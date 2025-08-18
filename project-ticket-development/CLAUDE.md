@@ -57,20 +57,66 @@ project-ticket-development/                     # Main development folder
 
 ## 🚀 Quick Start Commands
 
+### Server Startup (Complete System)
+```bash
+# Terminal 1: Start Express backend + Next.js frontend
+cd "/Users/borischu/project management/project-ticket-development/project-system"
+npm run dev:full
+
+# Terminal 2: Start public portal
+cd "/Users/borischu/project management/project-ticket-development/public-portal"
+python3 -m http.server 8081
+```
+
+**Access Points After Startup:**
+- **Public Portal**: http://localhost:8081 (Ticket submission form)
+- **Next.js App**: http://localhost:3000 (Admin/management interface)
+- **API Health**: http://localhost:3001/api/health (Backend status)
+
+**Test Login Credentials:**
+- admin / admin123
+- boris.chu / boris123
+- john.doe / john123
+
+### Individual Server Commands
+```bash
+# Express Backend API (Port 3001)
+cd "/Users/borischu/project management/project-ticket-development/project-system"
+npm run server
+
+# Next.js Frontend (Port 3000)
+cd "/Users/borischu/project management/project-ticket-development/project-system"
+npm run dev
+
+# Public Portal (Port 8081)
+cd "/Users/borischu/project management/project-ticket-development/public-portal"
+python3 -m http.server 8081
+```
+
 ### Development Commands
 ```bash
 # Linting and type checking (run after making changes)
 npm run lint
 npm run typecheck
 
-# Development server
-npm run dev
-
 # Build for production
 npm run build
 
 # Run tests
 npm test
+```
+
+### Troubleshooting Server Issues
+```bash
+# Check what's using a port
+lsof -ti:PORT_NUMBER
+
+# Kill processes using a port
+lsof -ti:PORT_NUMBER | xargs kill -9
+
+# Examples:
+lsof -ti:3001 | xargs kill -9  # Kill Express backend
+lsof -ti:8081 | xargs kill -9  # Kill public portal
 ```
 
 ## 🏗️ Architecture Guidelines
