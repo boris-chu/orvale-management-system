@@ -61,12 +61,33 @@ export default function TicketsPage() {
 
   // Check authentication on load
   useEffect(() => {
+    // Check if auth data is passed via URL (from public portal login)
+    const urlParams = new URLSearchParams(window.location.search);
+    const authParam = urlParams.get('auth');
+    
+    if (authParam) {
+      try {
+        // Decode auth data from URL
+        const authData = JSON.parse(atob(authParam));
+        localStorage.setItem('authToken', authData.token);
+        localStorage.setItem('currentUser', JSON.stringify(authData.user));
+        setCurrentUser(authData.user);
+        
+        // Clean URL by removing auth param
+        window.history.replaceState({}, '', '/tickets');
+        return;
+      } catch (error) {
+        console.error('Error processing auth data:', error);
+      }
+    }
+    
+    // Check existing localStorage
     const token = localStorage.getItem('authToken');
     const userData = localStorage.getItem('currentUser');
 
     if (!token || !userData) {
-      // Redirect to public portal for login
-      window.location.href = 'http://localhost:8081';
+      // Redirect to home page for login
+      window.location.href = '/';
       return;
     }
 
@@ -75,7 +96,7 @@ export default function TicketsPage() {
       setCurrentUser(user);
     } catch (error) {
       console.error('Error parsing user data:', error);
-      window.location.href = 'http://localhost:8081';
+      window.location.href = '/';
     }
   }, []);
 
@@ -93,7 +114,7 @@ export default function TicketsPage() {
         order: 'DESC'
       });
 
-      const response = await fetch(`http://localhost:3001/api/tickets?${params}`, {
+      const response = await fetch(`/api/tickets?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -141,7 +162,7 @@ export default function TicketsPage() {
   const handleTicketAction = async (ticketId: string, action: string, data?: any) => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`http://localhost:3001/api/tickets/${ticketId}/${action}`, {
+      const response = await fetch(`/api/tickets/${ticketId}/${action}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -211,7 +232,7 @@ export default function TicketsPage() {
                 onClick={() => {
                   localStorage.removeItem('authToken');
                   localStorage.removeItem('currentUser');
-                  window.location.href = 'http://localhost:8081';
+                  window.location.href = '/';
                 }}
                 variant="outline"
                 className="bg-transparent border-white text-white hover:bg-white hover:text-blue-600"
