@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 // Material-UI imports for working Select components
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save } from 'lucide-react';
+import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { organizationalData } from '../../config/organizational-data';
 import { categories } from '../../project-ticket-development/resources/main-categories';
@@ -117,6 +117,37 @@ export default function TicketsPage() {
   };
 
   // Check authentication on load
+  // Load current user with fresh permissions
+  const loadCurrentUser = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        window.location.href = '/';
+        return;
+      }
+
+      const response = await fetch('/api/auth/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const user = await response.json();
+        setCurrentUser(user);
+        localStorage.setItem('currentUser', JSON.stringify(user));
+      } else {
+        // Token invalid, redirect to login
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('currentUser');
+        window.location.href = '/';
+      }
+    } catch (error) {
+      console.error('Error loading user:', error);
+      window.location.href = '/';
+    }
+  };
+
   useEffect(() => {
     // Check if auth data is passed via URL (from public portal login)
     const urlParams = new URLSearchParams(window.location.search);
@@ -132,29 +163,23 @@ export default function TicketsPage() {
         
         // Clean URL by removing auth param
         window.history.replaceState({}, '', '/tickets');
+        // Load fresh user data with permissions
+        loadCurrentUser();
         return;
       } catch (error) {
         console.error('Error processing auth data:', error);
       }
     }
     
-    // Check existing localStorage
+    // Check existing localStorage and load fresh user data
     const token = localStorage.getItem('authToken');
-    const userData = localStorage.getItem('currentUser');
-
-    if (!token || !userData) {
-      // Redirect to home page for login
+    if (!token) {
       window.location.href = '/';
       return;
     }
 
-    try {
-      const user = JSON.parse(userData);
-      setCurrentUser(user);
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-      window.location.href = '/';
-    }
+    // Load current user with fresh permissions
+    loadCurrentUser();
   }, []);
 
   // Load tickets with filtering logic
@@ -496,6 +521,24 @@ export default function TicketsPage() {
             <h1 className="text-xl font-bold">📋 Support Ticket Queue</h1>
             <div className="flex items-center space-x-4">
               <span className="text-sm opacity-90">Welcome, {currentUser?.display_name}</span>
+              
+              {/* Admin Dashboard Button - only show if user has admin permissions */}
+              {currentUser?.permissions?.some((perm: string) => 
+                ['admin.manage_users', 'admin.view_users', 'admin.manage_teams', 'admin.view_teams', 
+                 'admin.manage_organization', 'admin.view_organization', 'admin.manage_categories', 
+                 'admin.view_categories', 'admin.view_analytics', 'admin.system_settings'].includes(perm)
+              ) && (
+                <Button
+                  onClick={() => window.location.href = '/developer'}
+                  variant="outline"
+                  className="bg-transparent border-white text-white hover:bg-white hover:text-blue-600"
+                  size="sm"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Admin Dashboard
+                </Button>
+              )}
+              
               <Button
                 onClick={() => {
                   localStorage.removeItem('authToken');
