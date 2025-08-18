@@ -166,7 +166,6 @@ export default function Home() {
               <div className="mt-4">
                 <Button 
                   onClick={() => window.location.href = '/public-portal/index.html'}
-                  variant="outline"
                   className="w-full"
                 >
                   Submit Request
