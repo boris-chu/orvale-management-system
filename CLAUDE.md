@@ -68,37 +68,45 @@ npm test
 
 ## 🎨 UI Component Usage Guidelines
 
-### Form Components
-**Use shadcn:ui** for all form elements:
+> 📋 **For comprehensive component usage, see `/docs/UI Libraries & Components Arsenal.md`**
+
+### Quick Reference - Form Components
+**Use Material-UI for Select** (React 19 compatible):
 ```javascript
-// Example: Ticket submission form
+import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+```
+
+**Use shadcn:ui for other form elements**:
+```javascript
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
 import { Form } from "@/components/ui/form"
 ```
 
-### Data Display
-**Use shadcn:ui DataTable** for ticket lists:
+### Quick Reference - Data Display
 ```javascript
-// Example: Ticket queue display
 import { DataTable } from "@/components/ui/data-table"
 import { Badge } from "@/components/ui/badge"
+import { Card } from "@/components/ui/card"
 ```
 
-### Charts and Analytics
-**Use evilcharts** for all visualizations:
+### Quick Reference - Charts and Analytics
 ```javascript
-// Example: Project metrics dashboard
-import { BarChart } from "@/charts/bar-charts/gradient-bar-chart"
-import { PieChart } from "@/charts/pie-charts/rounded-pie-chart"
-import { LineChart } from "@/charts/line-charts/glowing-line"
+import { GradientBarChart } from "@/charts/bar-charts/gradient-bar-chart"
+import { GlowingLine } from "@/charts/line-charts/glowing-line"
+import { RoundedPieChart } from "@/charts/pie-charts/rounded-pie-chart"
 ```
 
-### Icons
+### Quick Reference - Icons
 **Use Lucide React** as primary icon library:
 ```javascript
-import { Users, Ticket, Calendar, ChevronRight } from "lucide-react"
+import { Save, Search, Building2, Tag, Check, RefreshCw } from "lucide-react"
+```
+
+### Quick Reference - Animations
+**Use Framer Motion** for smooth interactions:
+```javascript
+import { motion, AnimatePresence } from 'framer-motion';
 ```
 
 ## 📋 Implementation Checklist
@@ -247,11 +255,12 @@ import { organizationalData } from './assets/organizational-data.js';
 ## 📚 Key Resources
 
 1. **Team Ticket System.md** - Core system architecture
-2. **Available Resources and Materials.md** - Component catalog
-3. **Dashboard & Achievements System.md** - Gamification features
-4. **Admin Dashboard Conceptual Design.md** - Admin panel specs
-5. **shadcn:ui docs** - Component examples
-6. **evilcharts examples** - Chart implementations
+2. **UI Libraries & Components Arsenal.md** - **COMPREHENSIVE UI COMPONENT REFERENCE** ⭐
+3. **Available Resources and Materials.md** - Component catalog
+4. **Dashboard & Achievements System.md** - Gamification features
+5. **Admin Dashboard Conceptual Design.md** - Admin panel specs
+6. **shadcn:ui docs** - Component examples
+7. **evilcharts examples** - Chart implementations
 
 ## 🎮 Key Features to Implement
 

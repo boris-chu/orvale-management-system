@@ -163,28 +163,94 @@ import { motion, AnimatePresence } from 'framer-motion';
 </AnimatePresence>
 ```
 
-### 5. **Lucide React** (Icons)
+### 5. **Lucide React** (Primary Icons)
 **Location**: External import via `lucide-react`  
-**Purpose**: Comprehensive icon library  
+**Purpose**: Comprehensive modern icon library  
 **Status**: ✅ **Primary Icon Library**
 
-#### Commonly Used Icons
-| Category | Icons | Usage |
-|----------|-------|-------|
-| **Actions** | `Save`, `Edit`, `Delete`, `Search`, `Eye` | Buttons, actions |
-| **Status** | `Check`, `X`, `AlertTriangle`, `Clock` | Status indicators |
-| **Navigation** | `ChevronRight`, `ArrowUp`, `FolderOpen` | Navigation, hierarchies |
-| **Content** | `User`, `Building2`, `Tag`, `Ticket` | Content representation |
-| **System** | `RefreshCw`, `Settings`, `Download` | System functions |
+#### Currently Used Icons (Active in Project)
+| Category | Icons | Usage | Implementation |
+|----------|-------|-------|---------------|
+| **Actions** | `Save`, `Search`, `Eye`, `LogIn` | Buttons, actions | Ticket management, login |
+| **Status** | `Check`, `X`, `AlertTriangle`, `Clock`, `CheckCircle` | Status indicators | Validation, notifications |
+| **Navigation** | `ArrowRight`, `ArrowUp`, `ArrowLeft`, `ChevronDown`, `ChevronUp` | Navigation, hierarchies | Dropdowns, browsing |
+| **Content** | `User`, `Building2`, `Tag`, `Ticket`, `Users` | Content representation | Tickets, organization |
+| **System** | `RefreshCw`, `Monitor`, `Phone`, `Mail`, `Building` | System functions | Loading, contact info |
+| **UI Elements** | `FolderOpen`, `Trash2`, `Sparkles` | Interface elements | Browse, delete, success |
 
 ```tsx
-import { Save, Check, AlertTriangle, Building2 } from 'lucide-react';
+// Current implementation patterns in project
+import { Save, Check, RefreshCw, Building2, Search } from 'lucide-react';
 
-<Button>
-  <Save className="h-4 w-4 mr-2" />
+// In buttons with loading states
+<Button disabled={saving}>
+  {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
   Save Changes
 </Button>
+
+// In browse modals
+<Button onClick={() => setShowBrowser(true)}>
+  <Search className="h-4 w-4 mr-2" />
+  Browse Paths
+</Button>
+
+// In status indicators
+<Badge className="bg-green-100">
+  <Check className="h-3 w-3 mr-1" />
+  Completed
+</Badge>
 ```
+
+### 6. **Tabler Icons** (Available Library)
+**Location**: `/project-ticket-development/icon library/tabler-icons/`  
+**Purpose**: 3,400+ free SVG icons  
+**Status**: 🟡 **Available but Not Implemented**
+
+#### Features
+- **3,400+ Icons**: Comprehensive icon set
+- **Multiple Formats**: SVG, React, Vue, Svelte components
+- **Consistent Design**: 24x24 grid, 1.5px stroke
+- **Framework Support**: React, Vue, Svelte, Angular
+- **Categories**: Interface, Communication, System, Media
+
+```tsx
+// Implementation pattern (if needed)
+import { IconUser, IconTicket, IconBuilding } from '@tabler/icons-react';
+
+<IconUser size={16} stroke={1.5} />
+```
+
+### 7. **Free Icons Collection** (Available Library)
+**Location**: `/project-ticket-development/icon library/free-icons/`  
+**Purpose**: 23,000+ free icons collection  
+**Status**: 🟡 **Available but Not Implemented**
+
+#### Features
+- **23,000+ Icons**: Massive icon collection
+- **Multiple Styles**: Solid, regular, light, thin, sharp variations
+- **Brand Icons**: Social media, company logos
+- **SVG Format**: Scalable vector graphics
+- **Categories**: Brands, interface, content, system
+
+#### Available Icon Styles
+| Style | File | Usage |
+|-------|------|-------|
+| **Solid** | `solid-icons.svg` | Bold, filled icons |
+| **Regular** | `regular-icons.svg` | Standard weight |
+| **Light** | `light-icons.svg` | Thin strokes |
+| **Thin** | `thin-icons.svg` | Ultra-light |
+| **Sharp** | `sharp-*-icons.svg` | Angular edges |
+| **Brands** | `brands-*.svg` | Company/social logos |
+
+### 8. **Awesome Icons** (Reference Library)
+**Location**: `/project-ticket-development/icon library/awesome-icons/`  
+**Purpose**: Curated list of icon resources  
+**Status**: 📚 **Reference/Documentation Only**
+
+#### Purpose
+- **Curated Collection**: Best icon libraries and resources
+- **Documentation**: Icon library recommendations
+- **Reference Guide**: Links to quality icon sources
 
 ---
 
@@ -222,6 +288,15 @@ import { Save, Check, AlertTriangle, Building2 } from 'lucide-react';
 | **Button States** | Framer Motion | `whileHover`, `whileTap` | Interactive feedback |
 | **Loading States** | EvilCharts | `ShimmerText` | Elegant loading |
 | **Modal Animations** | Framer Motion | `AnimatePresence` | Smooth modals |
+
+### Icons & Visual Elements
+| Need | Recommended Library | Component | Reason |
+|------|-------------------|-----------|--------|
+| **Interface Icons** | Lucide React | Standard icons | **Already implemented** |
+| **System Icons** | Lucide React | System/action icons | Consistent with project |
+| **Brand Icons** | Free Icons | Brand SVGs | 23,000+ icon collection |
+| **Specialized Icons** | Tabler Icons | Technical icons | 3,400+ consistent set |
+| **Loading Icons** | Lucide React | `RefreshCw` with `animate-spin` | Built-in animation |
 
 ---
 
@@ -280,6 +355,41 @@ import { Save, Check, RefreshCw } from 'lucide-react';
 )}
 ```
 
+### Icon Usage Patterns (Current Implementation)
+```tsx
+// Loading state icons
+import { RefreshCw } from 'lucide-react';
+<RefreshCw className="h-4 w-4 animate-spin" />
+
+// Status badges with icons
+import { Check, AlertTriangle, Clock } from 'lucide-react';
+<Badge variant="success">
+  <Check className="h-3 w-3 mr-1" />
+  Completed
+</Badge>
+
+// Interactive buttons with icons
+import { Search, Save, Trash2 } from 'lucide-react';
+<Button variant="outline" size="sm">
+  <Search className="h-4 w-4 mr-2" />
+  Browse
+</Button>
+
+// Navigation elements
+import { ArrowRight, ChevronDown } from 'lucide-react';
+<div className="flex items-center">
+  Office <ArrowRight className="h-4 w-4 mx-1" /> Bureau
+</div>
+
+// System status indicators
+import { CheckCircle, AlertTriangle, Clock } from 'lucide-react';
+const statusIcons = {
+  completed: <CheckCircle className="h-4 w-4 text-green-600" />,
+  pending: <Clock className="h-4 w-4 text-yellow-600" />,
+  error: <AlertTriangle className="h-4 w-4 text-red-600" />
+};
+```
+
 ---
 
 ## 🔧 Development Guidelines
@@ -318,7 +428,15 @@ import { Save, Check, RefreshCw } from 'lucide-react';
 2. **Material-UI for selects** until React 19 compatibility is resolved
 3. **EvilCharts for visualizations** and advanced UI elements
 4. **Framer Motion for animations** that enhance UX
-5. **Lucide React for all icons**
+5. **Lucide React for all icons** (primary icon library)
+
+### Icon Usage Guidelines
+1. **Consistent sizing**: Use `h-4 w-4` for standard buttons, `h-3 w-3` for badges
+2. **Proper spacing**: Use `mr-2` for button icons, `mr-1` for badge icons
+3. **Semantic meaning**: Choose icons that clearly represent their function
+4. **Loading states**: Use `RefreshCw` with `animate-spin` for loading
+5. **Status colors**: Match icon colors to semantic meaning (green=success, red=error)
+6. **Accessibility**: Ensure icons are supplemental to text, not replacements
 
 ### Performance Considerations
 1. **Lazy load** chart components
@@ -350,6 +468,13 @@ import { Save, Check, RefreshCw } from 'lucide-react';
 - **Kanban Board** components for project management
 - **Tree View** for organizational hierarchy
 - **Advanced Search** with filters and facets
+
+### Icon Library Integrations
+- **Tabler Icons** for specialized technical icons
+- **Free Icons** for brand/social media icons
+- **Custom Icon System** for company-specific symbols
+- **Icon Animation** library for enhanced interactions
+- **SVG Icon Optimization** for performance
 
 ---
 
