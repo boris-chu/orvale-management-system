@@ -1380,15 +1380,25 @@ ${computerInfoTable}
                     localStorage.setItem('authToken', result.token);
                     localStorage.setItem('currentUser', JSON.stringify(result.user));
                     
+                    console.log('Login successful, stored tokens');
+                    
                     // Show success message
                     showNotification(`✅ Welcome ${result.user.display_name}! Opening queue interface...`, 'success');
                     
                     // Close modal
                     closeLoginModal();
                     
+                    console.log('About to redirect to tickets page...');
+                    
                     // Redirect to queue interface after short delay
                     setTimeout(() => {
-                        window.location.href = 'http://localhost:3000/tickets';
+                        console.log('Redirecting now to http://localhost:3000/tickets');
+                        // Pass auth data via URL to handle cross-origin localStorage issue
+                        const authData = btoa(JSON.stringify({
+                            token: result.token,
+                            user: result.user
+                        }));
+                        window.location.href = `http://localhost:3000/tickets?auth=${authData}`;
                     }, 1500);
                     
                 } else {

@@ -57,40 +57,33 @@ project-ticket-development/                     # Main development folder
 
 ## 🚀 Quick Start Commands
 
-### Server Startup (Complete System)
+### Server Startup (Single Server Architecture)
 ```bash
-# Terminal 1: Start Express backend + Next.js frontend
+# Production (Port 80) - Recommended
 cd "/Users/borischu/project management/project-ticket-development/project-system"
-npm run dev:full
+sudo npm run dev
 
-# Terminal 2: Start public portal
-cd "/Users/borischu/project management/project-ticket-development/public-portal"
-python3 -m http.server 8081
+# Development (Port 3000) - No sudo required
+cd "/Users/borischu/project management/project-ticket-development/project-system"
+npm run dev:dev
 ```
 
 **Access Points After Startup:**
-- **Public Portal**: http://localhost:8081 (Ticket submission form)
-- **Next.js App**: http://localhost:3000 (Admin/management interface)
-- **API Health**: http://localhost:3001/api/health (Backend status)
+- **Public Portal**: http://localhost/ (Landing page with login modal)
+- **Admin Queue**: http://localhost/tickets (Ticket management interface)
+- **API Health**: http://localhost/api/health (Server status)
 
 **Test Login Credentials:**
 - admin / admin123
 - boris.chu / boris123
 - john.doe / john123
 
-### Individual Server Commands
+### Production Deployment
 ```bash
-# Express Backend API (Port 3001)
+# Build and start for production
 cd "/Users/borischu/project management/project-ticket-development/project-system"
-npm run server
-
-# Next.js Frontend (Port 3000)
-cd "/Users/borischu/project management/project-ticket-development/project-system"
-npm run dev
-
-# Public Portal (Port 8081)
-cd "/Users/borischu/project management/project-ticket-development/public-portal"
-python3 -m http.server 8081
+npm run build
+sudo npm start
 ```
 
 ### Development Commands
@@ -115,8 +108,8 @@ lsof -ti:PORT_NUMBER
 lsof -ti:PORT_NUMBER | xargs kill -9
 
 # Examples:
-lsof -ti:3001 | xargs kill -9  # Kill Express backend
-lsof -ti:8081 | xargs kill -9  # Kill public portal
+lsof -ti:80 | xargs kill -9    # Kill port 80 process
+lsof -ti:3000 | xargs kill -9  # Kill development server
 ```
 
 ## 🏗️ Architecture Guidelines
