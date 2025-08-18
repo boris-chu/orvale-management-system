@@ -1,6 +1,13 @@
+# Dependencies
+node_modules
+
 # UI Libraries and icon libraries
 icon library/
+icon-library/
 ui-libraries/
+
+# Next.js
+.next/
 
 # System files
 .DS_Store
