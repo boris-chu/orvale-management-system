@@ -128,21 +128,13 @@ export default function Home() {
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-center">
             <div className="flex items-center space-x-3">
               <Ticket className="h-8 w-8 text-blue-600" />
               <h1 className="text-2xl font-bold text-gray-900">
                 Orvale Management System
               </h1>
             </div>
-            <Button
-              onClick={() => setShowLogin(true)}
-              variant="outline"
-              className="flex items-center space-x-2"
-            >
-              <LogIn className="h-4 w-4" />
-              <span>IT Staff Login</span>
-            </Button>
           </div>
         </div>
       </header>
@@ -215,27 +207,6 @@ export default function Home() {
                 >
                   Access Queue
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Access */}
-        <div className="text-center">
-          <Card className="max-w-md mx-auto">
-            <CardContent className="pt-6">
-              <h3 className="text-lg font-semibold mb-4">Quick Access</h3>
-              <div className="space-y-3">
-                <Button 
-                  className="w-full" 
-                  size="lg"
-                  onClick={() => window.location.href = '/public-portal/index.html'}
-                >
-                  Submit New Ticket
-                </Button>
-                <p className="text-sm text-gray-500">
-                  Press <kbd className="px-2 py-1 bg-gray-100 rounded">Ctrl+T</kbd> for IT staff login
-                </p>
               </div>
             </CardContent>
           </Card>
