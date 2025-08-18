@@ -49,10 +49,56 @@ export const initDB = () => {
                     assigned_team TEXT,
                     email_recipient TEXT,
                     email_recipient_display TEXT,
+                    
+                    -- Organizational fields
+                    office TEXT,
+                    bureau TEXT,
+                    division TEXT,
+                    
+                    -- Category fields  
+                    category TEXT,
+                    request_type TEXT,
+                    subcategory TEXT,
+                    sub_subcategory TEXT,
+                    implementation TEXT,
+                    
+                    -- Workflow fields
+                    completion_notes TEXT,
+                    escalation_reason TEXT,
+                    escalated_at TIMESTAMP,
+                    completed_at TIMESTAMP,
+                    completed_by TEXT,
+                    
                     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             `);
+
+            // Add missing columns to existing table (migration)
+            const columnsToAdd = [
+                'office TEXT',
+                'bureau TEXT', 
+                'division TEXT',
+                'category TEXT',
+                'request_type TEXT',
+                'subcategory TEXT',
+                'sub_subcategory TEXT',
+                'implementation TEXT',
+                'completion_notes TEXT',
+                'escalation_reason TEXT',
+                'escalated_at TIMESTAMP',
+                'completed_at TIMESTAMP',
+                'completed_by TEXT'
+            ];
+
+            columnsToAdd.forEach(column => {
+                const columnName = column.split(' ')[0];
+                db.run(`ALTER TABLE user_tickets ADD COLUMN ${column}`, (err) => {
+                    if (err && !err.message.includes('duplicate column name')) {
+                        console.error(`Error adding column ${columnName}:`, err.message);
+                    }
+                });
+            });
 
             // Create default users
             const defaultUsers = [

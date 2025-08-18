@@ -33,6 +33,7 @@ interface ComputerInfo {
   ip: string;
   domain: string;
   browser: string;
+  platform: string;
   timestamp: string;
 }
 
@@ -54,17 +55,234 @@ export default function PublicPortal() {
 
   const [computerInfo, setComputerInfo] = useState<ComputerInfo>({
     ip: '',
-    domain: 'LAPDS5',
+    domain: 'Detecting...',
     browser: '',
+    platform: '',
     timestamp: ''
   });
 
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [emailPreview, setEmailPreview] = useState({ subject: '', html: '', recipient: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Platform detection function with Apple Silicon support
+  const getPlatformInfo = () => {
+    const userAgent = navigator.userAgent;
+    const platform = navigator.platform;
+    
+    // Detect Apple Silicon Macs
+    if (platform === 'MacIntel') {
+      // Method 1: Check WebGL renderer for explicit Apple Silicon identification
+      try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+          const renderer = gl.getParameter(gl.RENDERER);
+          
+          // Apple Silicon GPUs show as "Apple M1/M2/M3" or contain "Apple"
+          if (renderer && (renderer.includes('Apple M') || renderer.includes('Apple GPU'))) {
+            return 'macOS (Apple Silicon)';
+          }
+        }
+      } catch (e) {
+        // WebGL detection failed, continue with other methods
+      }
+      
+      // Method 2: Use CPU core count for chip identification
+      const cores = navigator.hardwareConcurrency;
+      const pixelRatio = window.devicePixelRatio;
+      
+      // Detect specific Apple Silicon chip based on core count
+      const getAppleSiliconChip = (coreCount: number) => {
+        // Core count patterns for Apple Silicon chips
+        switch (coreCount) {
+          case 8:
+            return 'M1/M2/M3'; // Could be any base model
+          case 9:
+          case 10:
+            return coreCount === 9 ? 'M4' : 'M1 Pro/M2 Pro/M1 Max/M4';
+          case 11:
+          case 12:
+            return coreCount === 11 ? 'M3 Pro' : 'M2 Pro/M2 Max/M3 Pro';
+          case 14:
+            return 'M3 Max/M4 Pro'; // Your chip!
+          case 16:
+            return 'M3 Max/M4 Max';
+          default:
+            if (coreCount >= 8) {
+              return 'Apple Silicon';
+            }
+            return null;
+        }
+      };
+      
+      // Apple Silicon detection with chip identification
+      if (cores >= 8) {
+        const chipModel = getAppleSiliconChip(cores);
+        if (chipModel) {
+          // With 8+ cores, we're confident it's Apple Silicon
+          return `macOS (${chipModel})`;
+        }
+      }
+      
+      // Fallback for edge cases
+      if (pixelRatio >= 2 && cores >= 4) {
+        return 'macOS (likely Apple Silicon)';
+      }
+      
+      return 'macOS (Intel)';
+    }
+    
+    // Windows detection with detailed version and architecture
+    if (platform.includes('Win')) {
+      const getWindowsVersion = () => {
+        // Windows 11 detection (NT 10.0 with specific build numbers)
+        if (userAgent.includes('Windows NT 10.0')) {
+          // Check for Windows 11 indicators
+          if (userAgent.includes('WebView') || navigator.userAgentData?.platform === 'Windows') {
+            // Try to detect Windows 11 vs 10 through available APIs
+            const isWindows11 = navigator.userAgentData?.platformVersion && 
+                               parseFloat(navigator.userAgentData.platformVersion) >= 13;
+            if (isWindows11) {
+              return 'Windows 11';
+            }
+          }
+          return 'Windows 10/11';
+        }
+        
+        // Windows 10 (older detection)
+        if (userAgent.includes('Windows NT 10.0')) {
+          return 'Windows 10';
+        }
+        
+        // Windows 8.1
+        if (userAgent.includes('Windows NT 6.3')) {
+          return 'Windows 8.1';
+        }
+        
+        // Windows 8
+        if (userAgent.includes('Windows NT 6.2')) {
+          return 'Windows 8';
+        }
+        
+        // Windows 7
+        if (userAgent.includes('Windows NT 6.1')) {
+          return 'Windows 7';
+        }
+        
+        // Windows Vista
+        if (userAgent.includes('Windows NT 6.0')) {
+          return 'Windows Vista';
+        }
+        
+        // Windows XP
+        if (userAgent.includes('Windows NT 5.1') || userAgent.includes('Windows XP')) {
+          return 'Windows XP';
+        }
+        
+        return 'Windows (Unknown Version)';
+      };
+      
+      const getWindowsArchitecture = () => {
+        // Check for ARM64 (Windows on ARM)
+        if (userAgent.includes('ARM64') || userAgent.includes('WOW64; ARM64')) {
+          return 'ARM64';
+        }
+        
+        // Check for x64/AMD64
+        if (userAgent.includes('WOW64') || userAgent.includes('Win64') || 
+            userAgent.includes('x64') || userAgent.includes('AMD64')) {
+          return 'x64';
+        }
+        
+        // 32-bit x86
+        return 'x86';
+      };
+      
+      const getWindowsEdition = () => {
+        // Try to detect Windows edition through available memory/features
+        const cores = navigator.hardwareConcurrency;
+        const memory = (navigator as any).deviceMemory;
+        
+        // High-end workstation/server indicators
+        if (cores >= 16 && memory >= 32) {
+          return ' Pro/Enterprise';
+        }
+        
+        // Professional/business indicators
+        if (cores >= 8 || memory >= 16) {
+          return ' Pro';
+        }
+        
+        return ''; // Likely Home edition or can't determine
+      };
+      
+      const version = getWindowsVersion();
+      const arch = getWindowsArchitecture();
+      const edition = getWindowsEdition();
+      
+      return `${version}${edition} (${arch})`;
+    }
+    
+    // Linux detection
+    if (platform.includes('Linux')) {
+      if (userAgent.includes('X11')) {
+        return 'Linux (X11)';
+      }
+      return 'Linux';
+    }
+    
+    // Mobile platforms
+    if (/iPhone|iPad|iPod/.test(userAgent)) {
+      return userAgent.includes('iPad') ? 'iPadOS' : 'iOS';
+    }
+    
+    if (/Android/.test(userAgent)) {
+      return 'Android';
+    }
+    
+    // Fallback to original platform
+    return platform || 'Unknown Platform';
+  };
+
+  // Browser detection function with proper priority
+  const getBrowserInfo = () => {
+    const userAgent = navigator.userAgent;
+    
+    // Check for Edge first (Chromium-based Edge contains "Edg/")
+    if (userAgent.includes('Edg/')) {
+      const version = userAgent.match(/Edg\/([\d.]+)/)?.[0];
+      return version ? `Microsoft Edge ${version.replace('Edg/', '')}` : 'Microsoft Edge';
+    }
+    
+    // Check for Chrome (but not Edge)
+    if (userAgent.includes('Chrome/') && !userAgent.includes('Edg/')) {
+      const version = userAgent.match(/Chrome\/([\d.]+)/)?.[0];
+      return version || 'Chrome';
+    }
+    
+    // Check for Firefox
+    if (userAgent.includes('Firefox/')) {
+      const version = userAgent.match(/Firefox\/([\d.]+)/)?.[0];
+      return version || 'Firefox';
+    }
+    
+    // Check for Safari (but not Chrome-based)
+    if (userAgent.includes('Safari/') && !userAgent.includes('Chrome/')) {
+      const version = userAgent.match(/Version\/([\d.]+)/)?.[1];
+      return version ? `Safari ${version}` : 'Safari';
+    }
+    
+    // Check for Internet Explorer
+    if (userAgent.includes('MSIE') || userAgent.includes('Trident/')) {
+      return 'Internet Explorer';
+    }
+    
+    return 'Unknown Browser';
+  };
 
   // Auto-detect computer info on component mount
   useEffect(() => {
@@ -75,8 +293,9 @@ export default function PublicPortal() {
         
         setComputerInfo({
           ip: data.ip || 'Unable to detect',
-          domain: data.domain || 'Not on domain',
-          browser: `${navigator.userAgent.match(/Chrome\/[\d.]+/)?.[0] || navigator.userAgent.match(/Firefox\/[\d.]+/)?.[0] || navigator.userAgent.match(/Safari\/[\d.]+/)?.[0] || navigator.userAgent.match(/Edge\/[\d.]+/)?.[0] || 'Unknown Browser'} on ${navigator.platform}`,
+          domain: data.domain || 'No domain detected',
+          browser: getBrowserInfo(),
+          platform: getPlatformInfo(),
           timestamp: new Date().toLocaleString('en-US', {
             timeZone: 'America/Los_Angeles',
             year: 'numeric',
@@ -92,8 +311,9 @@ export default function PublicPortal() {
         // Set fallback values if API fails
         setComputerInfo({
           ip: 'Unable to detect',
-          domain: 'Not on domain',
-          browser: `${navigator.userAgent.match(/Chrome\/[\d.]+/)?.[0] || navigator.userAgent.match(/Firefox\/[\d.]+/)?.[0] || navigator.userAgent.match(/Safari\/[\d.]+/)?.[0] || navigator.userAgent.match(/Edge\/[\d.]+/)?.[0] || 'Unknown Browser'} on ${navigator.platform}`,
+          domain: 'No domain detected',
+          browser: getBrowserInfo(),
+          platform: getPlatformInfo(),
           timestamp: new Date().toLocaleString('en-US', {
             timeZone: 'America/Los_Angeles',
             year: 'numeric',
@@ -254,8 +474,12 @@ export default function PublicPortal() {
       if (result.success) {
         showNotification(`✅ Ticket ${result.ticket_id} submitted successfully!`, 'success');
         
-        // Copy formatted email and show preview
-        await copyFormattedEmailAndOpen(subject, htmlBody, formData.emailRecipient);
+        // Generate plain text version and open email directly
+        const plainTextBody = generatePlainTextEmail();
+        const mailtoLink = `mailto:${formData.emailRecipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(plainTextBody)}`;
+        window.location.href = mailtoLink;
+        
+        showNotification('📧 Email opened in your default email client!', 'success');
         
         // Reset form
         if (formRef.current) {
@@ -291,88 +515,197 @@ export default function PublicPortal() {
     const teamLabel = selectedTeam?.label || 'IT Support';
     
     return `
-      <html><body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: #047dba; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-            <h2 style="margin: 0; font-size: 24px;">🎟️ IT Support Request</h2>
-            <p style="margin: 10px 0 0 0; opacity: 0.9;">Submitted via Orvale Management System</p>
-          </div>
-          
-          <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px;">
-            <p style="font-size: 16px; color: #047dba; margin-bottom: 20px;">
-              <strong>Good evening, ${teamLabel} Team,</strong><br>
-              I need assistance with the following issue:
-            </p>
-            
-            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #047dba;">
-              <h3 style="color: #047dba; margin-top: 0;">🔧 ${formData.issueTitle}</h3>
-              <p style="margin-bottom: 0; white-space: pre-wrap;">${formData.issueDescription}</p>
-            </div>
-
-            <h3 style="color: #047dba; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">CONTACT INFORMATION:</h3>
-            <table style="width: 100%; margin-bottom: 25px;">
-              <tr><td style="padding: 5px 10px; font-weight: bold;">Name:</td><td style="padding: 5px 10px;">${formData.userName}</td></tr>
-              <tr><td style="padding: 5px 10px; font-weight: bold;">Employee Number:</td><td style="padding: 5px 10px;">${formData.employeeNumber}</td></tr>
-              <tr><td style="padding: 5px 10px; font-weight: bold;">Teleworking:</td><td style="padding: 5px 10px;">${formData.teleworking}</td></tr>
-              <tr><td style="padding: 5px 10px; font-weight: bold;">Contact Phone:</td><td style="padding: 5px 10px;">${formData.phoneNumber}</td></tr>
-              <tr><td style="padding: 5px 10px; font-weight: bold;">Location:</td><td style="padding: 5px 10px;">${formData.location}</td></tr>
-              <tr><td style="padding: 5px 10px; font-weight: bold;">Section:</td><td style="padding: 5px 10px;">${formData.section}</td></tr>
-            </table>
-
-            <h3 style="color: #047dba; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">COMPUTER INFORMATION:</h3>
-            <table style="width: 100%; margin-bottom: 25px;">
-              <tr><td style="padding: 5px 10px; font-weight: bold;">IP Address:</td><td style="padding: 5px 10px;">${computerInfo.ip}</td></tr>
-              <tr><td style="padding: 5px 10px; font-weight: bold;">Domain:</td><td style="padding: 5px 10px;">${computerInfo.domain}</td></tr>
-              <tr><td style="padding: 5px 10px; font-weight: bold;">Browser:</td><td style="padding: 5px 10px;">${computerInfo.browser}</td></tr>
-              <tr><td style="padding: 5px 10px; font-weight: bold;">Timestamp:</td><td style="padding: 5px 10px;">${computerInfo.timestamp}</td></tr>
-            </table>
-
-            <div style="background: #e8f5e8; border: 1px solid #c3e6c3; padding: 15px; border-radius: 6px; text-align: center;">
-              <strong>Thank you for your assistance.</strong>
-            </div>
-          </div>
-        </div>
-      </body></html>
+      <html>
+      <head>
+        <style type="text/css">
+          /* Force Outlook to provide a "view in browser" button */
+          #outlook a { padding: 0; }
+          /* Force Hotmail to display emails at full width */
+          .ReadMsgBody { width: 100%; }
+          .ExternalClass { width: 100%; }
+          /* Prevent Webkit and Windows Mobile platforms from changing default font sizes */
+          body, table, td, p, a, li, blockquote { 
+            -webkit-text-size-adjust: 100%; 
+            -ms-text-size-adjust: 100%; 
+          }
+          /* Remove margin on email wrapper */
+          body { margin: 0; padding: 0; }
+          /* Allow smoother rendering of resized images in IE */
+          img { -ms-interpolation-mode: bicubic; }
+        </style>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #333333; background-color: #f4f4f4;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4;">
+          <tr>
+            <td align="center" style="padding: 20px;">
+              <!-- Main Container -->
+              <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <!-- Header -->
+                <tr>
+                  <td style="background-color: #047dba; color: #ffffff; padding: 30px; text-align: center;">
+                    <h1 style="margin: 0; font-size: 28px; font-weight: bold;">IT Support Request</h1>
+                    <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Submitted via Orvale Management System</p>
+                  </td>
+                </tr>
+                
+                <!-- Body -->
+                <tr>
+                  <td style="padding: 30px;">
+                    <!-- Greeting -->
+                    <p style="font-size: 16px; color: #047dba; margin-bottom: 20px;">
+                      <strong>Good evening, ${teamLabel} Team,</strong><br/>
+                      I need assistance with the following issue:
+                    </p>
+                    
+                    <!-- Issue Box -->
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 30px;">
+                      <tr>
+                        <td style="background-color: #f8f9fa; border-left: 4px solid #047dba; padding: 20px;">
+                          <h2 style="color: #047dba; margin: 0 0 10px 0; font-size: 20px;">${formData.issueTitle}</h2>
+                          <p style="margin: 0; color: #555555; white-space: pre-wrap;">${formData.issueDescription}</p>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Contact Information -->
+                    <h3 style="color: #047dba; font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">CONTACT INFORMATION</h3>
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 30px;">
+                      <tr>
+                        <td width="40%" style="padding: 8px 0; font-weight: bold; color: #555555;">Name:</td>
+                        <td width="60%" style="padding: 8px 0; color: #333333;">${formData.userName}</td>
+                      </tr>
+                      <tr style="background-color: #f8f9fa;">
+                        <td width="40%" style="padding: 8px 0; font-weight: bold; color: #555555;">Employee Number:</td>
+                        <td width="60%" style="padding: 8px 0; color: #333333;">${formData.employeeNumber}</td>
+                      </tr>
+                      <tr>
+                        <td width="40%" style="padding: 8px 0; font-weight: bold; color: #555555;">Teleworking:</td>
+                        <td width="60%" style="padding: 8px 0; color: #333333;">${formData.teleworking}</td>
+                      </tr>
+                      <tr style="background-color: #f8f9fa;">
+                        <td width="40%" style="padding: 8px 0; font-weight: bold; color: #555555;">Contact Phone:</td>
+                        <td width="60%" style="padding: 8px 0; color: #333333;">${formData.phoneNumber}</td>
+                      </tr>
+                      <tr>
+                        <td width="40%" style="padding: 8px 0; font-weight: bold; color: #555555;">Location:</td>
+                        <td width="60%" style="padding: 8px 0; color: #333333;">${formData.location}</td>
+                      </tr>
+                      <tr style="background-color: #f8f9fa;">
+                        <td width="40%" style="padding: 8px 0; font-weight: bold; color: #555555;">Section:</td>
+                        <td width="60%" style="padding: 8px 0; color: #333333;">${formData.section}</td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Computer Information -->
+                    <h3 style="color: #047dba; font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">COMPUTER INFORMATION</h3>
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 30px;">
+                      <tr>
+                        <td width="40%" style="padding: 8px 0; font-weight: bold; color: #555555;">IP Address:</td>
+                        <td width="60%" style="padding: 8px 0; color: #333333;">${computerInfo.ip}</td>
+                      </tr>
+                      <tr style="background-color: #f8f9fa;">
+                        <td width="40%" style="padding: 8px 0; font-weight: bold; color: #555555;">Domain:</td>
+                        <td width="60%" style="padding: 8px 0; color: #333333;">${computerInfo.domain}</td>
+                      </tr>
+                      <tr>
+                        <td width="40%" style="padding: 8px 0; font-weight: bold; color: #555555;">Browser:</td>
+                        <td width="60%" style="padding: 8px 0; color: #333333;">${computerInfo.browser}</td>
+                      </tr>
+                      <tr style="background-color: #f8f9fa;">
+                        <td width="40%" style="padding: 8px 0; font-weight: bold; color: #555555;">Platform:</td>
+                        <td width="60%" style="padding: 8px 0; color: #333333;">${computerInfo.platform}</td>
+                      </tr>
+                      <tr>
+                        <td width="40%" style="padding: 8px 0; font-weight: bold; color: #555555;">Timestamp:</td>
+                        <td width="60%" style="padding: 8px 0; color: #333333;">${computerInfo.timestamp}</td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Thank You -->
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="background-color: #e8f5e8; border: 1px solid #c3e6c3; padding: 15px; text-align: center; border-radius: 6px;">
+                          <strong style="color: #2e7d32;">Thank you for your assistance.</strong>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `;
   };
 
-  const copyFormattedEmailAndOpen = async (subject: string, htmlBody: string, recipient: string) => {
+
+  const generatePlainTextEmail = () => {
+    const selectedTeam = supportTeams.find(team => team.value === formData.emailRecipient);
+    const teamLabel = selectedTeam?.label || 'IT Support';
+    
+    return `Good evening, ${teamLabel} Team,
+
+I need assistance with the following issue:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${formData.issueTitle}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${formData.issueDescription}
+
+
+CONTACT INFORMATION:
+────────────────────
+Name: ${formData.userName}
+Employee Number: ${formData.employeeNumber}
+Teleworking: ${formData.teleworking}
+Contact Phone: ${formData.phoneNumber}
+Location: ${formData.location}
+Section: ${formData.section}
+
+
+COMPUTER INFORMATION:
+────────────────────
+IP Address: ${computerInfo.ip}
+Domain: ${computerInfo.domain}
+Browser: ${computerInfo.browser}
+Platform: ${computerInfo.platform}
+Timestamp: ${computerInfo.timestamp}
+
+
+Thank you for your assistance.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Submitted via Orvale Management System`;
+  };
+
+  // Handle IT staff login
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     try {
-      showNotification('📋 Copying formatted email...', 'info');
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginForm)
+      });
       
-      if (!navigator.clipboard) {
-        throw new Error('Clipboard API not available');
-      }
+      const data = await response.json();
       
-      if (navigator.clipboard.write && window.ClipboardItem) {
-        try {
-          const htmlBlob = new Blob([htmlBody], { type: 'text/html' });
-          const textBlob = new Blob([stripHtmlForText(htmlBody)], { type: 'text/plain' });
-          
-          const clipboardItem = new ClipboardItem({
-            'text/html': htmlBlob,
-            'text/plain': textBlob
-          });
-          
-          await navigator.clipboard.write([clipboardItem]);
-        } catch (clipboardError) {
-          console.warn('Rich clipboard failed, trying text fallback:', clipboardError);
-          await navigator.clipboard.writeText(stripHtmlForText(htmlBody));
-        }
-      } else if (navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(stripHtmlForText(htmlBody));
+      if (data.success) {
+        // Store auth data
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+        
+        // Redirect to tickets page
+        window.location.href = '/tickets';
       } else {
-        throw new Error('No clipboard API available');
+        showNotification('❌ Login failed: ' + data.message, 'error');
       }
-      
-      setEmailPreview({ subject, html: htmlBody, recipient });
-      setShowPreviewModal(true);
-      
     } catch (error) {
-      console.error('Failed to copy:', error);
-      showNotification('📋 Manual Copy Required - Please copy the content manually.', 'warning');
-      setEmailPreview({ subject, html: htmlBody, recipient });
-      setShowPreviewModal(true);
+      showNotification('❌ Login error: Please check your connection', 'error');
     }
   };
 
@@ -411,13 +744,6 @@ export default function PublicPortal() {
     return text.trim();
   };
 
-  const openEmailClient = () => {
-    const plainTextBody = stripHtmlForText(emailPreview.html);
-    const mailtoLink = `mailto:${emailPreview.recipient}?subject=${encodeURIComponent(emailPreview.subject)}&body=${encodeURIComponent(plainTextBody)}`;
-    window.location.href = mailtoLink;
-    setShowPreviewModal(false);
-    showNotification('📧 Email opened! For better formatting, press Ctrl+V to paste the HTML version.', 'success');
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -478,8 +804,8 @@ export default function PublicPortal() {
                     label="Select Support Team"
                     onChange={(e) => handleSelectChange('emailRecipient', e.target.value)}
                   >
-                    {supportTeams.map((team) => (
-                      <MenuItem key={team.value} value={team.value}>
+                    {supportTeams.map((team, index) => (
+                      <MenuItem key={`${team.value}-${index}`} value={team.value}>
                         {team.label}
                       </MenuItem>
                     ))}
@@ -642,6 +968,10 @@ export default function PublicPortal() {
                       <Badge variant="outline" className="ml-2">{computerInfo.browser}</Badge>
                     </div>
                     <div>
+                      <span className="font-medium">Platform:</span>
+                      <Badge variant="outline" className="ml-2">{computerInfo.platform}</Badge>
+                    </div>
+                    <div>
                       <span className="font-medium">Timestamp:</span>
                       <Badge variant="outline" className="ml-2">{computerInfo.timestamp}</Badge>
                     </div>
@@ -685,48 +1015,63 @@ export default function PublicPortal() {
         </div>
       </main>
 
+      {/* Hidden IT Staff Access - Click bottom-right corner */}
+      <div 
+        className="fixed bottom-0 right-0 w-20 h-20 opacity-0 cursor-pointer bg-blue-600"
+        onClick={() => setShowLoginModal(true)}
+        title="IT Staff Access"
+      />
 
-      {/* Email Preview Modal */}
-      <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>📧 Email Ready!</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Alert>
-              <AlertDescription>
-                Formatted content has been copied to clipboard
-              </AlertDescription>
-            </Alert>
-            
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p><strong>To:</strong> {emailPreview.recipient}</p>
-              <p><strong>Subject:</strong> {emailPreview.subject}</p>
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              🔐 IT Staff Access
+            </h2>
+            <form onSubmit={handleLogin}>
+              <div className="mb-4">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  value={loginForm.username}
+                  onChange={(e) => setLoginForm(prev => ({ ...prev, username: e.target.value }))}
+                  placeholder="Enter username"
+                  required
+                />
+              </div>
+              <div className="mb-6">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="Enter password"
+                  required
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" className="flex-1">
+                  Login
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setShowLoginModal(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+            <div className="mt-4 text-xs text-gray-500">
+              Test accounts: admin/admin123, boris.chu/boris123, john.doe/john123
             </div>
-
-            <div className="bg-green-50 p-4 rounded-lg text-center">
-              <p className="font-medium text-green-800">✅ Formatted Email Copied!</p>
-              <p className="text-sm text-green-600">Ready to paste into your email client</p>
-            </div>
-
-            <div className="flex gap-4 justify-center">
-              <Button onClick={openEmailClient} className="flex-1 max-w-sm">
-                📧 Open Email Client
-              </Button>
-              <Button variant="outline" onClick={() => setShowPreviewModal(false)} className="flex-1 max-w-sm">
-                Close
-              </Button>
-            </div>
-
-            <Alert className="bg-yellow-50">
-              <AlertDescription className="text-yellow-800">
-                <strong>✅ Email will open with content!</strong><br />
-                <em>Optional:</em> For even better formatting, press <kbd className="bg-gray-100 px-2 py-1 rounded">Ctrl+V</kbd> to paste the HTML version.
-              </AlertDescription>
-            </Alert>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 }

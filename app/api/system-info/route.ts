@@ -22,22 +22,26 @@ export async function GET(request: NextRequest) {
     }
     
     // Try to detect domain from various sources
-    let detectedDomain = 'Not on domain';
+    let detectedDomain = 'No domain detected';
     
     // Check for domain information in headers or host
     const host = request.headers.get('host');
     const userAgent = request.headers.get('user-agent') || '';
     
-    // Common domain detection patterns
+    // Domain detection patterns (server-side can't detect Windows domain membership)
+    // This only detects web/network domains, not Windows Active Directory domains
     if (host && (host.includes('.lacounty.gov') || host.includes('.dpss'))) {
-        detectedDomain = 'LACOUNTY';
+        detectedDomain = 'LACOUNTY Domain';
     } else if (host && host.includes('.local')) {
-        detectedDomain = 'LOCAL_DOMAIN';
-    } else if (normalizedIp.startsWith('192.168.') || normalizedIp.startsWith('10.') || normalizedIp.startsWith('172.')) {
-        // Private IP ranges suggest internal network
-        detectedDomain = 'INTERNAL_NETWORK';
+        detectedDomain = 'Local Network Domain';
     } else if (normalizedIp === 'localhost' || normalizedIp === '127.0.0.1') {
-        detectedDomain = 'LOCALHOST';
+        detectedDomain = 'Development (localhost)';
+    } else if (normalizedIp.startsWith('192.168.') || normalizedIp.startsWith('10.') || normalizedIp.startsWith('172.')) {
+        // Private IP ranges - could be on internal network but can't detect Windows domain from browser
+        detectedDomain = 'Private Network';
+    } else {
+        // Public IP - definitely not on internal domain
+        detectedDomain = 'Public Network';
     }
 
     return NextResponse.json({

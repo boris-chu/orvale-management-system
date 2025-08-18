@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// Material-UI imports for working Select components
+import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag } from 'lucide-react';
 import { organizationalData } from '../../config/organizational-data';
@@ -321,6 +322,64 @@ export default function TicketsPage() {
     }
   };
 
+  // Save ticket changes to backend
+  const saveTicketChanges = async () => {
+    if (!selectedTicket) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      console.log('🔑 Token from localStorage:', token ? `Present (${token.length} chars)` : 'Missing');
+      console.log('📝 Updating ticket:', selectedTicket.id);
+      
+      const response = await fetch(`/api/tickets/${selectedTicket.id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(selectedTicket)
+      });
+      
+      if (response.ok) {
+        // Update the ticket in the main list
+        setTickets(prev => prev.map(ticket => 
+          ticket.id === selectedTicket.id ? selectedTicket : ticket
+        ));
+        alert('✅ Ticket updated successfully!');
+      } else {
+        const error = await response.json();
+        alert(`❌ Failed to update ticket: ${error.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error saving ticket:', error);
+      alert('❌ Error saving ticket changes');
+    }
+  };
+
+  // Cycle through status values
+  const cycleStatus = () => {
+    if (!selectedTicket) return;
+    
+    const statusOrder = ['pending', 'in_progress', 'completed', 'escalated'];
+    const currentIndex = statusOrder.indexOf(selectedTicket.status);
+    const nextIndex = (currentIndex + 1) % statusOrder.length;
+    const nextStatus = statusOrder[nextIndex];
+    
+    setSelectedTicket(prev => prev ? { ...prev, status: nextStatus } : null);
+  };
+
+  // Cycle through priority values  
+  const cyclePriority = () => {
+    if (!selectedTicket) return;
+    
+    const priorityOrder = ['low', 'medium', 'high', 'urgent'];
+    const currentIndex = priorityOrder.indexOf(selectedTicket.priority);
+    const nextIndex = (currentIndex + 1) % priorityOrder.length;
+    const nextPriority = priorityOrder[nextIndex];
+    
+    setSelectedTicket(prev => prev ? { ...prev, priority: nextPriority } : null);
+  };
+
   if (!currentUser) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -384,44 +443,53 @@ export default function TicketsPage() {
       <div className="bg-white border-b p-4">
         <div className="container mx-auto">
           <div className="flex items-center space-x-4">
-            <Select value={filters.queue} onValueChange={(value) => setFilters({...filters, queue: value})}>
-              <SelectTrigger className="w-48">
-                <User className="h-4 w-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="my_tickets">My Tickets</SelectItem>
-                <SelectItem value="team_tickets">Team Tickets</SelectItem>
-                <SelectItem value="all_tickets">All Tickets</SelectItem>
-              </SelectContent>
-            </Select>
+            <FormControl size="small" className="w-48">
+              <InputLabel id="queue-filter-label">Queue</InputLabel>
+              <Select
+                labelId="queue-filter-label"
+                id="queue-filter"
+                value={filters.queue}
+                label="Queue"
+                onChange={(e) => setFilters({...filters, queue: e.target.value})}
+              >
+                <MenuItem value="my_tickets">My Tickets</MenuItem>
+                <MenuItem value="team_tickets">Team Tickets</MenuItem>
+                <MenuItem value="all_tickets">All Tickets</MenuItem>
+              </Select>
+            </FormControl>
 
-            <Select value={filters.priority} onValueChange={(value) => setFilters({...filters, priority: value})}>
-              <SelectTrigger className="w-48">
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
-                <SelectItem value="urgent">Urgent</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-              </SelectContent>
-            </Select>
+            <FormControl size="small" className="w-48">
+              <InputLabel id="priority-filter-label">Priority</InputLabel>
+              <Select
+                labelId="priority-filter-label"
+                id="priority-filter"
+                value={filters.priority}
+                label="Priority"
+                onChange={(e) => setFilters({...filters, priority: e.target.value})}
+              >
+                <MenuItem value="all">All Priorities</MenuItem>
+                <MenuItem value="urgent">Urgent</MenuItem>
+                <MenuItem value="high">High</MenuItem>
+                <MenuItem value="medium">Medium</MenuItem>
+                <MenuItem value="low">Low</MenuItem>
+              </Select>
+            </FormControl>
 
-            <Select value={filters.sort} onValueChange={(value) => setFilters({...filters, sort: value})}>
-              <SelectTrigger className="w-48">
-                <Clock className="h-4 w-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest_first">Newest First</SelectItem>
-                <SelectItem value="oldest_first">Oldest First</SelectItem>
-                <SelectItem value="priority_high">Priority: High to Low</SelectItem>
-                <SelectItem value="priority_low">Priority: Low to High</SelectItem>
-              </SelectContent>
-            </Select>
+            <FormControl size="small" className="w-48">
+              <InputLabel id="sort-filter-label">Sort</InputLabel>
+              <Select
+                labelId="sort-filter-label"
+                id="sort-filter"
+                value={filters.sort}
+                label="Sort"
+                onChange={(e) => setFilters({...filters, sort: e.target.value})}
+              >
+                <MenuItem value="newest_first">Newest First</MenuItem>
+                <MenuItem value="oldest_first">Oldest First</MenuItem>
+                <MenuItem value="priority_high">Priority: High to Low</MenuItem>
+                <MenuItem value="priority_low">Priority: Low to High</MenuItem>
+              </Select>
+            </FormControl>
           </div>
         </div>
       </div>
@@ -569,17 +637,38 @@ export default function TicketsPage() {
           >
             <div className="flex justify-between items-start mb-4">
               <h2 className="text-xl font-bold">{selectedTicket.issue_title}</h2>
-              <Button variant="outline" onClick={() => setSelectedTicket(null)}>
-                ✕ Close
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={saveTicketChanges} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  💾 Save Changes
+                </Button>
+                <Button variant="outline" onClick={() => setSelectedTicket(null)}>
+                  ✕ Close
+                </Button>
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h3 className="font-semibold text-blue-600 mb-2">Request Information</h3>
                 <div className="space-y-2 text-sm">
-                  <div><strong>Status:</strong> <Badge className={getStatusColor(selectedTicket.status)}>{selectedTicket.status}</Badge></div>
-                  <div><strong>Priority:</strong> <Badge className={getPriorityColor(selectedTicket.priority)}>{selectedTicket.priority}</Badge></div>
+                  <div><strong>Status:</strong> 
+                    <Badge 
+                      className={`${getStatusColor(selectedTicket.status)} cursor-pointer hover:opacity-80 ml-2`}
+                      onClick={() => cycleStatus()}
+                      title="Click to cycle status"
+                    >
+                      {selectedTicket.status}
+                    </Badge>
+                  </div>
+                  <div><strong>Priority:</strong> 
+                    <Badge 
+                      className={`${getPriorityColor(selectedTicket.priority)} cursor-pointer hover:opacity-80 ml-2`}
+                      onClick={() => cyclePriority()}
+                      title="Click to cycle priority"
+                    >
+                      {selectedTicket.priority}
+                    </Badge>
+                  </div>
                   <div><strong>Submitted:</strong> {formatDate(selectedTicket.submitted_at)}</div>
                   <div><strong>Ticket ID:</strong> {selectedTicket.submission_id}</div>
                 </div>
@@ -609,18 +698,22 @@ export default function TicketsPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Office:</label>
                       <div className="flex gap-2">
-                        <Select value={selectedTicket.office || ''} onValueChange={(value) => updateTicketField('office', value)}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Select Office..." />
-                          </SelectTrigger>
-                          <SelectContent>
+                        <FormControl size="small" className="flex-1">
+                          <InputLabel id="office-select-label">Select Office</InputLabel>
+                          <Select
+                            labelId="office-select-label"
+                            id="office-select"
+                            value={selectedTicket.office || ''}
+                            label="Select Office"
+                            onChange={(e) => updateTicketField('office', e.target.value)}
+                          >
                             {organizationalData.offices.map((office, index) => (
-                              <SelectItem key={`office-${index}`} value={office}>
+                              <MenuItem key={`office-${index}`} value={office}>
                                 {office}
-                              </SelectItem>
+                              </MenuItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </Select>
+                        </FormControl>
                         <Button size="sm" variant="outline" onClick={() => openOrgBrowser('offices')}>
                           <Search className="h-4 w-4" />
                         </Button>
@@ -630,18 +723,22 @@ export default function TicketsPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Bureau:</label>
                       <div className="flex gap-2">
-                        <Select value={selectedTicket.bureau || ''} onValueChange={(value) => updateTicketField('bureau', value)}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Select Bureau..." />
-                          </SelectTrigger>
-                          <SelectContent>
+                        <FormControl size="small" className="flex-1">
+                          <InputLabel id="bureau-select-label">Select Bureau</InputLabel>
+                          <Select
+                            labelId="bureau-select-label"
+                            id="bureau-select"
+                            value={selectedTicket.bureau || ''}
+                            label="Select Bureau"
+                            onChange={(e) => updateTicketField('bureau', e.target.value)}
+                          >
                             {organizationalData.bureaus.map((bureau, index) => (
-                              <SelectItem key={`bureau-${index}`} value={bureau}>
+                              <MenuItem key={`bureau-${index}`} value={bureau}>
                                 {bureau}
-                              </SelectItem>
+                              </MenuItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </Select>
+                        </FormControl>
                         <Button size="sm" variant="outline" onClick={() => openOrgBrowser('bureaus')}>
                           <Search className="h-4 w-4" />
                         </Button>
@@ -655,18 +752,22 @@ export default function TicketsPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Division:</label>
                       <div className="flex gap-2">
-                        <Select value={selectedTicket.division || ''} onValueChange={(value) => updateTicketField('division', value)}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Select Division..." />
-                          </SelectTrigger>
-                          <SelectContent>
+                        <FormControl size="small" className="flex-1">
+                          <InputLabel id="division-select-label">Select Division</InputLabel>
+                          <Select
+                            labelId="division-select-label"
+                            id="division-select"
+                            value={selectedTicket.division || ''}
+                            label="Select Division"
+                            onChange={(e) => updateTicketField('division', e.target.value)}
+                          >
                             {organizationalData.divisions.map((division, index) => (
-                              <SelectItem key={`division-${index}`} value={division}>
+                              <MenuItem key={`division-${index}`} value={division}>
                                 {division}
-                              </SelectItem>
+                              </MenuItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </Select>
+                        </FormControl>
                         <Button size="sm" variant="outline" onClick={() => openOrgBrowser('divisions')}>
                           <Search className="h-4 w-4" />
                         </Button>
@@ -676,18 +777,22 @@ export default function TicketsPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Section:</label>
                       <div className="flex gap-2">
-                        <Select value={selectedTicket.section || ''} onValueChange={(value) => updateTicketField('section', value)}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Select Section..." />
-                          </SelectTrigger>
-                          <SelectContent>
+                        <FormControl size="small" className="flex-1">
+                          <InputLabel id="section-select-label">Select Section</InputLabel>
+                          <Select
+                            labelId="section-select-label"
+                            id="section-select"
+                            value={selectedTicket.section || ''}
+                            label="Select Section"
+                            onChange={(e) => updateTicketField('section', e.target.value)}
+                          >
                             {organizationalData.sections.map((section, index) => (
-                              <SelectItem key={`section-${index}`} value={section}>
+                              <MenuItem key={`section-${index}`} value={section}>
                                 {section}
-                              </SelectItem>
+                              </MenuItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </Select>
+                        </FormControl>
                         <Button size="sm" variant="outline" onClick={() => openOrgBrowser('sections')}>
                           <Search className="h-4 w-4" />
                         </Button>
@@ -710,18 +815,22 @@ export default function TicketsPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Category:</label>
                       <div className="flex gap-2">
-                        <Select value={selectedTicket.category || ''} onValueChange={(value) => updateTicketField('category', value)}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Select Category..." />
-                          </SelectTrigger>
-                          <SelectContent>
+                        <FormControl size="small" className="flex-1">
+                          <InputLabel id="category-select-label">Select Category</InputLabel>
+                          <Select
+                            labelId="category-select-label"
+                            id="category-select"
+                            value={selectedTicket.category || ''}
+                            label="Select Category"
+                            onChange={(e) => updateTicketField('category', e.target.value)}
+                          >
                             {Object.entries(categories).map(([key, value]) => (
-                              <SelectItem key={key} value={key}>
+                              <MenuItem key={key} value={key}>
                                 {value}
-                              </SelectItem>
+                              </MenuItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </Select>
+                        </FormControl>
                         <Button size="sm" variant="outline" onClick={() => openCategoryBrowser('categories')}>
                           <FolderOpen className="h-4 w-4" />
                         </Button>
@@ -731,22 +840,23 @@ export default function TicketsPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Request Type:</label>
                       <div className="flex gap-2">
-                        <Select 
-                          value={selectedTicket.request_type || ''} 
-                          onValueChange={(value) => updateTicketField('request_type', value)}
-                          disabled={!selectedTicket.category}
-                        >
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Select Request Type..." />
-                          </SelectTrigger>
-                          <SelectContent>
+                        <FormControl size="small" className="flex-1" disabled={!selectedTicket.category}>
+                          <InputLabel id="request-type-select-label">Select Request Type</InputLabel>
+                          <Select
+                            labelId="request-type-select-label"
+                            id="request-type-select"
+                            value={selectedTicket.request_type || ''}
+                            label="Select Request Type"
+                            onChange={(e) => updateTicketField('request_type', e.target.value)}
+                            disabled={!selectedTicket.category}
+                          >
                             {selectedTicket.category && requestTypes[selectedTicket.category as keyof typeof requestTypes]?.map((type: any) => (
-                              <SelectItem key={type.value} value={type.value}>
+                              <MenuItem key={type.value} value={type.value}>
                                 {type.text}
-                              </SelectItem>
+                              </MenuItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </Select>
+                        </FormControl>
                         <Button size="sm" variant="outline" onClick={() => openCategoryBrowser('requestTypes')} disabled={!selectedTicket.category}>
                           <FolderOpen className="h-4 w-4" />
                         </Button>
@@ -760,23 +870,24 @@ export default function TicketsPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory:</label>
                       <div className="flex gap-2">
-                        <Select 
-                          value={selectedTicket.subcategory || ''} 
-                          onValueChange={(value) => updateTicketField('subcategory', value)}
-                          disabled={!selectedTicket.request_type}
-                        >
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Select Subcategory..." />
-                          </SelectTrigger>
-                          <SelectContent>
+                        <FormControl size="small" className="flex-1" disabled={!selectedTicket.request_type}>
+                          <InputLabel id="subcategory-select-label">Select Subcategory</InputLabel>
+                          <Select
+                            labelId="subcategory-select-label"
+                            id="subcategory-select"
+                            value={selectedTicket.subcategory || ''}
+                            label="Select Subcategory"
+                            onChange={(e) => updateTicketField('subcategory', e.target.value)}
+                            disabled={!selectedTicket.request_type}
+                          >
                             {selectedTicket.category && selectedTicket.request_type && 
                              subcategories[selectedTicket.category as keyof typeof subcategories]?.[selectedTicket.request_type as string]?.map((subcat: any) => (
-                              <SelectItem key={subcat.value} value={subcat.value}>
+                              <MenuItem key={subcat.value} value={subcat.value}>
                                 {subcat.text}
-                              </SelectItem>
+                              </MenuItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </Select>
+                        </FormControl>
                         <Button size="sm" variant="outline" onClick={() => openCategoryBrowser('subcategories')} disabled={!selectedTicket.request_type}>
                           <FolderOpen className="h-4 w-4" />
                         </Button>
@@ -786,17 +897,21 @@ export default function TicketsPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Implementation:</label>
                       <div className="flex gap-2">
-                        <Select value={selectedTicket.implementation || ''} onValueChange={(value) => updateTicketField('implementation', value)}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Select Implementation..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="immediate">Immediate</SelectItem>
-                            <SelectItem value="scheduled">Scheduled</SelectItem>
-                            <SelectItem value="planned">Planned</SelectItem>
-                            <SelectItem value="future">Future</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormControl size="small" className="flex-1">
+                          <InputLabel id="implementation-select-label">Select Implementation</InputLabel>
+                          <Select
+                            labelId="implementation-select-label"
+                            id="implementation-select"
+                            value={selectedTicket.implementation || ''}
+                            label="Select Implementation"
+                            onChange={(e) => updateTicketField('implementation', e.target.value)}
+                          >
+                            <MenuItem value="immediate">Immediate</MenuItem>
+                            <MenuItem value="scheduled">Scheduled</MenuItem>
+                            <MenuItem value="planned">Planned</MenuItem>
+                            <MenuItem value="future">Future</MenuItem>
+                          </Select>
+                        </FormControl>
                         <Button size="sm" variant="outline" onClick={() => openCategoryBrowser('implementation')}>
                           <Eye className="h-4 w-4" />
                         </Button>
