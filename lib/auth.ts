@@ -110,11 +110,80 @@ export const getUserPermissions = (user: User): string[] => {
             'queue.view_all',
             'queue.manage',
             'system.manage_settings',
-            'reporting.view_all'
+            'reporting.view_all',
+            // New admin dashboard permissions
+            'admin.manage_users',
+            'admin.view_users',
+            'admin.manage_teams',
+            'admin.view_teams',
+            'admin.manage_organization',
+            'admin.view_organization',
+            'admin.manage_categories',
+            'admin.view_categories',
+            'admin.view_analytics',
+            'admin.system_settings'
         );
     }
     
     return permissions;
+};
+
+export const verifyAuth = async (request: any): Promise<{success: boolean; user?: any; error?: string}> => {
+    try {
+        const authHeader = request.headers.get('authorization');
+        let token = null;
+
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.substring(7);
+        } else {
+            // Try to get token from cookies
+            const cookies = request.headers.get('cookie');
+            if (cookies) {
+                const tokenMatch = cookies.match(/auth-token=([^;]+)/);
+                if (tokenMatch) {
+                    token = tokenMatch[1];
+                }
+            }
+        }
+
+        if (!token) {
+            return { success: false, error: 'No token provided' };
+        }
+
+        const decoded = verifyToken(token);
+        if (!decoded) {
+            return { success: false, error: 'Invalid token' };
+        }
+
+        // Get fresh user data with permissions
+        const user = await getAsync(
+            'SELECT * FROM users WHERE id = ? AND active = TRUE',
+            [decoded.id]
+        );
+
+        if (!user) {
+            return { success: false, error: 'User not found' };
+        }
+
+        // Add permissions to user object
+        const userWithPermissions = {
+            id: user.id,
+            username: user.username,
+            display_name: user.display_name,
+            email: user.email,
+            role: user.role,
+            role_id: user.role, // Alias for compatibility
+            team_id: user.team_id,
+            section_id: user.section_id,
+            active: user.active,
+            permissions: getUserPermissions(user)
+        };
+
+        return { success: true, user: userWithPermissions };
+    } catch (error) {
+        console.error('Auth verification error:', error);
+        return { success: false, error: 'Authentication failed' };
+    }
 };
 
 export const getAccessibleQueues = async (user: User): Promise<any[]> => {

@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
-import Database from 'better-sqlite3';
-import path from 'path';
-
-// Initialize database connection
-const dbPath = path.join(process.cwd(), 'tickets.db');
-const db = new Database(dbPath);
+import { queryAsync, getAsync } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,47 +39,48 @@ export async function GET(request: NextRequest) {
 
     try {
       // Get user statistics
-      const userStats = db.prepare(`
+      const userStats = await getAsync(`
         SELECT 
           COUNT(*) as total_users,
           COUNT(CASE WHEN active = 1 THEN 1 END) as active_users
         FROM users
-      `).get() as any;
+      `);
 
       stats.totalUsers = userStats?.total_users || 0;
       stats.activeUsers = userStats?.active_users || 0;
 
-      // Get team statistics
-      const teamStats = db.prepare(`
-        SELECT COUNT(*) as total_teams FROM teams
-      `).get() as any;
+      // Get team statistics (placeholder since teams table doesn't exist yet)
+      // For now, count unique team_id values from users
+      const teamStats = await getAsync(`
+        SELECT COUNT(DISTINCT team_id) as total_teams 
+        FROM users 
+        WHERE team_id IS NOT NULL AND team_id != ''
+      `);
 
       stats.totalTeams = teamStats?.total_teams || 0;
 
       // Get ticket statistics
-      const ticketStats = db.prepare(`
+      const ticketStats = await getAsync(`
         SELECT COUNT(*) as total_tickets FROM user_tickets
-      `).get() as any;
+      `);
 
       stats.totalTickets = ticketStats?.total_tickets || 0;
 
-      // Get organizational units count (this is a placeholder - will be dynamic once org structure is built)
-      // For now, we'll count based on unique sections from tickets
-      const orgStats = db.prepare(`
+      // Get organizational units count (count unique sections from tickets)
+      const orgStats = await getAsync(`
         SELECT COUNT(DISTINCT section) as org_units 
         FROM user_tickets 
         WHERE section IS NOT NULL AND section != ''
-      `).get() as any;
+      `);
 
       stats.organizationalUnits = orgStats?.org_units || 0;
 
-      // Get category paths count (placeholder - will be dynamic once category management is built)
-      // For now, we'll count unique category combinations
-      const categoryStats = db.prepare(`
+      // Get category paths count (count unique category combinations)
+      const categoryStats = await getAsync(`
         SELECT COUNT(DISTINCT category || '|' || request_type || '|' || subcategory) as category_paths
         FROM user_tickets 
         WHERE category IS NOT NULL AND category != ''
-      `).get() as any;
+      `);
 
       stats.categoryPaths = categoryStats?.category_paths || 0;
 
