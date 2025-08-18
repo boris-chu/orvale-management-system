@@ -456,19 +456,13 @@ export default function PublicPortal() {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <p className="text-lg text-gray-600">
-            Submit your IT support request through the <strong className="text-blue-600">Orvale Management System</strong><br />
-            Our IT team will assist you as soon as possible.
-          </p>
-        </div>
 
         {/* Form Card */}
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Monitor className="h-5 w-5" />
-              IT Support Request Form
+              Crossroads IT Support
             </CardTitle>
           </CardHeader>
           <CardContent>
