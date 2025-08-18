@@ -315,8 +315,7 @@ export default function RoleManagement() {
         // Add system flag to built-in roles
         const rolesWithFlags = roleData.map((role: any) => ({
           ...role,
-          is_system: ['admin', 'manager', 'it_user'].includes(role.id),
-          user_count: Math.floor(Math.random() * 20) + 1 // Mock user count
+          is_system: role.is_system === 1
         }));
         setRoles(rolesWithFlags);
       } else {
