@@ -171,6 +171,15 @@ export default function Home() {
               <p className="text-gray-600">
                 Easily submit IT support requests with detailed information and automatic routing.
               </p>
+              <div className="mt-4">
+                <Button 
+                  onClick={() => window.location.href = '/public-portal/'}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Submit Request
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -217,7 +226,11 @@ export default function Home() {
             <CardContent className="pt-6">
               <h3 className="text-lg font-semibold mb-4">Quick Access</h3>
               <div className="space-y-3">
-                <Button className="w-full" size="lg">
+                <Button 
+                  className="w-full" 
+                  size="lg"
+                  onClick={() => window.location.href = '/public-portal/'}
+                >
                   Submit New Ticket
                 </Button>
                 <p className="text-sm text-gray-500">
