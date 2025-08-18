@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LogIn, Ticket, Users } from 'lucide-react';
+import { LogIn, Ticket, Users, Search, Eye } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -101,6 +102,10 @@ function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
 export default function Home() {
   const [showLogin, setShowLogin] = useState(false);
+  const [ticketNumber, setTicketNumber] = useState('');
+  const [ticketStatus, setTicketStatus] = useState<any>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [trackingError, setTrackingError] = useState('');
 
   // Check if user is already logged in
   useEffect(() => {
@@ -109,6 +114,73 @@ export default function Home() {
       window.location.href = '/tickets';
     }
   }, []);
+
+  // Track ticket by confirmation number
+  const trackTicket = async () => {
+    if (!ticketNumber.trim()) {
+      setTrackingError('Please enter a ticket number');
+      return;
+    }
+
+    setTrackingLoading(true);
+    setTrackingError('');
+    setTicketStatus(null);
+
+    try {
+      // Public API endpoint to get ticket status (no auth required)
+      const response = await fetch(`/api/public/ticket-status/${ticketNumber.trim()}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setTicketStatus(data.ticket);
+      } else if (response.status === 404) {
+        setTrackingError('Ticket not found. Please check your confirmation number.');
+      } else {
+        setTrackingError('Unable to retrieve ticket status. Please try again.');
+      }
+    } catch (error) {
+      setTrackingError('Network error. Please check your connection.');
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-blue-100 text-blue-800';
+      case 'assigned': return 'bg-purple-100 text-purple-800';
+      case 'in_progress': return 'bg-indigo-100 text-indigo-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'escalated': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const formatStatus = (status: string) => {
+    return status.replace('_', ' ').toUpperCase();
+  };
+
+  const formatTeamName = (teamId: string) => {
+    const teamNameMap: { [key: string]: string } = {
+      'ITTS_Region7': 'ITTS: Region 7',
+      'ITTS_Region1': 'ITTS: Region 1',
+      'ITTS_Region2': 'ITTS: Region 2',
+      'ITTS_Region3': 'ITTS: Region 3',
+      'ITTS_Region4': 'ITTS: Region 4',
+      'ITTS_Region5': 'ITTS: Region 5',
+      'ITTS_Region6': 'ITTS: Region 6',
+      'ITTS_Region8': 'ITTS: Region 8',
+      'NET_North': 'Network: North',
+      'NET_South': 'Network: South',
+      'NET_Central': 'Network: Central',
+      'DEV_Alpha': 'Development: Alpha Team',
+      'DEV_Beta': 'Development: Beta Team',
+      'SEC_Core': 'Security: Core Team',
+      'SEC_Perimeter': 'Security: Perimeter Team'
+    };
+    
+    return teamNameMap[teamId] || teamId;
+  };
 
   // Listen for Ctrl+T to open login
   useEffect(() => {
@@ -177,14 +249,57 @@ export default function Home() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Users className="h-5 w-5 text-green-600" />
+                <Search className="h-5 w-5 text-green-600" />
                 <span>Track Progress</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
-                Monitor the status of your requests and receive updates from IT staff.
+              <p className="text-gray-600 mb-4">
+                Enter your confirmation number to check the status of your request.
               </p>
+              
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. R7-250818-001"
+                    value={ticketNumber}
+                    onChange={(e) => setTicketNumber(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && trackTicket()}
+                    disabled={trackingLoading}
+                  />
+                  <Button
+                    onClick={trackTicket}
+                    disabled={trackingLoading || !ticketNumber.trim()}
+                    size="sm"
+                  >
+                    {trackingLoading ? '...' : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+
+                {trackingError && (
+                  <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                    {trackingError}
+                  </div>
+                )}
+
+                {ticketStatus && (
+                  <div className="bg-gray-50 p-3 rounded space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Status:</span>
+                      <Badge className={getStatusColor(ticketStatus.status)}>
+                        {formatStatus(ticketStatus.status)}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <div><strong>Issue:</strong> {ticketStatus.issue_title}</div>
+                      <div><strong>Submitted:</strong> {new Date(ticketStatus.submitted_at).toLocaleDateString()}</div>
+                      {ticketStatus.assigned_team && (
+                        <div><strong>Team:</strong> {formatTeamName(ticketStatus.assigned_team)}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
