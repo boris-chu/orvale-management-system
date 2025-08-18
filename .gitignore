@@ -1,0 +1,10 @@
+# UI Libraries and icon libraries
+icon library/
+ui-libraries/
+
+# System files
+.DS_Store
+
+# Screenshots
+*.png
+Screenshot*.png
