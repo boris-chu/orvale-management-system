@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
     // Get raw IP address
-    let rawIp = request.ip || request.headers.get('x-forwarded-for') || 'localhost';
+    let rawIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'localhost';
     
     // Normalize IP addresses for cleaner display
     let normalizedIp = rawIp;

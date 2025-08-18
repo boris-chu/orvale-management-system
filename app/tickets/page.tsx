@@ -6,7 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp } from 'lucide-react';
+import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag } from 'lucide-react';
+import { organizationalData } from '../../config/organizational-data';
+import { categories } from '../../project-ticket-development/resources/main-categories';
+import { requestTypes } from '../../project-ticket-development/resources/request-types';
+import { subcategories } from '../../project-ticket-development/resources/ticket-categories';
 
 interface Ticket {
   id: string;
@@ -16,6 +20,14 @@ interface Ticket {
   phone_number: string;
   location: string;
   section: string;
+  office?: string;
+  bureau?: string;
+  division?: string;
+  category?: string;
+  request_type?: string;
+  subcategory?: string;
+  sub_subcategory?: string;
+  implementation?: string;
   issue_title: string;
   issue_description: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
@@ -205,6 +217,107 @@ export default function TicketsPage() {
       case 'escalated': return 'bg-red-100 text-red-800';
       case 'deleted': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Update ticket field helper
+  const updateTicketField = (field: string, value: string) => {
+    if (selectedTicket) {
+      setSelectedTicket({
+        ...selectedTicket,
+        [field]: value
+      });
+      
+      // Clear dependent fields when parent category changes
+      if (field === 'category') {
+        setSelectedTicket(prev => prev ? {
+          ...prev,
+          category: value,
+          request_type: '',
+          subcategory: '',
+          sub_subcategory: ''
+        } : null);
+      } else if (field === 'request_type') {
+        setSelectedTicket(prev => prev ? {
+          ...prev,
+          request_type: value,
+          subcategory: '',
+          sub_subcategory: ''
+        } : null);
+      }
+      
+      // TODO: Call API to update ticket in database
+      console.log(`Updating ticket ${selectedTicket.id}: ${field} = ${value}`);
+    }
+  };
+
+  // Open organizational data browser
+  const openOrgBrowser = (type: string) => {
+    // Create a simple modal/alert for browsing data
+    const data = organizationalData[type as keyof typeof organizationalData];
+    const selection = prompt(`Select ${type}:\n\n${data.slice(0, 10).join('\n')}\n\n(Showing first 10 items. Type the exact name or cancel)`);
+    
+    if (selection && data.includes(selection)) {
+      const fieldMap: {[key: string]: string} = {
+        'offices': 'office',
+        'bureaus': 'bureau', 
+        'divisions': 'division',
+        'sections': 'section'
+      };
+      updateTicketField(fieldMap[type], selection);
+    }
+  };
+
+  // Open category data browser
+  const openCategoryBrowser = (type: string) => {
+    let data: string[] = [];
+    let fieldName = '';
+    
+    switch (type) {
+      case 'categories':
+        data = Object.values(categories);
+        fieldName = 'category';
+        break;
+      case 'requestTypes':
+        if (selectedTicket?.category) {
+          const types = requestTypes[selectedTicket.category as keyof typeof requestTypes] || [];
+          data = types.map((t: any) => t.text);
+          fieldName = 'request_type';
+        }
+        break;
+      case 'subcategories':
+        if (selectedTicket?.category && selectedTicket?.request_type) {
+          const subcats = subcategories[selectedTicket.category as keyof typeof subcategories]?.[selectedTicket.request_type] || [];
+          data = subcats.map((s: any) => s.text);
+          fieldName = 'subcategory';
+        }
+        break;
+      case 'implementation':
+        data = ['Immediate', 'Scheduled', 'Planned', 'Future'];
+        fieldName = 'implementation';
+        break;
+    }
+    
+    if (data.length > 0) {
+      const selection = prompt(`Select ${type}:\n\n${data.slice(0, 15).join('\n')}\n\n(Showing first 15 items. Type the exact name or cancel)`);
+      
+      if (selection && data.includes(selection)) {
+        // Map display text back to value for categories/types
+        if (type === 'categories') {
+          const categoryKey = Object.entries(categories).find(([, value]) => value === selection)?.[0];
+          if (categoryKey) updateTicketField(fieldName, categoryKey);
+        } else if (type === 'requestTypes' && selectedTicket?.category) {
+          const typeObj = requestTypes[selectedTicket.category as keyof typeof requestTypes]?.find((t: any) => t.text === selection);
+          if (typeObj) updateTicketField(fieldName, typeObj.value);
+        } else if (type === 'subcategories' && selectedTicket?.category && selectedTicket?.request_type) {
+          const subcatObj = subcategories[selectedTicket.category as keyof typeof subcategories]?.[selectedTicket.request_type]?.find((s: any) => s.text === selection);
+          if (subcatObj) updateTicketField(fieldName, subcatObj.value);
+        } else {
+          updateTicketField(fieldName, selection.toLowerCase());
+        }
+      }
+    } else {
+      alert(`No ${type} available. Please select the parent category first.`);
     }
   };
 
@@ -480,6 +593,216 @@ export default function TicketsPage() {
                   <div><strong>Phone:</strong> {selectedTicket.phone_number}</div>
                   <div><strong>Location:</strong> {selectedTicket.location}</div>
                   <div><strong>Section:</strong> {selectedTicket.section}</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Organizational Information Section */}
+            <div className="mt-6">
+              <h3 className="font-semibold text-blue-600 mb-4 flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Organizational Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Office:</label>
+                      <div className="flex gap-2">
+                        <Select value={selectedTicket.office || ''} onValueChange={(value) => updateTicketField('office', value)}>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Select Office..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {organizationalData.offices.map((office, index) => (
+                              <SelectItem key={`office-${index}`} value={office}>
+                                {office}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" onClick={() => openOrgBrowser('offices')}>
+                          <Search className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Bureau:</label>
+                      <div className="flex gap-2">
+                        <Select value={selectedTicket.bureau || ''} onValueChange={(value) => updateTicketField('bureau', value)}>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Select Bureau..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {organizationalData.bureaus.map((bureau, index) => (
+                              <SelectItem key={`bureau-${index}`} value={bureau}>
+                                {bureau}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" onClick={() => openOrgBrowser('bureaus')}>
+                          <Search className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Division:</label>
+                      <div className="flex gap-2">
+                        <Select value={selectedTicket.division || ''} onValueChange={(value) => updateTicketField('division', value)}>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Select Division..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {organizationalData.divisions.map((division, index) => (
+                              <SelectItem key={`division-${index}`} value={division}>
+                                {division}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" onClick={() => openOrgBrowser('divisions')}>
+                          <Search className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Section:</label>
+                      <div className="flex gap-2">
+                        <Select value={selectedTicket.section || ''} onValueChange={(value) => updateTicketField('section', value)}>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Select Section..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {organizationalData.sections.map((section, index) => (
+                              <SelectItem key={`section-${index}`} value={section}>
+                                {section}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" onClick={() => openOrgBrowser('sections')}>
+                          <Search className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Category Information Section */}
+            <div className="mt-6">
+              <h3 className="font-semibold text-blue-600 mb-4 flex items-center gap-2">
+                <Tag className="h-5 w-5" />
+                Category Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Category:</label>
+                      <div className="flex gap-2">
+                        <Select value={selectedTicket.category || ''} onValueChange={(value) => updateTicketField('category', value)}>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Select Category..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(categories).map(([key, value]) => (
+                              <SelectItem key={key} value={key}>
+                                {value}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" onClick={() => openCategoryBrowser('categories')}>
+                          <FolderOpen className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Request Type:</label>
+                      <div className="flex gap-2">
+                        <Select 
+                          value={selectedTicket.request_type || ''} 
+                          onValueChange={(value) => updateTicketField('request_type', value)}
+                          disabled={!selectedTicket.category}
+                        >
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Select Request Type..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedTicket.category && requestTypes[selectedTicket.category as keyof typeof requestTypes]?.map((type: any) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.text}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" onClick={() => openCategoryBrowser('requestTypes')} disabled={!selectedTicket.category}>
+                          <FolderOpen className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory:</label>
+                      <div className="flex gap-2">
+                        <Select 
+                          value={selectedTicket.subcategory || ''} 
+                          onValueChange={(value) => updateTicketField('subcategory', value)}
+                          disabled={!selectedTicket.request_type}
+                        >
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Select Subcategory..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedTicket.category && selectedTicket.request_type && 
+                             subcategories[selectedTicket.category as keyof typeof subcategories]?.[selectedTicket.request_type as string]?.map((subcat: any) => (
+                              <SelectItem key={subcat.value} value={subcat.value}>
+                                {subcat.text}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" onClick={() => openCategoryBrowser('subcategories')} disabled={!selectedTicket.request_type}>
+                          <FolderOpen className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Implementation:</label>
+                      <div className="flex gap-2">
+                        <Select value={selectedTicket.implementation || ''} onValueChange={(value) => updateTicketField('implementation', value)}>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Select Implementation..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="immediate">Immediate</SelectItem>
+                            <SelectItem value="scheduled">Scheduled</SelectItem>
+                            <SelectItem value="planned">Planned</SelectItem>
+                            <SelectItem value="future">Future</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" onClick={() => openCategoryBrowser('implementation')}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -4,13 +4,14 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// Material-UI imports for working Select components
+import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Ticket, Monitor, Phone, Building, Users, Clock } from 'lucide-react';
+import { Ticket, Monitor, Phone, Building, Clock } from 'lucide-react';
 import { organizationalData } from '../../config/organizational-data';
 
 interface FormData {
@@ -58,7 +59,6 @@ export default function PublicPortal() {
     timestamp: ''
   });
 
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [emailPreview, setEmailPreview] = useState({ subject: '', html: '', recipient: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -188,7 +188,12 @@ export default function PublicPortal() {
 
   // Handle select field changes
   const handleSelectChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    console.log(`Select change: ${field} = ${value}`);
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      console.log('Updated form data:', updated);
+      return updated;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -383,7 +388,7 @@ export default function PublicPortal() {
       let bulletPoints = '';
       const rows = tableMatch.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
       
-      rows.forEach(row => {
+      rows.forEach((row: string) => {
         const cells = row.match(/<td[^>]*>([^<]*)<\/td>/gi) || [];
         if (cells.length >= 2) {
           const label = cells[0].replace(/<[^>]*>/g, '').trim();
@@ -470,19 +475,22 @@ export default function PublicPortal() {
             <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
               {/* Support Team Selection */}
               <div>
-                <Label htmlFor="emailRecipient">Select Support Team:</Label>
-                <Select value={formData.emailRecipient} onValueChange={(value) => handleSelectChange('emailRecipient', value)}>
-                  <SelectTrigger className="w-full max-w-md">
-                    <SelectValue placeholder="Choose Your Location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {supportTeams.map((team, index) => (
-                      <SelectItem key={`team-${index}`} value={team.value}>
+                <FormControl size="small" className="w-full max-w-md" required>
+                  <InputLabel id="emailRecipient-label">Select Support Team</InputLabel>
+                  <Select
+                    labelId="emailRecipient-label"
+                    id="emailRecipient"
+                    value={formData.emailRecipient}
+                    label="Select Support Team"
+                    onChange={(e) => handleSelectChange('emailRecipient', e.target.value)}
+                  >
+                    {supportTeams.map((team) => (
+                      <MenuItem key={team.value} value={team.value}>
                         {team.label}
-                      </SelectItem>
+                      </MenuItem>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </Select>
+                </FormControl>
               </div>
 
               {/* Personal Information */}
@@ -529,49 +537,67 @@ export default function PublicPortal() {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="location">Location</Label>
-                  <Select value={formData.location} onValueChange={(value) => handleSelectChange('location', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {organizationalData.offices.map((office, index) => (
-                        <SelectItem key={`office-${index}`} value={office}>
+                  <FormControl size="small" fullWidth>
+                    <InputLabel id="location-label">Location</InputLabel>
+                    <Select
+                      labelId="location-label"
+                      id="location"
+                      value={formData.location}
+                      label="Location"
+                      onChange={(e) => {
+                        console.log('Location selected:', e.target.value);
+                        handleSelectChange('location', e.target.value);
+                      }}
+                    >
+                      {organizationalData.offices.map((office) => (
+                        <MenuItem key={office} value={office}>
                           {office}
-                        </SelectItem>
+                        </MenuItem>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </Select>
+                  </FormControl>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="section">Section</Label>
-                  <Select value={formData.section} onValueChange={(value) => handleSelectChange('section', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Section" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {organizationalData.sections.map((section, index) => (
-                        <SelectItem key={`section-${index}`} value={section}>
+                  <FormControl size="small" fullWidth>
+                    <InputLabel id="section-label">Section</InputLabel>
+                    <Select
+                      labelId="section-label"
+                      id="section"
+                      value={formData.section}
+                      label="Section"
+                      onChange={(e) => {
+                        console.log('Section selected:', e.target.value);
+                        handleSelectChange('section', e.target.value);
+                      }}
+                    >
+                      {organizationalData.sections.map((section) => (
+                        <MenuItem key={section} value={section}>
                           {section}
-                        </SelectItem>
+                        </MenuItem>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </Select>
+                  </FormControl>
                 </div>
                 <div>
-                  <Label htmlFor="teleworking">Teleworking</Label>
-                  <Select value={formData.teleworking} onValueChange={(value) => handleSelectChange('teleworking', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select teleworking status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Yes">Yes</SelectItem>
-                      <SelectItem value="No">No</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormControl size="small" fullWidth>
+                    <InputLabel id="teleworking-label">Teleworking</InputLabel>
+                    <Select
+                      labelId="teleworking-label"
+                      id="teleworking"
+                      value={formData.teleworking}
+                      label="Teleworking"
+                      onChange={(e) => {
+                        console.log('Teleworking selected:', e.target.value);
+                        handleSelectChange('teleworking', e.target.value);
+                      }}
+                    >
+                      <MenuItem value="Yes">Yes</MenuItem>
+                      <MenuItem value="No">No</MenuItem>
+                    </Select>
+                  </FormControl>
                 </div>
               </div>
 
@@ -657,14 +683,6 @@ export default function PublicPortal() {
         {/* Actions */}
         <div className="text-center">
           <Button
-            variant="outline"
-            onClick={() => setShowLoginModal(true)}
-            className="mr-4"
-          >
-            <Users className="h-4 w-4 mr-2" />
-            IT Staff Login
-          </Button>
-          <Button
             variant="ghost"
             onClick={() => window.location.href = '/'}
           >
@@ -673,18 +691,6 @@ export default function PublicPortal() {
         </div>
       </main>
 
-      {/* Login Modal */}
-      <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>IT Staff Login</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">Access the ticket management system</p>
-            {/* Login form would go here */}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Email Preview Modal */}
       <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
