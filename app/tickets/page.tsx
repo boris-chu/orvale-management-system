@@ -7,11 +7,14 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 // Material-UI imports for working Select components
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag } from 'lucide-react';
+import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { organizationalData } from '../../config/organizational-data';
 import { categories } from '../../project-ticket-development/resources/main-categories';
 import { requestTypes } from '../../project-ticket-development/resources/request-types';
 import { subcategories } from '../../project-ticket-development/resources/ticket-categories';
+import CategoryBrowserModal from '../../components/CategoryBrowserModal';
+import OrganizationalBrowserModal from '../../components/OrganizationalBrowserModal';
 
 interface Ticket {
   id: string;
@@ -71,6 +74,47 @@ export default function TicketsPage() {
     priority: 'all',
     sort: 'newest_first'
   });
+
+  // Modal states for browse functionality
+  const [showOrgBrowser, setShowOrgBrowser] = useState(false);
+  const [showCategoryBrowser, setShowCategoryBrowser] = useState(false);
+
+  // Notification state
+  const [notification, setNotification] = useState<{message: string; type: 'success' | 'error'} | null>(null);
+
+  // Save button state
+  const [originalTicket, setOriginalTicket] = useState<Ticket | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  // Show notification helper
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+    // Auto-hide after 3 seconds
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  // Check if ticket has changes
+  const hasChanges = () => {
+    if (!originalTicket || !selectedTicket) return false;
+    
+    // Compare key fields that can be modified
+    const fieldsToCompare = [
+      'office', 'bureau', 'division', 'section',
+      'category', 'request_type', 'subcategory', 'sub_subcategory', 'implementation',
+      'priority', 'status', 'assigned_to', 'assigned_team'
+    ];
+    
+    return fieldsToCompare.some(field => {
+      return originalTicket[field as keyof Ticket] !== selectedTicket[field as keyof Ticket];
+    });
+  };
+
+  // Store original ticket when modal opens
+  const openTicketModal = (ticket: Ticket) => {
+    setSelectedTicket(ticket);
+    setOriginalTicket({...ticket}); // Store original state
+    setSaveStatus('idle');
+  };
 
   // Check authentication on load
   useEffect(() => {
@@ -307,78 +351,57 @@ export default function TicketsPage() {
   };
 
   // Open organizational data browser
-  const openOrgBrowser = (type: string) => {
-    // Create a simple modal/alert for browsing data
-    const data = organizationalData[type as keyof typeof organizationalData];
-    const selection = prompt(`Select ${type}:\n\n${data.slice(0, 10).join('\n')}\n\n(Showing first 10 items. Type the exact name or cancel)`);
-    
-    if (selection && data.includes(selection)) {
-      const fieldMap: {[key: string]: string} = {
-        'offices': 'office',
-        'bureaus': 'bureau', 
-        'divisions': 'division',
-        'sections': 'section'
-      };
-      updateTicketField(fieldMap[type], selection);
-    }
+  const openOrgBrowser = () => {
+    setShowOrgBrowser(true);
   };
 
   // Open category data browser
-  const openCategoryBrowser = (type: string) => {
-    let data: string[] = [];
-    let fieldName = '';
+  const openCategoryBrowser = () => {
+    setShowCategoryBrowser(true);
+  };
+
+  // Handle organizational path selection
+  const handleOrgPathSelection = (pathData: any) => {
+    if (!selectedTicket) return;
     
-    switch (type) {
-      case 'categories':
-        data = Object.values(categories);
-        fieldName = 'category';
-        break;
-      case 'requestTypes':
-        if (selectedTicket?.category) {
-          const types = requestTypes[selectedTicket.category as keyof typeof requestTypes] || [];
-          data = types.map((t: any) => t.text);
-          fieldName = 'request_type';
-        }
-        break;
-      case 'subcategories':
-        if (selectedTicket?.category && selectedTicket?.request_type) {
-          const subcats = subcategories[selectedTicket.category as keyof typeof subcategories]?.[selectedTicket.request_type] || [];
-          data = subcats.map((s: any) => s.text);
-          fieldName = 'subcategory';
-        }
-        break;
-      case 'implementation':
-        data = ['Immediate', 'Scheduled', 'Planned', 'Future'];
-        fieldName = 'implementation';
-        break;
-    }
+    // Update all organizational fields at once
+    setSelectedTicket(prev => prev ? {
+      ...prev,
+      office: pathData.officeValue || '',
+      bureau: pathData.bureauValue || '',
+      division: pathData.divisionValue || '',
+      section: pathData.sectionValue || ''
+    } : null);
     
-    if (data.length > 0) {
-      const selection = prompt(`Select ${type}:\n\n${data.slice(0, 15).join('\n')}\n\n(Showing first 15 items. Type the exact name or cancel)`);
-      
-      if (selection && data.includes(selection)) {
-        // Map display text back to value for categories/types
-        if (type === 'categories') {
-          const categoryKey = Object.entries(categories).find(([, value]) => value === selection)?.[0];
-          if (categoryKey) updateTicketField(fieldName, categoryKey);
-        } else if (type === 'requestTypes' && selectedTicket?.category) {
-          const typeObj = requestTypes[selectedTicket.category as keyof typeof requestTypes]?.find((t: any) => t.text === selection);
-          if (typeObj) updateTicketField(fieldName, typeObj.value);
-        } else if (type === 'subcategories' && selectedTicket?.category && selectedTicket?.request_type) {
-          const subcatObj = subcategories[selectedTicket.category as keyof typeof subcategories]?.[selectedTicket.request_type]?.find((s: any) => s.text === selection);
-          if (subcatObj) updateTicketField(fieldName, subcatObj.value);
-        } else {
-          updateTicketField(fieldName, selection.toLowerCase());
-        }
-      }
-    } else {
-      alert(`No ${type} available. Please select the parent category first.`);
-    }
+    console.log('✅ Organizational path selected:', pathData);
+  };
+
+  // Handle category path selection
+  const handleCategoryPathSelection = (pathData: any) => {
+    if (!selectedTicket) return;
+    
+    // Update only available category fields (non-empty values)
+    const updates: any = {};
+    
+    if (pathData.categoryKey) updates.category = pathData.categoryKey;
+    if (pathData.requestTypeKey) updates.request_type = pathData.requestTypeKey;
+    if (pathData.subcategoryKey) updates.subcategory = pathData.subcategoryKey;
+    if (pathData.subSubcategoryKey) updates.sub_subcategory = pathData.subSubcategoryKey;
+    if (pathData.implementationKey) updates.implementation = pathData.implementationKey;
+    
+    setSelectedTicket(prev => prev ? {
+      ...prev,
+      ...updates
+    } : null);
+    
+    console.log('✅ Category path selected:', pathData, 'Updates:', updates);
   };
 
   // Save ticket changes to backend
   const saveTicketChanges = async () => {
-    if (!selectedTicket) return;
+    if (!selectedTicket || !hasChanges()) return;
+    
+    setSaveStatus('saving');
     
     try {
       const token = localStorage.getItem('authToken');
@@ -399,14 +422,23 @@ export default function TicketsPage() {
         setTickets(prev => prev.map(ticket => 
           ticket.id === selectedTicket.id ? selectedTicket : ticket
         ));
-        alert('✅ Ticket updated successfully!');
+        
+        // Update original ticket state
+        setOriginalTicket({...selectedTicket});
+        setSaveStatus('saved');
+        showNotification('Ticket updated successfully!', 'success');
+        
+        // Reset to idle after showing success
+        setTimeout(() => setSaveStatus('idle'), 2000);
       } else {
         const error = await response.json();
-        alert(`❌ Failed to update ticket: ${error.message || 'Unknown error'}`);
+        setSaveStatus('idle');
+        showNotification(`Failed to update ticket: ${error.message || 'Unknown error'}`, 'error');
       }
     } catch (error) {
       console.error('Error saving ticket:', error);
-      alert('❌ Error saving ticket changes');
+      setSaveStatus('idle');
+      showNotification('Error saving ticket changes', 'error');
     }
   };
 
@@ -594,7 +626,7 @@ export default function TicketsPage() {
               <Card 
                 key={ticket.id} 
                 className="cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => setSelectedTicket(ticket)}
+                onClick={() => openTicketModal(ticket)}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
@@ -634,7 +666,7 @@ export default function TicketsPage() {
                         size="sm"
                         variant="outline"
                         className="bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
-                        onClick={() => setSelectedTicket(ticket)}
+                        onClick={() => openTicketModal(ticket)}
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         View
@@ -671,9 +703,62 @@ export default function TicketsPage() {
             <div className="flex justify-between items-start mb-4">
               <h2 className="text-xl font-bold">{selectedTicket.issue_title}</h2>
               <div className="flex gap-2">
-                <Button onClick={saveTicketChanges} className="bg-blue-600 hover:bg-blue-700 text-white">
-                  💾 Save Changes
-                </Button>
+                <AnimatePresence mode="wait">
+                  {hasChanges() && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Button 
+                        onClick={saveTicketChanges} 
+                        disabled={saveStatus === 'saving'}
+                        className={`transition-all duration-300 ${
+                          saveStatus === 'saved' 
+                            ? 'bg-green-600 hover:bg-green-700' 
+                            : saveStatus === 'saving'
+                            ? 'bg-blue-500 cursor-not-allowed'
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        } text-white`}
+                      >
+                        <motion.div 
+                          className="flex items-center gap-2"
+                          initial={false}
+                          animate={{ 
+                            scale: saveStatus === 'saving' ? [1, 1.05, 1] : 1,
+                          }}
+                          transition={{ 
+                            repeat: saveStatus === 'saving' ? Infinity : 0,
+                            duration: 0.6 
+                          }}
+                        >
+                          {saveStatus === 'saved' ? (
+                            <>
+                              <Check className="h-4 w-4" />
+                              Saved!
+                            </>
+                          ) : saveStatus === 'saving' ? (
+                            <>
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </motion.div>
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="h-4 w-4" />
+                              Save Changes
+                            </>
+                          )}
+                        </motion.div>
+                      </Button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 <Button variant="outline" onClick={() => setSelectedTicket(null)}>
                   ✕ Close
                 </Button>
@@ -721,61 +806,57 @@ export default function TicketsPage() {
             
             {/* Organizational Information Section */}
             <div className="mt-6">
-              <h3 className="font-semibold text-blue-600 mb-4 flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Organizational Information
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-blue-600 flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Organizational Information
+                </h3>
+                <Button size="sm" variant="outline" onClick={openOrgBrowser} className="flex items-center gap-2">
+                  <Search className="h-4 w-4" />
+                  Browse Organizational Paths
+                </Button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Office:</label>
-                      <div className="flex gap-2">
-                        <FormControl size="small" className="flex-1">
-                          <InputLabel id="office-select-label">Select Office</InputLabel>
-                          <Select
-                            labelId="office-select-label"
-                            id="office-select"
-                            value={selectedTicket.office || ''}
-                            label="Select Office"
-                            onChange={(e) => updateTicketField('office', e.target.value)}
-                          >
-                            {organizationalData.offices.map((office, index) => (
-                              <MenuItem key={`office-${index}`} value={office}>
-                                {office}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                        <Button size="sm" variant="outline" onClick={() => openOrgBrowser('offices')}>
-                          <Search className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <FormControl size="small" className="w-full">
+                        <InputLabel id="office-select-label">Select Office</InputLabel>
+                        <Select
+                          labelId="office-select-label"
+                          id="office-select"
+                          value={selectedTicket.office || ''}
+                          label="Select Office"
+                          onChange={(e) => updateTicketField('office', e.target.value)}
+                        >
+                          {organizationalData.offices.map((office, index) => (
+                            <MenuItem key={`office-${index}`} value={office}>
+                              {office}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Bureau:</label>
-                      <div className="flex gap-2">
-                        <FormControl size="small" className="flex-1">
-                          <InputLabel id="bureau-select-label">Select Bureau</InputLabel>
-                          <Select
-                            labelId="bureau-select-label"
-                            id="bureau-select"
-                            value={selectedTicket.bureau || ''}
-                            label="Select Bureau"
-                            onChange={(e) => updateTicketField('bureau', e.target.value)}
-                          >
-                            {organizationalData.bureaus.map((bureau, index) => (
-                              <MenuItem key={`bureau-${index}`} value={bureau}>
-                                {bureau}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                        <Button size="sm" variant="outline" onClick={() => openOrgBrowser('bureaus')}>
-                          <Search className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <FormControl size="small" className="w-full">
+                        <InputLabel id="bureau-select-label">Select Bureau</InputLabel>
+                        <Select
+                          labelId="bureau-select-label"
+                          id="bureau-select"
+                          value={selectedTicket.bureau || ''}
+                          label="Select Bureau"
+                          onChange={(e) => updateTicketField('bureau', e.target.value)}
+                        >
+                          {organizationalData.bureaus.map((bureau, index) => (
+                            <MenuItem key={`bureau-${index}`} value={bureau}>
+                              {bureau}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
                     </div>
                   </div>
                 </div>
@@ -784,52 +865,42 @@ export default function TicketsPage() {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Division:</label>
-                      <div className="flex gap-2">
-                        <FormControl size="small" className="flex-1">
-                          <InputLabel id="division-select-label">Select Division</InputLabel>
-                          <Select
-                            labelId="division-select-label"
-                            id="division-select"
-                            value={selectedTicket.division || ''}
-                            label="Select Division"
-                            onChange={(e) => updateTicketField('division', e.target.value)}
-                          >
-                            {organizationalData.divisions.map((division, index) => (
-                              <MenuItem key={`division-${index}`} value={division}>
-                                {division}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                        <Button size="sm" variant="outline" onClick={() => openOrgBrowser('divisions')}>
-                          <Search className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <FormControl size="small" className="w-full">
+                        <InputLabel id="division-select-label">Select Division</InputLabel>
+                        <Select
+                          labelId="division-select-label"
+                          id="division-select"
+                          value={selectedTicket.division || ''}
+                          label="Select Division"
+                          onChange={(e) => updateTicketField('division', e.target.value)}
+                        >
+                          {organizationalData.divisions.map((division, index) => (
+                            <MenuItem key={`division-${index}`} value={division}>
+                              {division}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Section:</label>
-                      <div className="flex gap-2">
-                        <FormControl size="small" className="flex-1">
-                          <InputLabel id="section-select-label">Select Section</InputLabel>
-                          <Select
-                            labelId="section-select-label"
-                            id="section-select"
-                            value={selectedTicket.section || ''}
-                            label="Select Section"
-                            onChange={(e) => updateTicketField('section', e.target.value)}
-                          >
-                            {organizationalData.sections.map((section, index) => (
-                              <MenuItem key={`section-${index}`} value={section}>
-                                {section}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                        <Button size="sm" variant="outline" onClick={() => openOrgBrowser('sections')}>
-                          <Search className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <FormControl size="small" className="w-full">
+                        <InputLabel id="section-select-label">Select Section</InputLabel>
+                        <Select
+                          labelId="section-select-label"
+                          id="section-select"
+                          value={selectedTicket.section || ''}
+                          label="Select Section"
+                          onChange={(e) => updateTicketField('section', e.target.value)}
+                        >
+                          {organizationalData.sections.map((section, index) => (
+                            <MenuItem key={`section-${index}`} value={section}>
+                              {section}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
                     </div>
                   </div>
                 </div>
@@ -838,62 +909,58 @@ export default function TicketsPage() {
 
             {/* Category Information Section */}
             <div className="mt-6">
-              <h3 className="font-semibold text-blue-600 mb-4 flex items-center gap-2">
-                <Tag className="h-5 w-5" />
-                Category Information
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-blue-600 flex items-center gap-2">
+                  <Tag className="h-5 w-5" />
+                  Category Information
+                </h3>
+                <Button size="sm" variant="outline" onClick={openCategoryBrowser} className="flex items-center gap-2">
+                  <FolderOpen className="h-4 w-4" />
+                  Browse Category Paths
+                </Button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Category:</label>
-                      <div className="flex gap-2">
-                        <FormControl size="small" className="flex-1">
-                          <InputLabel id="category-select-label">Select Category</InputLabel>
-                          <Select
-                            labelId="category-select-label"
-                            id="category-select"
-                            value={selectedTicket.category || ''}
-                            label="Select Category"
-                            onChange={(e) => updateTicketField('category', e.target.value)}
-                          >
-                            {Object.entries(categories).map(([key, value]) => (
-                              <MenuItem key={key} value={key}>
-                                {value}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                        <Button size="sm" variant="outline" onClick={() => openCategoryBrowser('categories')}>
-                          <FolderOpen className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <FormControl size="small" className="w-full">
+                        <InputLabel id="category-select-label">Select Category</InputLabel>
+                        <Select
+                          labelId="category-select-label"
+                          id="category-select"
+                          value={selectedTicket.category || ''}
+                          label="Select Category"
+                          onChange={(e) => updateTicketField('category', e.target.value)}
+                        >
+                          {Object.entries(categories).map(([key, value]) => (
+                            <MenuItem key={key} value={key}>
+                              {value}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Request Type:</label>
-                      <div className="flex gap-2">
-                        <FormControl size="small" className="flex-1" disabled={!selectedTicket.category}>
-                          <InputLabel id="request-type-select-label">Select Request Type</InputLabel>
-                          <Select
-                            labelId="request-type-select-label"
-                            id="request-type-select"
-                            value={selectedTicket.request_type || ''}
-                            label="Select Request Type"
-                            onChange={(e) => updateTicketField('request_type', e.target.value)}
-                            disabled={!selectedTicket.category}
-                          >
-                            {selectedTicket.category && requestTypes[selectedTicket.category as keyof typeof requestTypes]?.map((type: any) => (
-                              <MenuItem key={type.value} value={type.value}>
-                                {type.text}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                        <Button size="sm" variant="outline" onClick={() => openCategoryBrowser('requestTypes')} disabled={!selectedTicket.category}>
-                          <FolderOpen className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <FormControl size="small" className="w-full" disabled={!selectedTicket.category}>
+                        <InputLabel id="request-type-select-label">Select Request Type</InputLabel>
+                        <Select
+                          labelId="request-type-select-label"
+                          id="request-type-select"
+                          value={selectedTicket.request_type || ''}
+                          label="Select Request Type"
+                          onChange={(e) => updateTicketField('request_type', e.target.value)}
+                          disabled={!selectedTicket.category}
+                        >
+                          {selectedTicket.category && requestTypes[selectedTicket.category as keyof typeof requestTypes]?.map((type: any) => (
+                            <MenuItem key={type.value} value={type.value}>
+                              {type.text}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
                     </div>
                   </div>
                 </div>
@@ -902,53 +969,43 @@ export default function TicketsPage() {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory:</label>
-                      <div className="flex gap-2">
-                        <FormControl size="small" className="flex-1" disabled={!selectedTicket.request_type}>
-                          <InputLabel id="subcategory-select-label">Select Subcategory</InputLabel>
-                          <Select
-                            labelId="subcategory-select-label"
-                            id="subcategory-select"
-                            value={selectedTicket.subcategory || ''}
-                            label="Select Subcategory"
-                            onChange={(e) => updateTicketField('subcategory', e.target.value)}
-                            disabled={!selectedTicket.request_type}
-                          >
-                            {selectedTicket.category && selectedTicket.request_type && 
-                             subcategories[selectedTicket.category as keyof typeof subcategories]?.[selectedTicket.request_type as string]?.map((subcat: any) => (
-                              <MenuItem key={subcat.value} value={subcat.value}>
-                                {subcat.text}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                        <Button size="sm" variant="outline" onClick={() => openCategoryBrowser('subcategories')} disabled={!selectedTicket.request_type}>
-                          <FolderOpen className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <FormControl size="small" className="w-full" disabled={!selectedTicket.request_type}>
+                        <InputLabel id="subcategory-select-label">Select Subcategory</InputLabel>
+                        <Select
+                          labelId="subcategory-select-label"
+                          id="subcategory-select"
+                          value={selectedTicket.subcategory || ''}
+                          label="Select Subcategory"
+                          onChange={(e) => updateTicketField('subcategory', e.target.value)}
+                          disabled={!selectedTicket.request_type}
+                        >
+                          {selectedTicket.category && selectedTicket.request_type && 
+                           subcategories[selectedTicket.category as keyof typeof subcategories]?.[selectedTicket.request_type as string]?.map((subcat: any) => (
+                            <MenuItem key={subcat.value} value={subcat.value}>
+                              {subcat.text}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Implementation:</label>
-                      <div className="flex gap-2">
-                        <FormControl size="small" className="flex-1">
-                          <InputLabel id="implementation-select-label">Select Implementation</InputLabel>
-                          <Select
-                            labelId="implementation-select-label"
-                            id="implementation-select"
-                            value={selectedTicket.implementation || ''}
-                            label="Select Implementation"
-                            onChange={(e) => updateTicketField('implementation', e.target.value)}
-                          >
-                            <MenuItem value="immediate">Immediate</MenuItem>
-                            <MenuItem value="scheduled">Scheduled</MenuItem>
-                            <MenuItem value="planned">Planned</MenuItem>
-                            <MenuItem value="future">Future</MenuItem>
-                          </Select>
-                        </FormControl>
-                        <Button size="sm" variant="outline" onClick={() => openCategoryBrowser('implementation')}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <FormControl size="small" className="w-full">
+                        <InputLabel id="implementation-select-label">Select Implementation</InputLabel>
+                        <Select
+                          labelId="implementation-select-label"
+                          id="implementation-select"
+                          value={selectedTicket.implementation || ''}
+                          label="Select Implementation"
+                          onChange={(e) => updateTicketField('implementation', e.target.value)}
+                        >
+                          <MenuItem value="immediate">Immediate</MenuItem>
+                          <MenuItem value="scheduled">Scheduled</MenuItem>
+                          <MenuItem value="planned">Planned</MenuItem>
+                          <MenuItem value="future">Future</MenuItem>
+                        </Select>
+                      </FormControl>
                     </div>
                   </div>
                 </div>
@@ -964,6 +1021,39 @@ export default function TicketsPage() {
           </div>
         </div>
       )}
+
+      {/* Notification */}
+      {notification && (
+        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+          notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+        }`}>
+          <div className="flex items-center space-x-2">
+            {notification.type === 'success' ? '✅' : '❌'}
+            <span>{notification.message}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Browser Modals */}
+      <OrganizationalBrowserModal
+        isOpen={showOrgBrowser}
+        onClose={() => setShowOrgBrowser(false)}
+        onSelect={handleOrgPathSelection}
+        organizationalData={organizationalData}
+      />
+
+      <CategoryBrowserModal
+        isOpen={showCategoryBrowser}
+        onClose={() => setShowCategoryBrowser(false)}
+        onSelect={handleCategoryPathSelection}
+        categoriesData={{
+          categories,
+          requestTypes,
+          subcategories,
+          subSubcategories: {}, // Add if available
+          implementationTypes: {} // Add if available
+        }}
+      />
     </div>
   );
 }
