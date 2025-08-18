@@ -113,7 +113,7 @@ export default function TicketsPage() {
     }
   }, []);
 
-  // Load tickets
+  // Load tickets with filtering logic
   const loadTickets = async () => {
     if (!currentUser) return;
 
@@ -122,9 +122,10 @@ export default function TicketsPage() {
       const token = localStorage.getItem('authToken');
       const params = new URLSearchParams({
         status: activeTab === 'all' ? '' : activeTab,
-        limit: '50',
-        sort: 'submitted_at',
-        order: 'DESC'
+        queue: filters.queue,
+        priority: filters.priority === 'all' ? '' : filters.priority,
+        sort: filters.sort,
+        limit: '50'
       });
 
       const response = await fetch(`/api/tickets?${params}`, {
@@ -136,12 +137,49 @@ export default function TicketsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setTickets(data.tickets || []);
+        let filteredTickets = data.tickets || [];
         
-        // Calculate stats
+        // Apply client-side filtering for queue logic
+        if (filters.queue === 'my_tickets') {
+          filteredTickets = filteredTickets.filter((ticket: Ticket) => 
+            ticket.assigned_to === currentUser.username
+          );
+        } else if (filters.queue === 'team_tickets') {
+          // Show tickets assigned to user's team or unassigned tickets for the team
+          filteredTickets = filteredTickets.filter((ticket: Ticket) => 
+            ticket.assigned_team === currentUser.team_id || 
+            (!ticket.assigned_to && !ticket.assigned_team)
+          );
+        }
+        // 'all_tickets' shows everything (no additional filtering)
+        
+        // Apply client-side sorting
+        filteredTickets.sort((a: Ticket, b: Ticket) => {
+          switch (filters.sort) {
+            case 'newest_first':
+              return new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime();
+            case 'oldest_first':
+              return new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime();
+            case 'priority_high':
+              const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+              return (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - 
+                     (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+            case 'priority_low':
+              const priorityOrderLow = { urgent: 4, high: 3, medium: 2, low: 1 };
+              return (priorityOrderLow[a.priority as keyof typeof priorityOrderLow] || 0) - 
+                     (priorityOrderLow[b.priority as keyof typeof priorityOrderLow] || 0);
+            default:
+              return new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime();
+          }
+        });
+        
+        setTickets(filteredTickets);
+        
+        // Calculate stats from all tickets (not filtered)
+        const allTickets = data.tickets || [];
         const stats = data.status_counts || {};
         const today = new Date().toDateString();
-        const todayCount = (data.tickets || []).filter((ticket: Ticket) => 
+        const todayCount = allTickets.filter((ticket: Ticket) => 
           new Date(ticket.submitted_at).toDateString() === today
         ).length;
 
@@ -169,7 +207,7 @@ export default function TicketsPage() {
     if (currentUser) {
       loadTickets();
     }
-  }, [currentUser, activeTab]);
+  }, [currentUser, activeTab, filters]);
 
   // Handle ticket actions
   const handleTicketAction = async (ticketId: string, action: string, data?: any) => {
@@ -215,7 +253,7 @@ export default function TicketsPage() {
       case 'assigned': return 'bg-purple-100 text-purple-800';
       case 'in_progress': return 'bg-indigo-100 text-indigo-800';
       case 'completed': return 'bg-green-100 text-green-800';
-      case 'escalated': return 'bg-red-100 text-red-800';
+      case 'escalated': return 'bg-purple-100 text-purple-800';
       case 'deleted': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -380,6 +418,16 @@ export default function TicketsPage() {
     setSelectedTicket(prev => prev ? { ...prev, priority: nextPriority } : null);
   };
 
+  // Format status for display (consistent with queue view)
+  const formatStatus = (status: string) => {
+    return status.replace('_', ' ').toUpperCase();
+  };
+
+  // Format priority for display (consistent with queue view)
+  const formatPriority = (priority: string) => {
+    return priority.toUpperCase();
+  };
+
   if (!currentUser) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -519,7 +567,7 @@ export default function TicketsPage() {
               </TabsTrigger>
               <TabsTrigger 
                 value="escalated" 
-                className="data-[state=active]:bg-red-500 data-[state=active]:text-white rounded-t-lg"
+                className="data-[state=active]:bg-purple-500 data-[state=active]:text-white rounded-t-lg"
               >
                 Escalated ({queueStats.escalated})
               </TabsTrigger>
@@ -585,27 +633,17 @@ export default function TicketsPage() {
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
+                    {/* View Button */}
                     <div className="flex space-x-2 ml-4" onClick={(e) => e.stopPropagation()}>
-                      {ticket.status === 'pending' || ticket.status === 'assigned' ? (
-                        <>
-                          <Button
-                            size="sm"
-                            className="bg-green-500 hover:bg-green-600 text-white"
-                            onClick={() => handleTicketAction(ticket.id, 'complete', { completion_notes: 'Completed via queue' })}
-                          >
-                            ✓ Complete
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="bg-purple-500 hover:bg-purple-600 text-white"
-                            onClick={() => handleTicketAction(ticket.id, 'escalate', { escalation_reason: 'Escalated from queue' })}
-                          >
-                            <ArrowUp className="h-4 w-4 mr-1" />
-                            Escalate
-                          </Button>
-                        </>
-                      ) : null}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
+                        onClick={() => setSelectedTicket(ticket)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
                       
                       {currentUser?.role === 'admin' && (
                         <Button
@@ -657,7 +695,7 @@ export default function TicketsPage() {
                       onClick={() => cycleStatus()}
                       title="Click to cycle status"
                     >
-                      {selectedTicket.status}
+                      {formatStatus(selectedTicket.status)}
                     </Badge>
                   </div>
                   <div><strong>Priority:</strong> 
@@ -666,7 +704,7 @@ export default function TicketsPage() {
                       onClick={() => cyclePriority()}
                       title="Click to cycle priority"
                     >
-                      {selectedTicket.priority}
+                      {formatPriority(selectedTicket.priority)}
                     </Badge>
                   </div>
                   <div><strong>Submitted:</strong> {formatDate(selectedTicket.submitted_at)}</div>

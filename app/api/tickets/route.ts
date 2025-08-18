@@ -26,9 +26,9 @@ export async function GET(request: NextRequest) {
 
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status') || '';
+        const queue = searchParams.get('queue') || 'team_tickets';
+        const priority = searchParams.get('priority') || '';
         const limit = parseInt(searchParams.get('limit') || '50');
-        const sort = searchParams.get('sort') || 'submitted_at';
-        const order = searchParams.get('order') || 'DESC';
 
         let whereClause = 'WHERE 1=1';
         const params: any[] = [];
@@ -39,29 +39,62 @@ export async function GET(request: NextRequest) {
             params.push(status);
         }
 
-        // Basic role-based filtering (can be enhanced)
-        if (user.role !== 'admin') {
-            whereClause += ' AND (assigned_to = ? OR assigned_team = ?)';
-            params.push(user.username, user.team_id);
+        // Filter by priority if specified
+        if (priority && priority !== 'all') {
+            whereClause += ' AND priority = ?';
+            params.push(priority);
         }
+
+        // Queue filtering logic
+        if (user.role !== 'admin') {
+            if (queue === 'my_tickets') {
+                whereClause += ' AND assigned_to = ?';
+                params.push(user.username);
+            } else if (queue === 'team_tickets') {
+                whereClause += ' AND (assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL))';
+                params.push(user.team_id);
+            }
+            // For 'all_tickets', add basic team filtering for non-admin users
+            else if (queue === 'all_tickets') {
+                whereClause += ' AND (assigned_to = ? OR assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL))';
+                params.push(user.username, user.team_id);
+            }
+        }
+        // Admin users see everything regardless of queue setting
 
         const sql = `
             SELECT * FROM user_tickets 
             ${whereClause}
-            ORDER BY ${sort} ${order}
+            ORDER BY submitted_at DESC
             LIMIT ?
         `;
         params.push(limit);
 
         const tickets = await queryAsync(sql, params);
 
-        // Get status counts
+        // Get status counts - use same filtering logic as main query
+        let countWhereClause = 'WHERE 1=1';
+        const countParams: any[] = [];
+        
+        if (user.role !== 'admin') {
+            if (queue === 'my_tickets') {
+                countWhereClause += ' AND assigned_to = ?';
+                countParams.push(user.username);
+            } else if (queue === 'team_tickets') {
+                countWhereClause += ' AND (assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL))';
+                countParams.push(user.team_id);
+            } else if (queue === 'all_tickets') {
+                countWhereClause += ' AND (assigned_to = ? OR assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL))';
+                countParams.push(user.username, user.team_id);
+            }
+        }
+        
         const statusCounts = await queryAsync(`
             SELECT status, COUNT(*) as count 
             FROM user_tickets 
-            ${user.role === 'admin' ? '' : 'WHERE (assigned_to = ? OR assigned_team = ?)'}
+            ${countWhereClause}
             GROUP BY status
-        `, user.role === 'admin' ? [] : [user.username, user.team_id]);
+        `, countParams);
 
         const counts: any = {};
         statusCounts.forEach((row: any) => {
