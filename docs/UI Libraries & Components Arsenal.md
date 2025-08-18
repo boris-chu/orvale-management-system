@@ -207,9 +207,9 @@ import { Save, Check, RefreshCw, Building2, Search } from 'lucide-react';
 **Status**: 🟡 **Available but Not Implemented**
 
 #### Features
-- **3,400+ Icons**: Comprehensive icon set
-- **Multiple Formats**: SVG, React, Vue, Svelte components
-- **Consistent Design**: 24x24 grid, 1.5px stroke
+- **3,400+ Icons**: Comprehensive SVG icon set
+- **Multiple Formats**: ✅ **SVG preferred**, React, Vue, Svelte components
+- **Consistent Design**: 24x24 grid, 1.5px stroke, optimized SVGs
 - **Framework Support**: React, Vue, Svelte, Angular
 - **Categories**: Interface, Communication, System, Media
 
@@ -222,14 +222,14 @@ import { IconUser, IconTicket, IconBuilding } from '@tabler/icons-react';
 
 ### 7. **Free Icons Collection** (Available Library)
 **Location**: `/project-ticket-development/icon library/free-icons/`  
-**Purpose**: 23,000+ free icons collection  
+**Purpose**: 23,000+ free SVG icons collection  
 **Status**: 🟡 **Available but Not Implemented**
 
 #### Features
-- **23,000+ Icons**: Massive icon collection
+- **23,000+ Icons**: Massive SVG icon collection
 - **Multiple Styles**: Solid, regular, light, thin, sharp variations
-- **Brand Icons**: Social media, company logos
-- **SVG Format**: Scalable vector graphics
+- **Brand Icons**: Social media, company logos in SVG format
+- **SVG Format**: ✅ **Preferred scalable vector graphics**
 - **Categories**: Brands, interface, content, system
 
 #### Available Icon Styles
@@ -292,11 +292,11 @@ import { IconUser, IconTicket, IconBuilding } from '@tabler/icons-react';
 ### Icons & Visual Elements
 | Need | Recommended Library | Component | Reason |
 |------|-------------------|-----------|--------|
-| **Interface Icons** | Lucide React | Standard icons | **Already implemented** |
-| **System Icons** | Lucide React | System/action icons | Consistent with project |
-| **Brand Icons** | Free Icons | Brand SVGs | 23,000+ icon collection |
-| **Specialized Icons** | Tabler Icons | Technical icons | 3,400+ consistent set |
-| **Loading Icons** | Lucide React | `RefreshCw` with `animate-spin` | Built-in animation |
+| **Interface Icons** | Lucide React | Standard icons | **Already implemented, SVG format** |
+| **System Icons** | Lucide React | System/action icons | Consistent with project, SVG format |
+| **Brand Icons** | Free Icons | Brand SVGs | 23,000+ SVG icon collection |
+| **Specialized Icons** | Tabler Icons | Technical icons | 3,400+ SVG consistent set |
+| **Loading Icons** | Lucide React | `RefreshCw` with `animate-spin` | Built-in SVG animation |
 
 ---
 
@@ -431,18 +431,20 @@ const statusIcons = {
 5. **Lucide React for all icons** (primary icon library)
 
 ### Icon Usage Guidelines
-1. **Consistent sizing**: Use `h-4 w-4` for standard buttons, `h-3 w-3` for badges
-2. **Proper spacing**: Use `mr-2` for button icons, `mr-1` for badge icons
-3. **Semantic meaning**: Choose icons that clearly represent their function
-4. **Loading states**: Use `RefreshCw` with `animate-spin` for loading
-5. **Status colors**: Match icon colors to semantic meaning (green=success, red=error)
-6. **Accessibility**: Ensure icons are supplemental to text, not replacements
+1. **Format preference**: Use SVG format when available for scalability and performance
+2. **Consistent sizing**: Use `h-4 w-4` for standard buttons, `h-3 w-3` for badges
+3. **Proper spacing**: Use `mr-2` for button icons, `mr-1` for badge icons
+4. **Semantic meaning**: Choose icons that clearly represent their function
+5. **Loading states**: Use `RefreshCw` with `animate-spin` for loading
+6. **Status colors**: Match icon colors to semantic meaning (green=success, red=error)
+7. **Accessibility**: Ensure icons are supplemental to text, not replacements
 
 ### Performance Considerations
-1. **Lazy load** chart components
-2. **Use React.memo** for expensive components
-3. **Dynamic imports** for non-critical components
-4. **Optimize bundle size** by importing only needed components
+1. **Prefer SVG icons** for scalability and crisp rendering at all sizes
+2. **Lazy load** chart components
+3. **Use React.memo** for expensive components
+4. **Dynamic imports** for non-critical components
+5. **Optimize bundle size** by importing only needed components
 
 ### Accessibility
 1. **Use semantic HTML** elements
