@@ -22,7 +22,8 @@ import {
   Shield,
   CheckCircle,
   XCircle,
-  RefreshCw
+  RefreshCw,
+  Key
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
@@ -66,9 +67,11 @@ export default function UserManagement() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState<{message: string; type: 'success' | 'error'} | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [resetPassword, setResetPassword] = useState('');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -283,6 +286,61 @@ export default function UserManagement() {
     }
   };
 
+  const openPasswordResetModal = (user: User) => {
+    setSelectedUser(user);
+    setResetPassword('');
+    setShowPasswordResetModal(true);
+  };
+
+  const handlePasswordReset = async () => {
+    if (!selectedUser || !currentUser?.permissions?.includes('admin.manage_users')) {
+      showNotification('Insufficient permissions to reset passwords', 'error');
+      return;
+    }
+
+    if (!resetPassword) {
+      showNotification('Please enter a new password', 'error');
+      return;
+    }
+
+    if (resetPassword.length < 6) {
+      showNotification('Password must be at least 6 characters long', 'error');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/developer/users/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          newPassword: resetPassword
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        showNotification(result.message, 'success');
+        setShowPasswordResetModal(false);
+        setSelectedUser(null);
+        setResetPassword('');
+      } else {
+        const error = await response.json();
+        showNotification(error.error || 'Failed to reset password', 'error');
+      }
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      showNotification('Error resetting password', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const openEditModal = (user: User) => {
     setSelectedUser(user);
     setFormData({
@@ -492,6 +550,14 @@ export default function UserManagement() {
                               onClick={() => openEditModal(user)}
                             >
                               <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openPasswordResetModal(user)}
+                              className="text-orange-600 hover:text-orange-700"
+                            >
+                              <Key className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"
@@ -767,6 +833,78 @@ export default function UserManagement() {
                   </>
                 ) : (
                   'Update User'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Reset Modal */}
+      <Dialog open={showPasswordResetModal} onOpenChange={setShowPasswordResetModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Key className="h-5 w-5" />
+              <span>Reset Password</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-start space-x-2">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-yellow-800">Password Reset</p>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    You are about to reset the password for <strong>{selectedUser?.display_name}</strong> (@{selectedUser?.username}).
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="new_password">New Password</Label>
+              <Input
+                id="new_password"
+                type="password"
+                value={resetPassword}
+                onChange={(e) => setResetPassword(e.target.value)}
+                placeholder="Enter new password (min 6 characters)"
+                className="mt-1"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Password must be at least 6 characters long
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowPasswordResetModal(false);
+                  setSelectedUser(null);
+                  setResetPassword('');
+                }}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handlePasswordReset}
+                disabled={saving || !resetPassword}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                {saving ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Resetting...
+                  </>
+                ) : (
+                  <>
+                    <Key className="h-4 w-4 mr-2" />
+                    Reset Password
+                  </>
                 )}
               </Button>
             </div>
