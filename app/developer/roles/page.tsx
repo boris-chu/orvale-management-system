@@ -1,0 +1,900 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { 
+  Shield, 
+  ShieldCheck,
+  ShieldPlus,
+  Edit, 
+  Trash2, 
+  Search, 
+  ArrowLeft,
+  Lock,
+  Unlock,
+  Users,
+  FileText,
+  Settings,
+  BarChart3,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  Key,
+  HelpCircle
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+interface Permission {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+}
+
+interface Role {
+  id: string;
+  name: string;
+  description: string;
+  permissions: string[];
+  is_system: boolean;
+  user_count?: number;
+}
+
+// Define all available permissions in the system
+const AVAILABLE_PERMISSIONS: Permission[] = [
+  // Ticket Permissions
+  { id: 'ticket.view_own', name: 'View Own Tickets', category: 'Tickets', description: 'Allows users to view tickets that are specifically assigned to them. This is a basic permission that most IT staff need to see their workload and progress on assigned issues.' },
+  { id: 'ticket.view_team', name: 'View Team Tickets', category: 'Tickets', description: 'Enables viewing of all tickets assigned to the user\'s team or section. Useful for team leads and managers who need visibility into their team\'s workload and priorities.' },
+  { id: 'ticket.view_all', name: 'View All Tickets', category: 'Tickets', description: 'Grants access to view all tickets in the entire system regardless of assignment. This is typically reserved for administrators and senior managers who need system-wide visibility.' },
+  { id: 'ticket.update_own', name: 'Update Own Tickets', category: 'Tickets', description: 'Allows users to modify and update the status, comments, and details of tickets assigned to them. Essential for IT staff to mark progress and resolution status.' },
+  { id: 'ticket.assign_within_team', name: 'Assign Within Team', category: 'Tickets', description: 'Permits assigning tickets to other members within the same team or section. Useful for team leads who need to distribute workload among team members.' },
+  { id: 'ticket.assign_any', name: 'Assign Any', category: 'Tickets', description: 'Allows assignment of tickets to any user in the system, across all teams and departments. This is typically restricted to administrators and managers with broad oversight.' },
+  { id: 'ticket.comment_own', name: 'Comment Own Tickets', category: 'Tickets', description: 'Enables adding comments and notes to tickets assigned to the user. Important for documenting progress, solutions attempted, and communication with requestors.' },
+  { id: 'ticket.escalate', name: 'Escalate Tickets', category: 'Tickets', description: 'Allows escalating tickets to higher-level support tiers or management when issues cannot be resolved at the current level. Critical for proper issue resolution workflow.' },
+  { id: 'ticket.delete', name: 'Delete Tickets', category: 'Tickets', description: 'Permits permanent deletion of tickets from the system. This is a destructive action typically reserved for administrators to handle spam, duplicates, or data cleanup.' },
+  
+  // Queue Permissions
+  { id: 'queue.view_own_team', name: 'View Own Team Queue', category: 'Queues', description: 'Allows viewing the ticket queue for the user\'s own team. Essential for team members to see pending work and prioritize their tasks effectively.' },
+  { id: 'queue.view_team', name: 'View Team Queues', category: 'Queues', description: 'Enables viewing ticket queues for all teams within the user\'s section or department. Useful for managers coordinating work across multiple teams.' },
+  { id: 'queue.view_all', name: 'View All Queues', category: 'Queues', description: 'Grants access to view all ticket queues across the entire organization. Typically used by administrators and senior management for system-wide oversight.' },
+  { id: 'queue.manage', name: 'Manage Queues', category: 'Queues', description: 'Allows creation, modification, and deletion of ticket queues. This includes setting queue rules, priorities, and routing configurations. Reserved for administrators.' },
+  
+  // User Permissions
+  { id: 'user.view_all', name: 'View All Users', category: 'Users', description: 'Permits viewing all user accounts in the system including their details, roles, and status. Necessary for administrators managing user accounts and assignments.' },
+  { id: 'user.create', name: 'Create Users', category: 'Users', description: 'Allows creation of new user accounts in the system. Includes setting initial passwords, roles, and team assignments. Typically restricted to HR and IT administrators.' },
+  { id: 'user.update', name: 'Update Users', category: 'Users', description: 'Enables modification of existing user account details such as contact information, team assignments, and roles. Important for maintaining accurate user records.' },
+  { id: 'user.deactivate', name: 'Deactivate Users', category: 'Users', description: 'Permits deactivating user accounts when employees leave or no longer need system access. A security-critical permission for maintaining proper access control.' },
+  
+  // Reporting Permissions
+  { id: 'reporting.view_team_metrics', name: 'View Team Metrics', category: 'Reporting', description: 'Allows access to performance metrics and analytics for the user\'s team including ticket resolution times, workload distribution, and efficiency statistics.' },
+  { id: 'reporting.view_all', name: 'View All Reports', category: 'Reporting', description: 'Grants access to all system reports and analytics across all teams and departments. Used by senior management and administrators for strategic planning.' },
+  
+  // System Permissions
+  { id: 'system.view_basic_info', name: 'View Basic Info', category: 'System', description: 'Allows viewing basic system information such as version numbers, uptime, and general health status. A minimal permission for general system awareness.' },
+  { id: 'system.manage_settings', name: 'Manage Settings', category: 'System', description: 'Permits modification of system-wide configuration settings including email templates, notification rules, and workflow configurations. Critical administrator permission.' },
+  
+  // Admin Permissions
+  { id: 'admin.manage_users', name: 'Manage Users', category: 'Administration', description: 'Full administrative access to user management including creation, modification, deletion, and role assignment. One of the most powerful permissions in the system.' },
+  { id: 'admin.view_users', name: 'View Users', category: 'Administration', description: 'Read-only access to the user management interface. Allows viewing user details and assignments without the ability to make changes.' },
+  { id: 'admin.manage_teams', name: 'Manage Teams', category: 'Administration', description: 'Allows creation and management of teams including setting team hierarchies, responsibilities, and member assignments. Essential for organizational structure management.' },
+  { id: 'admin.view_teams', name: 'View Teams', category: 'Administration', description: 'Read-only access to team information and structure. Useful for managers who need to understand organizational relationships without modification rights.' },
+  { id: 'admin.manage_organization', name: 'Manage Organization', category: 'Administration', description: 'Permits modification of the organizational structure including departments, sections, and reporting relationships. Critical for maintaining accurate organizational data.' },
+  { id: 'admin.view_organization', name: 'View Organization', category: 'Administration', description: 'Read-only access to organizational structure and hierarchy information. Helps users understand reporting relationships and departmental organization.' },
+  { id: 'admin.manage_categories', name: 'Manage Categories', category: 'Administration', description: 'Allows creation and modification of ticket categories, subcategories, and classification systems. Important for maintaining organized ticket routing and reporting.' },
+  { id: 'admin.view_categories', name: 'View Categories', category: 'Administration', description: 'Read-only access to the ticket categorization system. Helps users understand available categories without the ability to modify the classification structure.' },
+  { id: 'admin.view_analytics', name: 'View Analytics', category: 'Administration', description: 'Access to comprehensive system analytics including performance dashboards, trend analysis, and operational metrics. Used for strategic planning and optimization.' },
+  { id: 'admin.system_settings', name: 'System Settings', category: 'Administration', description: 'Access to advanced system configuration including security settings, integration parameters, and core system behaviors. The highest level of administrative access.' }
+];
+
+export default function RoleManagement() {
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [notification, setNotification] = useState<{message: string; type: 'success' | 'error'} | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState('all');
+
+  // Form state
+  const [formData, setFormData] = useState({
+    id: '',
+    name: '',
+    description: '',
+    permissions: [] as string[]
+  });
+
+  useEffect(() => {
+    checkPermissions();
+    loadRoles();
+  }, []);
+
+  const checkPermissions = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/auth/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const user = await response.json();
+        if (!user.permissions?.includes('admin.manage_users') && !user.permissions?.includes('admin.system_settings')) {
+          window.location.href = '/developer';
+          return;
+        }
+        setCurrentUser(user);
+      } else {
+        window.location.href = '/';
+      }
+    } catch (error) {
+      console.error('Permission check failed:', error);
+      window.location.href = '/';
+    }
+  };
+
+  const loadRoles = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/developer/roles', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const roleData = await response.json();
+        // Add system flag to built-in roles
+        const rolesWithFlags = roleData.map((role: any) => ({
+          ...role,
+          is_system: ['admin', 'manager', 'it_user'].includes(role.id),
+          user_count: Math.floor(Math.random() * 20) + 1 // Mock user count
+        }));
+        setRoles(rolesWithFlags);
+      } else {
+        showNotification('Failed to load roles', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to load roles:', error);
+      showNotification('Error loading roles', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const handleCreateRole = async () => {
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/developer/roles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id: formData.id || formData.name.toLowerCase().replace(/\s+/g, '_'),
+          name: formData.name,
+          description: formData.description,
+          permissions: formData.permissions
+        })
+      });
+
+      if (response.ok) {
+        showNotification('Role created successfully', 'success');
+        setShowCreateModal(false);
+        setFormData({
+          id: '',
+          name: '',
+          description: '',
+          permissions: []
+        });
+        loadRoles();
+      } else {
+        const error = await response.json();
+        showNotification(error.error || 'Failed to create role', 'error');
+      }
+    } catch (error) {
+      console.error('Error creating role:', error);
+      showNotification('Error creating role', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditRole = async () => {
+    if (!selectedRole) return;
+    
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      const response = await fetch('/api/developer/roles', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id: selectedRole.id,
+          name: formData.name,
+          description: formData.description,
+          permissions: formData.permissions
+        })
+      });
+
+      if (response.ok) {
+        showNotification('Role updated successfully', 'success');
+        setShowEditModal(false);
+        setSelectedRole(null);
+        loadRoles();
+      } else {
+        const error = await response.json();
+        showNotification(error.error || 'Failed to update role', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating role:', error);
+      showNotification('Error updating role', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteRole = async () => {
+    if (!selectedRole || selectedRole.is_system) {
+      showNotification('Cannot delete system roles', 'error');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      const response = await fetch(`/api/developer/roles?id=${selectedRole.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        showNotification('Role deleted successfully', 'success');
+        setShowDeleteModal(false);
+        setSelectedRole(null);
+        loadRoles();
+      } else {
+        const error = await response.json();
+        showNotification(error.error || 'Failed to delete role', 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting role:', error);
+      showNotification('Error deleting role', 'error');
+    } finally {
+      setSaving(false);
+      setShowDeleteModal(false);
+    }
+  };
+
+  const openEditModal = (role: Role) => {
+    setSelectedRole(role);
+    setFormData({
+      id: role.id,
+      name: role.name,
+      description: role.description,
+      permissions: [...role.permissions]
+    });
+    setShowEditModal(true);
+  };
+
+  const openDeleteModal = (role: Role) => {
+    setSelectedRole(role);
+    setShowDeleteModal(true);
+  };
+
+  const togglePermission = (permissionId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      permissions: prev.permissions.includes(permissionId)
+        ? prev.permissions.filter(p => p !== permissionId)
+        : [...prev.permissions, permissionId]
+    }));
+  };
+
+  const filteredRoles = roles.filter(role => {
+    const matchesSearch = role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         role.description.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesTab = activeTab === 'all' || 
+                      (activeTab === 'system' && role.is_system) ||
+                      (activeTab === 'custom' && !role.is_system);
+    
+    return matchesSearch && matchesTab;
+  });
+
+  const getCategoryIcon = (category: string) => {
+    switch(category) {
+      case 'Tickets': return FileText;
+      case 'Queues': return Users;
+      case 'Users': return Users;
+      case 'Reporting': return BarChart3;
+      case 'System': return Settings;
+      case 'Administration': return Shield;
+      default: return Key;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center"
+        >
+          <RefreshCw className="h-8 w-8 text-blue-600 mx-auto mb-4 animate-spin" />
+          <p className="text-gray-600">Loading roles...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <TooltipProvider>
+      <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center space-x-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => window.location.href = '/developer'}
+                className="flex items-center space-x-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Dashboard</span>
+              </Button>
+              
+              <div className="h-6 border-l border-gray-300"></div>
+              
+              <div className="flex items-center space-x-3">
+                <ShieldCheck className="h-6 w-6 text-red-600" />
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Role Management</h1>
+                  <p className="text-sm text-gray-500">{roles.length} roles configured</p>
+                </div>
+              </div>
+            </div>
+            
+            <Button 
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center space-x-2"
+            >
+              <ShieldPlus className="h-4 w-4" />
+              <span>Create Role</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Notification */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-4 right-4 z-50"
+          >
+            <Alert className={`${notification.type === 'success' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+              <AlertDescription className={notification.type === 'success' ? 'text-green-800' : 'text-red-800'}>
+                {notification.message}
+              </AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Search and Tabs */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+              <div className="relative">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Input
+                  placeholder="Search roles..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-64"
+                />
+              </div>
+              
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList>
+                  <TabsTrigger value="all">All Roles</TabsTrigger>
+                  <TabsTrigger value="system">System</TabsTrigger>
+                  <TabsTrigger value="custom">Custom</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Roles Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredRoles.map((role) => (
+            <motion.div
+              key={role.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow duration-200">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-2 rounded-lg ${role.is_system ? 'bg-blue-100' : 'bg-green-100'}`}>
+                        {role.is_system ? <Lock className="h-5 w-5 text-blue-600" /> : <Unlock className="h-5 w-5 text-green-600" />}
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">{role.name}</CardTitle>
+                        <Badge variant={role.is_system ? "secondary" : "default"} className="mt-1">
+                          {role.is_system ? 'System Role' : 'Custom Role'}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditModal(role)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      {!role.is_system && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openDeleteModal(role)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600 mb-4">{role.description}</p>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">Permissions:</span>
+                      <span className="font-medium">{role.permissions.length}</span>
+                    </div>
+                    
+                    {role.user_count !== undefined && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500">Users:</span>
+                        <span className="font-medium">{role.user_count}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="mt-4 pt-4 border-t">
+                    <p className="text-xs text-gray-500 mb-2">Key Permissions:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {role.permissions.slice(0, 3).map(perm => (
+                        <Badge key={perm} variant="outline" className="text-xs">
+                          {perm.split('.')[1]}
+                        </Badge>
+                      ))}
+                      {role.permissions.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{role.permissions.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+
+        {filteredRoles.length === 0 && (
+          <Card>
+            <CardContent className="text-center py-12">
+              <Shield className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+              <p className="text-gray-500">No roles found matching your criteria.</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Permissions Reference */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Key className="h-5 w-5" />
+                <span>Available Permissions</span>
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Hover over any permission to see detailed information</p>
+                </TooltipContent>
+              </Tooltip>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Object.entries(
+                AVAILABLE_PERMISSIONS.reduce((acc, perm) => {
+                  if (!acc[perm.category]) acc[perm.category] = [];
+                  acc[perm.category].push(perm);
+                  return acc;
+                }, {} as Record<string, Permission[]>)
+              ).map(([category, permissions]) => {
+                const Icon = getCategoryIcon(category);
+                return (
+                  <div key={category} className="space-y-2">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Icon className="h-4 w-4 text-gray-600" />
+                      <h4 className="font-medium text-gray-900">{category}</h4>
+                    </div>
+                    <div className="space-y-1">
+                      {permissions.map(perm => (
+                        <Tooltip key={perm.id}>
+                          <TooltipTrigger asChild>
+                            <div className="text-sm p-2 rounded hover:bg-gray-50 cursor-help transition-colors">
+                              <p className="font-medium text-gray-700">{perm.name}</p>
+                              <p className="text-xs text-gray-500">{perm.id}</p>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-xs">
+                            <div className="space-y-1">
+                              <p className="font-medium">{perm.name}</p>
+                              <p className="text-xs opacity-75">{perm.id}</p>
+                              <p className="text-sm">{perm.description}</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Create Role Modal */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <ShieldPlus className="h-5 w-5" />
+              <span>Create New Role</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="role_id">Role ID</Label>
+              <Input
+                id="role_id"
+                value={formData.id}
+                onChange={(e) => setFormData({...formData, id: e.target.value})}
+                placeholder="e.g., support_specialist (leave blank to auto-generate)"
+              />
+              <p className="text-xs text-gray-500 mt-1">Unique identifier for the role. If left blank, will be auto-generated from the role name.</p>
+            </div>
+            
+            <div>
+              <Label htmlFor="name">Role Name</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                placeholder="e.g., Support Specialist"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                placeholder="Describe the purpose and responsibilities of this role"
+                rows={3}
+              />
+            </div>
+            
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Permissions</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Hover over any permission for detailed information</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">Select the permissions this role should have</p>
+              
+              <div className="space-y-6">
+                {Object.entries(
+                  AVAILABLE_PERMISSIONS.reduce((acc, perm) => {
+                    if (!acc[perm.category]) acc[perm.category] = [];
+                    acc[perm.category].push(perm);
+                    return acc;
+                  }, {} as Record<string, Permission[]>)
+                ).map(([category, permissions]) => (
+                  <div key={category}>
+                    <h4 className="font-medium text-gray-900 mb-3">{category}</h4>
+                    <div className="space-y-2">
+                      {permissions.map(perm => (
+                        <Tooltip key={perm.id}>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-start space-x-3 p-2 rounded hover:bg-gray-50 transition-colors">
+                              <Checkbox
+                                id={perm.id}
+                                checked={formData.permissions.includes(perm.id)}
+                                onCheckedChange={() => togglePermission(perm.id)}
+                              />
+                              <div className="flex-1">
+                                <Label htmlFor={perm.id} className="font-normal cursor-pointer">
+                                  <span className="font-medium">{perm.name}</span>
+                                  <span className="text-xs text-gray-400 block">{perm.id}</span>
+                                </Label>
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-sm">
+                            <div className="space-y-1">
+                              <p className="font-medium">{perm.name}</p>
+                              <p className="text-xs opacity-75">{perm.id}</p>
+                              <p className="text-sm">{perm.description}</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowCreateModal(false)}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateRole}
+                disabled={saving || !formData.name || formData.permissions.length === 0}
+              >
+                {saving ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Role'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Role Modal - Similar to Create but with pre-filled data */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Edit className="h-5 w-5" />
+              <span>Edit Role</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {selectedRole?.is_system && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  This is a system role. You can only modify its permissions.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <div>
+              <Label htmlFor="edit_name">Role Name</Label>
+              <Input
+                id="edit_name"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                disabled={selectedRole?.is_system}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="edit_description">Description</Label>
+              <Textarea
+                id="edit_description"
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                disabled={selectedRole?.is_system}
+                rows={3}
+              />
+            </div>
+            
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Permissions</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Hover over any permission for detailed information</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">Select the permissions this role should have</p>
+              
+              <div className="space-y-6">
+                {Object.entries(
+                  AVAILABLE_PERMISSIONS.reduce((acc, perm) => {
+                    if (!acc[perm.category]) acc[perm.category] = [];
+                    acc[perm.category].push(perm);
+                    return acc;
+                  }, {} as Record<string, Permission[]>)
+                ).map(([category, permissions]) => (
+                  <div key={category}>
+                    <h4 className="font-medium text-gray-900 mb-3">{category}</h4>
+                    <div className="space-y-2">
+                      {permissions.map(perm => (
+                        <Tooltip key={perm.id}>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-start space-x-3 p-2 rounded hover:bg-gray-50 transition-colors">
+                              <Checkbox
+                                id={`edit_${perm.id}`}
+                                checked={formData.permissions.includes(perm.id)}
+                                onCheckedChange={() => togglePermission(perm.id)}
+                              />
+                              <div className="flex-1">
+                                <Label htmlFor={`edit_${perm.id}`} className="font-normal cursor-pointer">
+                                  <span className="font-medium">{perm.name}</span>
+                                  <span className="text-xs text-gray-400 block">{perm.id}</span>
+                                </Label>
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-sm">
+                            <div className="space-y-1">
+                              <p className="font-medium">{perm.name}</p>
+                              <p className="text-xs opacity-75">{perm.id}</p>
+                              <p className="text-sm">{perm.description}</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowEditModal(false)}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleEditRole}
+                disabled={saving}
+              >
+                {saving ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Role'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              <span>Delete Role</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p>Are you sure you want to delete the role "{selectedRole?.name}"?</p>
+            
+            {selectedRole?.user_count && selectedRole.user_count > 0 && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  This role is currently assigned to {selectedRole.user_count} user(s). 
+                  You will need to reassign these users to a different role.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <p className="text-sm text-gray-500">This action cannot be undone.</p>
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDeleteModal(false)}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={handleDeleteRole}
+                disabled={saving}
+              >
+                {saving ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Role'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      </div>
+    </TooltipProvider>
+  );
+}

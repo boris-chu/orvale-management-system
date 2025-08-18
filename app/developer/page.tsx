@@ -190,6 +190,16 @@ export default function DeveloperDashboard() {
         color: 'bg-gray-500',
         stats: 'Configuration management',
         requiredPermissions: ['admin.system_settings']
+      },
+      {
+        id: 'rbac',
+        title: 'Role Management',
+        description: 'Manage roles and permissions',
+        icon: ShieldCheck,
+        href: '/developer/roles',
+        color: 'bg-red-500',
+        stats: '3 system roles',
+        requiredPermissions: ['admin.manage_users', 'admin.system_settings']
       }
     ];
 

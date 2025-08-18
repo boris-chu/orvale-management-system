@@ -72,60 +72,73 @@ export const verifyToken = (token: string): any => {
     }
 };
 
-export const getUserPermissions = (user: User): string[] => {
-    const permissions: string[] = [];
-    
-    // Base permissions for all IT users
-    if (user.role === 'it_user' || user.role === 'manager' || user.role === 'admin') {
-        permissions.push(
-            'ticket.view_own',
-            'ticket.update_own', 
-            'ticket.comment_own',
-            'queue.view_own_team',
-            'system.view_basic_info'
+export const getUserPermissions = async (user: User): Promise<string[]> => {
+    try {
+        // Get permissions from the database
+        const permissions = await queryAsync(
+            `SELECT permission_id FROM role_permissions WHERE role_id = ?`,
+            [user.role]
         );
+        
+        return permissions.map((p: any) => p.permission_id);
+    } catch (error) {
+        console.error('Error fetching user permissions:', error);
+        
+        // Fallback to hardcoded permissions if database fails
+        const permissions: string[] = [];
+        
+        // Base permissions for all IT users
+        if (user.role === 'it_user' || user.role === 'manager' || user.role === 'admin') {
+            permissions.push(
+                'ticket.view_own',
+                'ticket.update_own', 
+                'ticket.comment_own',
+                'queue.view_own_team',
+                'system.view_basic_info'
+            );
+        }
+        
+        // Manager permissions
+        if (user.role === 'manager' || user.role === 'admin') {
+            permissions.push(
+                'ticket.view_team',
+                'ticket.assign_within_team',
+                'ticket.escalate',
+                'queue.view_team',
+                'reporting.view_team_metrics'
+            );
+        }
+        
+        // Admin permissions
+        if (user.role === 'admin') {
+            permissions.push(
+                'ticket.view_all',
+                'ticket.assign_any',
+                'ticket.delete',
+                'user.view_all',
+                'user.create',
+                'user.update',
+                'user.deactivate',
+                'queue.view_all',
+                'queue.manage',
+                'system.manage_settings',
+                'reporting.view_all',
+                // New admin dashboard permissions
+                'admin.manage_users',
+                'admin.view_users',
+                'admin.manage_teams',
+                'admin.view_teams',
+                'admin.manage_organization',
+                'admin.view_organization',
+                'admin.manage_categories',
+                'admin.view_categories',
+                'admin.view_analytics',
+                'admin.system_settings'
+            );
+        }
+        
+        return permissions;
     }
-    
-    // Manager permissions
-    if (user.role === 'manager' || user.role === 'admin') {
-        permissions.push(
-            'ticket.view_team',
-            'ticket.assign_within_team',
-            'ticket.escalate',
-            'queue.view_team',
-            'reporting.view_team_metrics'
-        );
-    }
-    
-    // Admin permissions
-    if (user.role === 'admin') {
-        permissions.push(
-            'ticket.view_all',
-            'ticket.assign_any',
-            'ticket.delete',
-            'user.view_all',
-            'user.create',
-            'user.update',
-            'user.deactivate',
-            'queue.view_all',
-            'queue.manage',
-            'system.manage_settings',
-            'reporting.view_all',
-            // New admin dashboard permissions
-            'admin.manage_users',
-            'admin.view_users',
-            'admin.manage_teams',
-            'admin.view_teams',
-            'admin.manage_organization',
-            'admin.view_organization',
-            'admin.manage_categories',
-            'admin.view_categories',
-            'admin.view_analytics',
-            'admin.system_settings'
-        );
-    }
-    
-    return permissions;
 };
 
 export const verifyAuth = async (request: any): Promise<{success: boolean; user?: any; error?: string}> => {
@@ -175,6 +188,7 @@ export const verifyAuth = async (request: any): Promise<{success: boolean; user?
         console.log('✅ User found in database:', user.username);
 
         // Add permissions to user object
+        const permissions = await getUserPermissions(user);
         const userWithPermissions = {
             id: user.id,
             username: user.username,
@@ -185,7 +199,7 @@ export const verifyAuth = async (request: any): Promise<{success: boolean; user?
             team_id: user.team_id,
             section_id: user.section_id,
             active: user.active,
-            permissions: getUserPermissions(user)
+            permissions: permissions
         };
 
         console.log('✅ User with permissions created, permission count:', userWithPermissions.permissions.length);
@@ -199,7 +213,7 @@ export const verifyAuth = async (request: any): Promise<{success: boolean; user?
 
 export const getAccessibleQueues = async (user: User): Promise<any[]> => {
     try {
-        const permissions = getUserPermissions(user);
+        const permissions = await getUserPermissions(user);
         let queues: any[] = [];
         
         if (permissions.includes('queue.view_all')) {
