@@ -1,98 +1,58 @@
 # Server Startup Guide - Orvale Management System
 
 ## Overview
-The Orvale Management System consists of three separate servers that need to be running for full functionality:
+The Orvale Management System is now a **unified single-server architecture** powered entirely by Next.js:
 
-1. **Express Backend API** (Port 3001) - Authentication, database, tickets
-2. **Next.js Frontend** (Port 3000) - React-based admin/management interface  
-3. **Public Portal** (Port 8081) - HTML ticket submission form
+✅ **Single Next.js Server** - All functionality consolidated into one server
+- Public portal (home page with login)
+- API routes (authentication, tickets, system info)
+- Admin interface (ticket queue management)
+- Database operations (SQLite with built-in API)
 
-## Quick Start - All Servers
+## Quick Start - Single Server
 
-### Method 1: Concurrent Start (Recommended)
+### Production (Port 80) - Recommended
 ```bash
-# Terminal 1: Start Express backend + Next.js frontend
 cd "/Users/borischu/project management/project-ticket-development/project-system"
-npm run dev:full
-
-# Terminal 2: Start public portal
-cd "/Users/borischu/project management/project-ticket-development/public-portal"
-python3 -m http.server 8081
+sudo npm run dev
 ```
 
-### Method 2: Individual Servers
+### Development (Port 3000) - No sudo required
 ```bash
-# Terminal 1: Express Backend API (Port 3001)
 cd "/Users/borischu/project management/project-ticket-development/project-system"
-npm run server
+npm run dev:dev
+```
 
-# Terminal 2: Next.js Frontend (Port 3000)
+### Build for Production
+```bash
 cd "/Users/borischu/project management/project-ticket-development/project-system"
-npm run dev
-
-# Terminal 3: Public Portal (Port 8081)
-cd "/Users/borischu/project management/project-ticket-development/public-portal"
-python3 -m http.server 8081
+npm run build
+sudo npm start
 ```
 
 ## Server Details
 
-### 1. Express Backend API (Port 3001)
-**Purpose**: REST API, authentication, database operations, ticket management
-
-**Start Command**:
-```bash
-cd "/Users/borischu/project management/project-ticket-development/project-system"
-npm run server
-```
+### Single Next.js Server (Port 80/3000)
+**Purpose**: Complete unified IT management system
 
 **Features**:
-- SQLite database with users and tickets
-- JWT authentication
-- CORS configured for ports 3000, 3001, 8081
-- REST endpoints for tickets, auth, system info
+- **Public Portal**: Professional landing page with login modal
+- **Authentication**: JWT-based with SQLite database
+- **API Routes**: Built-in Next.js API endpoints
+- **Admin Interface**: Modern ticket queue management
+- **Database**: SQLite with automatic initialization
+- **UI Components**: shadcn:ui with Tailwind CSS
 
 **Test Login Credentials**:
 - admin / admin123
 - boris.chu / boris123  
 - john.doe / john123
 
-**Health Check**: http://localhost:3001/api/health
-
-### 2. Next.js Frontend (Port 3000)
-**Purpose**: React-based admin interface, management dashboard
-
-**Start Command**:
-```bash
-cd "/Users/borischu/project management/project-ticket-development/project-system"
-npm run dev
-```
-
-**Features**:
-- Admin dashboard
-- Ticket queue management
-- User management interface
-- Analytics and reporting
-- React components with shadcn:ui
-
-**Access**: http://localhost:3000
-
-### 3. Public Portal (Port 8081)
-**Purpose**: Public-facing ticket submission form
-
-**Start Command**:
-```bash
-cd "/Users/borischu/project management/project-ticket-development/public-portal"
-python3 -m http.server 8081
-```
-
-**Features**:
-- HTML ticket submission form
-- Organizational data integration
-- Direct API communication with Express backend
-- Public access (no authentication required)
-
-**Access**: http://localhost:8081
+**Endpoints**:
+- **Home**: http://localhost/ (Public portal)
+- **Admin Queue**: http://localhost/tickets (After login)
+- **Health Check**: http://localhost/api/health
+- **Login API**: http://localhost/api/auth/login
 
 ## Troubleshooting
 
@@ -105,58 +65,43 @@ lsof -ti:PORT_NUMBER
 lsof -ti:PORT_NUMBER | xargs kill -9
 ```
 
-### CORS Errors
-- Ensure all three servers are running
-- Backend CORS is configured for ports 3000, 3001, 8081
-- Check browser console for specific CORS errors
-
-### Database Issues
-- Database is automatically initialized on first Express server start
-- SQLite file located in project-system directory
-- Restart Express server to reinitialize if needed
-
 ### Common Issues
-1. **Express server fails to start**: Check if port 3001 is free
-2. **Next.js warnings about lockfiles**: Safe to ignore, won't affect functionality
-3. **Python server fails**: Ensure Python 3 is installed, try different port
-4. **Login fails**: Ensure Express backend is running and responding
+1. **Port 80 requires sudo**: Use `sudo npm run dev` for port 80, or `npm run dev:dev` for port 3000
+2. **Module not found errors**: Run `npm install` to ensure all dependencies are installed
+3. **Database initialization**: Database auto-creates on first API call
+4. **Login fails**: Check browser console and ensure server is running
 
 ## Development Workflow
 
-### For Frontend Development (React/Next.js)
+### For Development
 ```bash
-# Start backend + Next.js
-npm run dev:full
+# Development mode (port 3000)
+npm run dev:dev
+
+# Production mode (port 80)
+sudo npm run dev
 ```
 
-### For Public Portal Development
+### For Production Deployment
 ```bash
-# Backend only
-npm run server
-
-# Public portal
-python3 -m http.server 8081
-```
-
-### For Full System Testing
-```bash
-# All three servers (use Quick Start Method 1)
-npm run dev:full  # Terminal 1
-python3 -m http.server 8081  # Terminal 2
+# Build and start
+npm run build
+sudo npm start
 ```
 
 ## Environment Access
 
-After all servers are running:
+After server is running:
 
-- **Public Portal**: http://localhost:8081 (Ticket submission)
-- **Next.js App**: http://localhost:3000 (Admin interface)
-- **API Health**: http://localhost:3001/api/health (Backend status)
+- **Public Portal**: http://localhost/ (Landing page with login)
+- **Admin Queue**: http://localhost/tickets (IT staff interface)
+- **API Health**: http://localhost/api/health (Server status)
 
-## Notes
+## Architecture Benefits
 
-- Express backend must be running for authentication and database operations
-- Public portal can work independently but needs backend for ticket submission
-- Next.js frontend requires backend for data and authentication
-- All servers support hot reload during development
-- HTTPS can be enabled for Next.js with `--experimental-https` flag
+✅ **Simplified Deployment**: Single server, single port
+✅ **No CORS Issues**: All endpoints on same origin  
+✅ **Unified Authentication**: Seamless login flow
+✅ **Modern UI**: shadcn:ui components throughout
+✅ **Production Ready**: Built-in Next.js optimizations
+✅ **Easy Maintenance**: One codebase, one deployment
