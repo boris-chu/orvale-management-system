@@ -1226,11 +1226,11 @@ ${computerInfoTable}
             const errorDiv = document.getElementById('loginError');
             
             // Show loading state
-            const submitButton = event.target.querySelector('.btn-login');
+            const submitButton = event.target.querySelector('button[type="submit"]');
             const originalText = submitButton.textContent;
             submitButton.textContent = 'Logging in...';
             submitButton.disabled = true;
-            errorDiv.style.display = 'none';
+            errorDiv.classList.add('hidden');
             
             try {
                 const response = await fetch('/api/auth/login', {
@@ -1272,13 +1272,13 @@ ${computerInfoTable}
                 } else {
                     // Show error message
                     errorDiv.textContent = result.message || 'Invalid username or password';
-                    errorDiv.style.display = 'block';
+                    errorDiv.classList.remove('hidden');
                 }
                 
             } catch (error) {
                 console.error('Login error:', error);
                 errorDiv.textContent = 'Connection error. Please ensure the server is running.';
-                errorDiv.style.display = 'block';
+                errorDiv.classList.remove('hidden');
             } finally {
                 // Reset button state
                 submitButton.textContent = originalText;
