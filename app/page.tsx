@@ -217,7 +217,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="text-center text-gray-600">
             <p>&copy; 2025 Orvale Management System. All rights reserved.</p>
-            <p className="mt-2">Created by Boris Chu - ITD Region 7</p>
+            <p className="mt-2">Created by Boris Chu - ITSD Region 7</p>
           </div>
         </div>
       </footer>
