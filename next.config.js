@@ -3,17 +3,8 @@ const nextConfig = {
   // App directory is now stable in Next.js 13+
   reactStrictMode: true,
   
-  // Allow cross-origin requests during development (addresses the warning)
-  experimental: {
-    allowedDevOrigins: [
-      '192.168.1.45',     // Your current IP
-      '192.168.1.*',      // Any IP in your local network range
-      '10.0.0.*',         // Common corporate network range
-      '172.16.*.*',       // Docker/private network range
-      'localhost',        // Always allow localhost
-      '127.0.0.1',        // Always allow loopback
-    ],
-  },
+  // Note: allowedDevOrigins is not available in Next.js 15.4.6
+  // Cross-origin warnings can be safely ignored in development
   
   // TypeScript configuration
   typescript: {
