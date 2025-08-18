@@ -3,3 +3,4 @@ node_modules
 # UI Libraries
 ui-libraries/
 icon-library/
+.next/
