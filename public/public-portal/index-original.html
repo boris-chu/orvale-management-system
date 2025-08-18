@@ -32,30 +32,230 @@
         }
     </script>
     <style>
-        /* Modern animations */
+        /* Email Generator Specific Styles */
+        .email-generator-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .email-form {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 30px;
+            margin-top: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="tel"],
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+            background: var(--background-color);
+            color: var(--text-color);
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        /* Consistent placeholder styling */
+        .form-group input[type="text"]::placeholder,
+        .form-group input[type="tel"]::placeholder,
+        .form-group textarea::placeholder {
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 8px;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .radio-group input[type="radio"] {
+            margin-right: 5px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .computer-info {
+            background: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 20px;
+            margin-top: 30px;
+            position: relative;
+        }
+
+        .computer-info h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+
+        .info-item {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .info-label {
+            font-weight: 500;
+            min-width: 140px;
+            color: var(--text-secondary);
+        }
+
+        .info-value {
+            color: var(--text-color);
+            font-family: monospace;
+        }
+
+        /* Hidden ticket management access */
+        .hidden-access {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 80px;
+            height: 80px;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        /* Login Modal Styles */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .login-modal {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        .login-modal h2 {
+            margin: 0 0 20px 0;
+            color: var(--primary-color);
+            text-align: center;
+        }
+
+        .login-modal input {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .login-modal button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .login-modal .btn-login {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .login-modal .btn-cancel {
+            background: #6c757d;
+            color: white;
+        }
+
+        .login-modal .btn-login:hover {
+            background: #0056b3;
+        }
+
+        .login-modal .btn-cancel:hover {
+            background: #545b62;
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
         }
+
         @keyframes modalSlideIn {
             from { opacity: 0; transform: scale(0.9) translateY(-50px); }
             to { opacity: 1; transform: scale(1) translateY(0); }
         }
-        @keyframes slideIn {
-            from { transform: translateX(100%); }
-            to { transform: translateX(0); }
+
+        .version-indicator {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            opacity: 0.5;
         }
-        @keyframes slideOut {
-            from { transform: translateX(0); }
-            to { transform: translateX(100%); }
-        }
-        
-        /* Custom styles for notification modals */
-        .login-overlay {
-            animation: fadeIn 0.3s ease-out;
-        }
-        .login-modal {
-            animation: modalSlideIn 0.3s ease-out;
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .email-form {
+                padding: 20px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .button-group button {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -86,7 +286,6 @@
         <!-- Form Card -->
         <div class="bg-white rounded-lg shadow-sm border p-8 mb-8">
             <form id="emailGeneratorForm" class="space-y-6">
-                <!-- Support Team Selection -->
                 <div>
                     <label for="emailRecipient" class="block text-sm font-medium text-gray-700 mb-2">Select Support Team:</label>
                     <select id="emailRecipient" name="emailRecipient" required class="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -100,7 +299,6 @@
                     </select>
                 </div>
 
-                <!-- On Behalf Radio Group -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-3">Is this request on behalf of another person?</label>
                     <div class="flex gap-6">
@@ -115,7 +313,6 @@
                     </div>
                 </div>
 
-                <!-- Employee Information -->
                 <div id="employeeInfoGroup">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
@@ -133,141 +330,121 @@
                     </div>
                 </div>
 
-                <!-- Other Employee Information (Hidden by default) -->
-                <div id="otherEmployeeGroup" class="hidden">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label for="otherEmployeeNumber" class="block text-sm font-medium text-gray-700 mb-2">Other Employee Number:</label>
-                            <input type="text" id="otherEmployeeNumber" name="otherEmployeeNumber" 
-                                   placeholder="e123456" maxlength="7" pattern="[ect][0-9]{6}"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label for="otherEmployeeName" class="block text-sm font-medium text-gray-700 mb-2">Other Employee's Name:</label>
-                            <input type="text" id="otherEmployeeName" name="otherEmployeeName" 
-                                   placeholder="Enter the other employee's full name"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        </div>
+            <div class="form-group" id="otherEmployeeGroup" style="display: none;">
+                <div style="display: flex; gap: 15px;">
+                    <div style="flex: 1;">
+                        <label for="otherEmployeeNumber">Other Employee Number:</label>
+                        <input type="text" id="otherEmployeeNumber" name="otherEmployeeNumber" 
+                               placeholder="e123456" maxlength="7" pattern="[ect][0-9]{6}"
+                               style="max-width: 150px;">
+                    </div>
+                    <div style="flex: 2;">
+                        <label for="otherEmployeeName">Other Employee's Name:</label>
+                        <input type="text" id="otherEmployeeName" name="otherEmployeeName" 
+                               placeholder="Enter the other employee's full name"
+                               style="max-width: 300px;">
                     </div>
                 </div>
+            </div>
 
-                <!-- Teleworking Radio Group -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-3">Are you teleworking today?</label>
-                    <div class="flex gap-6">
-                        <label class="flex items-center">
-                            <input type="radio" name="teleworking" value="Yes" required class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
-                            <span class="ml-2 text-sm text-gray-700">Yes</span>
+            <div class="form-group">
+                <label>Are you teleworking today?</label>
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="teleworking" value="Yes" required>
+                        Yes
+                    </label>
+                    <label>
+                        <input type="radio" name="teleworking" value="No" required>
+                        No
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="phoneNumber">Phone:</label>
+                <input type="tel" id="phoneNumber" name="phoneNumber" 
+                       placeholder="(XXX) XXX-XXXX" 
+                       pattern="\(\d{3}\) \d{3}-\d{4}"
+                       maxlength="14" required
+                       style="max-width: 200px;">
+            </div>
+
+            <div class="form-group">
+                <label for="location">Cubicle / Room #:</label>
+                <input type="text" id="location" name="location" 
+                       placeholder="e.g., Cubicle 4B-123 or Room 205" required
+                       style="max-width: 300px;">
+            </div>
+
+            <div class="form-group">
+                <label for="section">Section:</label>
+                <select id="section" name="section" required style="max-width: 400px;">
+                    <option value="">Select Section</option>
+                    <!-- Options will be dynamically populated from organizational-data.js -->
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="issueTitle">Subject:</label>
+                <input type="text" id="issueTitle" name="issueTitle" 
+                       placeholder="Tech Support Request" required>
+            </div>
+
+            <div class="form-group">
+                <label for="issueDescription">Issue Description:</label>
+                <textarea id="issueDescription" name="issueDescription" 
+                          placeholder="Briefly explain the technical issue you're facing" 
+                          required></textarea>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn-primary">Generate Email</button>
+                <button type="button" class="btn-secondary" onclick="resetForm()">Reset to Default</button>
+            </div>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                    <small style="color: var(--text-muted); font-size: 12px;">
+                        Your information (Support Team, Name, Employee Number, Phone, Location, Section) will be saved and pre-filled for 30 days.
+                    </small>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="autoRenewStorage" style="margin: 0;">
+                        <label for="autoRenewStorage" style="font-size: 12px; color: var(--text-muted); margin: 0; cursor: pointer;">
+                            Auto-renew on visit
                         </label>
-                        <label class="flex items-center">
-                            <input type="radio" name="teleworking" value="No" required class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300">
-                            <span class="ml-2 text-sm text-gray-700">No</span>
-                        </label>
                     </div>
                 </div>
+            </div>
+        </form>
 
-                <!-- Contact Information -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="phoneNumber" class="block text-sm font-medium text-gray-700 mb-2">Phone:</label>
-                        <input type="tel" id="phoneNumber" name="phoneNumber" 
-                               placeholder="(XXX) XXX-XXXX" pattern="\(\d{3}\) \d{3}-\d{4}" maxlength="14" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label for="location" class="block text-sm font-medium text-gray-700 mb-2">Cubicle / Room #:</label>
-                        <input type="text" id="location" name="location" 
-                               placeholder="e.g., Cubicle 4B-123 or Room 205" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    </div>
+        <div class="computer-info">
+            <h3>Your Computer Information</h3>
+            <div id="computerInfoDisplay">
+                <div class="info-item">
+                    <span class="info-label">IP Address:</span>
+                    <span class="info-value" id="ipAddress">Detecting...</span>
                 </div>
-
-                <!-- Section -->
-                <div>
-                    <label for="section" class="block text-sm font-medium text-gray-700 mb-2">Section:</label>
-                    <select id="section" name="section" required class="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">Select Section</option>
-                        <!-- Options will be dynamically populated -->
-                    </select>
+                <div class="info-item">
+                    <span class="info-label">Domain:</span>
+                    <span class="info-value" id="domain">LADPSS</span>
                 </div>
-
-                <!-- Issue Details -->
-                <div>
-                    <label for="issueTitle" class="block text-sm font-medium text-gray-700 mb-2">Subject:</label>
-                    <input type="text" id="issueTitle" name="issueTitle" 
-                           placeholder="Tech Support Request" required
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <div class="info-item">
+                    <span class="info-label">Browser:</span>
+                    <span class="info-value" id="browserInfo">Detecting...</span>
                 </div>
-
-                <div>
-                    <label for="issueDescription" class="block text-sm font-medium text-gray-700 mb-2">Issue Description:</label>
-                    <textarea id="issueDescription" name="issueDescription" rows="4"
-                              placeholder="Briefly explain the technical issue you're facing" required
-                              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical"></textarea>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="flex gap-4 pt-4">
-                    <button type="submit" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-                        Generate Email
-                    </button>
-                    <button type="button" onclick="resetForm()" class="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-                        Reset to Default
-                    </button>
-                </div>
-                
-                <!-- Storage Information -->
-                <div class="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500">
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <small class="text-xs text-gray-600">
-                            Your information (Support Team, Name, Employee Number, Phone, Location, Section) will be saved and pre-filled for 30 days.
-                        </small>
-                        <div class="flex items-center gap-2">
-                            <input type="checkbox" id="autoRenewStorage" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                            <label for="autoRenewStorage" class="text-xs text-gray-600 cursor-pointer">
-                                Auto-renew on visit
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-        <!-- Computer Information Card -->
-        <div class="bg-white rounded-lg shadow-sm border p-6 relative">
-            <h3 class="text-lg font-semibold text-blue-600 mb-4">Your Computer Information</h3>
-            <div id="computerInfoDisplay" class="space-y-3">
-                <div class="flex justify-between">
-                    <span class="text-sm font-medium text-gray-700 min-w-[140px]">IP Address:</span>
-                    <span id="ipAddress" class="text-sm font-mono text-gray-900">Detecting...</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-sm font-medium text-gray-700 min-w-[140px]">Domain:</span>
-                    <span id="domain" class="text-sm font-mono text-gray-900">LADPSS</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-sm font-medium text-gray-700 min-w-[140px]">Browser:</span>
-                    <span id="browserInfo" class="text-sm font-mono text-gray-900">Detecting...</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-sm font-medium text-gray-700 min-w-[140px]">Timestamp:</span>
-                    <span id="timestamp" class="text-sm font-mono text-gray-900">-</span>
+                <div class="info-item">
+                    <span class="info-label">Timestamp:</span>
+                    <span class="info-value" id="timestamp">-</span>
                 </div>
             </div>
             <!-- Hidden access to ticket management system -->
-            <div class="absolute bottom-0 right-0 w-20 h-20 opacity-0 cursor-pointer z-10" onclick="showLoginModal()" title="Access Ticket Management System"></div>
+            <div class="hidden-access" onclick="showLoginModal()" title="Access Ticket Management System"></div>
         </div>
-    </main>
+    </div>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t mt-12">
-        <div class="max-w-4xl mx-auto px-4 py-6">
-            <div class="text-center text-sm text-gray-600">
-                <p>&copy; 2025 Orvale Management System. All rights reserved.</p>
-                <p class="mt-1">Created by Boris Chu - ITD Region 7</p>
-            </div>
-        </div>
-    </footer>    <script type="module">
+
+    <script type="module">
         // Import organizational data
         import { organizationalData } from './organizational-data.js';
         
@@ -643,34 +820,21 @@ ${computerInfoTable}
                 // Show loading notification
                 showNotification('📋 Copying formatted email...', 'info');
                 
-                // Check for secure context and clipboard API availability
-                if (!navigator.clipboard) {
-                    throw new Error('Clipboard API not available - not a secure context');
-                }
-                
-                // Copy HTML to clipboard with improved error handling
-                if (navigator.clipboard.write && window.ClipboardItem) {
-                    try {
-                        // Use modern clipboard API for rich text
-                        const htmlBlob = new Blob([htmlBody], { type: 'text/html' });
-                        const textBlob = new Blob([stripHtmlForText(htmlBody)], { type: 'text/plain' });
-                        
-                        const clipboardItem = new ClipboardItem({
-                            'text/html': htmlBlob,
-                            'text/plain': textBlob
-                        });
-                        
-                        await navigator.clipboard.write([clipboardItem]);
-                    } catch (clipboardError) {
-                        console.warn('Rich clipboard failed, trying text fallback:', clipboardError);
-                        // Fallback to text-only clipboard
-                        await navigator.clipboard.writeText(stripHtmlForText(htmlBody));
-                    }
-                } else if (navigator.clipboard.writeText) {
-                    // Fallback to text clipboard only
-                    await navigator.clipboard.writeText(stripHtmlForText(htmlBody));
+                // Copy HTML to clipboard
+                if (navigator.clipboard && navigator.clipboard.write) {
+                    // Use modern clipboard API for rich text
+                    const htmlBlob = new Blob([htmlBody], { type: 'text/html' });
+                    const textBlob = new Blob([stripHtmlForText(htmlBody)], { type: 'text/plain' });
+                    
+                    const clipboardItem = new ClipboardItem({
+                        'text/html': htmlBlob,
+                        'text/plain': textBlob
+                    });
+                    
+                    await navigator.clipboard.write([clipboardItem]);
                 } else {
-                    throw new Error('No clipboard API available');
+                    // Fallback to text clipboard
+                    await navigator.clipboard.writeText(htmlBody);
                 }
                 
                 // Show preview popup briefly, then auto-open email
@@ -678,7 +842,7 @@ ${computerInfoTable}
                 
             } catch (error) {
                 console.error('Failed to copy:', error);
-                showNotification('📋 Manual Copy Required - Automatic copy failed. Please copy the HTML manually.', 'warning');
+                showNotification('⚠️ Could not copy automatically. Opening manual preview...', 'warning');
                 showManualPreview(subject, htmlBody, recipient);
             }
         }
@@ -1179,24 +1343,16 @@ ${computerInfoTable}
         // Show login modal
         function showLoginModal() {
             const loginModal = `
-                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 login-overlay" id="loginOverlay">
-                    <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-md mx-4 login-modal">
-                        <h2 class="text-xl font-bold text-center text-blue-600 mb-6">🔐 IT Team Access</h2>
-                        <form id="loginForm" class="space-y-4">
-                            <input type="text" id="username" placeholder="Username" required 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <input type="password" id="password" placeholder="Password" required 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <button type="submit" 
-                                    class="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-                                Login
-                            </button>
-                            <button type="button" onclick="closeLoginModal()" 
-                                    class="w-full px-4 py-2 bg-gray-600 text-white font-medium rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors">
-                                Cancel
-                            </button>
+                <div class="login-overlay" id="loginOverlay">
+                    <div class="login-modal">
+                        <h2>🔐 IT Team Access</h2>
+                        <form id="loginForm">
+                            <input type="text" id="username" placeholder="Username" required>
+                            <input type="password" id="password" placeholder="Password" required>
+                            <button type="submit" class="btn-login">Login</button>
+                            <button type="button" class="btn-cancel" onclick="closeLoginModal()">Cancel</button>
                         </form>
-                        <div id="loginError" class="text-red-600 text-sm text-center mt-4 hidden"></div>
+                        <div id="loginError" style="color: red; margin-top: 10px; text-align: center; display: none;"></div>
                     </div>
                 </div>
             `;
@@ -1239,11 +1395,11 @@ ${computerInfoTable}
             const errorDiv = document.getElementById('loginError');
             
             // Show loading state
-            const submitButton = event.target.querySelector('button[type="submit"]');
+            const submitButton = event.target.querySelector('.btn-login');
             const originalText = submitButton.textContent;
             submitButton.textContent = 'Logging in...';
             submitButton.disabled = true;
-            errorDiv.classList.add('hidden');
+            errorDiv.style.display = 'none';
             
             try {
                 const response = await fetch('/api/auth/login', {
@@ -1285,13 +1441,13 @@ ${computerInfoTable}
                 } else {
                     // Show error message
                     errorDiv.textContent = result.message || 'Invalid username or password';
-                    errorDiv.classList.remove('hidden');
+                    errorDiv.style.display = 'block';
                 }
                 
             } catch (error) {
                 console.error('Login error:', error);
                 errorDiv.textContent = 'Connection error. Please ensure the server is running.';
-                errorDiv.classList.remove('hidden');
+                errorDiv.style.display = 'block';
             } finally {
                 // Reset button state
                 submitButton.textContent = originalText;
