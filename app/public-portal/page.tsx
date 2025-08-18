@@ -624,7 +624,7 @@ export default function PublicPortal() {
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Monitor className="h-4 w-4" />
-                    Auto-Detected System Information
+                    System Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
