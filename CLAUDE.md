@@ -226,6 +226,77 @@ const schema = z.object({
 4. **Error handling** - always handle edge cases
 5. **Type safety** - use TypeScript strictly
 
+## 🔄 Git Workflow Guidelines
+
+### **Commit After Each Completed Change**
+To maintain clean development history and enable easy reverting:
+
+1. **Commit Frequency**: After completing each discrete feature or fix
+2. **Atomic Commits**: Each commit should represent one logical change
+3. **Descriptive Messages**: Clear commit messages explaining what was changed
+4. **Push Regularly**: Sync to remote after each commit for backup
+
+### **Standard Git Workflow**
+```bash
+# After completing a feature/change
+git add .
+git status                    # Review what's being committed
+git commit -m "Brief description of change"
+git push origin main          # Sync to remote immediately
+```
+
+### **Commit Message Format**
+```bash
+git commit -m "$(cat <<'EOF'
+Brief description of the main change
+
+- Specific change 1
+- Specific change 2  
+- Specific change 3
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
+```
+
+### **When to Commit**
+- ✅ **After completing a component** (e.g., new modal, new page)
+- ✅ **After adding a new API endpoint** that works
+- ✅ **After fixing a bug** or issue
+- ✅ **After updating documentation** 
+- ✅ **After completing a todo item**
+- ✅ **Before starting a major refactor**
+
+### **When NOT to Commit**
+- ❌ **Broken or incomplete code** that doesn't compile
+- ❌ **Half-implemented features** without basic functionality
+- ❌ **Debug/test code** that shouldn't be in production
+
+### **Emergency Reverting**
+```bash
+# View recent commits
+git log --oneline -5
+
+# Revert last commit (soft - keeps changes)
+git reset HEAD~1
+
+# Revert last commit (hard - discards changes)
+git reset --hard HEAD~1
+
+# Revert specific commit
+git revert <commit-hash>
+
+# Push revert to remote
+git push origin main --force-with-lease
+```
+
+### **Branch Protection**
+- **Always work on main branch** for this project
+- **Use --force-with-lease** instead of --force for safety
+- **Test locally** before pushing to remote
+
 ## 🔍 Testing Guidelines
 
 Run these commands after changes:
