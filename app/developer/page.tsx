@@ -50,9 +50,28 @@ export default function DeveloperDashboard() {
 
   const checkAdminAccess = async () => {
     try {
-      const response = await fetch('/api/auth/user');
+      const token = localStorage.getItem('authToken');
+      console.log('🔍 Admin dashboard - checking permissions, token exists:', !!token);
+      
+      if (!token) {
+        console.log('❌ No token found, redirecting to home');
+        window.location.href = '/';
+        return;
+      }
+
+      const response = await fetch('/api/auth/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      console.log('🔍 Admin dashboard - auth response status:', response.status);
+
       if (response.ok) {
         const user = await response.json();
+        console.log('🔍 Admin dashboard - user loaded:', user.display_name, 'Role:', user.role);
+        console.log('🔍 Admin dashboard - permissions:', user.permissions);
+        
         // Check if user has any admin permissions
         const adminPermissions = [
           'admin.manage_users', 'admin.view_users',
@@ -66,16 +85,22 @@ export default function DeveloperDashboard() {
           user.permissions?.includes(perm)
         );
         
+        console.log('🔍 Admin dashboard - has admin access:', hasAdminAccess);
+        
         if (!hasAdminAccess) {
+          console.log('❌ User lacks admin permissions, redirecting to tickets');
           window.location.href = '/tickets';
           return;
         }
+        
+        console.log('✅ Admin access granted');
         setCurrentUser(user);
       } else {
+        console.log('❌ Auth failed, redirecting to login');
         window.location.href = '/';
       }
     } catch (error) {
-      console.error('Authentication check failed:', error);
+      console.error('❌ Permission check failed:', error);
       window.location.href = '/';
     }
   };
