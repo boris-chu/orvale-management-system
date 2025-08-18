@@ -49,11 +49,11 @@ npm install
 
 ### 3. Start Development Server
 ```bash
-npm run dev
+sudo npm run dev
 ```
 
 ### 4. Open Browser
-Visit `http://localhost:3000`
+Visit `http://localhost/`
 
 ## 🎯 Key Features
 
@@ -111,10 +111,10 @@ Visit `http://localhost:3000`
 ## 📋 Development Commands
 
 ```bash
-# Development
-npm run dev          # Start dev server
+# Development (Port 80 - Production-style setup)
+sudo npm run dev     # Start dev server on port 80
 npm run build        # Build for production
-npm run start        # Start production server
+sudo npm start       # Start production server
 
 # Code Quality
 npm run lint         # Check linting
