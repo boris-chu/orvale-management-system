@@ -135,6 +135,7 @@ export const verifyAuth = async (request: any): Promise<{success: boolean; user?
 
         if (authHeader && authHeader.startsWith('Bearer ')) {
             token = authHeader.substring(7);
+            console.log('🔍 Token found in Authorization header');
         } else {
             // Try to get token from cookies
             const cookies = request.headers.get('cookie');
@@ -142,18 +143,23 @@ export const verifyAuth = async (request: any): Promise<{success: boolean; user?
                 const tokenMatch = cookies.match(/auth-token=([^;]+)/);
                 if (tokenMatch) {
                     token = tokenMatch[1];
+                    console.log('🔍 Token found in cookies');
                 }
             }
         }
 
         if (!token) {
+            console.log('❌ No token provided in request');
             return { success: false, error: 'No token provided' };
         }
 
         const decoded = verifyToken(token);
         if (!decoded) {
+            console.log('❌ Token verification failed');
             return { success: false, error: 'Invalid token' };
         }
+
+        console.log('✅ Token verified for user ID:', decoded.id);
 
         // Get fresh user data with permissions
         const user = await getAsync(
@@ -162,8 +168,11 @@ export const verifyAuth = async (request: any): Promise<{success: boolean; user?
         );
 
         if (!user) {
+            console.log('❌ User not found in database for ID:', decoded.id);
             return { success: false, error: 'User not found' };
         }
+
+        console.log('✅ User found in database:', user.username);
 
         // Add permissions to user object
         const userWithPermissions = {
@@ -179,9 +188,11 @@ export const verifyAuth = async (request: any): Promise<{success: boolean; user?
             permissions: getUserPermissions(user)
         };
 
+        console.log('✅ User with permissions created, permission count:', userWithPermissions.permissions.length);
+
         return { success: true, user: userWithPermissions };
     } catch (error) {
-        console.error('Auth verification error:', error);
+        console.error('❌ Auth verification error:', error);
         return { success: false, error: 'Authentication failed' };
     }
 };

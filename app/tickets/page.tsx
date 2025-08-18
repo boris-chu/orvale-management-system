@@ -121,7 +121,10 @@ export default function TicketsPage() {
   const loadCurrentUser = async () => {
     try {
       const token = localStorage.getItem('authToken');
+      console.log('🔍 Loading current user, token exists:', !!token);
+      
       if (!token) {
+        console.log('❌ No token found, redirecting to login');
         window.location.href = '/';
         return;
       }
@@ -132,19 +135,37 @@ export default function TicketsPage() {
         }
       });
 
+      console.log('🔍 Auth API response status:', response.status);
+
       if (response.ok) {
         const user = await response.json();
+        console.log('✅ User loaded successfully:', user.display_name, 'Permissions:', user.permissions?.length || 0);
         setCurrentUser(user);
         localStorage.setItem('currentUser', JSON.stringify(user));
       } else {
+        console.log('❌ Token invalid, status:', response.status);
         // Token invalid, redirect to login
         localStorage.removeItem('authToken');
         localStorage.removeItem('currentUser');
         window.location.href = '/';
       }
     } catch (error) {
-      console.error('Error loading user:', error);
-      window.location.href = '/';
+      console.error('❌ Error loading user:', error);
+      // Don't redirect immediately on error - might be a temporary network issue
+      // Instead, try to use cached user data as fallback
+      const userData = localStorage.getItem('currentUser');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          console.log('🔄 Using cached user data as fallback:', user.display_name);
+          setCurrentUser(user);
+        } catch (parseError) {
+          console.error('❌ Error parsing cached user data:', parseError);
+          window.location.href = '/';
+        }
+      } else {
+        window.location.href = '/';
+      }
     }
   };
 
