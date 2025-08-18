@@ -108,6 +108,49 @@ const getNextSequenceForTeam = async (teamId: string, dateStr: string): Promise<
   }
 };
 
+// Convert sequence number to formatted string, always keeping 3 characters
+const formatSequenceNumber = (sequence: number): string => {
+  // 1-999: Standard 3-digit format (001-999)
+  if (sequence <= 999) {
+    return sequence.toString().padStart(3, '0');
+  }
+  
+  // 1000-3599: One letter + two digits (A00-Z99)
+  // 26 letters × 100 numbers = 2,600 combinations
+  if (sequence <= 999 + 2600) {
+    const offset = sequence - 1000;
+    const letterIndex = Math.floor(offset / 100);
+    const number = offset % 100;
+    const letter = String.fromCharCode(65 + letterIndex);
+    return `${letter}${number.toString().padStart(2, '0')}`;
+  }
+  
+  // 3600-10359: Two letters + one digit (AA0-ZZ9)
+  // 26 × 26 × 10 = 6,760 combinations
+  if (sequence <= 999 + 2600 + 6760) {
+    const offset = sequence - (1000 + 2600);
+    const firstLetterIndex = Math.floor(offset / 260);
+    const remaining = offset % 260;
+    const secondLetterIndex = Math.floor(remaining / 10);
+    const number = remaining % 10;
+    const firstLetter = String.fromCharCode(65 + firstLetterIndex);
+    const secondLetter = String.fromCharCode(65 + secondLetterIndex);
+    return `${firstLetter}${secondLetter}${number}`;
+  }
+  
+  // 10360+: Three letters (AAA-ZZZ)
+  // 26 × 26 × 26 = 17,576 combinations
+  const offset = sequence - (1000 + 2600 + 6760);
+  const firstLetterIndex = Math.floor(offset / 676);
+  const remaining = offset % 676;
+  const secondLetterIndex = Math.floor(remaining / 26);
+  const thirdLetterIndex = remaining % 26;
+  const firstLetter = String.fromCharCode(65 + firstLetterIndex);
+  const secondLetter = String.fromCharCode(65 + secondLetterIndex);
+  const thirdLetter = String.fromCharCode(65 + thirdLetterIndex);
+  return `${firstLetter}${secondLetter}${thirdLetter}`;
+};
+
 // Generate ticket number based on team
 export const generateTicketNumber = async (teamId: string): Promise<string> => {
   const now = new Date();
@@ -115,8 +158,9 @@ export const generateTicketNumber = async (teamId: string): Promise<string> => {
   
   const prefix = generateTeamPrefix(teamId);
   const sequence = await getNextSequenceForTeam(teamId, dateStr);
+  const formattedSequence = formatSequenceNumber(sequence);
   
-  return `${prefix}-${dateStr}-${sequence.toString().padStart(3, '0')}`;
+  return `${prefix}-${dateStr}-${formattedSequence}`;
 };
 
 // Get team prefix for display purposes
@@ -144,7 +188,8 @@ export const updateExistingTickets = async (): Promise<void> => {
       // Generate new ticket number for this team/date combination
       const prefix = generateTeamPrefix(teamId);
       const sequence = await getNextSequenceForTeam(teamId, dateStr);
-      const newTicketNumber = `${prefix}-${dateStr}-${sequence.toString().padStart(3, '0')}`;
+      const formattedSequence = formatSequenceNumber(sequence);
+      const newTicketNumber = `${prefix}-${dateStr}-${formattedSequence}`;
       
       // Update the ticket with new submission_id
       await runAsync(

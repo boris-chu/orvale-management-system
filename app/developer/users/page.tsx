@@ -90,7 +90,12 @@ export default function UserManagement() {
 
   const checkPermissions = async () => {
     try {
-      const response = await fetch('/api/auth/user');
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/auth/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const user = await response.json();
         if (!user.permissions?.includes('admin.manage_users') && !user.permissions?.includes('admin.view_users')) {
@@ -109,7 +114,12 @@ export default function UserManagement() {
 
   const loadUsers = async () => {
     try {
-      const response = await fetch('/api/developer/users');
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/developer/users', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const userData = await response.json();
         setUsers(userData);
@@ -126,7 +136,12 @@ export default function UserManagement() {
 
   const loadTeams = async () => {
     try {
-      const response = await fetch('/api/developer/teams');
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/developer/teams', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const teamData = await response.json();
         setTeams(teamData);
@@ -138,7 +153,12 @@ export default function UserManagement() {
 
   const loadRoles = async () => {
     try {
-      const response = await fetch('/api/developer/roles');
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/developer/roles', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const roleData = await response.json();
         setRoles(roleData);
@@ -161,9 +181,13 @@ export default function UserManagement() {
 
     setSaving(true);
     try {
+      const token = localStorage.getItem('authToken');
       const response = await fetch('/api/developer/users', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(formData)
       });
 
@@ -200,10 +224,14 @@ export default function UserManagement() {
 
     setSaving(true);
     try {
-      const response = await fetch(`/api/developer/users/${selectedUser.id}`, {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/developer/users', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ ...formData, id: selectedUser.id })
       });
 
       if (response.ok) {
@@ -234,8 +262,12 @@ export default function UserManagement() {
     }
 
     try {
-      const response = await fetch(`/api/developer/users/${userId}`, {
-        method: 'DELETE'
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/developer/users?id=${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (response.ok) {

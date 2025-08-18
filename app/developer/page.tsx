@@ -107,10 +107,17 @@ export default function DeveloperDashboard() {
 
   const loadDashboardStats = async () => {
     try {
-      const response = await fetch('/api/developer/stats');
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/developer/stats', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const statsData = await response.json();
         setStats(statsData);
+      } else {
+        console.error('Failed to load stats, status:', response.status);
       }
     } catch (error) {
       console.error('Failed to load dashboard stats:', error);
