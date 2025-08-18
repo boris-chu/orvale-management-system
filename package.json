@@ -13,12 +13,13 @@
     "analytics"
   ],
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 80",
+    "dev:dev": "next dev -p 3000",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 80",
     "server": "node server/server.js",
     "dev:server": "nodemon server/server.js",
-    "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
+    "dev:full": "concurrently \"npm run server\" \"npm run dev:dev\"",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "typecheck": "tsc --noEmit",

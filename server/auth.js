@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { getAsync } = require('./database');
+const { getAsync, queryAsync } = require('./database');
 
 // JWT Secret - In production, use environment variable
 const JWT_SECRET = process.env.JWT_SECRET || 'orvale-management-system-secret-key-2025';
