@@ -32,15 +32,24 @@ project management/
 npm run lint
 npm run typecheck
 
-# Development server
-npm run dev
+# Main development server (Port 80 - Production-style setup)
+sudo npm run dev
 
 # Build for production
 npm run build
 
+# Production server
+sudo npm start
+
 # Run tests
 npm test
 ```
+
+### Access Points (Port 80):
+- **Public Portal**: http://localhost/ (Landing page with ticket submission)
+- **Submit Tickets**: http://localhost/public-portal/ (Original ticket submission form)
+- **Admin Queue**: http://localhost/tickets (IT staff ticket management)
+- **API Health**: http://localhost/api/health (Server status check)
 
 ## 🏗️ Architecture Guidelines
 
