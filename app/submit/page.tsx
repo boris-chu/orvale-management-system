@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 export default function SubmitTicket() {
   useEffect(() => {
     // Redirect to the original public portal
-    window.location.href = '/public-portal/';
+    window.location.href = '/public-portal/index.html';
   }, []);
 
   return (
