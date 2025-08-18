@@ -1,6 +1,7 @@
 import sqlite3 from 'sqlite3';
 import path from 'path';
 import bcrypt from 'bcryptjs';
+import { initTicketSequences, updateExistingTickets } from './ticket-numbering';
 
 const dbPath = path.join(process.cwd(), 'orvale_tickets.db');
 const db = new sqlite3.Database(dbPath);
@@ -100,6 +101,17 @@ export const initDB = () => {
                 });
             });
 
+            // Initialize ticket sequences table
+            initTicketSequences().then(() => {
+                console.log('✅ Ticket numbering system initialized');
+                // Update existing tickets with new numbering system (one-time migration)
+                updateExistingTickets().catch((error) => {
+                    console.log('ℹ️ Existing tickets already updated or no tickets to update');
+                });
+            }).catch((error) => {
+                console.error('❌ Error initializing ticket numbering:', error);
+            });
+
             // Create default users
             const defaultUsers = [
                 {
@@ -117,7 +129,7 @@ export const initDB = () => {
                     email: 'boris.chu@orvale.gov', 
                     password: 'boris123',
                     role: 'it_user',
-                    team_id: 'ITTS_Main',
+                    team_id: 'ITTS_Region7',
                     section_id: 'ITD'
                 },
                 {
@@ -126,7 +138,7 @@ export const initDB = () => {
                     email: 'john.doe@orvale.gov',
                     password: 'john123', 
                     role: 'it_user',
-                    team_id: 'ITTS_Main',
+                    team_id: 'ITTS_Region7',
                     section_id: 'ITD'
                 }
             ];

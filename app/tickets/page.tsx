@@ -209,6 +209,22 @@ export default function TicketsPage() {
     }
   }, [currentUser, activeTab, filters]);
 
+  // Real-time polling for new tickets assigned to user's team
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const pollInterval = setInterval(() => {
+      // Only poll if user is on pending tab and team_tickets queue (most common scenario)
+      if (activeTab === 'pending' && filters.queue === 'team_tickets') {
+        console.log('🔄 Polling for new team tickets...');
+        loadTickets();
+      }
+    }, 30000); // Poll every 30 seconds
+
+    // Cleanup interval on unmount
+    return () => clearInterval(pollInterval);
+  }, [currentUser, activeTab, filters.queue]);
+
   // Handle ticket actions
   const handleTicketAction = async (ticketId: string, action: string, data?: any) => {
     try {
@@ -463,27 +479,6 @@ export default function TicketsPage() {
             </div>
           </div>
 
-          {/* Stats bar */}
-          <div className="flex items-center justify-between mt-3">
-            <div className="flex items-center space-x-6 text-sm">
-              <span>{queueStats.pending} pending</span>
-              <span>•</span>
-              <span>{queueStats.assigned} assigned</span>
-              <span>•</span>
-              <span>{queueStats.today} today</span>
-              <span>•</span>
-              <span>{queueStats.total} total</span>
-            </div>
-            <Button
-              onClick={loadTickets}
-              className="bg-green-500 hover:bg-green-600 text-white"
-              size="sm"
-              disabled={loading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
-              Refresh Now
-            </Button>
-          </div>
         </div>
       </div>
 

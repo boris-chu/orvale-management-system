@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 // Material-UI imports for working Select components
-import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { Select, MenuItem, FormControl, InputLabel, ListSubheader } from '@mui/material';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -37,9 +37,63 @@ interface ComputerInfo {
   timestamp: string;
 }
 
+// Define support team groups outside component to avoid reference errors
+const supportTeamGroups = {
+  "ITTS: Region 7": [
+    { 
+      value: 'DPSS_Academy', 
+      label: 'DPSS Academy', 
+      team_id: 'ITTS_Region7',
+      email: 'BechtelTechs@dpss.lacounty.gov',
+      description: 'IT Support for DPSS Academy' 
+    },
+    { 
+      value: 'BHR_Tech', 
+      label: 'Bureau of Human Resources', 
+      team_id: 'ITTS_Region7',
+      email: 'BHRTechs@dpss.lacounty.gov',
+      description: 'IT Support for Bureau of Human Resources' 
+    },
+    { 
+      value: 'Crossroads_East', 
+      label: 'Crossroads East', 
+      team_id: 'ITTS_Region7',
+      email: 'CrossroadsITSupport@dpss.lacounty.gov',
+      description: 'IT Support for Crossroads East Location' 
+    },
+    { 
+      value: 'Crossroads_Main', 
+      label: 'Crossroads Main', 
+      team_id: 'ITTS_Region7',
+      email: 'CrossroadsITSupport@dpss.lacounty.gov',
+      description: 'IT Support for Crossroads Main Location' 
+    },
+    { 
+      value: 'Crossroads_West', 
+      label: 'Crossroads West', 
+      team_id: 'ITTS_Region7',
+      email: 'CrossroadsITSupport@dpss.lacounty.gov',
+      description: 'IT Support for Crossroads West Location' 
+    },
+    { 
+      value: 'Kaiser_FOD', 
+      label: 'Kaiser Building (FOD | IHSS | LOD)', 
+      team_id: 'ITTS_Region7',
+      email: 'FODTechs@dpss.lacounty.gov',
+      description: 'IT Support for Kaiser Building - FOD, IHSS, LOD' 
+    }
+  ]
+};
+
+// Flatten for easier lookups
+const allSupportTeams = Object.values(supportTeamGroups).flat();
+
+// Get the default team (Crossroads Main) 
+const defaultTeam = allSupportTeams.find(team => team.value === 'Crossroads_Main');
+
 export default function PublicPortal() {
   const [formData, setFormData] = useState<FormData>({
-    emailRecipient: '',
+    emailRecipient: defaultTeam?.value || 'Crossroads_Main',  // Default to Crossroads Main
     userName: '',
     employeeNumber: '',
     phoneNumber: '',
@@ -330,14 +384,6 @@ export default function PublicPortal() {
     detectComputerInfo();
   }, []);
 
-  const supportTeams = [
-    { value: 'BechtelTechs@dpss.lacounty.gov', label: 'DPSS Academy' },
-    { value: 'BHRTechs@dpss.lacounty.gov', label: 'Bureau of Human Resources' },
-    { value: 'CrossroadsITSupport@dpss.lacounty.gov', label: 'Crossroads East' },
-    { value: 'CrossroadsITSupport@dpss.lacounty.gov', label: 'Crossroads Main' },
-    { value: 'CrossroadsITSupport@dpss.lacounty.gov', label: 'Crossroads West' },
-    { value: 'FODTechs@dpss.lacounty.gov', label: 'Kaiser Building (FOD | IHSS | LOD)' }
-  ];
 
   const showNotification = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     setNotification({ message, type });
@@ -439,7 +485,7 @@ export default function PublicPortal() {
     setIsSubmitting(true);
 
     try {
-      const selectedTeam = supportTeams.find(team => team.value === formData.emailRecipient);
+      const selectedTeam = allSupportTeams.find(team => team.value === formData.emailRecipient);
       
       // Create email content
       const subject = `IT Support Request - ${formData.issueTitle}`;
@@ -463,8 +509,8 @@ export default function PublicPortal() {
           issue_description: formData.issueDescription,
           computer_info: computerInfo,
           priority: 'medium',
-          assigned_team: 'ITTS_Main',
-          email_recipient: formData.emailRecipient,
+          assigned_team: selectedTeam?.team_id || 'ITTS_Region7',
+          email_recipient: selectedTeam?.email || 'CrossroadsITSupport@dpss.lacounty.gov',
           email_recipient_display: selectedTeam?.label || 'IT Support'
         })
       });
@@ -472,33 +518,22 @@ export default function PublicPortal() {
       const result = await response.json();
       
       if (result.success) {
-        showNotification(`✅ Ticket ${result.ticket_id} submitted successfully!`, 'success');
-        
         // Generate plain text version and open email directly
         const plainTextBody = generatePlainTextEmail();
-        const mailtoLink = `mailto:${formData.emailRecipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(plainTextBody)}`;
+        const mailtoLink = `mailto:${selectedTeam?.email || 'CrossroadsITSupport@dpss.lacounty.gov'}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(plainTextBody)}`;
         window.location.href = mailtoLink;
         
-        showNotification('📧 Email opened in your default email client!', 'success');
+        // Redirect to success page with ticket details
+        const successUrl = new URL('/public-portal/success', window.location.origin);
+        successUrl.searchParams.set('ticket', result.ticket_id);
+        successUrl.searchParams.set('user', formData.userName);
+        successUrl.searchParams.set('title', formData.issueTitle);
+        successUrl.searchParams.set('team', selectedTeam?.label || 'IT Support');
         
-        // Reset form
-        if (formRef.current) {
-          formRef.current.reset();
-        }
-        setFormData({
-          emailRecipient: '',
-          userName: '',
-          employeeNumber: '',
-          phoneNumber: '',
-          location: '',
-          section: '',
-          teleworking: 'No',
-          onBehalf: false,
-          submittedBy: '',
-          submittedByEmployeeNumber: '',
-          issueTitle: '',
-          issueDescription: ''
-        });
+        // Small delay to allow email to open, then redirect
+        setTimeout(() => {
+          window.location.href = successUrl.toString();
+        }, 1000);
       } else {
         showNotification(`❌ ${result.message || 'Failed to submit ticket'}`, 'error');
       }
@@ -511,7 +546,7 @@ export default function PublicPortal() {
   };
 
   const generateEmailHTML = () => {
-    const selectedTeam = supportTeams.find(team => team.value === formData.emailRecipient);
+    const selectedTeam = allSupportTeams.find(team => team.value === formData.emailRecipient);
     const teamLabel = selectedTeam?.label || 'IT Support';
     
     return `
@@ -642,7 +677,7 @@ export default function PublicPortal() {
 
 
   const generatePlainTextEmail = () => {
-    const selectedTeam = supportTeams.find(team => team.value === formData.emailRecipient);
+    const selectedTeam = allSupportTeams.find(team => team.value === formData.emailRecipient);
     const teamLabel = selectedTeam?.label || 'IT Support';
     
     return `Good evening, ${teamLabel} Team,
@@ -804,11 +839,16 @@ Submitted via Orvale Management System`;
                     label="Select Support Team"
                     onChange={(e) => handleSelectChange('emailRecipient', e.target.value)}
                   >
-                    {supportTeams.map((team, index) => (
-                      <MenuItem key={`${team.value}-${index}`} value={team.value}>
-                        {team.label}
-                      </MenuItem>
-                    ))}
+                    {Object.entries(supportTeamGroups).map(([groupName, teams]) => [
+                      <ListSubheader key={groupName} sx={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#1976d2' }}>
+                        {groupName}
+                      </ListSubheader>,
+                      ...teams.map((team, index) => (
+                        <MenuItem key={`${team.value}-${index}`} value={team.value} sx={{ pl: 3 }}>
+                          {team.label}
+                        </MenuItem>
+                      ))
+                    ]).flat()}
                   </Select>
                 </FormControl>
               </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryAsync, runAsync } from '@/lib/database';
 import { verifyToken } from '@/lib/auth';
+import { generateTicketNumber } from '@/lib/ticket-numbering';
 
 // Middleware to verify authentication
 async function authenticateRequest(request: NextRequest) {
@@ -125,12 +126,6 @@ export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
         
-        // Generate submission ID
-        const now = new Date();
-        const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-        const timeStr = String(Date.now()).slice(-3);
-        const submissionId = `TKT-${dateStr}-${timeStr}`;
-
         const {
             user_name,
             employee_number,
@@ -145,10 +140,13 @@ export async function POST(request: NextRequest) {
             issue_description,
             computer_info,
             priority = 'medium',
-            assigned_team = 'ITTS_Main',
+            assigned_team = 'ITTS_Region7',
             email_recipient = 'itts@orvale.gov',
-            email_recipient_display = 'ITTS: Main Office'
+            email_recipient_display = 'ITTS: Region 7'
         } = body;
+
+        // Generate team-based ticket number
+        const submissionId = await generateTicketNumber(assigned_team);
 
         const result = await runAsync(`
             INSERT INTO user_tickets (

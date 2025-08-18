@@ -129,7 +129,7 @@ const seedInitialData = async () => {
         db.run(`
             INSERT INTO teams (id, name, description, email, section_id) VALUES
             ('ITTS_Region7', 'ITTS: Region 7', 'IT Technical Support Region 7', 'region7@dpss.gov', 'ITTS'),
-            ('ITTS_Main', 'ITTS: Main Office', 'IT Technical Support Main Office', 'itts@dpss.gov', 'ITTS'),
+            ('ITTS_Region7', 'ITTS: Region 7', 'IT Technical Support Region 7', 'itts@dpss.gov', 'ITTS'),
             ('ADMIN_Main', 'Administration: Main', 'Main Administrative Office', 'admin@dpss.gov', 'ADMIN')
         `);
 
@@ -142,7 +142,7 @@ const seedInitialData = async () => {
         `, [
             'admin', 'System Administrator', 'admin@dpss.gov', adminHash, 'admin', 'ADMIN_Main', 'ADMIN',
             'boris.chu', 'Boris Chu', 'boris.chu@dpss.gov', borisHash, 'it_user', 'ITTS_Region7', 'ITTS',
-            'john.doe', 'John Doe', 'john.doe@dpss.gov', johnHash, 'it_user', 'ITTS_Main', 'ITTS'
+            'john.doe', 'John Doe', 'john.doe@dpss.gov', johnHash, 'it_user', 'ITTS_Region7', 'ITTS'
         ], function(err) {
             if (err) {
                 console.error('❌ Error seeding users:', err);
@@ -210,7 +210,7 @@ const seedTestTickets = () => {
             }),
             priority: 'medium',
             status: 'pending',
-            assigned_team: 'ITTS_Main',
+            assigned_team: 'ITTS_Region7',
             email_recipient: 'itts@dpss.gov',
             email_recipient_display: 'ITTS: Main Office'
         },
@@ -237,7 +237,7 @@ const seedTestTickets = () => {
             priority: 'medium',
             status: 'assigned',
             assigned_to: 'john.doe',
-            assigned_team: 'ITTS_Main',
+            assigned_team: 'ITTS_Region7',
             email_recipient: 'itts@dpss.gov',
             email_recipient_display: 'ITTS: Main Office'
         }
