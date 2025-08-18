@@ -173,7 +173,7 @@ export default function Home() {
               </p>
               <div className="mt-4">
                 <Button 
-                  onClick={() => window.location.href = '/public-portal/'}
+                  onClick={() => window.location.href = '/public-portal/index.html'}
                   variant="outline"
                   className="w-full"
                 >
@@ -229,7 +229,7 @@ export default function Home() {
                 <Button 
                   className="w-full" 
                   size="lg"
-                  onClick={() => window.location.href = '/public-portal/'}
+                  onClick={() => window.location.href = '/public-portal/index.html'}
                 >
                   Submit New Ticket
                 </Button>
