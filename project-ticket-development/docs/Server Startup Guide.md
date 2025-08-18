@@ -11,16 +11,10 @@ The Orvale Management System is now a **unified single-server architecture** pow
 
 ## Quick Start - Single Server
 
-### Production (Port 80) - Recommended
+### Standard Development Server (Port 80 - Production-style setup)
 ```bash
 cd "/Users/borischu/project management/project-ticket-development/project-system"
 sudo npm run dev
-```
-
-### Development (Port 3000) - No sudo required
-```bash
-cd "/Users/borischu/project management/project-ticket-development/project-system"
-npm run dev:dev
 ```
 
 ### Build for Production
@@ -32,7 +26,7 @@ sudo npm start
 
 ## Server Details
 
-### Single Next.js Server (Port 80/3000)
+### Single Next.js Server (Port 80)
 **Purpose**: Complete unified IT management system
 
 **Features**:
@@ -66,7 +60,7 @@ lsof -ti:PORT_NUMBER | xargs kill -9
 ```
 
 ### Common Issues
-1. **Port 80 requires sudo**: Use `sudo npm run dev` for port 80, or `npm run dev:dev` for port 3000
+1. **Port 80 requires sudo**: Use `sudo npm run dev` for port 80 development
 2. **Module not found errors**: Run `npm install` to ensure all dependencies are installed
 3. **Database initialization**: Database auto-creates on first API call
 4. **Login fails**: Check browser console and ensure server is running
@@ -75,10 +69,7 @@ lsof -ti:PORT_NUMBER | xargs kill -9
 
 ### For Development
 ```bash
-# Development mode (port 3000)
-npm run dev:dev
-
-# Production mode (port 80)
+# Standard development (port 80 - production-style)
 sudo npm run dev
 ```
 

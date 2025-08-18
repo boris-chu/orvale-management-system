@@ -59,19 +59,16 @@ project-ticket-development/                     # Main development folder
 
 ### Server Startup (Single Server Architecture)
 ```bash
-# Production (Port 80) - Recommended
+# Standard Development Server (Port 80 - Production-style setup)
 cd "/Users/borischu/project management/project-ticket-development/project-system"
 sudo npm run dev
-
-# Development (Port 3000) - No sudo required
-cd "/Users/borischu/project management/project-ticket-development/project-system"
-npm run dev:dev
 ```
 
 **Access Points After Startup:**
-- **Public Portal**: http://localhost/ (Landing page with login modal)
-- **Admin Queue**: http://localhost/tickets (Ticket management interface)
-- **API Health**: http://localhost/api/health (Server status)
+- **Public Portal**: http://localhost/ (Landing page with ticket submission)
+- **Submit Tickets**: http://localhost/public-portal/ (Detailed ticket submission form) 
+- **Admin Queue**: http://localhost/tickets (IT staff ticket management interface)
+- **API Health**: http://localhost/api/health (Server status check)
 
 **Test Login Credentials:**
 - admin / admin123

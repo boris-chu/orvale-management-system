@@ -737,11 +737,11 @@ class TicketUI {
 
 ### **Apache + React Integration**
 
-#### **Current Architecture (HTML/JS + Node.js)**
+#### **Current Architecture (Single Next.js Server)**
 ```
-User Browser → Apache (HTTPS) → Node.js API (HTTP localhost:3000)
+User Browser → Next.js Server (HTTP/HTTPS localhost:80)
              ↓
-           Static Files (HTML/CSS/JS)
+           Unified App (SSR + API Routes + Static Files)
 ```
 
 #### **React Migration Path**
@@ -781,10 +781,9 @@ Phase 2: Full React Application
     Header always set X-XSS-Protection "1; mode=block"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     
-    # API Proxy to Node.js Backend
-    ProxyPass /api/ http://localhost:3000/api/
-    ProxyPassReverse /api/ http://localhost:3000/api/
-    ProxyPreserveHost On
+    # Single Next.js Server (Port 80)
+    # All API routes and static files served by Next.js
+    # No proxy needed - unified server architecture
     
     # React Router Support (SPA)
     <Directory "/var/www/html/ticket-system">
