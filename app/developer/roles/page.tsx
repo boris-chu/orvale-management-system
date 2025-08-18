@@ -54,47 +54,202 @@ interface Role {
 // Define all available permissions in the system
 const AVAILABLE_PERMISSIONS: Permission[] = [
   // Ticket Permissions
-  { id: 'ticket.view_own', name: 'View Own Tickets', category: 'Tickets', description: 'Allows users to view tickets that are specifically assigned to them. This is a basic permission that most IT staff need to see their workload and progress on assigned issues.' },
-  { id: 'ticket.view_team', name: 'View Team Tickets', category: 'Tickets', description: 'Enables viewing of all tickets assigned to the user\'s team or section. Useful for team leads and managers who need visibility into their team\'s workload and priorities.' },
-  { id: 'ticket.view_all', name: 'View All Tickets', category: 'Tickets', description: 'Grants access to view all tickets in the entire system regardless of assignment. This is typically reserved for administrators and senior managers who need system-wide visibility.' },
-  { id: 'ticket.update_own', name: 'Update Own Tickets', category: 'Tickets', description: 'Allows users to modify and update the status, comments, and details of tickets assigned to them. Essential for IT staff to mark progress and resolution status.' },
-  { id: 'ticket.assign_within_team', name: 'Assign Within Team', category: 'Tickets', description: 'Permits assigning tickets to other members within the same team or section. Useful for team leads who need to distribute workload among team members.' },
-  { id: 'ticket.assign_any', name: 'Assign Any', category: 'Tickets', description: 'Allows assignment of tickets to any user in the system, across all teams and departments. This is typically restricted to administrators and managers with broad oversight.' },
-  { id: 'ticket.comment_own', name: 'Comment Own Tickets', category: 'Tickets', description: 'Enables adding comments and notes to tickets assigned to the user. Important for documenting progress, solutions attempted, and communication with requestors.' },
-  { id: 'ticket.escalate', name: 'Escalate Tickets', category: 'Tickets', description: 'Allows escalating tickets to higher-level support tiers or management when issues cannot be resolved at the current level. Critical for proper issue resolution workflow.' },
-  { id: 'ticket.delete', name: 'Delete Tickets', category: 'Tickets', description: 'Permits permanent deletion of tickets from the system. This is a destructive action typically reserved for administrators to handle spam, duplicates, or data cleanup.' },
+  { 
+    id: 'ticket.view_own', 
+    name: 'View Own Tickets', 
+    category: 'Tickets', 
+    description: 'View tickets assigned to self\n• See personal workload\n• Track assigned issues\n• Basic permission for IT staff' 
+  },
+  { 
+    id: 'ticket.view_team', 
+    name: 'View Team Tickets', 
+    category: 'Tickets', 
+    description: 'View all team tickets\n• See team workload\n• Monitor priorities\n• For team leads & managers' 
+  },
+  { 
+    id: 'ticket.view_all', 
+    name: 'View All Tickets', 
+    category: 'Tickets', 
+    description: 'View all system tickets\n• System-wide visibility\n• For administrators\n• Senior management access' 
+  },
+  { 
+    id: 'ticket.update_own', 
+    name: 'Update Own Tickets', 
+    category: 'Tickets', 
+    description: 'Modify assigned tickets\n• Update status & details\n• Add resolution notes\n• Essential for IT staff' 
+  },
+  { 
+    id: 'ticket.assign_within_team', 
+    name: 'Assign Within Team', 
+    category: 'Tickets', 
+    description: 'Assign to team members\n• Distribute workload\n• For team leads\n• Within same section only' 
+  },
+  { 
+    id: 'ticket.assign_any', 
+    name: 'Assign Any', 
+    category: 'Tickets', 
+    description: 'Assign to any user\n• Cross-team assignment\n• For administrators\n• Broad oversight required' 
+  },
+  { 
+    id: 'ticket.comment_own', 
+    name: 'Comment Own Tickets', 
+    category: 'Tickets', 
+    description: 'Add comments & notes\n• Document progress\n• Communicate with users\n• Track solutions attempted' 
+  },
+  { 
+    id: 'ticket.escalate', 
+    name: 'Escalate Tickets', 
+    category: 'Tickets', 
+    description: 'Escalate to higher level\n• Move to senior support\n• Critical for workflow\n• When issues can\'t be resolved' 
+  },
+  { 
+    id: 'ticket.delete', 
+    name: 'Delete Tickets', 
+    category: 'Tickets', 
+    description: 'Permanently delete tickets\n• Handle spam/duplicates\n• Data cleanup\n• ⚠️ Destructive action' 
+  },
   
   // Queue Permissions
-  { id: 'queue.view_own_team', name: 'View Own Team Queue', category: 'Queues', description: 'Allows viewing the ticket queue for the user\'s own team. Essential for team members to see pending work and prioritize their tasks effectively.' },
-  { id: 'queue.view_team', name: 'View Team Queues', category: 'Queues', description: 'Enables viewing ticket queues for all teams within the user\'s section or department. Useful for managers coordinating work across multiple teams.' },
-  { id: 'queue.view_all', name: 'View All Queues', category: 'Queues', description: 'Grants access to view all ticket queues across the entire organization. Typically used by administrators and senior management for system-wide oversight.' },
-  { id: 'queue.manage', name: 'Manage Queues', category: 'Queues', description: 'Allows creation, modification, and deletion of ticket queues. This includes setting queue rules, priorities, and routing configurations. Reserved for administrators.' },
+  { 
+    id: 'queue.view_own_team', 
+    name: 'View Own Team Queue', 
+    category: 'Queues', 
+    description: 'View team queue\n• See pending work\n• Prioritize tasks\n• Essential for team members' 
+  },
+  { 
+    id: 'queue.view_team', 
+    name: 'View Team Queues', 
+    category: 'Queues', 
+    description: 'View all section queues\n• Cross-team visibility\n• Coordinate work\n• For managers' 
+  },
+  { 
+    id: 'queue.view_all', 
+    name: 'View All Queues', 
+    category: 'Queues', 
+    description: 'View all system queues\n• Organization-wide view\n• For administrators\n• System oversight' 
+  },
+  { 
+    id: 'queue.manage', 
+    name: 'Manage Queues', 
+    category: 'Queues', 
+    description: 'Create & manage queues\n• Set rules & priorities\n• Configure routing\n• Administrator only' 
+  },
   
   // User Permissions
-  { id: 'user.view_all', name: 'View All Users', category: 'Users', description: 'Permits viewing all user accounts in the system including their details, roles, and status. Necessary for administrators managing user accounts and assignments.' },
-  { id: 'user.create', name: 'Create Users', category: 'Users', description: 'Allows creation of new user accounts in the system. Includes setting initial passwords, roles, and team assignments. Typically restricted to HR and IT administrators.' },
-  { id: 'user.update', name: 'Update Users', category: 'Users', description: 'Enables modification of existing user account details such as contact information, team assignments, and roles. Important for maintaining accurate user records.' },
-  { id: 'user.deactivate', name: 'Deactivate Users', category: 'Users', description: 'Permits deactivating user accounts when employees leave or no longer need system access. A security-critical permission for maintaining proper access control.' },
+  { 
+    id: 'user.view_all', 
+    name: 'View All Users', 
+    category: 'Users', 
+    description: 'View all user accounts\n• See details & roles\n• Check status\n• For administrators' 
+  },
+  { 
+    id: 'user.create', 
+    name: 'Create Users', 
+    category: 'Users', 
+    description: 'Create new accounts\n• Set passwords & roles\n• Assign teams\n• HR & IT administrators' 
+  },
+  { 
+    id: 'user.update', 
+    name: 'Update Users', 
+    category: 'Users', 
+    description: 'Modify user details\n• Update contact info\n• Change assignments\n• Maintain accurate records' 
+  },
+  { 
+    id: 'user.deactivate', 
+    name: 'Deactivate Users', 
+    category: 'Users', 
+    description: 'Deactivate accounts\n• Remove system access\n• Security critical\n• When employees leave' 
+  },
   
   // Reporting Permissions
-  { id: 'reporting.view_team_metrics', name: 'View Team Metrics', category: 'Reporting', description: 'Allows access to performance metrics and analytics for the user\'s team including ticket resolution times, workload distribution, and efficiency statistics.' },
-  { id: 'reporting.view_all', name: 'View All Reports', category: 'Reporting', description: 'Grants access to all system reports and analytics across all teams and departments. Used by senior management and administrators for strategic planning.' },
+  { 
+    id: 'reporting.view_team_metrics', 
+    name: 'View Team Metrics', 
+    category: 'Reporting', 
+    description: 'View team analytics\n• Resolution times\n• Workload distribution\n• Efficiency statistics' 
+  },
+  { 
+    id: 'reporting.view_all', 
+    name: 'View All Reports', 
+    category: 'Reporting', 
+    description: 'Access all reports\n• System-wide analytics\n• Strategic planning\n• Senior management' 
+  },
   
   // System Permissions
-  { id: 'system.view_basic_info', name: 'View Basic Info', category: 'System', description: 'Allows viewing basic system information such as version numbers, uptime, and general health status. A minimal permission for general system awareness.' },
-  { id: 'system.manage_settings', name: 'Manage Settings', category: 'System', description: 'Permits modification of system-wide configuration settings including email templates, notification rules, and workflow configurations. Critical administrator permission.' },
+  { 
+    id: 'system.view_basic_info', 
+    name: 'View Basic Info', 
+    category: 'System', 
+    description: 'View system information\n• Version numbers\n• Uptime status\n• General awareness' 
+  },
+  { 
+    id: 'system.manage_settings', 
+    name: 'Manage Settings', 
+    category: 'System', 
+    description: 'Modify system config\n• Email templates\n• Notification rules\n• ⚠️ Critical permission' 
+  },
   
   // Admin Permissions
-  { id: 'admin.manage_users', name: 'Manage Users', category: 'Administration', description: 'Full administrative access to user management including creation, modification, deletion, and role assignment. One of the most powerful permissions in the system.' },
-  { id: 'admin.view_users', name: 'View Users', category: 'Administration', description: 'Read-only access to the user management interface. Allows viewing user details and assignments without the ability to make changes.' },
-  { id: 'admin.manage_teams', name: 'Manage Teams', category: 'Administration', description: 'Allows creation and management of teams including setting team hierarchies, responsibilities, and member assignments. Essential for organizational structure management.' },
-  { id: 'admin.view_teams', name: 'View Teams', category: 'Administration', description: 'Read-only access to team information and structure. Useful for managers who need to understand organizational relationships without modification rights.' },
-  { id: 'admin.manage_organization', name: 'Manage Organization', category: 'Administration', description: 'Permits modification of the organizational structure including departments, sections, and reporting relationships. Critical for maintaining accurate organizational data.' },
-  { id: 'admin.view_organization', name: 'View Organization', category: 'Administration', description: 'Read-only access to organizational structure and hierarchy information. Helps users understand reporting relationships and departmental organization.' },
-  { id: 'admin.manage_categories', name: 'Manage Categories', category: 'Administration', description: 'Allows creation and modification of ticket categories, subcategories, and classification systems. Important for maintaining organized ticket routing and reporting.' },
-  { id: 'admin.view_categories', name: 'View Categories', category: 'Administration', description: 'Read-only access to the ticket categorization system. Helps users understand available categories without the ability to modify the classification structure.' },
-  { id: 'admin.view_analytics', name: 'View Analytics', category: 'Administration', description: 'Access to comprehensive system analytics including performance dashboards, trend analysis, and operational metrics. Used for strategic planning and optimization.' },
-  { id: 'admin.system_settings', name: 'System Settings', category: 'Administration', description: 'Access to advanced system configuration including security settings, integration parameters, and core system behaviors. The highest level of administrative access.' }
+  { 
+    id: 'admin.manage_users', 
+    name: 'Manage Users', 
+    category: 'Administration', 
+    description: 'Full user management\n• Create, modify, delete\n• Role assignment\n• ⚠️ Powerful permission' 
+  },
+  { 
+    id: 'admin.view_users', 
+    name: 'View Users', 
+    category: 'Administration', 
+    description: 'Read-only user access\n• View details\n• See assignments\n• No modification rights' 
+  },
+  { 
+    id: 'admin.manage_teams', 
+    name: 'Manage Teams', 
+    category: 'Administration', 
+    description: 'Create & manage teams\n• Set hierarchies\n• Assign members\n• Organizational structure' 
+  },
+  { 
+    id: 'admin.view_teams', 
+    name: 'View Teams', 
+    category: 'Administration', 
+    description: 'Read-only team access\n• View structure\n• See relationships\n• No modifications' 
+  },
+  { 
+    id: 'admin.manage_organization', 
+    name: 'Manage Organization', 
+    category: 'Administration', 
+    description: 'Modify org structure\n• Departments & sections\n• Reporting relationships\n• Critical data management' 
+  },
+  { 
+    id: 'admin.view_organization', 
+    name: 'View Organization', 
+    category: 'Administration', 
+    description: 'View org hierarchy\n• Understand structure\n• See relationships\n• Read-only access' 
+  },
+  { 
+    id: 'admin.manage_categories', 
+    name: 'Manage Categories', 
+    category: 'Administration', 
+    description: 'Manage ticket categories\n• Create & modify types\n• Organize routing\n• Classification system' 
+  },
+  { 
+    id: 'admin.view_categories', 
+    name: 'View Categories', 
+    category: 'Administration', 
+    description: 'View category system\n• See available types\n• Understand structure\n• No modifications' 
+  },
+  { 
+    id: 'admin.view_analytics', 
+    name: 'View Analytics', 
+    category: 'Administration', 
+    description: 'System analytics access\n• Performance dashboards\n• Trend analysis\n• Strategic planning' 
+  },
+  { 
+    id: 'admin.system_settings', 
+    name: 'System Settings', 
+    category: 'Administration', 
+    description: 'Advanced system config\n• Security settings\n• Core behaviors\n• ⚠️ Highest level access' 
+  }
 ];
 
 export default function RoleManagement() {
@@ -575,11 +730,21 @@ export default function RoleManagement() {
                               <p className="text-xs text-gray-500">{perm.id}</p>
                             </div>
                           </TooltipTrigger>
-                          <TooltipContent side="right" className="max-w-xs">
-                            <div className="space-y-1">
-                              <p className="font-medium">{perm.name}</p>
-                              <p className="text-xs opacity-75">{perm.id}</p>
-                              <p className="text-sm">{perm.description}</p>
+                          <TooltipContent 
+                            side="top" 
+                            className="max-w-64 p-3"
+                            sideOffset={8}
+                          >
+                            <div className="space-y-2">
+                              <div>
+                                <p className="font-medium text-sm">{perm.name}</p>
+                                <p className="text-xs opacity-75 font-mono">{perm.id}</p>
+                              </div>
+                              <div className="text-sm space-y-1">
+                                {perm.description.split('\n').map((line, index) => (
+                                  <p key={index} className={index === 0 ? "font-medium" : ""}>{line}</p>
+                                ))}
+                              </div>
                             </div>
                           </TooltipContent>
                         </Tooltip>
@@ -678,11 +843,21 @@ export default function RoleManagement() {
                               </div>
                             </div>
                           </TooltipTrigger>
-                          <TooltipContent side="right" className="max-w-sm">
-                            <div className="space-y-1">
-                              <p className="font-medium">{perm.name}</p>
-                              <p className="text-xs opacity-75">{perm.id}</p>
-                              <p className="text-sm">{perm.description}</p>
+                          <TooltipContent 
+                            side="top" 
+                            className="max-w-64 p-3"
+                            sideOffset={8}
+                          >
+                            <div className="space-y-2">
+                              <div>
+                                <p className="font-medium text-sm">{perm.name}</p>
+                                <p className="text-xs opacity-75 font-mono">{perm.id}</p>
+                              </div>
+                              <div className="text-sm space-y-1">
+                                {perm.description.split('\n').map((line, index) => (
+                                  <p key={index} className={index === 0 ? "font-medium" : ""}>{line}</p>
+                                ))}
+                              </div>
                             </div>
                           </TooltipContent>
                         </Tooltip>
@@ -802,11 +977,21 @@ export default function RoleManagement() {
                               </div>
                             </div>
                           </TooltipTrigger>
-                          <TooltipContent side="right" className="max-w-sm">
-                            <div className="space-y-1">
-                              <p className="font-medium">{perm.name}</p>
-                              <p className="text-xs opacity-75">{perm.id}</p>
-                              <p className="text-sm">{perm.description}</p>
+                          <TooltipContent 
+                            side="top" 
+                            className="max-w-64 p-3"
+                            sideOffset={8}
+                          >
+                            <div className="space-y-2">
+                              <div>
+                                <p className="font-medium text-sm">{perm.name}</p>
+                                <p className="text-xs opacity-75 font-mono">{perm.id}</p>
+                              </div>
+                              <div className="text-sm space-y-1">
+                                {perm.description.split('\n').map((line, index) => (
+                                  <p key={index} className={index === 0 ? "font-medium" : ""}>{line}</p>
+                                ))}
+                              </div>
                             </div>
                           </TooltipContent>
                         </Tooltip>
