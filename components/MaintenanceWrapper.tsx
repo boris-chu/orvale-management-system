@@ -18,7 +18,7 @@ function shouldShowMaintenance(
   userPermissions: string[] | null | undefined
 ): boolean {
   // If user has override permission, never show maintenance
-  if (userPermissions && userPermissions.includes('admin.maintenance_override')) {
+  if (Array.isArray(userPermissions) && userPermissions.includes('admin.maintenance_override')) {
     return false;
   }
 
