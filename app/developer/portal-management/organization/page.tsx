@@ -104,8 +104,7 @@ export default function OrganizationStructurePage() {
       
       // Check permissions for organization management
       const hasPermission = userData.role === 'admin' ||
-                           userData.permissions?.includes('admin.manage_categories') ||
-                           userData.permissions?.includes('portal.manage_organization');
+                           userData.permissions?.includes('admin.manage_organization');
       
       if (!hasPermission) {
         router.push('/developer/portal-management');
@@ -120,14 +119,14 @@ export default function OrganizationStructurePage() {
   const loadData = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/categories', {
+      const response = await fetch('/api/developer/dpss-org', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (response.ok) {
         const data = await response.json();
-        setDpssOffices(data.dpss_offices || []);
-        setDpssSections(data.dpss_sections || []);
+        setDpssOffices(data.offices || []);
+        setDpssSections(data.sections || []);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -148,8 +147,7 @@ export default function OrganizationStructurePage() {
   };
 
   const canManageOrg = currentUser?.role === 'admin' ||
-                      currentUser?.permissions?.includes('admin.manage_categories') ||
-                      currentUser?.permissions?.includes('portal.manage_organization');
+                      currentUser?.permissions?.includes('admin.manage_organization');
 
   const openCreateModal = (type: 'office' | 'section') => {
     setModalType(type);
@@ -191,7 +189,7 @@ export default function OrganizationStructurePage() {
     setSaving(true);
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/categories', {
+      const response = await fetch('/api/developer/dpss-org', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -226,7 +224,7 @@ export default function OrganizationStructurePage() {
     setSaving(true);
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/categories', {
+      const response = await fetch('/api/developer/dpss-org', {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -264,7 +262,7 @@ export default function OrganizationStructurePage() {
 
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/developer/categories?type=${type}&id=${itemId}`, {
+      const response = await fetch(`/api/developer/dpss-org?type=${type}&id=${itemId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

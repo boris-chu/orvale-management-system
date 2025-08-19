@@ -114,7 +114,7 @@ export default function PortalManagementPage() {
         { label: 'Offices', value: '8' },
         { label: 'Sections', value: '89' }
       ],
-      permissions: ['admin.manage_organization', 'portal.manage_organization']
+      permissions: ['admin.manage_organization']
     },
     {
       id: 'settings',
