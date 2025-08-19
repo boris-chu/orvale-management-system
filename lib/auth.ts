@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { getAsync, queryAsync } from './database';
+import { authLogger } from './logger';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'orvale-management-system-secret-key-2025';
 const JWT_EXPIRES_IN = '24h';
@@ -25,17 +26,17 @@ export const authenticateUser = async (username: string, password: string): Prom
         );
 
         if (!user) {
-            console.log(`❌ Authentication failed: User '${username}' not found`);
+            authLogger.login(username, undefined, false);
             return null;
         }
 
         const isValidPassword = await bcrypt.compare(password, user.password_hash);
         if (!isValidPassword) {
-            console.log(`❌ Authentication failed: Invalid password for '${username}'`);
+            authLogger.login(username, undefined, false);
             return null;
         }
 
-        console.log(`✅ Authentication successful: ${user.display_name} (${user.role})`);
+        authLogger.login(username, undefined, true);
         return {
             id: user.id,
             username: user.username,

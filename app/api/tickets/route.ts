@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { queryAsync, runAsync } from '@/lib/database';
 import { verifyAuth } from '@/lib/auth';
 import { generateTicketNumber } from '@/lib/ticket-numbering';
+import { ticketLogger, apiLogger } from '@/lib/logger';
 
 // Helper function to add history entry
 async function addHistoryEntry(ticketId: string, actionType: string, user: any, fromValue?: string, toValue?: string, fromTeam?: string, toTeam?: string, reason?: string, details?: any) {
@@ -235,6 +236,9 @@ export async function POST(request: NextRequest) {
                 initial_assignment: assigned_team
             }
         );
+
+        // Log ticket creation
+        ticketLogger.created(submissionId, submitted_by, assigned_team);
 
         return NextResponse.json({
             success: true,

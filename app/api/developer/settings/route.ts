@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { queryAsync, getAsync, runAsync } from '@/lib/database';
+import { systemLogger, updateLogLevel } from '@/lib/logger';
 
 // Default system settings
 const DEFAULT_SETTINGS = {
@@ -160,6 +161,12 @@ export async function PUT(request: NextRequest) {
     });
 
     await Promise.all(updatePromises);
+
+    // If log level was updated, update the logger configuration
+    if (settings.logLevel) {
+      await updateLogLevel();
+      systemLogger.configUpdated('log_level', authResult.user.username);
+    }
 
     return NextResponse.json({ 
       success: true, 

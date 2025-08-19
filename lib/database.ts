@@ -2,12 +2,14 @@ import sqlite3 from 'sqlite3';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 import { initTicketSequences, updateExistingTickets } from './ticket-numbering';
+import { systemLogger } from './logger';
 
 const dbPath = path.join(process.cwd(), 'orvale_tickets.db');
 const db = new sqlite3.Database(dbPath);
 
 export const initDB = () => {
     console.log('🔧 Initializing Orvale Management System database...');
+    systemLogger.databaseConnected();
     
     return new Promise<void>((resolve, reject) => {
         db.serialize(() => {

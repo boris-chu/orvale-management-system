@@ -15,3 +15,7 @@ ui-libraries/
 # Screenshots
 *.png
 Screenshot*.png
+
+# Log files
+logs/*.log
+logs/*.log.*
