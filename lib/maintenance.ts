@@ -50,8 +50,16 @@ export async function checkMaintenanceStatus(): Promise<MaintenanceStatus> {
     const systemConfig = parseMaintenanceSettings(systemSettings, 'system');
     const portalConfig = parseMaintenanceSettings(portalSettings, 'portal');
 
+    // Debug logging
+    console.log('🔍 System settings raw:', systemSettings);
+    console.log('🔍 System config parsed:', systemConfig);
+    console.log('🔍 Portal settings raw:', portalSettings);
+    console.log('🔍 Portal config parsed:', portalConfig);
+
     const isSystemMaintenance = systemConfig?.enabled || false;
     const isPortalMaintenance = portalConfig?.enabled || false;
+    
+    console.log('🔍 Final maintenance status:', { isSystemMaintenance, isPortalMaintenance });
 
     // Determine effective mode (system takes priority)
     let effectiveMode: 'system' | 'portal' | 'none' = 'none';

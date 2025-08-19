@@ -6,6 +6,15 @@ export async function GET(request: NextRequest) {
   try {
     // Get maintenance status
     const status = await checkMaintenanceStatus();
+    
+    // Debug logging
+    console.log('🔍 Maintenance API Debug:', {
+      isSystemMaintenance: status.isSystemMaintenance,
+      isPortalMaintenance: status.isPortalMaintenance,
+      effectiveMode: status.effectiveMode,
+      hasSystemConfig: !!status.systemConfig,
+      hasPortalConfig: !!status.portalConfig
+    });
 
     // Check if user has override permission
     let hasOverride = false;
