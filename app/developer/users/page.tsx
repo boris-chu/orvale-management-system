@@ -514,8 +514,7 @@ export default function UserManagement() {
                         <div className="flex items-center space-x-3">
                           <UserAvatar 
                             user={user}
-                            size="md"
-                            className="w-10 h-10"
+                            size="lg"
                           />
                           <div>
                             <p className="font-medium text-gray-900">{user.display_name}</p>

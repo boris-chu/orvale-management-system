@@ -665,9 +665,8 @@ export default function TicketsPage() {
                       >
                         <UserAvatar 
                           user={currentUser}
-                          size="md"
+                          size="lg"
                           showOnlineIndicator={true}
-                          className="w-8 h-8 border-2 border-white/30"
                         />
                         <div className="text-left min-w-0">
                           <p className="text-sm font-medium text-white truncate">{currentUser?.display_name}</p>
@@ -698,7 +697,6 @@ export default function TicketsPage() {
                             <UserAvatar 
                               user={currentUser}
                               size="lg"
-                              className="w-10 h-10"
                             />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-gray-900 truncate">{currentUser?.display_name}</p>

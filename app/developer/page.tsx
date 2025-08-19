@@ -335,7 +335,6 @@ export default function DeveloperDashboard() {
                           user={currentUser}
                           size="lg"
                           showOnlineIndicator={true}
-                          className="w-9 h-9"
                         />
                         <div className="text-left min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">{currentUser?.display_name}</p>
@@ -366,7 +365,6 @@ export default function DeveloperDashboard() {
                             <UserAvatar 
                               user={currentUser}
                               size="lg"
-                              className="w-10 h-10"
                             />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-gray-900 truncate">{currentUser?.display_name}</p>

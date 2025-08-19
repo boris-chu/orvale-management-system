@@ -199,8 +199,7 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
           <div className="flex flex-col items-center space-y-4">
             <UserAvatar 
               user={user} 
-              size="xl" 
-              className="w-24 h-24"
+              size="2xl"
             />
             
             <div className="flex space-x-2">

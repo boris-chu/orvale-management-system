@@ -10,7 +10,7 @@ interface UserAvatarProps {
     profile_picture?: string;
     email?: string;
   };
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   className?: string;
   onClick?: () => void;
   showOnlineIndicator?: boolean;
@@ -20,14 +20,16 @@ const sizeClasses = {
   sm: 'h-6 w-6 text-xs',
   md: 'h-8 w-8 text-sm',
   lg: 'h-10 w-10 text-sm',
-  xl: 'h-12 w-12 text-base'
+  xl: 'h-12 w-12 text-base',
+  '2xl': 'h-24 w-24 text-xl'
 };
 
 const onlineIndicatorSize = {
   sm: 'w-2 h-2',
   md: 'w-2.5 h-2.5',
   lg: 'w-3 h-3',
-  xl: 'w-3.5 h-3.5'
+  xl: 'w-3.5 h-3.5',
+  '2xl': 'w-4 h-4'
 };
 
 const getInitials = (name: string): string => {
