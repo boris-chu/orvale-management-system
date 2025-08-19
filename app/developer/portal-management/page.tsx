@@ -106,13 +106,13 @@ export default function PortalManagementPage() {
     {
       id: 'organization',
       title: 'Organization Structure',
-      description: 'Update offices, bureaus, divisions, and sections',
+      description: 'Manage DPSS offices and sections used in the public portal',
       icon: Building2,
       href: '/developer/portal-management/organization',
       color: 'from-purple-500 to-purple-600',
       stats: [
         { label: 'Offices', value: '8' },
-        { label: 'Total Units', value: '234' }
+        { label: 'Sections', value: '89' }
       ],
       permissions: ['admin.manage_organization', 'portal.manage_organization']
     },
