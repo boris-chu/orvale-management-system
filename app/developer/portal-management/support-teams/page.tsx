@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Users, 
@@ -22,7 +21,17 @@ import {
   Building2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { 
+  Select, 
+  MenuItem, 
+  FormControl, 
+  InputLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography
+} from '@mui/material';
 
 interface SupportTeamGroup {
   id: string;
@@ -49,7 +58,6 @@ interface SupportTeam {
 export default function SupportTeamsManagement() {
   const [groups, setGroups] = useState<SupportTeamGroup[]>([]);
   const [teams, setTeams] = useState<SupportTeam[]>([]);
-  // Removed supportTeamGroups state since we're using simple text input
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -506,14 +514,14 @@ export default function SupportTeamsManagement() {
       </div>
 
       {/* Create Modal */}
-      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="max-w-md" style={{ zIndex: 15000 }}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <Plus className="h-5 w-5" />
-              <span>Create New {modalType === 'group' ? 'Group' : 'Team'}</span>
-            </DialogTitle>
-          </DialogHeader>
+      <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <div className="flex items-center space-x-2">
+            <Plus className="h-5 w-5" />
+            <span>Create New {modalType === 'group' ? 'Group' : 'Team'}</span>
+          </div>
+        </DialogTitle>
+        <DialogContent>
           
           <div className="space-y-4">
             {modalType === 'group' ? (
@@ -541,93 +549,6 @@ export default function SupportTeamsManagement() {
               </>
             ) : (
               <>
-                {/* Support Group - Dropdown for group selection */}
-                <div style={{ position: 'relative', zIndex: 20000 }}>
-                  <Label htmlFor="support_group">Support Group</Label>
-                  <FormControl 
-                    fullWidth 
-                    size="small"
-                    sx={{ 
-                      zIndex: 20000,
-                      '& .MuiInputBase-root': { zIndex: 20000 },
-                      '& .MuiOutlinedInput-root': { zIndex: 20000 }
-                    }}
-                  >
-                    <InputLabel 
-                      id="support-group-label"
-                      sx={{ zIndex: 20001 }}
-                    >
-                      Select Support Group
-                    </InputLabel>
-                    <Select
-                      labelId="support-group-label"
-                      id="support_group"
-                      value={formData.group_id}
-                      label="Select Support Group"
-                      onChange={(e) => setFormData({...formData, group_id: e.target.value as string})}
-                      MenuProps={{
-                        PaperProps: {
-                          sx: {
-                            zIndex: 25000,
-                            maxHeight: 200,
-                            '& .MuiMenuItem-root': {
-                              zIndex: 25001
-                            }
-                          }
-                        },
-                        anchorOrigin: {
-                          vertical: 'bottom',
-                          horizontal: 'left',
-                        },
-                        transformOrigin: {
-                          vertical: 'top',
-                          horizontal: 'left',
-                        },
-                      }}
-                      sx={{ zIndex: 20000 }}
-                    >
-                      {groups.length === 0 ? (
-                        <MenuItem disabled>No groups available</MenuItem>
-                      ) : (
-                        groups.map((group) => (
-                          <MenuItem 
-                            key={group.id} 
-                            value={group.id}
-                            sx={{ zIndex: 25002 }}
-                          >
-                            {group.name}
-                          </MenuItem>
-                        ))
-                      )}
-                    </Select>
-                  </FormControl>
-                  <p className="text-xs text-gray-500 mt-1">Select which group this team belongs to</p>
-                </div>
-
-                {/* Display Label */}
-                <div>
-                  <Label htmlFor="display_label">Display Label</Label>
-                  <Input
-                    id="display_label"
-                    value={formData.label}
-                    onChange={(e) => setFormData({...formData, label: e.target.value})}
-                    placeholder="Crossroads Main"
-                  />
-                </div>
-
-                {/* Email Address */}
-                <div>
-                  <Label htmlFor="team_email">Email Address</Label>
-                  <Input
-                    id="team_email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    placeholder="support@dpss.lacounty.gov"
-                  />
-                </div>
-
-                {/* Team Name */}
                 <div>
                   <Label htmlFor="team_name">Team Name</Label>
                   <Input
@@ -646,17 +567,63 @@ export default function SupportTeamsManagement() {
                   />
                 </div>
 
-                {/* Team ID - Auto-generated */}
                 <div>
-                  <Label htmlFor="team_id">Team ID (Auto-generated)</Label>
+                  <Label htmlFor="team_id">Team ID (Auto-generated, editable)</Label>
                   <Input
                     id="team_id"
                     value={formData.id}
-                    readOnly
-                    className="font-mono bg-gray-50"
+                    onChange={(e) => setFormData({...formData, id: e.target.value})}
+                    className="font-mono"
                     placeholder="Will be generated from team name"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Generated automatically from team name</p>
+                  <p className="text-xs text-gray-500 mt-1">Generated automatically from team name, but you can edit it</p>
+                </div>
+              </>
+            )}
+
+            {modalType === 'team' && (
+              <>
+                <div>
+                  <Label htmlFor="item_label">Display Label</Label>
+                  <Input
+                    id="item_label"
+                    value={formData.label}
+                    onChange={(e) => setFormData({...formData, label: e.target.value})}
+                    placeholder="Crossroads Main"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="item_email">Email Address</Label>
+                  <Input
+                    id="item_email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="support@dpss.lacounty.gov"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="group">Support Group</Label>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Select Group</InputLabel>
+                    <Select
+                      value={formData.group_id}
+                      label="Select Group"
+                      onChange={(e) => setFormData({...formData, group_id: e.target.value as string})}
+                    >
+                      {groups.length === 0 ? (
+                        <MenuItem disabled>No groups available</MenuItem>
+                      ) : (
+                        groups.map((group) => (
+                          <MenuItem key={group.id} value={group.id}>
+                            {group.name}
+                          </MenuItem>
+                        ))
+                      )}
+                    </Select>
+                  </FormControl>
                 </div>
               </>
             )}
@@ -683,41 +650,41 @@ export default function SupportTeamsManagement() {
               />
             </div>
             
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowCreateModal(false)}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleCreateItem}
-                disabled={saving || !formData.id || !formData.name || (modalType === 'team' && (!formData.email || !formData.group_id))}
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  `Create ${modalType === 'group' ? 'Group' : 'Team'}`
-                )}
-              </Button>
-            </div>
           </div>
         </DialogContent>
+        <DialogActions>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowCreateModal(false)}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleCreateItem}
+            disabled={saving || !formData.id || !formData.name || (modalType === 'team' && (!formData.email || !formData.group_id))}
+          >
+            {saving ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              `Create ${modalType === 'group' ? 'Group' : 'Team'}`
+            )}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Edit Modal - Similar structure to Create Modal */}
-      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-md" style={{ zIndex: 15000 }}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <Edit className="h-5 w-5" />
-              <span>Edit {modalType === 'group' ? 'Group' : 'Team'}</span>
-            </DialogTitle>
-          </DialogHeader>
+      <Dialog open={showEditModal} onClose={() => setShowEditModal(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <div className="flex items-center space-x-2">
+            <Edit className="h-5 w-5" />
+            <span>Edit {modalType === 'group' ? 'Group' : 'Team'}</span>
+          </div>
+        </DialogTitle>
+        <DialogContent>
           
           <div className="space-y-4">
             {modalType === 'group' ? (
@@ -745,70 +712,31 @@ export default function SupportTeamsManagement() {
               </>
             ) : (
               <>
-                {/* Support Group - Dropdown for group selection */}
-                <div style={{ position: 'relative', zIndex: 20000 }}>
-                  <Label htmlFor="edit_support_group">Support Group</Label>
-                  <FormControl 
-                    fullWidth 
-                    size="small"
-                    sx={{ 
-                      zIndex: 20000,
-                      '& .MuiInputBase-root': { zIndex: 20000 },
-                      '& .MuiOutlinedInput-root': { zIndex: 20000 }
-                    }}
-                  >
-                    <InputLabel 
-                      id="edit-support-group-label"
-                      sx={{ zIndex: 20001 }}
-                    >
-                      Select Support Group
-                    </InputLabel>
-                    <Select
-                      labelId="edit-support-group-label"
-                      id="edit_support_group"
-                      value={formData.group_id}
-                      label="Select Support Group"
-                      onChange={(e) => setFormData({...formData, group_id: e.target.value as string})}
-                      MenuProps={{
-                        PaperProps: {
-                          sx: {
-                            zIndex: 25000,
-                            maxHeight: 200,
-                            '& .MuiMenuItem-root': {
-                              zIndex: 25001
-                            }
-                          }
-                        },
-                        anchorOrigin: {
-                          vertical: 'bottom',
-                          horizontal: 'left',
-                        },
-                        transformOrigin: {
-                          vertical: 'top',
-                          horizontal: 'left',
-                        },
-                      }}
-                      sx={{ zIndex: 20000 }}
-                    >
-                      {groups.length === 0 ? (
-                        <MenuItem disabled>No groups available</MenuItem>
-                      ) : (
-                        groups.map((group) => (
-                          <MenuItem 
-                            key={group.id} 
-                            value={group.id}
-                            sx={{ zIndex: 25002 }}
-                          >
-                            {group.name}
-                          </MenuItem>
-                        ))
-                      )}
-                    </Select>
-                  </FormControl>
-                  <p className="text-xs text-gray-500 mt-1">Select which group this team belongs to</p>
+                <div>
+                  <Label htmlFor="edit_team_name">Team Name</Label>
+                  <Input
+                    id="edit_team_name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="Support Team Name"
+                  />
                 </div>
 
-                {/* Display Label */}
+                <div>
+                  <Label htmlFor="edit_team_id">Team ID</Label>
+                  <Input
+                    id="edit_team_id"
+                    value={formData.id}
+                    disabled
+                    className="font-mono bg-gray-100"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">ID cannot be changed</p>
+                </div>
+              </>
+            )}
+
+            {modalType === 'team' && (
+              <>
                 <div>
                   <Label htmlFor="edit_display_label">Display Label</Label>
                   <Input
@@ -819,7 +747,6 @@ export default function SupportTeamsManagement() {
                   />
                 </div>
 
-                {/* Email Address */}
                 <div>
                   <Label htmlFor="edit_team_email">Email Address</Label>
                   <Input
@@ -831,27 +758,26 @@ export default function SupportTeamsManagement() {
                   />
                 </div>
 
-                {/* Team Name */}
                 <div>
-                  <Label htmlFor="edit_team_name">Team Name</Label>
-                  <Input
-                    id="edit_team_name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    placeholder="Support Team Name"
-                  />
-                </div>
-
-                {/* Team ID - Cannot be changed */}
-                <div>
-                  <Label htmlFor="edit_team_id">Team ID</Label>
-                  <Input
-                    id="edit_team_id"
-                    value={formData.id}
-                    disabled
-                    className="font-mono bg-gray-100"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">ID cannot be changed</p>
+                  <Label htmlFor="edit_group">Support Group</Label>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Select Group</InputLabel>
+                    <Select
+                      value={formData.group_id}
+                      label="Select Group"
+                      onChange={(e) => setFormData({...formData, group_id: e.target.value as string})}
+                    >
+                      {groups.length === 0 ? (
+                        <MenuItem disabled>No groups available</MenuItem>
+                      ) : (
+                        groups.map((group) => (
+                          <MenuItem key={group.id} value={group.id}>
+                            {group.name}
+                          </MenuItem>
+                        ))
+                      )}
+                    </Select>
+                  </FormControl>
                 </div>
               </>
             )}
@@ -889,30 +815,30 @@ export default function SupportTeamsManagement() {
               <Label htmlFor="edit_active">Active</Label>
             </div>
             
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowEditModal(false)}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleEditItem}
-                disabled={saving || !formData.name || (modalType === 'team' && (!formData.email || !formData.group_id))}
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  `Update ${modalType === 'group' ? 'Group' : 'Team'}`
-                )}
-              </Button>
-            </div>
           </div>
         </DialogContent>
+        <DialogActions>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowEditModal(false)}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleEditItem}
+            disabled={saving || !formData.name || (modalType === 'team' && (!formData.email || !formData.group_id))}
+          >
+            {saving ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              `Update ${modalType === 'group' ? 'Group' : 'Team'}`
+            )}
+          </Button>
+        </DialogActions>
       </Dialog>
     </div>
   );
