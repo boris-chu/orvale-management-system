@@ -12,7 +12,6 @@ import {
   Settings,
   FileText,
   ArrowLeft,
-  Info,
   Shield,
   Database
 } from 'lucide-react';
@@ -194,20 +193,6 @@ export default function PortalManagementPage() {
           </div>
         </div>
 
-        {/* Info Banner */}
-        <Card className="mb-8 border-blue-200 bg-blue-50">
-          <CardContent className="flex items-start pt-6">
-            <Info className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
-            <div className="text-sm text-blue-800">
-              <p className="font-semibold mb-1">System Information Analyst Access</p>
-              <p>
-                This portal allows system analysts to manage public-facing configurations 
-                without requiring developer intervention. All changes are logged and can be 
-                reverted if needed.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {managementCards.map((card, index) => {

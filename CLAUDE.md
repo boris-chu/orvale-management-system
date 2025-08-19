@@ -192,6 +192,69 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 ## 🚨 Important Patterns
 
+### ⚠️ UI Library Mixing - CRITICAL LESSONS LEARNED
+
+**NEVER mix different UI libraries for the same component type**. This causes focus management conflicts and infinite recursion errors, especially with React 19.
+
+#### ❌ **What NOT to do:**
+```javascript
+// DON'T MIX: Radix UI Dialog with Material UI Select
+import { Dialog, DialogContent } from '@/components/ui/dialog'; // Radix UI
+import { Select, MenuItem } from '@mui/material'; // Material UI
+
+// This causes focus-scope infinite recursion errors!
+<Dialog>
+  <DialogContent>
+    <Select> {/* Focus conflict! */}
+      <MenuItem>Option 1</MenuItem>
+    </Select>
+  </DialogContent>
+</Dialog>
+```
+
+#### ✅ **What TO do:**
+```javascript
+// USE CONSISTENTLY: All Material UI or All Radix UI
+import { 
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  DialogActions,
+  Select, 
+  MenuItem 
+} from '@mui/material'; // All from same library
+
+<Dialog>
+  <DialogTitle>Title</DialogTitle>
+  <DialogContent>
+    <Select> {/* No focus conflicts! */}
+      <MenuItem>Option 1</MenuItem>
+    </Select>
+  </DialogContent>
+  <DialogActions>
+    <Button>Action</Button>
+  </DialogActions>
+</Dialog>
+```
+
+#### 🔧 **Library-Specific Guidelines:**
+
+**For React 19 compatibility with dropdowns in modals:**
+- **Use Material UI**: `Dialog` + `Select` + `MenuItem` (fully compatible)
+- **Avoid Radix UI**: `Dialog` + Material UI `Select` (causes focus errors)
+- **Update packages**: Keep Radix UI at latest versions for React 19
+
+**Component consistency rules:**
+1. **Modal + Dropdown**: Use same library for both
+2. **Form components**: Stick to one library per form
+3. **Interactive elements**: Don't mix focus-managed components
+
+#### 📚 **Error signatures to watch for:**
+```
+focus-scope.tsx:295 Uncaught RangeError: Maximum call stack size exceeded
+```
+**Solution**: Check for mixed UI libraries in modals/dropdowns
+
 ### API Response Handling
 ```javascript
 try {
