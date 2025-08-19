@@ -621,11 +621,12 @@ export default function SystemSettings() {
 
             {/* Maintenance Settings */}
             <TabsContent value="maintenance" className="space-y-6 mt-6">
+              {/* System Maintenance Mode */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Database className="h-5 w-5" />
-                    <span>Maintenance & Backup</span>
+                    <span>System Maintenance Mode</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -638,24 +639,188 @@ export default function SystemSettings() {
                         enableMaintenance: checked
                       })}
                     />
-                    <Label htmlFor="enableMaintenance">Enable Maintenance Mode</Label>
+                    <Label htmlFor="enableMaintenance">Enable System-wide Maintenance</Label>
                   </div>
                   
                   {settings.enableMaintenance && (
-                    <div>
-                      <Label htmlFor="maintenanceMessage">Maintenance Message</Label>
-                      <Textarea
-                        id="maintenanceMessage"
-                        value={settings.maintenanceMessage}
-                        onChange={(e) => setSettings({
-                          ...settings, 
-                          maintenanceMessage: e.target.value
-                        })}
-                        rows={3}
-                      />
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                        <span className="text-red-800 font-medium">System Maintenance Active</span>
+                      </div>
+                      <p className="text-red-700 text-sm">
+                        All users except those with maintenance override permission will see the maintenance page.
+                      </p>
                     </div>
                   )}
                   
+                  {settings.enableMaintenance && (
+                    <>
+                      {/* Maintenance Message */}
+                      <div>
+                        <Label htmlFor="maintenanceMessage">Maintenance Message</Label>
+                        <Textarea
+                          id="maintenanceMessage"
+                          value={settings.maintenanceMessage}
+                          onChange={(e) => setSettings({
+                            ...settings, 
+                            maintenanceMessage: e.target.value
+                          })}
+                          rows={4}
+                          placeholder="Enter the message users will see during maintenance..."
+                          className="font-mono"
+                        />
+                        <p className="text-sm text-gray-500 mt-1">
+                          Supports basic HTML formatting and line breaks
+                        </p>
+                      </div>
+
+                      {/* Theme Customization */}
+                      <div>
+                        <Label>Theme Customization</Label>
+                        <div className="mt-2 p-4 border rounded-lg space-y-4">
+                          {/* Preset Themes */}
+                          <div>
+                            <Label className="text-sm font-medium">Preset Themes</Label>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-2">
+                              {Object.entries({
+                                'orvale-default': { name: 'Orvale Default', color: '#2563eb' },
+                                'government-official': { name: 'Government', color: '#166534' },
+                                'maintenance-orange': { name: 'Maintenance', color: '#ea580c' },
+                                'emergency-red': { name: 'Emergency', color: '#dc2626' },
+                                'dark-mode': { name: 'Dark Mode', color: '#3b82f6' }
+                              }).map(([key, theme]) => (
+                                <button
+                                  key={key}
+                                  onClick={() => {
+                                    // This would apply the preset theme
+                                    console.log(`Apply theme: ${key}`);
+                                  }}
+                                  className="p-2 border rounded text-xs text-center hover:bg-gray-50 transition-colors"
+                                >
+                                  <div 
+                                    className="w-full h-3 rounded mb-1" 
+                                    style={{ backgroundColor: theme.color }}
+                                  ></div>
+                                  {theme.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Custom Colors */}
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div>
+                              <Label className="text-xs">Primary Color</Label>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <input type="color" defaultValue="#2563eb" className="w-8 h-8 border rounded" />
+                                <span className="text-sm text-gray-600">#2563eb</span>
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Background</Label>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <input type="color" defaultValue="#f8fafc" className="w-8 h-8 border rounded" />
+                                <span className="text-sm text-gray-600">#f8fafc</span>
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Text Color</Label>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <input type="color" defaultValue="#475569" className="w-8 h-8 border rounded" />
+                                <span className="text-sm text-gray-600">#475569</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Advanced Options */}
+                      <div>
+                        <Label>Advanced Options</Label>
+                        <div className="mt-2 p-4 border rounded-lg space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="estimatedReturn" className="text-sm">Estimated Return Time</Label>
+                              <Input
+                                id="estimatedReturn"
+                                type="datetime-local"
+                                className="mt-1"
+                                placeholder="Optional"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="emergencyContact" className="text-sm">Emergency Contact</Label>
+                              <Input
+                                id="emergencyContact"
+                                placeholder="e.g., IT Helpdesk: (555) 123-4567"
+                                className="mt-1"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <Switch id="adminOverride" defaultChecked />
+                              <Label htmlFor="adminOverride" className="text-sm">Allow admin override (users with permission)</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Switch id="showRefresh" defaultChecked />
+                              <Label htmlFor="showRefresh" className="text-sm">Show refresh button for auto-recovery</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Switch id="logChanges" defaultChecked />
+                              <Label htmlFor="logChanges" className="text-sm">Log maintenance mode changes</Label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Live Preview */}
+                      <div>
+                        <Label>Live Preview</Label>
+                        <div className="mt-2 border rounded-lg overflow-hidden">
+                          <div className="bg-gray-50 px-3 py-2 border-b flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-xs text-gray-600">Updates in real-time as you edit above</span>
+                          </div>
+                          <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 min-h-[200px]">
+                            {/* Mini maintenance page preview */}
+                            <div className="max-w-sm mx-auto bg-white rounded-lg shadow-sm border p-4 text-center">
+                              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <Database className="w-6 h-6 text-blue-600" />
+                              </div>
+                              <h3 className="font-bold text-gray-900 mb-1">ORVALE MANAGEMENT SYSTEM</h3>
+                              <h4 className="text-lg font-semibold text-blue-600 mb-2">System Maintenance</h4>
+                              <div className="w-6 h-0.5 bg-blue-600 mx-auto mb-3"></div>
+                              <p className="text-sm text-gray-600 mb-3 leading-relaxed">
+                                {settings.maintenanceMessage || 'System is under maintenance. Please try again later.'}
+                              </p>
+                              <p className="text-xs text-gray-500 mb-3">
+                                We're performing scheduled maintenance to improve your experience.
+                              </p>
+                              <div className="flex space-x-2 justify-center">
+                                <div className="bg-blue-600 text-white px-3 py-1 rounded text-xs">Refresh Page</div>
+                                <div className="border border-gray-300 px-3 py-1 rounded text-xs">Admin Login</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Backup Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Database className="h-5 w-5" />
+                    <span>Backup Configuration</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="backupRetentionDays">Backup Retention (days)</Label>
@@ -722,6 +887,21 @@ export default function SystemSettings() {
                       <option value="debug">Debug</option>
                     </select>
                     <p className="text-sm text-gray-500 mt-1">System logging verbosity level</p>
+                  </div>
+
+                  {/* Log Location Information Box */}
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-800 font-medium mb-2">Log File Locations</p>
+                    <div className="mt-2 text-sm text-green-600 font-mono space-y-1">
+                      <div><strong>Development:</strong> Console output only</div>
+                      <div><strong>Production:</strong></div>
+                      <div className="ml-4">• ./logs/app.log (All logs)</div>
+                      <div className="ml-4">• ./logs/error.log (Errors only)</div>
+                      <div className="ml-4">• Console/PM2 logs (All levels)</div>
+                    </div>
+                    <p className="text-xs text-green-600 mt-2">
+                      View logs: <code>tail -f logs/app.log</code> or <code>tail -f logs/error.log</code>
+                    </p>
                   </div>
                 </CardContent>
               </Card>

@@ -154,7 +154,7 @@ export const initDB = () => {
                         'admin.manage_organization', 'admin.view_organization',
                         'admin.manage_categories', 'admin.view_categories',
                         'admin.manage_support_teams', 'admin.view_support_teams',
-                        'admin.view_analytics', 'admin.system_settings'
+                        'admin.view_analytics', 'admin.system_settings', 'admin.maintenance_override'
                     ]
                 },
                 {

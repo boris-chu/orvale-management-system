@@ -256,6 +256,12 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     category: 'Administration', 
     description: 'Advanced system config\n• Security settings\n• Core behaviors\n• ⚠️ Highest level access' 
   },
+  { 
+    id: 'admin.maintenance_override', 
+    name: 'Maintenance Override', 
+    category: 'Administration', 
+    description: 'Bypass maintenance mode\n• Access during maintenance\n• Emergency administrative access\n• Override system downtime' 
+  },
   
   // Portal Management Permissions
   { 
