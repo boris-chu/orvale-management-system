@@ -47,7 +47,7 @@ async function authenticateRequest(request: NextRequest) {
     return decoded;
 }
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await authenticateRequest(request);
         if (!user) {
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             }, { status: 401 });
         }
 
-        const ticketId = params.id;
+        const { id: ticketId } = await params;
         const tickets = await queryAsync('SELECT * FROM user_tickets WHERE id = ?', [ticketId]);
         
         if (tickets.length === 0) {
@@ -81,9 +81,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        console.log('🚀 PUT request received for ticket:', params.id);
+        const { id: ticketId } = await params;
+        console.log('🚀 PUT request received for ticket:', ticketId);
         
         const user = await authenticateRequest(request);
         if (!user) {
@@ -96,7 +97,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
         console.log('✅ User authenticated:', user.username);
 
-        const ticketId = params.id;
         const body = await request.json();
         console.log('📄 Request body:', JSON.stringify(body, null, 2));
         
@@ -393,7 +393,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const user = await authenticateRequest(request);
         if (!user) {
@@ -403,7 +403,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
             }, { status: 401 });
         }
 
-        const ticketId = params.id;
+        const { id: ticketId } = await params;
         
         // Check if user has permission to delete tickets
         // For now, only allow deletion by assigned user or admin

@@ -3,7 +3,7 @@ import { verifyAuth } from '@/lib/auth';
 import { queryAsync } from '@/lib/database';
 
 // Get ticket history
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const authResult = await verifyAuth(request);
         if (!authResult.success || !authResult.user) {
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             }, { status: 403 });
         }
 
-        const ticketId = params.id;
+        const { id: ticketId } = await params;
         
         // Get ticket history with detailed information
         const history = await queryAsync(`
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // Add history entry
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const authResult = await verifyAuth(request);
         if (!authResult.success || !authResult.user) {
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
             }, { status: 403 });
         }
 
-        const ticketId = params.id;
+        const { id: ticketId } = await params;
         const {
             action_type,
             from_value,
