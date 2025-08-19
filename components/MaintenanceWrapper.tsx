@@ -3,8 +3,37 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import MaintenancePage from './MaintenancePage';
-import { checkMaintenanceStatus, shouldShowMaintenance } from '@/lib/maintenance';
-import type { MaintenanceStatus } from '@/lib/maintenance';
+
+interface MaintenanceStatus {
+  isSystemMaintenance: boolean;
+  isPortalMaintenance: boolean;
+  effectiveMode: 'system' | 'portal' | 'none';
+  effectiveConfig: any;
+}
+
+// Client-side function to check if maintenance should be shown
+function shouldShowMaintenance(
+  pathname: string, 
+  status: MaintenanceStatus,
+  userPermissions: string[]
+): boolean {
+  // If user has override permission, never show maintenance
+  if (userPermissions.includes('admin.maintenance_override')) {
+    return false;
+  }
+
+  // System maintenance affects everything except admin routes
+  if (status.isSystemMaintenance) {
+    return !pathname.startsWith('/admin') && !pathname.startsWith('/developer');
+  }
+
+  // Portal maintenance only affects public-facing pages
+  if (status.isPortalMaintenance) {
+    return pathname === '/' || pathname.startsWith('/public-portal');
+  }
+
+  return false;
+}
 
 interface MaintenanceWrapperProps {
   children: ReactNode;
