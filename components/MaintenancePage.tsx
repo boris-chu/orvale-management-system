@@ -229,32 +229,32 @@ export default function MaintenancePage({ config, preview = false }: Maintenance
 
   const handleAdminLogin = () => {
     if (preview) return;
-    window.location.href = '/admin-login';
+    window.location.href = '/';
   };
 
-  // Dynamic styles based on theme
+  // Dynamic styles based on theme with safe property access
   const pageStyle: React.CSSProperties = {
-    backgroundColor: theme.gradientStart && theme.gradientEnd 
+    backgroundColor: (theme?.gradientStart && theme?.gradientEnd) 
       ? undefined 
-      : theme.backgroundColor,
-    backgroundImage: theme.gradientStart && theme.gradientEnd 
+      : theme?.backgroundColor || '#f8fafc',
+    backgroundImage: (theme?.gradientStart && theme?.gradientEnd) 
       ? `linear-gradient(135deg, ${theme.gradientStart}, ${theme.gradientEnd})`
       : undefined,
-    fontFamily: theme.fontFamily,
+    fontFamily: theme?.fontFamily || 'system-ui, sans-serif',
     minHeight: '100vh',
-    color: theme.textColor
+    color: theme?.textColor || '#475569'
   };
 
   const cardStyle: React.CSSProperties = {
-    backgroundColor: theme.cardBackground,
-    borderColor: theme.borderColor,
-    borderRadius: theme.borderRadius
+    backgroundColor: theme?.cardBackground || '#ffffff',
+    borderColor: theme?.borderColor || '#e2e8f0',
+    borderRadius: theme?.borderRadius || '8px'
   };
 
   const buttonStyle: React.CSSProperties = {
-    backgroundColor: theme.buttonBackground,
-    color: theme.buttonText,
-    borderRadius: theme.borderRadius
+    backgroundColor: theme?.buttonBackground || '#2563eb',
+    color: theme?.buttonText || '#ffffff',
+    borderRadius: theme?.borderRadius || '6px'
   };
 
   return (
@@ -275,14 +275,14 @@ export default function MaintenancePage({ config, preview = false }: Maintenance
               className="mb-6"
             >
               <div className="mx-auto w-20 h-20 rounded-full flex items-center justify-center mb-4"
-                   style={{ backgroundColor: `${theme.primaryColor}20` }}>
+                   style={{ backgroundColor: `${theme?.primaryColor || '#2563eb'}20` }}>
                 <Wrench 
                   size={40} 
-                  style={{ color: theme.iconColor }}
+                  style={{ color: theme?.iconColor || theme?.primaryColor || '#2563eb' }}
                   className="animate-pulse"
                 />
               </div>
-              <h1 className="text-2xl font-bold tracking-wide" style={{ color: theme.headingColor }}>
+              <h1 className="text-2xl font-bold tracking-wide" style={{ color: theme?.headingColor || '#1e293b' }}>
                 ORVALE MANAGEMENT SYSTEM
               </h1>
             </motion.div>
@@ -294,10 +294,10 @@ export default function MaintenancePage({ config, preview = false }: Maintenance
               transition={{ delay: 0.4 }}
               className="mb-6"
             >
-              <h2 className="text-3xl font-bold mb-2" style={{ color: theme.primaryColor }}>
+              <h2 className="text-3xl font-bold mb-2" style={{ color: theme?.primaryColor || '#2563eb' }}>
                 System Maintenance
               </h2>
-              <div className="w-24 h-1 mx-auto rounded" style={{ backgroundColor: theme.primaryColor }}></div>
+              <div className="w-24 h-1 mx-auto rounded" style={{ backgroundColor: theme?.primaryColor || '#2563eb' }}></div>
             </motion.div>
 
             {/* Maintenance Message */}
@@ -307,15 +307,12 @@ export default function MaintenancePage({ config, preview = false }: Maintenance
               transition={{ delay: 0.6 }}
               className="mb-8"
             >
-              <div className="text-lg leading-relaxed mb-4" style={{ color: theme.textColor }}>
+              <div className="text-lg leading-relaxed mb-4" style={{ color: theme?.textColor || '#475569' }}>
                 <div dangerouslySetInnerHTML={{ 
                   __html: activeConfig.message.replace(/\n/g, '<br>') 
                 }} />
               </div>
               
-              <p className="text-base" style={{ color: theme.textColor }}>
-                We're performing scheduled maintenance to improve your experience.
-              </p>
             </motion.div>
 
             {/* Additional Information */}
@@ -328,9 +325,9 @@ export default function MaintenancePage({ config, preview = false }: Maintenance
               {/* Estimated Return Time */}
               {activeConfig.estimatedReturn && (
                 <div className="flex items-center justify-center space-x-2 p-3 rounded-lg"
-                     style={{ backgroundColor: `${theme.primaryColor}10` }}>
-                  <Clock size={20} style={{ color: theme.accentTextColor }} />
-                  <span style={{ color: theme.accentTextColor }} className="font-medium">
+                     style={{ backgroundColor: `${theme?.primaryColor || '#2563eb'}10` }}>
+                  <Clock size={20} style={{ color: theme?.accentTextColor || theme?.primaryColor || '#2563eb' }} />
+                  <span style={{ color: theme?.accentTextColor || theme?.primaryColor || '#2563eb' }} className="font-medium">
                     {timeUntilReturn || `Expected completion: ${new Date(activeConfig.estimatedReturn).toLocaleString()}`}
                   </span>
                 </div>
@@ -339,9 +336,9 @@ export default function MaintenancePage({ config, preview = false }: Maintenance
               {/* Emergency Contact */}
               {activeConfig.emergencyContact && (
                 <div className="flex items-center justify-center space-x-2 p-3 rounded-lg"
-                     style={{ backgroundColor: `${theme.primaryColor}10` }}>
-                  <Phone size={20} style={{ color: theme.accentTextColor }} />
-                  <span style={{ color: theme.accentTextColor }} className="font-medium">
+                     style={{ backgroundColor: `${theme?.primaryColor || '#2563eb'}10` }}>
+                  <Phone size={20} style={{ color: theme?.accentTextColor || theme?.primaryColor || '#2563eb' }} />
+                  <span style={{ color: theme?.accentTextColor || theme?.primaryColor || '#2563eb' }} className="font-medium">
                     Emergency contact: {formatPhoneForDisplay(activeConfig.emergencyContact)}
                   </span>
                 </div>
@@ -373,8 +370,8 @@ export default function MaintenancePage({ config, preview = false }: Maintenance
                   variant="outline"
                   className="flex items-center space-x-2 px-6 py-3 text-lg font-medium transition-all duration-200"
                   style={{ 
-                    borderColor: theme.borderColor, 
-                    color: theme.accentTextColor,
+                    borderColor: theme?.borderColor || '#e2e8f0', 
+                    color: theme?.accentTextColor || theme?.primaryColor || '#2563eb',
                     backgroundColor: 'transparent'
                   }}
                 >
@@ -390,13 +387,13 @@ export default function MaintenancePage({ config, preview = false }: Maintenance
               animate={{ opacity: 1 }}
               transition={{ delay: 1.2 }}
               className="mt-8 pt-6 border-t"
-              style={{ borderColor: theme.borderColor }}
+              style={{ borderColor: theme?.borderColor || '#e2e8f0' }}
             >
-              <p className="text-sm font-medium" style={{ color: theme.textColor }}>
+              <p className="text-sm font-medium" style={{ color: theme?.textColor || '#475569' }}>
                 Thank you for your patience.
               </p>
               {!preview && activeConfig.showRefreshButton && (
-                <p className="text-xs mt-2" style={{ color: theme.textColor, opacity: 0.7 }}>
+                <p className="text-xs mt-2" style={{ color: theme?.textColor || '#475569', opacity: 0.7 }}>
                   This page will automatically refresh when maintenance is complete.
                 </p>
               )}
@@ -413,7 +410,7 @@ export default function MaintenancePage({ config, preview = false }: Maintenance
             className="mt-4 text-center"
           >
             <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium"
-                 style={{ backgroundColor: theme.primaryColor, color: theme.buttonText }}>
+                 style={{ backgroundColor: theme?.primaryColor || '#2563eb', color: theme?.buttonText || '#ffffff' }}>
               <AlertTriangle size={14} />
               <span>Live Preview - Updates in real-time</span>
             </div>

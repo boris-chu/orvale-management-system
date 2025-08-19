@@ -93,9 +93,20 @@ export default function MaintenanceWrapper({ children }: MaintenanceWrapperProps
   }
 
   // Check if we should show maintenance page
+  // Debug logging
+  console.log('🔍 MaintenanceWrapper Debug:', {
+    pathname,
+    maintenanceStatus,
+    userPermissions,
+    shouldShow: maintenanceStatus ? shouldShowMaintenance(pathname, maintenanceStatus, userPermissions) : false
+  });
+
   if (maintenanceStatus && shouldShowMaintenance(pathname, maintenanceStatus, userPermissions)) {
+    console.log('✅ Showing maintenance page');
     return <MaintenancePage config={maintenanceStatus.effectiveConfig || undefined} />;
   }
+
+  console.log('❌ Not showing maintenance page - showing normal content');
 
   // Normal content
   return <>{children}</>;

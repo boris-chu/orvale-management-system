@@ -18,8 +18,10 @@ export interface MaintenanceStatus {
  * Check current maintenance status from database settings
  */
 export async function checkMaintenanceStatus(): Promise<MaintenanceStatus> {
+  console.log('🚀 checkMaintenanceStatus called');
   try {
     // Get system maintenance settings
+    console.log('📋 Querying system settings...');
     const systemSettings = await queryAsync(`
       SELECT setting_key, setting_value 
       FROM system_settings 
@@ -32,23 +34,56 @@ export async function checkMaintenanceStatus(): Promise<MaintenanceStatus> {
         'admin_override_enabled'
       )
     `);
+    console.log('✅ System settings query complete:', systemSettings);
 
-    // Get portal maintenance settings
-    const portalSettings = await queryAsync(`
-      SELECT setting_key, setting_value 
+    // Get portal maintenance settings (different table structure)
+    console.log('📋 Querying portal settings...');
+    const portalSettingsRaw = await queryAsync(`
+      SELECT settings_json 
       FROM portal_settings 
-      WHERE setting_key IN (
-        'maintenance_mode',
-        'maintenance_message', 
-        'portal_maintenance_theme',
-        'portal_estimated_return',
-        'portal_emergency_contact'
-      )
+      LIMIT 1
     `);
+    console.log('✅ Portal settings query complete:', portalSettingsRaw);
+    
+    // Convert portal settings to same format as system settings
+    let portalSettings = [];
+    if (portalSettingsRaw.length > 0 && portalSettingsRaw[0].settings_json) {
+      try {
+        const portalData = JSON.parse(portalSettingsRaw[0].settings_json);
+        portalSettings = [
+          { setting_key: 'maintenance_mode', setting_value: JSON.stringify(portalData.maintenance_mode) },
+          { setting_key: 'maintenance_message', setting_value: JSON.stringify(portalData.maintenance_message) },
+          { setting_key: 'portal_maintenance_theme', setting_value: JSON.stringify(portalData.portal_maintenance_theme) },
+          { setting_key: 'portal_estimated_return', setting_value: JSON.stringify(portalData.portal_estimated_return) },
+          { setting_key: 'portal_emergency_contact', setting_value: JSON.stringify(portalData.portal_emergency_contact) }
+        ].filter(item => item.setting_value !== 'undefined');
+      } catch (error) {
+        console.error('❌ Error parsing portal settings JSON:', error);
+        portalSettings = [];
+      }
+    }
+    console.log('📋 Portal settings converted:', portalSettings);
 
     // Parse system settings
-    const systemConfig = parseMaintenanceSettings(systemSettings, 'system');
-    const portalConfig = parseMaintenanceSettings(portalSettings, 'portal');
+    console.log('🔧 Parsing system settings...');
+    let systemConfig;
+    try {
+      systemConfig = parseMaintenanceSettings(systemSettings, 'system');
+      console.log('✅ System config parsed:', systemConfig);
+    } catch (error) {
+      console.error('❌ Error parsing system settings:', error);
+      systemConfig = null;
+    }
+    
+    console.log('🔧 Parsing portal settings...');
+    let portalConfig;
+    try {
+      portalConfig = parseMaintenanceSettings(portalSettings, 'portal');
+      console.log('✅ Portal config parsed:', portalConfig);
+    } catch (error) {
+      console.error('❌ Error parsing portal settings:', error);
+      portalConfig = null;
+    }
 
     // Debug logging
     console.log('🔍 System settings raw:', systemSettings);
@@ -118,9 +153,14 @@ function parseMaintenanceSettings(
       }
     });
 
+    console.log(`🔍 parseMaintenanceSettings ${type} - settings object:`, settings);
+
     // Check if maintenance is enabled
     const enabledKey = type === 'system' ? 'enableMaintenance' : 'maintenance_mode';
-    const enabled = settings[enabledKey] === true;
+    const enabledValue = settings[enabledKey];
+    const enabled = enabledValue === true;
+    
+    console.log(`🔍 parseMaintenanceSettings ${type} - enabledKey: ${enabledKey}, value: ${enabledValue} (type: ${typeof enabledValue}), enabled: ${enabled}`);
 
     if (!enabled) {
       return { enabled: false, config: getDefaultMaintenanceConfig() };
