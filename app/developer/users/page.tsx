@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { UserAvatar } from '@/components/UserAvatar';
 
 interface User {
   id: number;
@@ -42,6 +43,7 @@ interface User {
   active: boolean;
   created_at: string;
   last_login?: string;
+  profile_picture?: string;
 }
 
 interface Team {
@@ -509,10 +511,17 @@ export default function UserManagement() {
                       className="border-b hover:bg-gray-50"
                     >
                       <td className="py-3 px-4">
-                        <div>
-                          <p className="font-medium text-gray-900">{user.display_name}</p>
-                          <p className="text-sm text-gray-500">@{user.username}</p>
-                          <p className="text-sm text-gray-500">{user.email}</p>
+                        <div className="flex items-center space-x-3">
+                          <UserAvatar 
+                            user={user}
+                            size="md"
+                            className="w-10 h-10"
+                          />
+                          <div>
+                            <p className="font-medium text-gray-900">{user.display_name}</p>
+                            <p className="text-sm text-gray-500">@{user.username}</p>
+                            <p className="text-sm text-gray-500">{user.email}</p>
+                          </div>
                         </div>
                       </td>
                       <td className="py-3 px-4">

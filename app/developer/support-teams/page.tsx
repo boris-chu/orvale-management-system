@@ -20,7 +20,7 @@ import {
   XCircle,
   RefreshCw,
   Building2,
-  Team
+  Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
@@ -393,7 +393,7 @@ export default function SupportTeamsManagement() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center space-x-2">
-              <Team className="h-5 w-5 text-blue-600" />
+              <Users className="h-5 w-5 text-blue-600" />
               <span>Support Teams</span>
               <Badge variant="outline" className="ml-2">Individual Teams in Portal</Badge>
             </CardTitle>
