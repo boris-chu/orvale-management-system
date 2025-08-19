@@ -597,7 +597,127 @@ export default function CategoryManagement() {
               </CardContent>
             </Card>
 
-            {/* Similar cards for Divisions and Sections would follow... */}
+            {/* Divisions */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center space-x-2">
+                  <FileText className="h-5 w-5 text-purple-600" />
+                  <span>Divisions</span>
+                </CardTitle>
+                {canManageOrg && (
+                  <Button size="sm" onClick={() => openCreateModal('division')}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Division
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {dpssDivisions.map((division) => (
+                    <Card key={division.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-medium text-gray-900 text-sm">{division.name}</h4>
+                          {canManageOrg && (
+                            <div className="flex space-x-1">
+                              <Button variant="ghost" size="sm" onClick={() => openEditModal(division, 'division')}>
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDeleteItem(division.id, 'division')} className="text-red-600">
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        <code className="text-xs bg-gray-100 px-1 rounded mb-1 inline-block">{division.id}</code>
+                        <div className="text-xs text-gray-500 space-y-1">
+                          {division.office_name && (
+                            <div className="flex items-center">
+                              <ChevronRight className="h-3 w-3" />
+                              {division.office_name}
+                            </div>
+                          )}
+                          {division.bureau_name && (
+                            <div className="flex items-center ml-3">
+                              <ChevronRight className="h-3 w-3" />
+                              {division.bureau_name}
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-2 text-sm text-gray-600">
+                          {division.section_count || 0} sections
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Sections */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center space-x-2">
+                  <Users className="h-5 w-5 text-orange-600" />
+                  <span>Sections</span>
+                  <Badge variant="outline" className="ml-2">Used in Ticket Forms</Badge>
+                </CardTitle>
+                {canManageOrg && (
+                  <Button size="sm" onClick={() => openCreateModal('section')}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Section
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {dpssSections.map((section) => (
+                    <Card key={section.id} className="hover:shadow-md transition-shadow border-orange-200">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-medium text-gray-900 text-sm">{section.name}</h4>
+                          {canManageOrg && (
+                            <div className="flex space-x-1">
+                              <Button variant="ghost" size="sm" onClick={() => openEditModal(section, 'section')}>
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDeleteItem(section.id, 'section')} className="text-red-600">
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        <code className="text-xs bg-gray-100 px-1 rounded mb-1 inline-block">{section.id}</code>
+                        <div className="text-xs text-gray-500 space-y-1">
+                          {section.office_name && (
+                            <div className="flex items-center">
+                              <ChevronRight className="h-3 w-3" />
+                              {section.office_name}
+                            </div>
+                          )}
+                          {section.bureau_name && (
+                            <div className="flex items-center ml-3">
+                              <ChevronRight className="h-3 w-3" />
+                              {section.bureau_name}
+                            </div>
+                          )}
+                          {section.division_name && (
+                            <div className="flex items-center ml-6">
+                              <ChevronRight className="h-3 w-3" />
+                              {section.division_name}
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-2 text-sm text-gray-600 flex items-center space-x-1">
+                          <Users className="h-3 w-3" />
+                          <span>{section.user_count || 0} users</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
             
           </TabsContent>
         </Tabs>

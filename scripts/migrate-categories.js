@@ -183,26 +183,83 @@ db.serialize(() => {
 
   // Insert sample DPSS bureaus
   const defaultBureaus = [
-    { id: 'bas', name: 'Bureau of Administrative Services' },
-    { id: 'bcsc', name: 'Bureau of Customer Service Centers' },
-    { id: 'bhr_bureau', name: 'Bureau of Human Resources' },
-    { id: 'bpp', name: 'Bureau of Program & Policy' },
-    { id: 'bso', name: 'Bureau of Special Operations' },
-    { id: 'bts', name: 'Bureau of Technology Services' },
-    { id: 'bws_north', name: 'Bureau of Workforce Services North' },
-    { id: 'bws_south', name: 'Bureau of Workforce Services South' },
-    { id: 'dpss_admin', name: 'DPSS Administration' }
+    { id: 'bas', name: 'Bureau of Administrative Services', office_id: 'crossroads_main' },
+    { id: 'bcsc', name: 'Bureau of Customer Service Centers', office_id: 'crossroads_main' },
+    { id: 'bhr_bureau', name: 'Bureau of Human Resources', office_id: 'bhr' },
+    { id: 'bpp', name: 'Bureau of Program & Policy', office_id: 'crossroads_main' },
+    { id: 'bso', name: 'Bureau of Special Operations', office_id: 'crossroads_main' },
+    { id: 'bts', name: 'Bureau of Technology Services', office_id: 'crossroads_main' },
+    { id: 'bws_north', name: 'Bureau of Workforce Services North', office_id: 'crossroads_north' },
+    { id: 'bws_south', name: 'Bureau of Workforce Services South', office_id: 'crossroads_south' },
+    { id: 'dpss_admin', name: 'DPSS Administration', office_id: 'crossroads_main' }
   ];
 
   defaultBureaus.forEach(bureau => {
     db.run(
-      `INSERT OR IGNORE INTO dpss_bureaus (id, name) VALUES (?, ?)`,
-      [bureau.id, bureau.name],
+      `INSERT OR IGNORE INTO dpss_bureaus (id, name, office_id) VALUES (?, ?, ?)`,
+      [bureau.id, bureau.name, bureau.office_id],
       function(err) {
         if (err) {
           console.error(`Error creating bureau ${bureau.id}:`, err);
         } else {
           console.log(`✅ Bureau created: ${bureau.name}`);
+        }
+      }
+    );
+  });
+
+  // Insert sample DPSS divisions
+  const defaultDivisions = [
+    { id: 'it_division', name: 'Information Technology Division', bureau_id: 'bts' },
+    { id: 'network_division', name: 'Network Services Division', bureau_id: 'bts' },
+    { id: 'security_division', name: 'Information Security Division', bureau_id: 'bts' },
+    { id: 'hr_operations', name: 'HR Operations Division', bureau_id: 'bhr_bureau' },
+    { id: 'hr_recruitment', name: 'Recruitment Division', bureau_id: 'bhr_bureau' },
+    { id: 'fiscal_mgmt', name: 'Fiscal Management Division', bureau_id: 'bas' },
+    { id: 'facilities_mgmt', name: 'Facilities Management Division', bureau_id: 'bas' },
+    { id: 'customer_ops', name: 'Customer Operations Division', bureau_id: 'bcsc' }
+  ];
+
+  defaultDivisions.forEach(division => {
+    db.run(
+      `INSERT OR IGNORE INTO dpss_divisions (id, name, bureau_id) VALUES (?, ?, ?)`,
+      [division.id, division.name, division.bureau_id],
+      function(err) {
+        if (err) {
+          console.error(`Error creating division ${division.id}:`, err);
+        } else {
+          console.log(`✅ Division created: ${division.name}`);
+        }
+      }
+    );
+  });
+
+  // Insert sample DPSS sections (these appear in ticket forms)
+  const defaultSections = [
+    { id: 'it_support', name: 'IT Technical Support', division_id: 'it_division' },
+    { id: 'it_infrastructure', name: 'IT Infrastructure', division_id: 'it_division' },
+    { id: 'network_ops', name: 'Network Operations', division_id: 'network_division' },
+    { id: 'network_security', name: 'Network Security', division_id: 'network_division' },
+    { id: 'info_security', name: 'Information Security', division_id: 'security_division' },
+    { id: 'hr_admin', name: 'HR Administration', division_id: 'hr_operations' },
+    { id: 'hr_benefits', name: 'Benefits Administration', division_id: 'hr_operations' },
+    { id: 'recruitment', name: 'Recruitment Services', division_id: 'hr_recruitment' },
+    { id: 'fiscal_ops', name: 'Fiscal Operations', division_id: 'fiscal_mgmt' },
+    { id: 'budget_analysis', name: 'Budget Analysis', division_id: 'fiscal_mgmt' },
+    { id: 'facilities', name: 'Facilities Operations', division_id: 'facilities_mgmt' },
+    { id: 'customer_service', name: 'Customer Service', division_id: 'customer_ops' },
+    { id: 'case_management', name: 'Case Management', division_id: 'customer_ops' }
+  ];
+
+  defaultSections.forEach(section => {
+    db.run(
+      `INSERT OR IGNORE INTO dpss_sections (id, name, division_id) VALUES (?, ?, ?)`,
+      [section.id, section.name, section.division_id],
+      function(err) {
+        if (err) {
+          console.error(`Error creating section ${section.id}:`, err);
+        } else {
+          console.log(`✅ Section created: ${section.name}`);
         }
       }
     );
