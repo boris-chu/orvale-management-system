@@ -84,8 +84,21 @@ export default function SupportTeamsManagement() {
       });
       if (response.ok) {
         const user = await response.json();
-        if (!user.permissions?.includes('admin.manage_support_teams') && !user.permissions?.includes('admin.view_support_teams')) {
-          window.location.href = '/developer';
+        console.log('Support Teams - User permissions:', user.permissions);
+        console.log('Support Teams - User role:', user.role);
+        
+        // Check for either admin support team permissions or portal management permissions
+        const hasPermission = user.permissions?.includes('admin.manage_support_teams') || 
+                            user.permissions?.includes('admin.view_support_teams') ||
+                            user.permissions?.includes('portal.manage_teams') ||
+                            user.permissions?.includes('admin.manage_categories') ||
+                            user.role === 'admin';
+        
+        console.log('Support Teams - Has permission:', hasPermission);
+        
+        if (!hasPermission) {
+          console.log('Support Teams - Redirecting due to insufficient permissions');
+          window.location.href = '/developer/portal-management';
           return;
         }
         setCurrentUser(user);
