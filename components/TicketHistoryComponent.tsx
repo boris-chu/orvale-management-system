@@ -44,7 +44,7 @@ export default function TicketHistoryComponent({ ticketId, isVisible }: TicketHi
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('authToken');
       const response = await fetch(`/api/tickets/${ticketId}/history`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -52,7 +52,8 @@ export default function TicketHistoryComponent({ ticketId, isVisible }: TicketHi
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch ticket history');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to fetch ticket history');
       }
 
       const data = await response.json();
