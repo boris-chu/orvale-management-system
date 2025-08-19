@@ -301,6 +301,16 @@ export default function SupportTeamsManagement() {
     });
   };
 
+  // Auto-generate team ID from team name
+  const generateTeamId = (teamName: string): string => {
+    return teamName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '') // Remove special characters except spaces
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/_{2,}/g, '_') // Replace multiple underscores with single
+      .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+  };
+
   const canManage = currentUser?.role === 'admin' ||
                    currentUser?.permissions?.includes('admin.manage_support_teams') ||
                    currentUser?.permissions?.includes('admin.manage_categories');
@@ -505,53 +515,35 @@ export default function SupportTeamsManagement() {
           </DialogHeader>
           
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="item_id">{modalType === 'group' ? 'Group' : 'Team'} ID</Label>
-              <Input
-                id="item_id"
-                value={formData.id}
-                onChange={(e) => setFormData({...formData, id: e.target.value})}
-                placeholder={modalType === 'group' ? 'itts_region_8' : 'support_team_id'}
-                className="font-mono"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="item_name">{modalType === 'group' ? 'Group' : 'Team'} Name</Label>
-              <Input
-                id="item_name"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder={modalType === 'group' ? 'ITTS: Region 8' : 'Support Team Name'}
-              />
-            </div>
-
-            {modalType === 'team' && (
+            {modalType === 'group' ? (
               <>
                 <div>
-                  <Label htmlFor="item_label">Display Label</Label>
+                  <Label htmlFor="group_id">Group ID</Label>
                   <Input
-                    id="item_label"
-                    value={formData.label}
-                    onChange={(e) => setFormData({...formData, label: e.target.value})}
-                    placeholder="Crossroads Main"
+                    id="group_id"
+                    value={formData.id}
+                    onChange={(e) => setFormData({...formData, id: e.target.value})}
+                    placeholder="itts_region_8"
+                    className="font-mono"
                   />
                 </div>
-
+                
                 <div>
-                  <Label htmlFor="item_email">Email Address</Label>
+                  <Label htmlFor="group_name">Group Name</Label>
                   <Input
-                    id="item_email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    placeholder="support@dpss.lacounty.gov"
+                    id="group_name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="ITTS: Region 8"
                   />
                 </div>
-
+              </>
+            ) : (
+              <>
+                {/* Support Group - First field for teams */}
                 <div>
-                  <Label htmlFor="group">Support Group</Label>
-                  <FormControl fullWidth size="small">
+                  <Label htmlFor="support_group">Support Group</Label>
+                  <FormControl fullWidth size="small" style={{ zIndex: 10000 }}>
                     <InputLabel>Select Group</InputLabel>
                     <Select
                       value={formData.group_id}
@@ -560,11 +552,11 @@ export default function SupportTeamsManagement() {
                       MenuProps={{
                         PaperProps: {
                           style: {
-                            zIndex: 9999,
+                            zIndex: 10001,
                             maxHeight: 200,
                           },
                         },
-                        disablePortal: true,
+                        disablePortal: false,
                       }}
                     >
                       {groups.length === 0 ? (
@@ -578,6 +570,61 @@ export default function SupportTeamsManagement() {
                       )}
                     </Select>
                   </FormControl>
+                </div>
+
+                {/* Display Label */}
+                <div>
+                  <Label htmlFor="display_label">Display Label</Label>
+                  <Input
+                    id="display_label"
+                    value={formData.label}
+                    onChange={(e) => setFormData({...formData, label: e.target.value})}
+                    placeholder="Crossroads Main"
+                  />
+                </div>
+
+                {/* Email Address */}
+                <div>
+                  <Label htmlFor="team_email">Email Address</Label>
+                  <Input
+                    id="team_email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="support@dpss.lacounty.gov"
+                  />
+                </div>
+
+                {/* Team Name */}
+                <div>
+                  <Label htmlFor="team_name">Team Name</Label>
+                  <Input
+                    id="team_name"
+                    value={formData.name}
+                    onChange={(e) => {
+                      const newName = e.target.value;
+                      const generatedId = generateTeamId(newName);
+                      setFormData({
+                        ...formData, 
+                        name: newName,
+                        id: generatedId
+                      });
+                    }}
+                    placeholder="Support Team Name"
+                  />
+                </div>
+
+                {/* Team ID - Auto-generated */}
+                <div>
+                  <Label htmlFor="team_id">Team ID (Auto-generated)</Label>
+                  <Input
+                    id="team_id"
+                    value={formData.id}
+                    readOnly
+                    className="font-mono bg-gray-50"
+                    placeholder="Will be generated from team name"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Generated automatically from team name</p>
                 </div>
               </>
             )}
@@ -641,53 +688,35 @@ export default function SupportTeamsManagement() {
           </DialogHeader>
           
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit_item_id">{modalType === 'group' ? 'Group' : 'Team'} ID</Label>
-              <Input
-                id="edit_item_id"
-                value={formData.id}
-                disabled
-                className="font-mono bg-gray-100"
-              />
-              <p className="text-xs text-gray-500 mt-1">ID cannot be changed</p>
-            </div>
-            
-            <div>
-              <Label htmlFor="edit_item_name">{modalType === 'group' ? 'Group' : 'Team'} Name</Label>
-              <Input
-                id="edit_item_name"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder={modalType === 'group' ? 'ITTS: Region 8' : 'Support Team Name'}
-              />
-            </div>
-
-            {modalType === 'team' && (
+            {modalType === 'group' ? (
               <>
                 <div>
-                  <Label htmlFor="edit_item_label">Display Label</Label>
+                  <Label htmlFor="edit_group_id">Group ID</Label>
                   <Input
-                    id="edit_item_label"
-                    value={formData.label}
-                    onChange={(e) => setFormData({...formData, label: e.target.value})}
-                    placeholder="Crossroads Main"
+                    id="edit_group_id"
+                    value={formData.id}
+                    disabled
+                    className="font-mono bg-gray-100"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">ID cannot be changed</p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="edit_group_name">Group Name</Label>
+                  <Input
+                    id="edit_group_name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="ITTS: Region 8"
                   />
                 </div>
-
+              </>
+            ) : (
+              <>
+                {/* Support Group - First field for teams */}
                 <div>
-                  <Label htmlFor="edit_item_email">Email Address</Label>
-                  <Input
-                    id="edit_item_email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    placeholder="support@dpss.lacounty.gov"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="edit_group">Support Group</Label>
-                  <FormControl fullWidth size="small">
+                  <Label htmlFor="edit_support_group">Support Group</Label>
+                  <FormControl fullWidth size="small" style={{ zIndex: 10000 }}>
                     <InputLabel>Select Group</InputLabel>
                     <Select
                       value={formData.group_id}
@@ -696,11 +725,11 @@ export default function SupportTeamsManagement() {
                       MenuProps={{
                         PaperProps: {
                           style: {
-                            zIndex: 9999,
+                            zIndex: 10001,
                             maxHeight: 200,
                           },
                         },
-                        disablePortal: true,
+                        disablePortal: false,
                       }}
                     >
                       {groups.length === 0 ? (
@@ -714,6 +743,52 @@ export default function SupportTeamsManagement() {
                       )}
                     </Select>
                   </FormControl>
+                </div>
+
+                {/* Display Label */}
+                <div>
+                  <Label htmlFor="edit_display_label">Display Label</Label>
+                  <Input
+                    id="edit_display_label"
+                    value={formData.label}
+                    onChange={(e) => setFormData({...formData, label: e.target.value})}
+                    placeholder="Crossroads Main"
+                  />
+                </div>
+
+                {/* Email Address */}
+                <div>
+                  <Label htmlFor="edit_team_email">Email Address</Label>
+                  <Input
+                    id="edit_team_email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="support@dpss.lacounty.gov"
+                  />
+                </div>
+
+                {/* Team Name */}
+                <div>
+                  <Label htmlFor="edit_team_name">Team Name</Label>
+                  <Input
+                    id="edit_team_name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="Support Team Name"
+                  />
+                </div>
+
+                {/* Team ID - Cannot be changed */}
+                <div>
+                  <Label htmlFor="edit_team_id">Team ID</Label>
+                  <Input
+                    id="edit_team_id"
+                    value={formData.id}
+                    disabled
+                    className="font-mono bg-gray-100"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">ID cannot be changed</p>
                 </div>
               </>
             )}
