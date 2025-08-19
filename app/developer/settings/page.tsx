@@ -39,7 +39,6 @@ interface SystemSettings {
   autoAssignment: boolean;
   defaultPriority: string;
   emailNotifications: boolean;
-  ticketNumberPrefix: string;
   maxTicketsPerUser: number;
   
   // Email Configuration
@@ -77,7 +76,6 @@ export default function SystemSettings() {
     autoAssignment: false,
     defaultPriority: 'medium',
     emailNotifications: true,
-    ticketNumberPrefix: 'TKT',
     maxTicketsPerUser: 50,
     
     // Email defaults
@@ -461,17 +459,18 @@ export default function SystemSettings() {
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <Label htmlFor="ticketNumberPrefix">Ticket Number Prefix</Label>
-                      <Input
-                        id="ticketNumberPrefix"
-                        value={settings.ticketNumberPrefix}
-                        onChange={(e) => setSettings({
-                          ...settings, 
-                          ticketNumberPrefix: e.target.value || 'TKT'
-                        })}
-                        placeholder="TKT"
-                      />
-                      <p className="text-sm text-gray-500 mt-1">Prefix for all ticket numbers</p>
+                      <Label>Ticket Numbering System</Label>
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800 font-medium mb-2">Team-Based Prefixes (Auto-Generated)</p>
+                        <p className="text-sm text-blue-700">
+                          Tickets automatically receive prefixes based on assigned team:
+                        </p>
+                        <div className="mt-2 text-sm text-blue-600 font-mono">
+                          • ITTS_Region7 → R7-YYMMDD-###<br/>
+                          • HELPDESK → HE-YYMMDD-###<br/>
+                          • ITTS_Main → IM-YYMMDD-###
+                        </div>
+                      </div>
                     </div>
                     
                     <div>
