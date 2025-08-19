@@ -12,6 +12,7 @@ export default function AdminLogin() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [checkingMaintenance, setCheckingMaintenance] = useState(true);
 
   // Check if user is already logged in
   useEffect(() => {
@@ -20,6 +21,42 @@ export default function AdminLogin() {
       window.location.href = '/tickets';
     }
   }, []);
+
+  // Check if system is under maintenance - redirect to main page if not
+  useEffect(() => {
+    const checkMaintenanceStatus = async () => {
+      try {
+        const response = await fetch('/api/maintenance/status');
+        const data = await response.json();
+        
+        if (!data.isSystemMaintenance && !data.isPortalMaintenance) {
+          // No maintenance active, redirect to main login page
+          window.location.href = '/';
+          return;
+        }
+        
+        setCheckingMaintenance(false);
+      } catch (error) {
+        console.error('Failed to check maintenance status:', error);
+        // On error, allow access (fail-safe)
+        setCheckingMaintenance(false);
+      }
+    };
+
+    checkMaintenanceStatus();
+  }, []);
+
+  // Show loading while checking maintenance status
+  if (checkingMaintenance) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking system status...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
