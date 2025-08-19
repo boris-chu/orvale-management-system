@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -984,14 +984,12 @@ export default function CategoryManagement() {
       </div>
 
       {/* Create Modal */}
-      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <Plus className="h-5 w-5" />
-              <span>Create New {modalType}</span>
-            </DialogTitle>
-          </DialogHeader>
+      <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="sm" fullWidth>
+        <DialogTitle className="flex items-center space-x-2">
+          <Plus className="h-5 w-5" />
+          <span>Create New {modalType}</span>
+        </DialogTitle>
+        <DialogContent>
           
           <div className="space-y-4">
             <div>
@@ -1045,29 +1043,27 @@ export default function CategoryManagement() {
             
             {getParentOptions().length > 0 && (
               <div>
-                <Label htmlFor="parent">
-                  {modalType === 'request_type' ? 'Category' : 
-                   modalType === 'subcategory' ? 'Request Type' :
-                   modalType === 'bureau' ? 'Office' : 
-                   modalType === 'division' ? 'Bureau' : 'Division'}
-                </Label>
                 <FormControl fullWidth size="small">
                   <InputLabel>Select {modalType === 'request_type' ? 'Category' : modalType === 'subcategory' ? 'Request Type' : 'Parent'}</InputLabel>
                   <Select
-                    value={modalType === 'request_type' ? formData.category_id : modalType === 'subcategory' ? formData.request_type_id : formData.parent_id}
+                    value={(() => {
+                      if (modalType === 'request_type') return formData.category_id || '';
+                      if (modalType === 'subcategory') return formData.request_type_id || '';
+                      return formData.parent_id || '';
+                    })()} 
                     label={`Select ${modalType === 'request_type' ? 'Category' : modalType === 'subcategory' ? 'Request Type' : 'Parent'}`}
                     onChange={(e) => {
                       const value = e.target.value as string;
+                      console.log('Select changed:', { modalType, value, currentFormData: formData });
                       if (modalType === 'request_type') {
-                        setFormData({...formData, category_id: value});
+                        setFormData(prev => ({ ...prev, category_id: value }));
                       } else if (modalType === 'subcategory') {
-                        setFormData({...formData, request_type_id: value});
+                        setFormData(prev => ({ ...prev, request_type_id: value }));
                       } else {
-                        setFormData({...formData, parent_id: value});
+                        setFormData(prev => ({ ...prev, parent_id: value }));
                       }
                     }}
                   >
-                    <MenuItem value="">No {modalType === 'request_type' ? 'Category' : modalType === 'subcategory' ? 'Request Type' : 'Parent'}</MenuItem>
                     {getParentOptions().map((option) => (
                       <MenuItem key={option.id} value={option.id}>
                         {option.name}
@@ -1088,44 +1084,41 @@ export default function CategoryManagement() {
                 placeholder="0"
               />
             </div>
-            
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowCreateModal(false)}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleCreateItem}
-                disabled={saving || !formData.id || !formData.name || 
-                  (modalType === 'request_type' && !formData.category_id) || 
-                  (modalType === 'subcategory' && !formData.request_type_id)}
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  `Create ${modalType}`
-                )}
-              </Button>
-            </div>
           </div>
         </DialogContent>
+        <DialogActions className="px-6 pb-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowCreateModal(false)}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleCreateItem}
+            disabled={saving || !formData.id || !formData.name || 
+              (modalType === 'request_type' && !formData.category_id) || 
+              (modalType === 'subcategory' && !formData.request_type_id)}
+          >
+            {saving ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              `Create ${modalType}`
+            )}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Edit Modal - Similar structure to Create Modal */}
-      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <Edit className="h-5 w-5" />
-              <span>Edit {modalType}</span>
-            </DialogTitle>
-          </DialogHeader>
+      <Dialog open={showEditModal} onClose={() => setShowEditModal(false)} maxWidth="sm" fullWidth>
+        <DialogTitle className="flex items-center space-x-2">
+          <Edit className="h-5 w-5" />
+          <span>Edit {modalType}</span>
+        </DialogTitle>
+        <DialogContent>
           
           <div className="space-y-4">
             <div>
@@ -1162,15 +1155,17 @@ export default function CategoryManagement() {
             
             {getParentOptions().length > 0 && (
               <div>
-                <Label htmlFor="edit_parent">Parent {modalType === 'bureau' ? 'Office' : modalType === 'division' ? 'Bureau' : 'Division'}</Label>
                 <FormControl fullWidth size="small">
                   <InputLabel>Select Parent</InputLabel>
                   <Select
-                    value={formData.parent_id}
+                    value={formData.parent_id || ''}
                     label="Select Parent"
-                    onChange={(e) => setFormData({...formData, parent_id: e.target.value as string})}
+                    onChange={(e) => {
+                      const value = e.target.value as string;
+                      console.log('Edit Select changed:', { value, currentParentId: formData.parent_id });
+                      setFormData(prev => ({ ...prev, parent_id: value }));
+                    }}
                   >
-                    <MenuItem value="">No Parent</MenuItem>
                     {getParentOptions().map((option) => (
                       <MenuItem key={option.id} value={option.id}>
                         {option.name}
@@ -1202,31 +1197,30 @@ export default function CategoryManagement() {
               />
               <Label htmlFor="edit_active">Active</Label>
             </div>
-            
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowEditModal(false)}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleEditItem}
-                disabled={saving || !formData.name}
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  `Update ${modalType}`
-                )}
-              </Button>
-            </div>
           </div>
         </DialogContent>
+        <DialogActions className="px-6 pb-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowEditModal(false)}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleEditItem}
+            disabled={saving || !formData.name}
+          >
+            {saving ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              `Update ${modalType}`
+            )}
+          </Button>
+        </DialogActions>
       </Dialog>
     </div>
   );
