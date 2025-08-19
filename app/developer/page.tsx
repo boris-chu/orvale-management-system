@@ -22,7 +22,8 @@ import {
   Ticket,
   ArrowLeft,
   User,
-  ChevronDown
+  ChevronDown,
+  Globe
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -197,14 +198,14 @@ export default function DeveloperDashboard() {
         requiredPermissions: ['admin.manage_categories', 'admin.view_categories']
       },
       {
-        id: 'support_teams',
-        title: 'Support Teams Management',
-        description: 'Manage support team groups and assignments',
-        icon: Users,
-        href: '/developer/support-teams',
+        id: 'portal_management',
+        title: 'Public Portal Management',
+        description: 'Manage all aspects of the public ticket submission portal',
+        icon: Globe,
+        href: '/developer/portal-management',
         color: 'bg-cyan-500',
-        stats: 'Team management',
-        requiredPermissions: ['admin.manage_support_teams', 'admin.view_support_teams']
+        stats: 'Portal configuration',
+        requiredPermissions: ['admin.manage_categories', 'admin.manage_organization', 'portal.manage_settings']
       },
       {
         id: 'analytics',

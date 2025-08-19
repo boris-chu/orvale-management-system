@@ -286,11 +286,11 @@ export default function SupportTeamsManagement() {
             <div className="flex items-center space-x-4">
               <Button 
                 variant="ghost" 
-                onClick={() => window.location.href = '/developer'}
+                onClick={() => window.location.href = '/developer/portal-management'}
                 className="flex items-center space-x-2"
               >
                 <ArrowLeft className="h-4 w-4" />
-                <span>Back to Dashboard</span>
+                <span>Back to Portal Management</span>
               </Button>
               
               <div className="h-6 border-l border-gray-300"></div>
