@@ -564,14 +564,6 @@ export default function SupportTeamsManagement() {
                             maxHeight: 200,
                           },
                         },
-                        anchorOrigin: {
-                          vertical: 'bottom',
-                          horizontal: 'left',
-                        },
-                        transformOrigin: {
-                          vertical: 'top',
-                          horizontal: 'left',
-                        },
                         disablePortal: true,
                       }}
                     >
@@ -707,14 +699,6 @@ export default function SupportTeamsManagement() {
                             zIndex: 9999,
                             maxHeight: 200,
                           },
-                        },
-                        anchorOrigin: {
-                          vertical: 'bottom',
-                          horizontal: 'left',
-                        },
-                        transformOrigin: {
-                          vertical: 'top',
-                          horizontal: 'left',
                         },
                         disablePortal: true,
                       }}
