@@ -13,10 +13,12 @@ const adminPermissions = [
     'ticket.view_own',
     'ticket.update_own',
     'ticket.comment_own',
-    'ticket.assign_any',
+    'ticket.assign_own',
     'ticket.assign_within_team',
+    'ticket.assign_any',
     'ticket.escalate',
     'ticket.delete',
+    'ticket.edit_completed',
     
     // User management permissions
     'user.view_all',

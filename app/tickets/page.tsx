@@ -108,6 +108,18 @@ export default function TicketsPage() {
     setTimeout(() => setNotification(null), 3000);
   };
 
+  // Check if current user can edit a completed ticket
+  const canEditCompletedTicket = () => {
+    return currentUser?.permissions?.includes('ticket.edit_completed');
+  };
+
+  // Check if ticket is editable based on status and permissions
+  const isTicketEditable = (ticket: Ticket | null) => {
+    if (!ticket) return false;
+    if (ticket.status !== 'completed') return true;
+    return canEditCompletedTicket();
+  };
+
   // Load dynamic data from database APIs
   const loadTicketData = async () => {
     try {
@@ -486,6 +498,8 @@ export default function TicketsPage() {
   // Update ticket field helper
   const updateTicketField = (field: string, value: string) => {
     if (selectedTicket) {
+      // Don't allow field updates if ticket is completed (unless user has permission)
+      if (!isTicketEditable(selectedTicket)) return;
       setSelectedTicket({
         ...selectedTicket,
         [field]: value
@@ -674,6 +688,9 @@ export default function TicketsPage() {
   const cycleStatus = () => {
     if (!selectedTicket) return;
     
+    // Don't allow status changes if ticket is completed
+    if (selectedTicket.status === 'completed') return;
+    
     const statusOrder: Array<'pending' | 'in_progress' | 'complete' | 'escalated'> = ['pending', 'in_progress', 'complete', 'escalated'];
     const currentIndex = statusOrder.indexOf(selectedTicket.status as any);
     const nextIndex = (currentIndex + 1) % statusOrder.length;
@@ -685,6 +702,9 @@ export default function TicketsPage() {
   // Cycle through priority values  
   const cyclePriority = () => {
     if (!selectedTicket) return;
+    
+    // Don't allow priority changes if ticket is completed
+    if (selectedTicket.status === 'completed') return;
     
     const priorityOrder: Array<'low' | 'medium' | 'high' | 'urgent'> = ['low', 'medium', 'high', 'urgent'];
     const currentIndex = priorityOrder.indexOf(selectedTicket.priority);
@@ -1040,10 +1060,20 @@ export default function TicketsPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-bold">{selectedTicket.issue_title}</h2>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold">{selectedTicket.issue_title}</h2>
+                {selectedTicket.status === 'completed' && (
+                  <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="text-sm text-green-800 font-medium">
+                      This ticket has been completed and is now read-only
+                    </span>
+                  </div>
+                )}
+              </div>
               <div className="flex gap-2">
                 <AnimatePresence mode="wait">
-                  {hasChanges() && (
+                  {hasChanges() && isTicketEditable(selectedTicket) && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -1110,18 +1140,18 @@ export default function TicketsPage() {
                 <div className="space-y-2 text-sm">
                   <div><strong>Status:</strong> 
                     <Badge 
-                      className={`${getStatusColor(selectedTicket.status)} cursor-pointer hover:opacity-80 ml-2`}
-                      onClick={() => cycleStatus()}
-                      title="Click to cycle status"
+                      className={`${getStatusColor(selectedTicket.status)} ${!isTicketEditable(selectedTicket) ? 'cursor-default opacity-60' : 'cursor-pointer hover:opacity-80'} ml-2`}
+                      onClick={() => isTicketEditable(selectedTicket) && cycleStatus()}
+                      title={!isTicketEditable(selectedTicket) ? 'Completed tickets cannot be modified' : 'Click to cycle status'}
                     >
                       {formatStatus(selectedTicket.status)}
                     </Badge>
                   </div>
                   <div><strong>Priority:</strong> 
                     <Badge 
-                      className={`${getPriorityColor(selectedTicket.priority)} cursor-pointer hover:opacity-80 ml-2`}
-                      onClick={() => cyclePriority()}
-                      title="Click to cycle priority"
+                      className={`${getPriorityColor(selectedTicket.priority)} ${!isTicketEditable(selectedTicket) ? 'cursor-default opacity-60' : 'cursor-pointer hover:opacity-80'} ml-2`}
+                      onClick={() => isTicketEditable(selectedTicket) && cyclePriority()}
+                      title={!isTicketEditable(selectedTicket) ? 'Completed tickets cannot be modified' : 'Click to cycle priority'}
                     >
                       {formatPriority(selectedTicket.priority)}
                     </Badge>
@@ -1138,7 +1168,7 @@ export default function TicketsPage() {
                         value={selectedTicket.assigned_to || ''}
                         label="Select Assignee"
                         onChange={(e) => updateTicketField('assigned_to', e.target.value)}
-                        disabled={loadingAssignableUsers}
+                        disabled={loadingAssignableUsers || !isTicketEditable(selectedTicket)}
                       >
                         <MenuItem value="">
                           <em>Unassigned</em>
@@ -1173,7 +1203,13 @@ export default function TicketsPage() {
                   <Building2 className="h-5 w-5" />
                   Organizational Information
                 </h3>
-                <Button size="sm" variant="outline" onClick={openOrgBrowser} className="flex items-center gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={openOrgBrowser} 
+                  className="flex items-center gap-2"
+                  disabled={selectedTicket.status === 'completed'}
+                >
                   <Search className="h-4 w-4" />
                   Browse Organizational Paths
                 </Button>
@@ -1191,6 +1227,7 @@ export default function TicketsPage() {
                           value={selectedTicket.office || ''}
                           label="Select Office"
                           onChange={(e) => updateTicketField('office', e.target.value)}
+                          disabled={!isTicketEditable(selectedTicket)}
                         >
                           {organizationalData.offices.map((office, index) => (
                             <MenuItem key={`office-${index}`} value={office}>
@@ -1211,6 +1248,7 @@ export default function TicketsPage() {
                           value={selectedTicket.bureau || ''}
                           label="Select Bureau"
                           onChange={(e) => updateTicketField('bureau', e.target.value)}
+                          disabled={!isTicketEditable(selectedTicket)}
                         >
                           {organizationalData.bureaus.map((bureau, index) => (
                             <MenuItem key={`bureau-${index}`} value={bureau}>
@@ -1235,6 +1273,7 @@ export default function TicketsPage() {
                           value={selectedTicket.division || ''}
                           label="Select Division"
                           onChange={(e) => updateTicketField('division', e.target.value)}
+                          disabled={!isTicketEditable(selectedTicket)}
                         >
                           {organizationalData.divisions.map((division, index) => (
                             <MenuItem key={`division-${index}`} value={division}>
@@ -1255,6 +1294,7 @@ export default function TicketsPage() {
                           value={selectedTicket.section || ''}
                           label="Select Section"
                           onChange={(e) => updateTicketField('section', e.target.value)}
+                          disabled={!isTicketEditable(selectedTicket)}
                         >
                           {organizationalData?.sections?.map((section, index) => (
                             <MenuItem key={`section-${index}`} value={section}>
@@ -1276,7 +1316,13 @@ export default function TicketsPage() {
                   <Tag className="h-5 w-5" />
                   Category Information
                 </h3>
-                <Button size="sm" variant="outline" onClick={openCategoryBrowser} className="flex items-center gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={openCategoryBrowser} 
+                  className="flex items-center gap-2"
+                  disabled={selectedTicket.status === 'completed'}
+                >
                   <FolderOpen className="h-4 w-4" />
                   Browse Category Paths
                 </Button>
@@ -1294,6 +1340,7 @@ export default function TicketsPage() {
                           value={selectedTicket.category || ''}
                           label="Select Category"
                           onChange={(e) => updateTicketField('category', e.target.value)}
+                          disabled={!isTicketEditable(selectedTicket)}
                         >
                           {Object.entries(categories || {}).map(([key, value]) => (
                             <MenuItem key={key} value={key}>
@@ -1314,7 +1361,7 @@ export default function TicketsPage() {
                           value={selectedTicket.request_type || ''}
                           label="Select Request Type"
                           onChange={(e) => updateTicketField('request_type', e.target.value)}
-                          disabled={!selectedTicket.category}
+                          disabled={!selectedTicket.category || !isTicketEditable(selectedTicket)}
                         >
                           {selectedTicket.category && requestTypes[selectedTicket.category]?.map((type: any) => (
                             <MenuItem key={type.value} value={type.value}>
@@ -1339,7 +1386,7 @@ export default function TicketsPage() {
                           value={selectedTicket.subcategory || ''}
                           label="Select Subcategory"
                           onChange={(e) => updateTicketField('subcategory', e.target.value)}
-                          disabled={!selectedTicket.request_type}
+                          disabled={!selectedTicket.request_type || !isTicketEditable(selectedTicket)}
                         >
                           {selectedTicket.category && selectedTicket.request_type && 
                            subcategories[selectedTicket.category]?.[selectedTicket.request_type]?.map((subcat: any) => (
@@ -1361,6 +1408,7 @@ export default function TicketsPage() {
                           value={selectedTicket.implementation || ''}
                           label="Select Implementation"
                           onChange={(e) => updateTicketField('implementation', e.target.value)}
+                          disabled={!isTicketEditable(selectedTicket)}
                         >
                           <MenuItem value="immediate">Immediate</MenuItem>
                           <MenuItem value="scheduled">Scheduled</MenuItem>

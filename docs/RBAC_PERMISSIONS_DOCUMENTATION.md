@@ -2,8 +2,8 @@
 ## Orvale Management System - Complete Permission Reference
 
 **Last Updated:** August 19, 2025  
-**Total Permissions:** 33  
-**Permission Categories:** 8  
+**Total Permissions:** 49  
+**Permission Categories:** 10  
 
 ---
 
@@ -15,7 +15,7 @@ The Orvale Management System implements a comprehensive Role-Based Access Contro
 
 ## 📋 Permission Categories
 
-### 1. **Tickets** (7 permissions)
+### 1. **Tickets** (9 permissions)
 Core ticket management and workflow permissions
 
 ### 2. **Queues** (4 permissions)  
@@ -131,6 +131,25 @@ Service Level Agreement configuration
   - Data cleanup
   - ⚠️ Destructive action
 - **Granted To:** Admins
+
+#### `ticket.edit_completed`
+- **Name:** Edit Completed Tickets
+- **Description:** Modify tickets marked as completed
+- **Use Cases:**
+  - Correct completion notes
+  - Reopen resolved tickets
+  - Administrative corrections
+  - ⚠️ Override completed status protection
+- **Granted To:** Admins
+
+#### `ticket.assign_own`
+- **Name:** Assign to Self
+- **Description:** Assign tickets to yourself
+- **Use Cases:**
+  - Take ownership of tickets
+  - Self-assignment from queue
+  - Basic assignment permission
+- **Granted To:** IT Users, Managers, Admins
 
 ---
 
