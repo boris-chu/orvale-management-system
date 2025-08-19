@@ -15,6 +15,7 @@ import CategoryBrowserModal from '../../components/CategoryBrowserModal';
 import OrganizationalBrowserModal from '../../components/OrganizationalBrowserModal';
 import { UserAvatar } from '@/components/UserAvatar';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
+import TicketHistoryComponent from '../../components/TicketHistoryComponent';
 
 interface Ticket {
   id: string;
@@ -82,6 +83,7 @@ export default function TicketsPage() {
   // Modal states for browse functionality
   const [showOrgBrowser, setShowOrgBrowser] = useState(false);
   const [showCategoryBrowser, setShowCategoryBrowser] = useState(false);
+  const [modalActiveTab, setModalActiveTab] = useState('details'); // 'details' or 'history'
 
   // Notification state
   const [notification, setNotification] = useState<{message: string; type: 'success' | 'error'} | null>(null);
@@ -218,6 +220,7 @@ export default function TicketsPage() {
     setSelectedTicket(ticket);
     setOriginalTicket({...ticket}); // Store original state
     setSaveStatus('idle');
+    setModalActiveTab('details'); // Reset to details tab
     loadAssignableUsers(); // Load users that can be assigned to
   };
 
@@ -1208,7 +1211,21 @@ export default function TicketsPage() {
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Tab Navigation */}
+            <Tabs value={modalActiveTab} onValueChange={setModalActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="details" className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  Ticket Details
+                </TabsTrigger>
+                <TabsTrigger value="history" className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  History & Audit Trail
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="details" className="mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h3 className="font-semibold text-blue-600 mb-2">Request Information</h3>
                 <div className="space-y-2 text-sm">
@@ -1494,14 +1511,23 @@ export default function TicketsPage() {
                   </div>
                 </div>
               </div>
-            </div>
-            
-            <div className="mt-6">
-              <h3 className="font-semibold text-blue-600 mb-2">Issue Details</h3>
-              <div className="bg-gray-50 p-4 rounded border-l-4 border-blue-500">
-                {selectedTicket.issue_description}
-              </div>
-            </div>
+                </div>
+                
+                <div className="mt-6">
+                  <h3 className="font-semibold text-blue-600 mb-2">Issue Details</h3>
+                  <div className="bg-gray-50 p-4 rounded border-l-4 border-blue-500">
+                    {selectedTicket.issue_description}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="history" className="mt-4">
+                <TicketHistoryComponent 
+                  ticketId={selectedTicket.id} 
+                  isVisible={modalActiveTab === 'history'}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       )}

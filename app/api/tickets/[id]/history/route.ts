@@ -10,6 +10,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        // Check if user has permission to view ticket history
+        if (!authResult.user.permissions?.includes('ticket.view_history')) {
+            return NextResponse.json({ 
+                error: 'Forbidden', 
+                message: 'You do not have permission to view ticket history' 
+            }, { status: 403 });
+        }
+
         const ticketId = params.id;
         
         // Get ticket history with detailed information
@@ -44,6 +52,15 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         const authResult = await verifyAuth(request);
         if (!authResult.success || !authResult.user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Check if user has permission to modify tickets (to add history)
+        if (!authResult.user.permissions?.includes('ticket.update_own') && 
+            !authResult.user.permissions?.includes('ticket.assign_any')) {
+            return NextResponse.json({ 
+                error: 'Forbidden', 
+                message: 'You do not have permission to add ticket history entries' 
+            }, { status: 403 });
         }
 
         const ticketId = params.id;

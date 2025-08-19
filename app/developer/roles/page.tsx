@@ -108,6 +108,12 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     category: 'Tickets', 
     description: 'Permanently delete tickets\n• Handle spam/duplicates\n• Data cleanup\n• ⚠️ Destructive action' 
   },
+  { 
+    id: 'ticket.view_history', 
+    name: 'View Ticket History', 
+    category: 'Tickets', 
+    description: 'View ticket audit trail\n• Track changes & assignments\n• See escalation history\n• Essential for accountability' 
+  },
   
   // Queue Permissions
   { 
