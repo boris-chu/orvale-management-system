@@ -4,101 +4,10 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { LogIn, Ticket, Users, Search, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import UnifiedLoginModal from '@/components/UnifiedLoginModal';
 
-interface LoginModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        localStorage.setItem('authToken', result.token);
-        localStorage.setItem('currentUser', JSON.stringify(result.user));
-        window.location.href = '/tickets';
-      } else {
-        setError(result.message || 'Invalid username or password');
-      }
-    } catch (error) {
-      setError('Connection error. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-center">IT Staff Login</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            {error && (
-              <div className="text-red-600 text-sm">{error}</div>
-            )}
-            <div className="flex space-x-2">
-              <Button type="submit" disabled={loading} className="flex-1">
-                {loading ? 'Logging in...' : 'Login'}
-              </Button>
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-            </div>
-          </form>
-          <div className="mt-4 text-xs text-gray-600">
-            <p><strong>Test Credentials:</strong></p>
-            <p>admin / admin123</p>
-            <p>boris.chu / boris123</p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 export default function Home() {
   const [showLogin, setShowLogin] = useState(false);
@@ -337,7 +246,13 @@ export default function Home() {
         </div>
       </footer>
 
-      <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
+      <UnifiedLoginModal 
+        isOpen={showLogin} 
+        onClose={() => setShowLogin(false)}
+        mode="regular"
+        title="Staff Login"
+        description="Access the ticket management system"
+      />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Ticket, Monitor, Phone, Building, Clock } from 'lucide-react';
+import UnifiedLoginModal from '@/components/UnifiedLoginModal';
 // Import removed - will load dynamically from API
 
 interface FormData {
@@ -67,7 +68,6 @@ export default function PublicPortal() {
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [organizationalData, setOrganizationalData] = useState<any>(null);
   const [ticketCategories, setTicketCategories] = useState<any>(null);
   const [supportTeamGroups, setSupportTeamGroups] = useState<any>({});
@@ -732,33 +732,6 @@ Thank you for your assistance.
 Submitted via Orvale Management System`;
   };
 
-  // Handle IT staff login
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loginForm)
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        // Store auth data
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('currentUser', JSON.stringify(data.user));
-        
-        // Redirect to tickets page
-        window.location.href = '/tickets';
-      } else {
-        showNotification('❌ Login failed: ' + data.message, 'error');
-      }
-    } catch (error) {
-      showNotification('❌ Login error: Please check your connection', 'error');
-    }
-  };
 
   const stripHtmlForText = (html: string) => {
     let text = html.replace(/<html><body[^>]*>/, '').replace(/<\/body><\/html>/, '');
@@ -1079,55 +1052,13 @@ Submitted via Orvale Management System`;
       />
 
       {/* Login Modal */}
-      {showLoginModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              🔐 IT Staff Access
-            </h2>
-            <form onSubmit={handleLogin}>
-              <div className="mb-4">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  type="text"
-                  value={loginForm.username}
-                  onChange={(e) => setLoginForm(prev => ({ ...prev, username: e.target.value }))}
-                  placeholder="Enter username"
-                  required
-                />
-              </div>
-              <div className="mb-6">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="Enter password"
-                  required
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button type="submit" className="flex-1">
-                  Login
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setShowLoginModal(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-            <div className="mt-4 text-xs text-gray-500">
-              Test accounts: admin/admin123, boris.chu/boris123, john.doe/john123
-            </div>
-          </div>
-        </div>
-      )}
+      <UnifiedLoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)}
+        mode="staff"
+        title="IT Staff Access"
+        description="Access internal staff management tools"
+      />
     </div>
   );
 }
