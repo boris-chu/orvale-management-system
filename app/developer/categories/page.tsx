@@ -511,7 +511,7 @@ export default function CategoryManagement() {
                 <CardTitle className="flex items-center space-x-2">
                   <Building className="h-5 w-5 text-blue-600" />
                   <span>Offices</span>
-                  <Badge variant="outline" className="ml-2">Used in Ticket Forms</Badge>
+                  <Badge variant="outline" className="ml-2">Used in Public Portal & Ticket Forms</Badge>
                 </CardTitle>
                 {canManageOrg && (
                   <Button size="sm" onClick={() => openCreateModal('office')}>
@@ -540,7 +540,7 @@ export default function CategoryManagement() {
                         </div>
                         <code className="text-xs bg-gray-100 px-1 rounded">{office.id}</code>
                         <div className="mt-2 text-sm text-gray-600">
-                          {office.bureau_count || 0} bureaus
+                          Physical location
                         </div>
                       </CardContent>
                     </Card>
@@ -590,7 +590,7 @@ export default function CategoryManagement() {
                           </div>
                         )}
                         <div className="mt-2 text-sm text-gray-600">
-                          {bureau.division_count || 0} divisions
+                          Organizational unit
                         </div>
                       </CardContent>
                     </Card>
@@ -648,7 +648,7 @@ export default function CategoryManagement() {
                           )}
                         </div>
                         <div className="mt-2 text-sm text-gray-600">
-                          {division.section_count || 0} sections
+                          Departmental division
                         </div>
                       </CardContent>
                     </Card>
@@ -663,7 +663,7 @@ export default function CategoryManagement() {
                 <CardTitle className="flex items-center space-x-2">
                   <Users className="h-5 w-5 text-orange-600" />
                   <span>Sections</span>
-                  <Badge variant="outline" className="ml-2">Used in Ticket Forms</Badge>
+                  <Badge variant="outline" className="ml-2">Used in Public Portal & Ticket Forms</Badge>
                 </CardTitle>
                 {canManageOrg && (
                   <Button size="sm" onClick={() => openCreateModal('section')}>
@@ -713,7 +713,7 @@ export default function CategoryManagement() {
                         </div>
                         <div className="mt-2 text-sm text-gray-600 flex items-center space-x-1">
                           <Users className="h-3 w-3" />
-                          <span>{section.user_count || 0} users</span>
+                          <span>Work section</span>
                         </div>
                       </CardContent>
                     </Card>

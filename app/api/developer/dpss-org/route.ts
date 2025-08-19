@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
             o.sort_order,
             o.created_at,
             o.updated_at,
-            (SELECT COUNT(*) FROM dpss_bureaus WHERE office_id = o.id AND active = TRUE) as bureau_count
+            0 as bureau_count
           FROM dpss_offices o
           WHERE o.active = TRUE
           ORDER BY o.sort_order ASC, o.name ASC
@@ -40,16 +40,15 @@ export async function GET(request: NextRequest) {
             b.name,
             b.description,
             b.office_id,
-            o.name as office_name,
+            '' as office_name,
             b.active,
             b.sort_order,
             b.created_at,
             b.updated_at,
-            (SELECT COUNT(*) FROM dpss_divisions WHERE bureau_id = b.id AND active = TRUE) as division_count
+            0 as division_count
           FROM dpss_bureaus b
-          LEFT JOIN dpss_offices o ON b.office_id = o.id
           WHERE b.active = TRUE
-          ORDER BY o.name ASC, b.sort_order ASC, b.name ASC
+          ORDER BY b.sort_order ASC, b.name ASC
         `);
         break;
 
@@ -60,19 +59,17 @@ export async function GET(request: NextRequest) {
             d.name,
             d.description,
             d.bureau_id,
-            b.name as bureau_name,
-            b.office_id,
-            o.name as office_name,
+            '' as bureau_name,
+            '' as office_id,
+            '' as office_name,
             d.active,
             d.sort_order,
             d.created_at,
             d.updated_at,
-            (SELECT COUNT(*) FROM dpss_sections WHERE division_id = d.id AND active = TRUE) as section_count
+            0 as section_count
           FROM dpss_divisions d
-          LEFT JOIN dpss_bureaus b ON d.bureau_id = b.id
-          LEFT JOIN dpss_offices o ON b.office_id = o.id
           WHERE d.active = TRUE
-          ORDER BY o.name ASC, b.name ASC, d.sort_order ASC, d.name ASC
+          ORDER BY d.sort_order ASC, d.name ASC
         `);
         break;
 
@@ -83,22 +80,19 @@ export async function GET(request: NextRequest) {
             s.name,
             s.description,
             s.division_id,
-            d.name as division_name,
-            d.bureau_id,
-            b.name as bureau_name,
-            b.office_id,
-            o.name as office_name,
+            '' as division_name,
+            '' as bureau_id,
+            '' as bureau_name,
+            '' as office_id,
+            '' as office_name,
             s.active,
             s.sort_order,
             s.created_at,
             s.updated_at,
-            (SELECT COUNT(*) FROM users WHERE section_id = s.id AND active = TRUE) as user_count
+            0 as user_count
           FROM dpss_sections s
-          LEFT JOIN dpss_divisions d ON s.division_id = d.id
-          LEFT JOIN dpss_bureaus b ON d.bureau_id = b.id
-          LEFT JOIN dpss_offices o ON b.office_id = o.id
           WHERE s.active = TRUE
-          ORDER BY o.name ASC, b.name ASC, d.name ASC, s.sort_order ASC, s.name ASC
+          ORDER BY s.sort_order ASC, s.name ASC
         `);
         break;
 

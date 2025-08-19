@@ -7,12 +7,10 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 // Material-UI imports for working Select components
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings } from 'lucide-react';
+import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
-import { organizationalData } from '../../config/organizational-data';
-import { categories } from '../../project-ticket-development/resources/main-categories';
-import { requestTypes } from '../../project-ticket-development/resources/request-types';
-import { subcategories } from '../../project-ticket-development/resources/ticket-categories';
+// Removed static imports - will load dynamically from database APIs
 import CategoryBrowserModal from '../../components/CategoryBrowserModal';
 import OrganizationalBrowserModal from '../../components/OrganizationalBrowserModal';
 
@@ -86,11 +84,66 @@ export default function TicketsPage() {
   const [originalTicket, setOriginalTicket] = useState<Ticket | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
+  // Dynamic data from database
+  const [organizationalData, setOrganizationalData] = useState<any>(null);
+  const [categories, setCategories] = useState<any>({});
+  const [requestTypes, setRequestTypes] = useState<any>({});
+  const [subcategories, setSubcategories] = useState<any>({});
+  const [dataLoading, setDataLoading] = useState(true);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
   // Show notification helper
   const showNotification = (message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
     // Auto-hide after 3 seconds
     setTimeout(() => setNotification(null), 3000);
+  };
+
+  // Load dynamic data from database APIs
+  const loadTicketData = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const headers = {
+        'Authorization': `Bearer ${token}`
+      };
+
+      // Load organizational data and categories in parallel
+      const [orgResponse, categoriesResponse] = await Promise.all([
+        fetch('/api/ticket-data/organization', { headers }),
+        fetch('/api/ticket-data/categories', { headers })
+      ]);
+
+      if (orgResponse.ok) {
+        const orgData = await orgResponse.json();
+        setOrganizationalData(orgData);
+      } else {
+        console.error('Failed to load organizational data');
+        setOrganizationalData({ offices: [], bureaus: [], divisions: [], sections: [] });
+      }
+
+      if (categoriesResponse.ok) {
+        const categoriesData = await categoriesResponse.json();
+        
+        // Transform the data to match the expected format
+        setCategories(categoriesData.categories || {});
+        setRequestTypes(categoriesData.requestTypes || {});
+        setSubcategories(categoriesData.subcategories || {});
+      } else {
+        console.error('Failed to load ticket categories');
+        setCategories({});
+        setRequestTypes({});
+        setSubcategories({});
+      }
+
+    } catch (error) {
+      console.error('Error loading ticket data:', error);
+      setOrganizationalData({ offices: [], bureaus: [], divisions: [], sections: [] });
+      setCategories({});
+      setRequestTypes({});
+      setSubcategories({});
+    } finally {
+      setDataLoading(false);
+    }
   };
 
   // Check if ticket has changes
@@ -201,6 +254,9 @@ export default function TicketsPage() {
 
     // Load current user with fresh permissions
     loadCurrentUser();
+    
+    // Load ticket category and organizational data
+    loadTicketData();
   }, []);
 
   // Load tickets with filtering logic
@@ -314,6 +370,20 @@ export default function TicketsPage() {
     // Cleanup interval on unmount
     return () => clearInterval(pollInterval);
   }, [currentUser, activeTab, filters.queue]);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showUserMenu) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showUserMenu]);
 
   // Handle ticket actions
   const handleTicketAction = async (ticketId: string, action: string, data?: any) => {
@@ -541,37 +611,113 @@ export default function TicketsPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold">📋 Support Ticket Queue</h1>
             <div className="flex items-center space-x-4">
-              <span className="text-sm opacity-90">Welcome, {currentUser?.display_name}</span>
-              
               {/* Admin Dashboard Button - only show if user has admin permissions */}
               {currentUser?.permissions?.some((perm: string) => 
                 ['admin.manage_users', 'admin.view_users', 'admin.manage_teams', 'admin.view_teams', 
                  'admin.manage_organization', 'admin.view_organization', 'admin.manage_categories', 
                  'admin.view_categories', 'admin.view_analytics', 'admin.system_settings'].includes(perm)
               ) && (
-                <Button
-                  onClick={() => window.location.href = '/developer'}
-                  variant="outline"
-                  className="bg-transparent border-white text-white hover:bg-white hover:text-blue-600"
-                  size="sm"
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Admin Dashboard
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={() => window.location.href = '/developer'}
+                        variant="outline"
+                        className="bg-transparent border-white text-white hover:bg-white hover:text-blue-600 transition-all duration-200"
+                        size="sm"
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Admin Dashboard
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>System Administration</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
               
-              <Button
-                onClick={() => {
-                  localStorage.removeItem('authToken');
-                  localStorage.removeItem('currentUser');
-                  window.location.href = '/';
-                }}
-                variant="outline"
-                className="bg-transparent border-white text-white hover:bg-white hover:text-blue-600"
-                size="sm"
-              >
-                Logout
-              </Button>
+              {/* Enhanced User Menu */}
+              <TooltipProvider>
+                <div className="relative">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowUserMenu(!showUserMenu);
+                        }}
+                        className="flex items-center space-x-3 p-2 rounded-lg hover:bg-blue-700 transition-all duration-200 border border-blue-400 hover:border-white"
+                      >
+                        <div className="relative">
+                          <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30">
+                            <User className="h-4 w-4 text-white" />
+                          </div>
+                          {/* Online indicator */}
+                          <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 border-2 border-blue-600 rounded-full"></div>
+                        </div>
+                        <div className="text-left min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{currentUser?.display_name}</p>
+                          <p className="text-xs text-blue-100 truncate">{currentUser?.role_id}</p>
+                        </div>
+                        <ChevronDown className={`h-4 w-4 text-white/70 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>User Menu</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  {/* Enhanced User Dropdown Menu */}
+                  <AnimatePresence>
+                    {showUserMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                        transition={{ duration: 0.15, ease: "easeOut" }}
+                        className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {/* User Info Section */}
+                        <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-sm">
+                              <User className="h-5 w-5 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-900 truncate">{currentUser?.display_name}</p>
+                              <p className="text-xs text-gray-600 truncate">{currentUser?.email}</p>
+                              <div className="mt-1">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {currentUser?.role_id}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Menu Items */}
+                        <div className="py-1">
+                          <button
+                            onClick={() => {
+                              localStorage.removeItem('authToken');
+                              localStorage.removeItem('currentUser');
+                              window.location.href = '/';
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-3 transition-colors duration-150"
+                          >
+                            <div className="w-5 h-5 flex items-center justify-center">
+                              <LogOut className="h-4 w-4" />
+                            </div>
+                            <span className="font-medium">Sign Out</span>
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </TooltipProvider>
             </div>
           </div>
 
@@ -958,11 +1104,11 @@ export default function TicketsPage() {
                           label="Select Section"
                           onChange={(e) => updateTicketField('section', e.target.value)}
                         >
-                          {organizationalData.sections.map((section, index) => (
+                          {organizationalData?.sections?.map((section, index) => (
                             <MenuItem key={`section-${index}`} value={section}>
                               {section}
                             </MenuItem>
-                          ))}
+                          )) || []}
                         </Select>
                       </FormControl>
                     </div>
@@ -997,7 +1143,7 @@ export default function TicketsPage() {
                           label="Select Category"
                           onChange={(e) => updateTicketField('category', e.target.value)}
                         >
-                          {Object.entries(categories).map(([key, value]) => (
+                          {Object.entries(categories || {}).map(([key, value]) => (
                             <MenuItem key={key} value={key}>
                               {value}
                             </MenuItem>
@@ -1018,11 +1164,11 @@ export default function TicketsPage() {
                           onChange={(e) => updateTicketField('request_type', e.target.value)}
                           disabled={!selectedTicket.category}
                         >
-                          {selectedTicket.category && requestTypes[selectedTicket.category as keyof typeof requestTypes]?.map((type: any) => (
+                          {selectedTicket.category && requestTypes[selectedTicket.category]?.map((type: any) => (
                             <MenuItem key={type.value} value={type.value}>
                               {type.text}
                             </MenuItem>
-                          ))}
+                          )) || []}
                         </Select>
                       </FormControl>
                     </div>
@@ -1044,11 +1190,11 @@ export default function TicketsPage() {
                           disabled={!selectedTicket.request_type}
                         >
                           {selectedTicket.category && selectedTicket.request_type && 
-                           subcategories[selectedTicket.category as keyof typeof subcategories]?.[selectedTicket.request_type as string]?.map((subcat: any) => (
+                           subcategories[selectedTicket.category]?.[selectedTicket.request_type]?.map((subcat: any) => (
                             <MenuItem key={subcat.value} value={subcat.value}>
                               {subcat.text}
                             </MenuItem>
-                          ))}
+                          )) || []}
                         </Select>
                       </FormControl>
                     </div>

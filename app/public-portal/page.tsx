@@ -37,63 +37,11 @@ interface ComputerInfo {
   timestamp: string;
 }
 
-// Define support team groups outside component to avoid reference errors
-const supportTeamGroups = {
-  "ITTS: Region 7": [
-    { 
-      value: 'DPSS_Academy', 
-      label: 'DPSS Academy', 
-      team_id: 'ITTS_Region7',
-      email: 'BechtelTechs@dpss.lacounty.gov',
-      description: 'IT Support for DPSS Academy' 
-    },
-    { 
-      value: 'BHR_Tech', 
-      label: 'Bureau of Human Resources', 
-      team_id: 'ITTS_Region7',
-      email: 'BHRTechs@dpss.lacounty.gov',
-      description: 'IT Support for Bureau of Human Resources' 
-    },
-    { 
-      value: 'Crossroads_East', 
-      label: 'Crossroads East', 
-      team_id: 'ITTS_Region7',
-      email: 'CrossroadsITSupport@dpss.lacounty.gov',
-      description: 'IT Support for Crossroads East Location' 
-    },
-    { 
-      value: 'Crossroads_Main', 
-      label: 'Crossroads Main', 
-      team_id: 'ITTS_Region7',
-      email: 'CrossroadsITSupport@dpss.lacounty.gov',
-      description: 'IT Support for Crossroads Main Location' 
-    },
-    { 
-      value: 'Crossroads_West', 
-      label: 'Crossroads West', 
-      team_id: 'ITTS_Region7',
-      email: 'CrossroadsITSupport@dpss.lacounty.gov',
-      description: 'IT Support for Crossroads West Location' 
-    },
-    { 
-      value: 'Kaiser_FOD', 
-      label: 'Kaiser Building (FOD | IHSS | LOD)', 
-      team_id: 'ITTS_Region7',
-      email: 'FODTechs@dpss.lacounty.gov',
-      description: 'IT Support for Kaiser Building - FOD, IHSS, LOD' 
-    }
-  ]
-};
-
-// Flatten for easier lookups
-const allSupportTeams = Object.values(supportTeamGroups).flat();
-
-// Get the default team (Crossroads Main) 
-const defaultTeam = allSupportTeams.find(team => team.value === 'Crossroads_Main');
+// Support teams will be loaded dynamically from database
 
 export default function PublicPortal() {
   const [formData, setFormData] = useState<FormData>({
-    emailRecipient: defaultTeam?.value || 'Crossroads_Main',  // Default to Crossroads Main
+    emailRecipient: '',  // Will be set after support teams load
     userName: '',
     employeeNumber: '',
     phoneNumber: '',
@@ -122,6 +70,7 @@ export default function PublicPortal() {
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [organizationalData, setOrganizationalData] = useState<any>(null);
   const [ticketCategories, setTicketCategories] = useState<any>(null);
+  const [supportTeamGroups, setSupportTeamGroups] = useState<any>({});
   const [dataLoading, setDataLoading] = useState(true);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -387,14 +336,15 @@ export default function PublicPortal() {
     detectComputerInfo();
   }, []);
 
-  // Load organizational data and ticket categories
+  // Load organizational data, ticket categories, and support teams
   useEffect(() => {
     const loadTicketData = async () => {
       try {
-        // Load organizational data and categories in parallel
-        const [orgResponse, categoriesResponse] = await Promise.all([
+        // Load organizational data, categories, and support teams in parallel
+        const [orgResponse, categoriesResponse, supportTeamsResponse] = await Promise.all([
           fetch('/api/ticket-data/organization'),
-          fetch('/api/ticket-data/categories')
+          fetch('/api/ticket-data/categories'),
+          fetch('/api/ticket-data/support-teams')
         ]);
 
         if (orgResponse.ok) {
@@ -402,7 +352,6 @@ export default function PublicPortal() {
           setOrganizationalData(orgData);
         } else {
           console.error('Failed to load organizational data');
-          // Fallback to empty structure
           setOrganizationalData({
             offices: [],
             bureaus: [],
@@ -416,13 +365,26 @@ export default function PublicPortal() {
           setTicketCategories(categoriesData);
         } else {
           console.error('Failed to load ticket categories');
-          // Fallback to empty categories
           setTicketCategories({});
+        }
+
+        if (supportTeamsResponse.ok) {
+          const supportTeamsData = await supportTeamsResponse.json();
+          setSupportTeamGroups(supportTeamsData);
+          
+          // Set default email recipient to Crossroads Main if available
+          const allTeams = Object.values(supportTeamsData).flat() as any[];
+          const defaultTeam = allTeams.find((team: any) => team.value === 'crossroads_main') || allTeams[0];
+          if (defaultTeam && !formData.emailRecipient) {
+            setFormData(prev => ({ ...prev, emailRecipient: defaultTeam.value }));
+          }
+        } else {
+          console.error('Failed to load support teams');
+          setSupportTeamGroups({});
         }
 
       } catch (error) {
         console.error('Error loading ticket data:', error);
-        // Set fallback data
         setOrganizationalData({
           offices: [],
           bureaus: [],
@@ -430,6 +392,7 @@ export default function PublicPortal() {
           sections: []
         });
         setTicketCategories({});
+        setSupportTeamGroups({});
       } finally {
         setDataLoading(false);
       }
@@ -892,11 +855,11 @@ Submitted via Orvale Management System`;
                     label="Select Support Team"
                     onChange={(e) => handleSelectChange('emailRecipient', e.target.value)}
                   >
-                    {Object.entries(supportTeamGroups).map(([groupName, teams]) => [
+                    {Object.entries(supportTeamGroups || {}).map(([groupName, teams]) => [
                       <ListSubheader key={groupName} sx={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#1976d2' }}>
                         {groupName}
                       </ListSubheader>,
-                      ...teams.map((team, index) => (
+                      ...(teams as any[]).map((team, index) => (
                         <MenuItem key={`${team.value}-${index}`} value={team.value} sx={{ pl: 3 }}>
                           {team.label}
                         </MenuItem>
@@ -962,11 +925,11 @@ Submitted via Orvale Management System`;
                         handleSelectChange('location', e.target.value);
                       }}
                     >
-                      {organizationalData.offices.map((office) => (
+                      {organizationalData?.offices?.map((office) => (
                         <MenuItem key={office} value={office}>
                           {office}
                         </MenuItem>
-                      ))}
+                      )) || []}
                     </Select>
                   </FormControl>
                 </div>
@@ -986,11 +949,11 @@ Submitted via Orvale Management System`;
                         handleSelectChange('section', e.target.value);
                       }}
                     >
-                      {organizationalData.sections.map((section) => (
+                      {organizationalData?.sections?.map((section) => (
                         <MenuItem key={section} value={section}>
                           {section}
                         </MenuItem>
-                      ))}
+                      )) || []}
                     </Select>
                   </FormControl>
                 </div>
