@@ -511,6 +511,7 @@ export default function CategoryManagement() {
                 <CardTitle className="flex items-center space-x-2">
                   <Building className="h-5 w-5 text-blue-600" />
                   <span>Offices</span>
+                  <Badge variant="outline" className="ml-2">Used in Ticket Forms</Badge>
                 </CardTitle>
                 {canManageOrg && (
                   <Button size="sm" onClick={() => openCreateModal('office')}>
@@ -554,6 +555,7 @@ export default function CategoryManagement() {
                 <CardTitle className="flex items-center space-x-2">
                   <Building2 className="h-5 w-5 text-green-600" />
                   <span>Bureaus</span>
+                  <Badge variant="outline" className="ml-2">Used in Ticket Forms</Badge>
                 </CardTitle>
                 {canManageOrg && (
                   <Button size="sm" onClick={() => openCreateModal('bureau')}>
@@ -603,6 +605,7 @@ export default function CategoryManagement() {
                 <CardTitle className="flex items-center space-x-2">
                   <FileText className="h-5 w-5 text-purple-600" />
                   <span>Divisions</span>
+                  <Badge variant="outline" className="ml-2">Used in Ticket Forms</Badge>
                 </CardTitle>
                 {canManageOrg && (
                   <Button size="sm" onClick={() => openCreateModal('division')}>
