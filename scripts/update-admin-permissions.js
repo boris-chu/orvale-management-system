@@ -19,6 +19,7 @@ const adminPermissions = [
     'ticket.escalate',
     'ticket.delete',
     'ticket.edit_completed',
+    'ticket.override_assignment',
     
     // User management permissions
     'user.view_all',

@@ -22,6 +22,7 @@ const helpdeskSupervisorPermissions = [
     'ticket.reassign_any_team',      // NEW: Reassign from any team to any team
     'ticket.escalate',
     'ticket.manage_escalated',       // NEW: Manage escalated tickets
+    'ticket.override_assignment',    // NEW: Can edit tickets assigned to others
     
     // Queue permissions
     'queue.view_all',                // Can see all team queues

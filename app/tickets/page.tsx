@@ -113,7 +113,12 @@ export default function TicketsPage() {
     return currentUser?.permissions?.includes('ticket.edit_completed');
   };
 
-  // Check if ticket is editable based on status and permissions
+  // Check if current user can override ticket assignments
+  const canOverrideAssignment = () => {
+    return currentUser?.permissions?.includes('ticket.override_assignment');
+  };
+
+  // Check if ticket is editable based on status, assignment, and permissions
   const isTicketEditable = (ticket: Ticket | null) => {
     if (!ticket) return false;
     
@@ -127,7 +132,17 @@ export default function TicketsPage() {
       return currentUser?.permissions?.includes('ticket.manage_escalated');
     }
     
-    // All other statuses are editable
+    // Check assignment ownership
+    if (ticket.assigned_to) {
+      // If assigned to someone else, check for override permission
+      if (ticket.assigned_to !== currentUser?.username) {
+        return canOverrideAssignment();
+      }
+      // If assigned to current user, they can edit
+      return true;
+    }
+    
+    // Unassigned tickets are editable by anyone (will auto-assign on first edit)
     return true;
   };
 
@@ -510,12 +525,18 @@ export default function TicketsPage() {
   // Update ticket field helper
   const updateTicketField = (field: string, value: string) => {
     if (selectedTicket) {
-      // Don't allow field updates if ticket is completed (unless user has permission)
+      // Don't allow field updates if ticket is not editable
       if (!isTicketEditable(selectedTicket)) return;
-      setSelectedTicket({
-        ...selectedTicket,
-        [field]: value
-      });
+      
+      // Auto-assign ticket to current user if unassigned (except when changing assignment directly)
+      let updatedTicket = { ...selectedTicket, [field]: value };
+      
+      if (!selectedTicket.assigned_to && field !== 'assigned_to' && currentUser?.username) {
+        updatedTicket.assigned_to = currentUser.username;
+        showNotification(`Ticket automatically assigned to you`, 'success');
+      }
+      
+      setSelectedTicket(updatedTicket);
       
       // Clear dependent fields when parent category changes
       if (field === 'category') {
@@ -731,22 +752,36 @@ export default function TicketsPage() {
     const nextIndex = (currentIndex + 1) % statusOrder.length;
     const nextStatus = statusOrder[nextIndex];
     
-    setSelectedTicket(prev => prev ? { ...prev, status: nextStatus } : null);
+    // Auto-assign if unassigned
+    let updatedTicket = { ...selectedTicket, status: nextStatus };
+    if (!selectedTicket.assigned_to && currentUser?.username) {
+      updatedTicket.assigned_to = currentUser.username;
+      showNotification(`Ticket automatically assigned to you`, 'success');
+    }
+    
+    setSelectedTicket(updatedTicket);
   };
 
   // Cycle through priority values  
   const cyclePriority = () => {
     if (!selectedTicket) return;
     
-    // Don't allow priority changes if ticket is completed
-    if (selectedTicket.status === 'completed') return;
+    // Don't allow priority changes if ticket is not editable
+    if (!isTicketEditable(selectedTicket)) return;
     
     const priorityOrder: Array<'low' | 'medium' | 'high' | 'urgent'> = ['low', 'medium', 'high', 'urgent'];
     const currentIndex = priorityOrder.indexOf(selectedTicket.priority);
     const nextIndex = (currentIndex + 1) % priorityOrder.length;
     const nextPriority = priorityOrder[nextIndex];
     
-    setSelectedTicket(prev => prev ? { ...prev, priority: nextPriority } : null);
+    // Auto-assign if unassigned
+    let updatedTicket = { ...selectedTicket, priority: nextPriority };
+    if (!selectedTicket.assigned_to && currentUser?.username) {
+      updatedTicket.assigned_to = currentUser.username;
+      showNotification(`Ticket automatically assigned to you`, 'success');
+    }
+    
+    setSelectedTicket(updatedTicket);
   };
 
   // Format status for display (consistent with queue view)

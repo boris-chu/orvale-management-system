@@ -2,7 +2,7 @@
 ## Orvale Management System - Complete Permission Reference
 
 **Last Updated:** August 19, 2025  
-**Total Permissions:** 54  
+**Total Permissions:** 55  
 **Permission Categories:** 10  
 
 ---
@@ -15,7 +15,7 @@ The Orvale Management System implements a comprehensive Role-Based Access Contro
 
 ## 📋 Permission Categories
 
-### 1. **Tickets** (12 permissions)
+### 1. **Tickets** (13 permissions)
 Core ticket management and workflow permissions
 
 ### 2. **Queues** (7 permissions)  
@@ -177,6 +177,16 @@ Service Level Agreement configuration
   - Escalated ticket processing
   - Priority ticket handling
 - **Granted To:** Helpdesk Supervisor, Helpdesk Members, Admins
+
+#### `ticket.override_assignment`
+- **Name:** Override Assignment Protection
+- **Description:** Edit tickets assigned to other users
+- **Use Cases:**
+  - Supervisory intervention
+  - Emergency ticket handling
+  - Administrative corrections
+  - ⚠️ Bypasses ownership protection
+- **Granted To:** Helpdesk Supervisor, Admins
 
 ---
 
