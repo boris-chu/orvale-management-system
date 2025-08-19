@@ -180,6 +180,16 @@ export default function OrganizationStructurePage() {
     });
   };
 
+  // Auto-generate ID from name
+  const generateId = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '') // Remove special characters except spaces
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/_{2,}/g, '_') // Replace multiple underscores with single
+      .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+  };
+
   const handleCreateItem = async () => {
     if (!canManageOrg) {
       showNotification('Insufficient permissions', 'error');
@@ -556,7 +566,25 @@ export default function OrganizationStructurePage() {
           
           <div className="space-y-4">
             <div>
-              <Label htmlFor="item_id">{modalType === 'office' ? 'Office' : 'Section'} ID</Label>
+              <Label htmlFor="item_name">{modalType === 'office' ? 'Office' : 'Section'} Name</Label>
+              <Input
+                id="item_name"
+                value={formData.name}
+                onChange={(e) => {
+                  const newName = e.target.value;
+                  const generatedId = generateId(newName);
+                  setFormData({
+                    ...formData, 
+                    name: newName,
+                    id: generatedId
+                  });
+                }}
+                placeholder={modalType === 'office' ? 'Main Office' : 'Information Technology'}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="item_id">{modalType === 'office' ? 'Office' : 'Section'} ID (Auto-generated, editable)</Label>
               <Input
                 id="item_id"
                 value={formData.id}
@@ -564,16 +592,7 @@ export default function OrganizationStructurePage() {
                 placeholder={modalType === 'office' ? 'office_main' : 'section_it'}
                 className="font-mono"
               />
-            </div>
-            
-            <div>
-              <Label htmlFor="item_name">{modalType === 'office' ? 'Office' : 'Section'} Name</Label>
-              <Input
-                id="item_name"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder={modalType === 'office' ? 'Main Office' : 'Information Technology'}
-              />
+              <p className="text-xs text-gray-500 mt-1">Generated automatically from name, but you can edit it</p>
             </div>
             
             <div>
