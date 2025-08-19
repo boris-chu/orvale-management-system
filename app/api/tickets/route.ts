@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryAsync, runAsync } from '@/lib/database';
-import { verifyToken } from '@/lib/auth';
+import { verifyAuth } from '@/lib/auth';
 import { generateTicketNumber } from '@/lib/ticket-numbering';
 
-// Middleware to verify authentication
+// Middleware to verify authentication with permissions
 async function authenticateRequest(request: NextRequest) {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return null;
-    }
-
-    const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
-    return decoded;
+    const authResult = await verifyAuth(request);
+    return authResult.success ? authResult.user : null;
 }
 
 export async function GET(request: NextRequest) {
@@ -48,17 +42,36 @@ export async function GET(request: NextRequest) {
 
         // Queue filtering logic
         if (user.role !== 'admin') {
+            const canManageEscalated = user.permissions?.includes('ticket.manage_escalated') || false;
+            
             if (queue === 'my_tickets') {
-                whereClause += ' AND assigned_to = ?';
-                params.push(user.username);
+                if (canManageEscalated) {
+                    // Users who can manage escalated tickets see their assigned tickets AND escalated tickets
+                    whereClause += ' AND (assigned_to = ? OR status = \'escalated\')';
+                    params.push(user.username);
+                } else {
+                    whereClause += ' AND assigned_to = ?';
+                    params.push(user.username);
+                }
             } else if (queue === 'team_tickets') {
-                whereClause += ' AND (assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL))';
-                params.push(user.team_id);
+                if (canManageEscalated) {
+                    // Include escalated tickets for users who can manage them
+                    whereClause += ' AND (assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL) OR status = \'escalated\')';
+                    params.push(user.team_id);
+                } else {
+                    whereClause += ' AND (assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL))';
+                    params.push(user.team_id);
+                }
             }
             // For 'all_tickets', add basic team filtering for non-admin users
             else if (queue === 'all_tickets') {
-                whereClause += ' AND (assigned_to = ? OR assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL))';
-                params.push(user.username, user.team_id);
+                if (canManageEscalated) {
+                    whereClause += ' AND (assigned_to = ? OR assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL) OR status = \'escalated\')';
+                    params.push(user.username, user.team_id);
+                } else {
+                    whereClause += ' AND (assigned_to = ? OR assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL))';
+                    params.push(user.username, user.team_id);
+                }
             }
         }
         // Admin users see everything regardless of queue setting
@@ -78,15 +91,32 @@ export async function GET(request: NextRequest) {
         const countParams: any[] = [];
         
         if (user.role !== 'admin') {
+            const canManageEscalated = user.permissions?.includes('ticket.manage_escalated') || false;
+            
             if (queue === 'my_tickets') {
-                countWhereClause += ' AND assigned_to = ?';
-                countParams.push(user.username);
+                if (canManageEscalated) {
+                    countWhereClause += ' AND (assigned_to = ? OR status = \'escalated\')';
+                    countParams.push(user.username);
+                } else {
+                    countWhereClause += ' AND assigned_to = ?';
+                    countParams.push(user.username);
+                }
             } else if (queue === 'team_tickets') {
-                countWhereClause += ' AND (assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL))';
-                countParams.push(user.team_id);
+                if (canManageEscalated) {
+                    countWhereClause += ' AND (assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL) OR status = \'escalated\')';
+                    countParams.push(user.team_id);
+                } else {
+                    countWhereClause += ' AND (assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL))';
+                    countParams.push(user.team_id);
+                }
             } else if (queue === 'all_tickets') {
-                countWhereClause += ' AND (assigned_to = ? OR assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL))';
-                countParams.push(user.username, user.team_id);
+                if (canManageEscalated) {
+                    countWhereClause += ' AND (assigned_to = ? OR assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL) OR status = \'escalated\')';
+                    countParams.push(user.username, user.team_id);
+                } else {
+                    countWhereClause += ' AND (assigned_to = ? OR assigned_team = ? OR (assigned_to IS NULL AND assigned_team IS NULL))';
+                    countParams.push(user.username, user.team_id);
+                }
             }
         }
         
