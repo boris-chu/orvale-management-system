@@ -496,7 +496,7 @@ export default function SupportTeamsManagement() {
 
       {/* Create Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" style={{ zIndex: 1000 }}>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Plus className="h-5 w-5" />
@@ -557,6 +557,23 @@ export default function SupportTeamsManagement() {
                       value={formData.group_id}
                       label="Select Group"
                       onChange={(e) => setFormData({...formData, group_id: e.target.value as string})}
+                      MenuProps={{
+                        PaperProps: {
+                          style: {
+                            zIndex: 9999,
+                            maxHeight: 200,
+                          },
+                        },
+                        anchorOrigin: {
+                          vertical: 'bottom',
+                          horizontal: 'left',
+                        },
+                        transformOrigin: {
+                          vertical: 'top',
+                          horizontal: 'left',
+                        },
+                        disablePortal: true,
+                      }}
                     >
                       {groups.length === 0 ? (
                         <MenuItem disabled>No groups available</MenuItem>
@@ -623,7 +640,7 @@ export default function SupportTeamsManagement() {
 
       {/* Edit Modal - Similar structure to Create Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" style={{ zIndex: 1000 }}>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Edit className="h-5 w-5" />
@@ -684,6 +701,23 @@ export default function SupportTeamsManagement() {
                       value={formData.group_id}
                       label="Select Group"
                       onChange={(e) => setFormData({...formData, group_id: e.target.value as string})}
+                      MenuProps={{
+                        PaperProps: {
+                          style: {
+                            zIndex: 9999,
+                            maxHeight: 200,
+                          },
+                        },
+                        anchorOrigin: {
+                          vertical: 'bottom',
+                          horizontal: 'left',
+                        },
+                        transformOrigin: {
+                          vertical: 'top',
+                          horizontal: 'left',
+                        },
+                        disablePortal: true,
+                      }}
                     >
                       {groups.length === 0 ? (
                         <MenuItem disabled>No groups available</MenuItem>
