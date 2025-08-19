@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogOverlay } from '@/components/ui/dialog';
+// Removed Dialog import to avoid conflicts with Framer Motion
 import { Badge } from '@/components/ui/badge';
 import { 
   LogIn, 
@@ -114,16 +114,32 @@ export default function UnifiedLoginModal({
 
   return (
     <AnimatePresence>
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogOverlay className="bg-black/60 backdrop-blur-sm" />
-        <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-md">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
-            <Card className="border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        onClick={handleClose}
+      >
+        {/* Backdrop */}
+        <motion.div 
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        />
+        
+        {/* Modal Content */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="relative z-10 w-full max-w-md mx-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Card className="border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
               <CardHeader className="text-center space-y-4 pb-4">
                 <motion.div
                   initial={{ scale: 0 }}
@@ -277,10 +293,9 @@ export default function UnifiedLoginModal({
                   </p>
                 </motion.div>
               </CardContent>
-            </Card>
-          </motion.div>
-        </DialogContent>
-      </Dialog>
+          </Card>
+        </motion.div>
+      </motion.div>
     </AnimatePresence>
   );
 }
