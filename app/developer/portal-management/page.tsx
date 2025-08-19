@@ -13,9 +13,14 @@ import {
   FileText,
   ArrowLeft,
   Shield,
-  Database
+  Database,
+  ChevronDown,
+  LogOut
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { UserAvatar } from '@/components/UserAvatar';
+import { ProfileEditModal } from '@/components/ProfileEditModal';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -37,6 +42,8 @@ export default function PortalManagementPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -158,6 +165,11 @@ export default function PortalManagementPage() {
     );
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    router.push('/');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -167,7 +179,10 @@ export default function PortalManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div 
+      className="min-h-screen bg-gray-50"
+      onClick={() => setShowUserMenu(false)}
+    >
       <div className="max-w-7xl mx-auto p-8">
         <div className="mb-8">
           <Link href="/developer" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4">
@@ -186,10 +201,95 @@ export default function PortalManagementPage() {
               </p>
             </div>
             
-            <Badge variant="outline" className="px-3 py-1">
-              <Shield className="h-4 w-4 mr-2" />
-              {user?.role || 'Unknown Role'}
-            </Badge>
+            {/* User Profile Menu */}
+            <TooltipProvider>
+              <div className="relative">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowUserMenu(!showUserMenu);
+                      }}
+                      className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 border border-gray-200 hover:border-gray-300"
+                    >
+                      <UserAvatar 
+                        user={user}
+                        size="lg"
+                        showOnlineIndicator={true}
+                      />
+                      <div className="text-left min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{user?.display_name}</p>
+                        <p className="text-xs text-gray-500 truncate">{user?.role_id}</p>
+                      </div>
+                      <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>User Menu</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* User Dropdown Menu */}
+                <AnimatePresence>
+                  {showUserMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      transition={{ duration: 0.15, ease: "easeOut" }}
+                      className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 overflow-hidden"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {/* User Info Section */}
+                      <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                        <div className="flex items-center space-x-3">
+                          <UserAvatar 
+                            user={user}
+                            size="lg"
+                            showOnlineIndicator={true}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{user?.display_name}</p>
+                            <p className="text-xs text-gray-600 truncate">{user?.email}</p>
+                            <Badge variant="secondary" className="mt-1 text-xs">
+                              {user?.role_id}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Menu Items */}
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            setShowProfileModal(true);
+                            setShowUserMenu(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                        >
+                          <Users className="h-4 w-4" />
+                          <span>Edit Profile</span>
+                        </button>
+
+                        <div className="border-t border-gray-100 my-1"></div>
+
+                        <button
+                          onClick={() => {
+                            handleLogout();
+                            setShowUserMenu(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </TooltipProvider>
           </div>
         </div>
 
@@ -276,6 +376,14 @@ export default function PortalManagementPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Profile Edit Modal */}
+      <ProfileEditModal
+        open={showProfileModal}
+        onOpenChange={setShowProfileModal}
+        user={user}
+        onProfileUpdate={setUser}
+      />
     </div>
   );
 }
