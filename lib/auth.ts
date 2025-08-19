@@ -111,17 +111,64 @@ export const getUserPermissions = async (user: User): Promise<string[]> => {
             );
         }
         
+        // Helpdesk Supervisor permissions
+        if (user.role === 'helpdesk_supervisor') {
+            permissions.push(
+                'ticket.view_all',
+                'ticket.view_team',
+                'ticket.view_own',
+                'ticket.update_own',
+                'ticket.comment_own',
+                'ticket.assign_own',
+                'ticket.assign_within_team',
+                'ticket.assign_cross_team',
+                'ticket.reassign_any_team',
+                'ticket.escalate',
+                'ticket.manage_escalated',
+                'queue.view_all',
+                'queue.view_team',
+                'queue.view_own_team',
+                'queue.view_escalated',
+                'queue.access_helpdesk',
+                'system.view_basic_info',
+                'reporting.view_all',
+                'reporting.view_team_metrics'
+            );
+        }
+        
+        // Helpdesk Team Member permissions
+        if (user.role === 'helpdesk_member') {
+            permissions.push(
+                'ticket.view_own',
+                'ticket.update_own',
+                'ticket.comment_own',
+                'ticket.assign_own',
+                'ticket.assign_cross_team',
+                'ticket.escalate',
+                'ticket.manage_escalated',
+                'queue.view_own_team',
+                'queue.view_escalated',
+                'queue.access_helpdesk',
+                'system.view_basic_info'
+            );
+        }
+        
         // Admin permissions
         if (user.role === 'admin') {
             permissions.push(
                 'ticket.view_all',
                 'ticket.assign_any',
+                'ticket.assign_cross_team',
+                'ticket.reassign_any_team',
+                'ticket.manage_escalated',
                 'ticket.delete',
                 'user.view_all',
                 'user.create',
                 'user.update',
                 'user.deactivate',
                 'queue.view_all',
+                'queue.view_escalated',
+                'queue.access_helpdesk',
                 'queue.manage',
                 'system.manage_settings',
                 'reporting.view_all',

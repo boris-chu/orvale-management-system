@@ -2,7 +2,7 @@
 ## Orvale Management System - Complete Permission Reference
 
 **Last Updated:** August 19, 2025  
-**Total Permissions:** 49  
+**Total Permissions:** 54  
 **Permission Categories:** 10  
 
 ---
@@ -15,10 +15,10 @@ The Orvale Management System implements a comprehensive Role-Based Access Contro
 
 ## 📋 Permission Categories
 
-### 1. **Tickets** (9 permissions)
+### 1. **Tickets** (12 permissions)
 Core ticket management and workflow permissions
 
-### 2. **Queues** (4 permissions)  
+### 2. **Queues** (7 permissions)  
 Ticket queue visibility and management permissions
 
 ### 3. **Users** (4 permissions)
@@ -151,6 +151,33 @@ Service Level Agreement configuration
   - Basic assignment permission
 - **Granted To:** IT Users, Managers, Admins
 
+#### `ticket.assign_cross_team`
+- **Name:** Cross-Team Assignment
+- **Description:** Assign tickets between different teams
+- **Use Cases:**
+  - Helpdesk routing to appropriate teams
+  - Escalation to specialized teams
+  - Cross-departmental ticket distribution
+- **Granted To:** Helpdesk Supervisor, Helpdesk Members, Admins
+
+#### `ticket.reassign_any_team`
+- **Name:** Reassign Any Team
+- **Description:** Reassign tickets from any team to any other team
+- **Use Cases:**
+  - Full helpdesk supervisor authority
+  - Administrative ticket management
+  - Emergency reassignment capabilities
+- **Granted To:** Helpdesk Supervisor, Admins
+
+#### `ticket.manage_escalated`
+- **Name:** Manage Escalated Tickets
+- **Description:** Full management of escalated tickets
+- **Use Cases:**
+  - Helpdesk queue management
+  - Escalated ticket processing
+  - Priority ticket handling
+- **Granted To:** Helpdesk Supervisor, Helpdesk Members, Admins
+
 ---
 
 ### **QUEUE PERMISSIONS**
@@ -190,6 +217,24 @@ Service Level Agreement configuration
   - Configure routing
   - Administrator only
 - **Granted To:** Admins
+
+#### `queue.view_escalated`
+- **Name:** View Escalated Queue
+- **Description:** Access to the escalated/helpdesk queue
+- **Use Cases:**
+  - View escalated tickets
+  - Helpdesk queue management
+  - Priority ticket handling
+- **Granted To:** Helpdesk Supervisor, Helpdesk Members, Admins
+
+#### `queue.access_helpdesk`
+- **Name:** Access Helpdesk Queue
+- **Description:** Permission to access helpdesk queue
+- **Use Cases:**
+  - Helpdesk team operations
+  - Escalated ticket processing
+  - Cross-team ticket management
+- **Granted To:** Helpdesk Supervisor, Helpdesk Members, Admins
 
 ---
 
