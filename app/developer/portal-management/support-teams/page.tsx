@@ -19,7 +19,9 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
-  Building2
+  Building2,
+  FolderTree,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
@@ -43,6 +45,14 @@ interface SupportTeam {
   sort_order: number;
   active: boolean;
   group_name: string;
+}
+
+interface CategoryAssignment {
+  category_id: string;
+  category_name: string;
+  team_id: string;
+  team_label: string;
+  priority: number;
 }
 
 export default function SupportTeamsManagement() {
@@ -312,7 +322,7 @@ export default function SupportTeamsManagement() {
                 <Users className="h-6 w-6 text-blue-600" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">Support Teams Management</h1>
-                  <p className="text-sm text-gray-500">Manage support team groups and individual teams</p>
+                  <p className="text-sm text-gray-500">Manage support team groups, individual teams, and category assignments for the public portal</p>
                 </div>
               </div>
             </div>
@@ -459,6 +469,61 @@ export default function SupportTeamsManagement() {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Category-Team Assignments */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center space-x-2">
+              <FolderTree className="h-5 w-5 text-green-600" />
+              <span>Category-Team Assignments</span>
+              <Badge variant="outline" className="ml-2">Auto-assignment in Public Portal</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert className="mb-4 bg-amber-50 border-amber-200">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800">
+                <strong>Note:</strong> Category-based team auto-assignment is not yet implemented. 
+                Currently, users manually select support teams when submitting tickets. 
+                This feature would automatically suggest teams based on the selected category.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="space-y-4">
+              <div className="text-center py-8 text-gray-500">
+                <Building2 className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium mb-2">Feature Coming Soon</p>
+                <p className="text-sm max-w-md mx-auto">
+                  This section will allow you to assign support teams to specific ticket categories, 
+                  enabling automatic team selection in the public portal based on the user's category choice.
+                </p>
+              </div>
+              
+              {/* Preview of what it would look like */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50">
+                <h4 className="font-medium text-gray-700 mb-4">Planned Features:</h4>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li className="flex items-start">
+                    <span className="text-green-500 mr-2">•</span>
+                    Assign multiple teams per category with priority levels
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-green-500 mr-2">•</span>
+                    Set default teams for unassigned categories
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-green-500 mr-2">•</span>
+                    Configure fallback teams for load balancing
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-green-500 mr-2">•</span>
+                    Import/export assignment configurations
+                  </li>
+                </ul>
+              </div>
             </div>
           </CardContent>
         </Card>
