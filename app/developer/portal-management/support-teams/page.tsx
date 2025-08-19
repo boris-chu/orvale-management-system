@@ -22,7 +22,7 @@ import {
   Building2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { Select, MenuItem, FormControl, InputLabel, ListSubheader } from '@mui/material';
 
 interface SupportTeamGroup {
   id: string;
@@ -49,6 +49,7 @@ interface SupportTeam {
 export default function SupportTeamsManagement() {
   const [groups, setGroups] = useState<SupportTeamGroup[]>([]);
   const [teams, setTeams] = useState<SupportTeam[]>([]);
+  const [supportTeamGroups, setSupportTeamGroups] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -117,23 +118,34 @@ export default function SupportTeamsManagement() {
       const token = localStorage.getItem('authToken');
       console.log('Support Teams - Loading data with token:', !!token);
       
-      const response = await fetch('/api/developer/support-teams', {
+      // Load admin data for management
+      const adminResponse = await fetch('/api/developer/support-teams', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      console.log('Support Teams - API response status:', response.status);
+      // Load public data for dropdown
+      const publicResponse = await fetch('/api/ticket-data/support-teams');
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Support Teams - API response data:', data);
-        setGroups(data.groups || []);
-        setTeams(data.teams || []);
-        console.log('Support Teams - Groups loaded:', data.groups?.length || 0);
-        console.log('Support Teams - Teams loaded:', data.teams?.length || 0);
+      console.log('Support Teams - Admin API response status:', adminResponse.status);
+      console.log('Support Teams - Public API response status:', publicResponse.status);
+      
+      if (adminResponse.ok) {
+        const adminData = await adminResponse.json();
+        console.log('Support Teams - Admin API response data:', adminData);
+        setGroups(adminData.groups || []);
+        setTeams(adminData.teams || []);
+        console.log('Support Teams - Groups loaded:', adminData.groups?.length || 0);
+        console.log('Support Teams - Teams loaded:', adminData.teams?.length || 0);
       } else {
-        const errorText = await response.text();
-        console.error('Support Teams - API error:', response.status, errorText);
-        showNotification(`Error loading support teams: ${response.status}`, 'error');
+        const errorText = await adminResponse.text();
+        console.error('Support Teams - Admin API error:', adminResponse.status, errorText);
+        showNotification(`Error loading support teams: ${adminResponse.status}`, 'error');
+      }
+
+      if (publicResponse.ok) {
+        const publicData = await publicResponse.json();
+        console.log('Support Teams - Public API response data:', publicData);
+        setSupportTeamGroups(publicData);
       }
     } catch (error) {
       console.error('Failed to load support teams:', error);
@@ -543,31 +555,25 @@ export default function SupportTeamsManagement() {
                 {/* Support Group - First field for teams */}
                 <div>
                   <Label htmlFor="support_group">Support Group</Label>
-                  <FormControl fullWidth size="small" style={{ zIndex: 10000 }}>
-                    <InputLabel>Select Group</InputLabel>
+                  <FormControl size="small" className="w-full" required>
+                    <InputLabel id="support-group-label">Select Support Team</InputLabel>
                     <Select
+                      labelId="support-group-label"
+                      id="support_group"
                       value={formData.group_id}
-                      label="Select Group"
+                      label="Select Support Team"
                       onChange={(e) => setFormData({...formData, group_id: e.target.value as string})}
-                      MenuProps={{
-                        PaperProps: {
-                          style: {
-                            zIndex: 10001,
-                            maxHeight: 200,
-                          },
-                        },
-                        disablePortal: false,
-                      }}
                     >
-                      {groups.length === 0 ? (
-                        <MenuItem disabled>No groups available</MenuItem>
-                      ) : (
-                        groups.map((group) => (
-                          <MenuItem key={group.id} value={group.id}>
-                            {group.name}
+                      {Object.entries(supportTeamGroups || {}).map(([groupName, teams]) => [
+                        <ListSubheader key={groupName} sx={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#1976d2' }}>
+                          {groupName}
+                        </ListSubheader>,
+                        ...(teams as any[]).map((team, index) => (
+                          <MenuItem key={`${team.value}-${index}`} value={team.value} sx={{ pl: 3 }}>
+                            {team.label}
                           </MenuItem>
                         ))
-                      )}
+                      ]).flat()}
                     </Select>
                   </FormControl>
                 </div>
@@ -716,31 +722,25 @@ export default function SupportTeamsManagement() {
                 {/* Support Group - First field for teams */}
                 <div>
                   <Label htmlFor="edit_support_group">Support Group</Label>
-                  <FormControl fullWidth size="small" style={{ zIndex: 10000 }}>
-                    <InputLabel>Select Group</InputLabel>
+                  <FormControl size="small" className="w-full" required>
+                    <InputLabel id="edit-support-group-label">Select Support Team</InputLabel>
                     <Select
+                      labelId="edit-support-group-label"
+                      id="edit_support_group"
                       value={formData.group_id}
-                      label="Select Group"
+                      label="Select Support Team"
                       onChange={(e) => setFormData({...formData, group_id: e.target.value as string})}
-                      MenuProps={{
-                        PaperProps: {
-                          style: {
-                            zIndex: 10001,
-                            maxHeight: 200,
-                          },
-                        },
-                        disablePortal: false,
-                      }}
                     >
-                      {groups.length === 0 ? (
-                        <MenuItem disabled>No groups available</MenuItem>
-                      ) : (
-                        groups.map((group) => (
-                          <MenuItem key={group.id} value={group.id}>
-                            {group.name}
+                      {Object.entries(supportTeamGroups || {}).map(([groupName, teams]) => [
+                        <ListSubheader key={groupName} sx={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#1976d2' }}>
+                          {groupName}
+                        </ListSubheader>,
+                        ...(teams as any[]).map((team, index) => (
+                          <MenuItem key={`${team.value}-${index}`} value={team.value} sx={{ pl: 3 }}>
+                            {team.label}
                           </MenuItem>
                         ))
-                      )}
+                      ]).flat()}
                     </Select>
                   </FormControl>
                 </div>
