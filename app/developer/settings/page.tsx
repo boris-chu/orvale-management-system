@@ -23,7 +23,8 @@ import {
   Info,
   CheckCircle,
   Lock,
-  Server
+  Server,
+  Phone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -99,6 +100,35 @@ export default function SystemSettings() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('security');
   const [notification, setNotification] = useState<SettingsNotification | null>(null);
+  const [emergencyContactValue, setEmergencyContactValue] = useState<string>('');
+  const [selectedTheme, setSelectedTheme] = useState<string>('orvale-default');
+
+  // Phone number formatting utility
+  const formatPhoneNumber = (value: string): string => {
+    // Remove all non-numeric characters
+    const phoneNumber = value.replace(/\D/g, '');
+    
+    // Format based on length
+    if (phoneNumber.length === 0) return '';
+    if (phoneNumber.length <= 3) return phoneNumber;
+    if (phoneNumber.length <= 6) return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+    if (phoneNumber.length <= 10) {
+      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6)}`;
+    }
+    // Limit to 10 digits and format
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+  };
+
+  // Extract numbers only from formatted phone
+  const extractPhoneNumbers = (value: string): string => {
+    return value.replace(/\D/g, '');
+  };
+
+  // Validate phone number (10 digits)
+  const isValidPhoneNumber = (value: string): boolean => {
+    const numbers = extractPhoneNumbers(value);
+    return numbers.length === 10;
+  };
 
   useEffect(() => {
     checkPermissions();
@@ -681,7 +711,12 @@ export default function SystemSettings() {
                         <div className="mt-2 p-4 border rounded-lg space-y-4">
                           {/* Preset Themes */}
                           <div>
-                            <Label className="text-sm font-medium">Preset Themes</Label>
+                            <Label className="text-sm font-medium">
+                              Preset Themes 
+                              <span className="text-xs text-gray-500 ml-2">
+                                (Selected: {selectedTheme.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())})
+                              </span>
+                            </Label>
                             <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-2">
                               {Object.entries({
                                 'orvale-default': { name: 'Orvale Default', color: '#2563eb' },
@@ -693,16 +728,30 @@ export default function SystemSettings() {
                                 <button
                                   key={key}
                                   onClick={() => {
-                                    // This would apply the preset theme
-                                    console.log(`Apply theme: ${key}`);
+                                    setSelectedTheme(key);
+                                    // In the future, this would also update the actual theme in preview
+                                    console.log(`Applied theme: ${key}`);
                                   }}
-                                  className="p-2 border rounded text-xs text-center hover:bg-gray-50 transition-colors"
+                                  className={`p-2 border rounded text-xs text-center transition-colors ${
+                                    selectedTheme === key 
+                                      ? 'border-blue-500 bg-blue-50 border-2' 
+                                      : 'border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                                  }`}
                                 >
-                                  <div 
-                                    className="w-full h-3 rounded mb-1" 
-                                    style={{ backgroundColor: theme.color }}
-                                  ></div>
-                                  {theme.name}
+                                  <div className="relative">
+                                    <div 
+                                      className="w-full h-3 rounded mb-1" 
+                                      style={{ backgroundColor: theme.color }}
+                                    ></div>
+                                    {selectedTheme === key && (
+                                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                        <CheckCircle size={10} className="text-white" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span className={selectedTheme === key ? 'font-medium' : ''}>
+                                    {theme.name}
+                                  </span>
                                 </button>
                               ))}
                             </div>
@@ -750,12 +799,35 @@ export default function SystemSettings() {
                               />
                             </div>
                             <div>
-                              <Label htmlFor="emergencyContact" className="text-sm">Emergency Contact</Label>
+                              <Label htmlFor="emergencyContact" className="text-sm">
+                                Emergency Contact
+                                {emergencyContactValue && !isValidPhoneNumber(emergencyContactValue) && (
+                                  <span className="text-red-500 text-xs ml-2">Must be 10 digits</span>
+                                )}
+                                {emergencyContactValue && isValidPhoneNumber(emergencyContactValue) && (
+                                  <span className="text-green-500 text-xs ml-2">✓ Valid</span>
+                                )}
+                              </Label>
                               <Input
                                 id="emergencyContact"
-                                placeholder="e.g., IT Helpdesk: (555) 123-4567"
-                                className="mt-1"
+                                value={emergencyContactValue}
+                                onChange={(e) => {
+                                  const formatted = formatPhoneNumber(e.target.value);
+                                  setEmergencyContactValue(formatted);
+                                }}
+                                placeholder="(555) 123-4567"
+                                className={`mt-1 ${
+                                  emergencyContactValue && !isValidPhoneNumber(emergencyContactValue) 
+                                    ? 'border-red-300 focus:border-red-500' 
+                                    : emergencyContactValue && isValidPhoneNumber(emergencyContactValue)
+                                    ? 'border-green-300 focus:border-green-500'
+                                    : ''
+                                }`}
+                                maxLength={14} // (555) 123-4567 = 14 characters
                               />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Enter 10-digit phone number (will auto-format)
+                              </p>
                             </div>
                           </div>
                           
@@ -799,6 +871,15 @@ export default function SystemSettings() {
                               <p className="text-xs text-gray-500 mb-3">
                                 We're performing scheduled maintenance to improve your experience.
                               </p>
+                              
+                              {/* Emergency Contact in Preview */}
+                              {emergencyContactValue && isValidPhoneNumber(emergencyContactValue) && (
+                                <div className="flex items-center justify-center space-x-1 p-2 bg-blue-50 rounded text-xs text-blue-600 mb-3">
+                                  <Phone size={12} />
+                                  <span>Emergency: {emergencyContactValue}</span>
+                                </div>
+                              )}
+                              
                               <div className="flex space-x-2 justify-center">
                                 <div className="bg-blue-600 text-white px-3 py-1 rounded text-xs">Refresh Page</div>
                                 <div className="border border-gray-300 px-3 py-1 rounded text-xs">Admin Login</div>

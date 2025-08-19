@@ -123,6 +123,20 @@ export default function MaintenancePage({ config, preview = false }: Maintenance
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [timeUntilReturn, setTimeUntilReturn] = useState<string | null>(null);
 
+  // Format phone number for display
+  const formatPhoneForDisplay = (phone: string): string => {
+    // Remove all non-numeric characters
+    const numbers = phone.replace(/\D/g, '');
+    
+    // Format if it's exactly 10 digits
+    if (numbers.length === 10) {
+      return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)}-${numbers.slice(6)}`;
+    }
+    
+    // Return original if not 10 digits
+    return phone;
+  };
+
   // Default configuration
   const defaultConfig: MaintenanceConfig = {
     message: 'System is under maintenance. Please try again later.',
@@ -328,7 +342,7 @@ export default function MaintenancePage({ config, preview = false }: Maintenance
                      style={{ backgroundColor: `${theme.primaryColor}10` }}>
                   <Phone size={20} style={{ color: theme.accentTextColor }} />
                   <span style={{ color: theme.accentTextColor }} className="font-medium">
-                    Emergency contact: {activeConfig.emergencyContact}
+                    Emergency contact: {formatPhoneForDisplay(activeConfig.emergencyContact)}
                   </span>
                 </div>
               )}
