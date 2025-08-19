@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 // Material-UI imports for working Select components
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings, LogOut, ChevronDown, CheckCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 // Removed static imports - will load dynamically from database APIs
@@ -35,7 +35,7 @@ interface Ticket {
   issue_title: string;
   issue_description: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'escalated' | 'deleted';
+  status: 'pending' | 'assigned' | 'in_progress' | 'complete' | 'completed' | 'escalated' | 'deleted';
   assigned_to?: string;
   assigned_team?: string;
   submitted_at: string;
@@ -85,6 +85,10 @@ export default function TicketsPage() {
   // Save button state
   const [originalTicket, setOriginalTicket] = useState<Ticket | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  
+  // Completion modal state
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [completionNotes, setCompletionNotes] = useState('');
 
   // Dynamic data from database
   const [organizationalData, setOrganizationalData] = useState<any>(null);
@@ -442,6 +446,7 @@ export default function TicketsPage() {
       case 'pending': return 'bg-blue-100 text-blue-800';
       case 'assigned': return 'bg-purple-100 text-purple-800';
       case 'in_progress': return 'bg-indigo-100 text-indigo-800';
+      case 'complete': return 'bg-yellow-100 text-yellow-800';
       case 'completed': return 'bg-green-100 text-green-800';
       case 'escalated': return 'bg-purple-100 text-purple-800';
       case 'deleted': return 'bg-gray-100 text-gray-800';
@@ -531,6 +536,13 @@ export default function TicketsPage() {
   const saveTicketChanges = async () => {
     if (!selectedTicket || !hasChanges()) return;
     
+    // Check if status is being changed to 'complete'
+    if (selectedTicket.status === 'complete' && originalTicket?.status !== 'complete') {
+      // Show completion modal instead of saving immediately
+      setShowCompletionModal(true);
+      return;
+    }
+    
     setSaveStatus('saving');
     
     try {
@@ -572,11 +584,68 @@ export default function TicketsPage() {
     }
   };
 
+  // Handle completion with notes
+  const handleCompletion = async () => {
+    if (!selectedTicket || !completionNotes.trim()) {
+      showNotification('Please provide completion notes', 'error');
+      return;
+    }
+    
+    setSaveStatus('saving');
+    setShowCompletionModal(false);
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      // Update ticket status to 'completed' and add completion notes
+      const completedTicket = {
+        ...selectedTicket,
+        status: 'completed' as const,
+        completion_notes: completionNotes,
+        completed_at: new Date().toISOString()
+      };
+      
+      const response = await fetch(`/api/tickets/${selectedTicket.id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(completedTicket)
+      });
+      
+      if (response.ok) {
+        // Update the ticket in the main list
+        setTickets(prev => prev.map(ticket => 
+          ticket.id === selectedTicket.id ? completedTicket : ticket
+        ));
+        
+        // Update selected ticket and original ticket state
+        setSelectedTicket(completedTicket);
+        setOriginalTicket({...completedTicket});
+        setSaveStatus('saved');
+        showNotification('Ticket completed successfully!', 'success');
+        setCompletionNotes('');
+        
+        // Reset to idle after showing success
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } else {
+        const error = await response.json();
+        setSaveStatus('idle');
+        showNotification(`Failed to complete ticket: ${error.message || 'Unknown error'}`, 'error');
+      }
+    } catch (error) {
+      console.error('Error completing ticket:', error);
+      setSaveStatus('idle');
+      showNotification('Error completing ticket', 'error');
+    }
+  };
+
   // Cycle through status values
   const cycleStatus = () => {
     if (!selectedTicket) return;
     
-    const statusOrder = ['pending', 'in_progress', 'completed', 'escalated'];
+    const statusOrder = ['pending', 'in_progress', 'complete', 'escalated'];
     const currentIndex = statusOrder.indexOf(selectedTicket.status);
     const nextIndex = (currentIndex + 1) % statusOrder.length;
     const nextStatus = statusOrder[nextIndex];
@@ -1299,6 +1368,79 @@ export default function TicketsPage() {
           onProfileUpdate={handleProfileUpdate}
         />
       )}
+
+      {/* Completion Notes Modal */}
+      <AnimatePresence>
+        {showCompletionModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            onClick={() => setShowCompletionModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center mb-4">
+                <CheckCircle className="h-6 w-6 text-green-600 mr-2" />
+                <h3 className="text-lg font-semibold">Complete Ticket</h3>
+              </div>
+              
+              <p className="text-gray-600 mb-4">
+                Please provide notes on how this issue was resolved:
+              </p>
+              
+              <textarea
+                value={completionNotes}
+                onChange={(e) => setCompletionNotes(e.target.value)}
+                placeholder="Describe how the issue was resolved..."
+                className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                autoFocus
+              />
+              
+              <div className="flex justify-end space-x-3 mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCompletionModal(false);
+                    setCompletionNotes('');
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCompletion}
+                  disabled={!completionNotes.trim() || saveStatus === 'saving'}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {saveStatus === 'saving' ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 1 }}
+                        className="mr-2"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </motion.div>
+                      Completing...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Complete Ticket
+                    </>
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

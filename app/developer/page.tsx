@@ -209,8 +209,8 @@ export default function DeveloperDashboard() {
       },
       {
         id: 'analytics',
-        title: 'System Analytics',
-        description: 'View system metrics and reports',
+        title: 'Service Analytics',
+        description: 'View service delivery performance and metrics',
         icon: BarChart3,
         href: '/developer/analytics',
         color: 'bg-indigo-500',

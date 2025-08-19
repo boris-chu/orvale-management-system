@@ -22,7 +22,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Placeholder chart components - will be replaced with actual evilcharts
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Cell, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Cell, BarChart, Bar, Pie } from 'recharts';
 
 interface AnalyticsStats {
   totalUsers: number;
@@ -59,6 +59,15 @@ interface TeamPerformance {
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+// Helper function to format category names
+const formatCategoryName = (name: string): string => {
+  // Handle camelCase to Title Case
+  return name
+    .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+    .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+    .trim(); // Remove any leading/trailing spaces
+};
 
 export default function SystemAnalytics() {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -227,7 +236,7 @@ export default function SystemAnalytics() {
           className="text-center"
         >
           <BarChart3 className="h-12 w-12 text-blue-600 mx-auto mb-4 animate-pulse" />
-          <p className="text-gray-600">Loading analytics data...</p>
+          <p className="text-gray-600">Loading service analytics...</p>
         </motion.div>
       </div>
     );
@@ -254,8 +263,8 @@ export default function SystemAnalytics() {
               <div className="flex items-center space-x-3">
                 <BarChart3 className="h-6 w-6 text-blue-600" />
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">System Analytics</h1>
-                  <p className="text-sm text-gray-500">Performance metrics and usage insights</p>
+                  <h1 className="text-2xl font-bold text-gray-900">Service Analytics</h1>
+                  <p className="text-sm text-gray-500">Service delivery performance and operational insights</p>
                 </div>
               </div>
             </div>
@@ -354,7 +363,7 @@ export default function SystemAnalytics() {
           transition={{ delay: 0.2 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="tickets">Ticket Trends</TabsTrigger>
               <TabsTrigger value="categories">Categories</TabsTrigger>
@@ -390,11 +399,11 @@ export default function SystemAnalytics() {
                   <CardContent>
                     <ResponsiveContainer width="100%" height={300}>
                       <RechartsPieChart>
-                        <PieChart data={categoryData} cx="50%" cy="50%" outerRadius={80} fill="#8884d8" dataKey="value">
+                        <Pie data={categoryData} cx="50%" cy="50%" outerRadius={80} fill="#8884d8" dataKey="value">
                           {categoryData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
-                        </PieChart>
+                        </Pie>
                         <Tooltip />
                       </RechartsPieChart>
                     </ResponsiveContainer>
@@ -466,7 +475,7 @@ export default function SystemAnalytics() {
                               className="w-4 h-4 rounded" 
                               style={{ backgroundColor: COLORS[index % COLORS.length] }}
                             />
-                            <span className="font-medium">{category.name}</span>
+                            <span className="font-medium">{formatCategoryName(category.name)}</span>
                           </div>
                           <div className="text-right">
                             <p className="font-bold">{category.value} tickets</p>
@@ -488,7 +497,7 @@ export default function SystemAnalytics() {
                         const avgTime = (Math.random() * 5 + 1).toFixed(1);
                         return (
                           <div key={category.name} className="flex items-center justify-between">
-                            <span className="font-medium">{category.name}</span>
+                            <span className="font-medium">{formatCategoryName(category.name)}</span>
                             <Badge variant="outline">{avgTime}h avg</Badge>
                           </div>
                         );

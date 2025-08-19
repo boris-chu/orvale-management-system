@@ -91,7 +91,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             sub_subcategory,
             implementation,
             completion_notes,
-            escalation_reason
+            escalation_reason,
+            completed_at
         } = body;
 
         // Build dynamic update query
@@ -157,6 +158,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         if (escalation_reason !== undefined) {
             updateFields.push('escalation_reason = ?');
             updateValues.push(escalation_reason);
+        }
+        if (completed_at !== undefined) {
+            updateFields.push('completed_at = ?');
+            updateValues.push(completed_at);
+        }
+        
+        // If status is being set to completed, also set completed_by
+        if (status === 'completed') {
+            updateFields.push('completed_by = ?');
+            updateValues.push(user.username);
         }
 
         // Always update the updated_at timestamp

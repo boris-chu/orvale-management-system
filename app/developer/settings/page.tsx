@@ -350,7 +350,7 @@ export default function SystemSettings() {
           animate={{ opacity: 1, y: 0 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
               <TabsTrigger value="security">Security</TabsTrigger>
               <TabsTrigger value="system">System</TabsTrigger>
               <TabsTrigger value="email">Email</TabsTrigger>
