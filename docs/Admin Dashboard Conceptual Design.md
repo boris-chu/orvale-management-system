@@ -109,6 +109,7 @@ The Admin Dashboard serves as the central command center for system administrato
 
 - **User Profiles**
   - Detailed user information
+  - Profile picture management
   - Login history and patterns
   - Permission assignments
   - Achievement progress

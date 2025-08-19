@@ -8,6 +8,12 @@ The Dashboard & Achievements System transforms IT support ticket management into
 ### 1. Personal Dashboard
 **Purpose**: Provide users with comprehensive insights into their ticket generation activities and impact.
 
+#### User Profile Display
+- **Profile Picture**: User avatar with uploaded image or gradient-based initials
+- **Display Name**: Prominent display of user's full name
+- **Role Badge**: Visual indicator of user's role in the organization
+- **Online Status**: Real-time presence indicator
+
 #### Key Metrics
 - **Tickets Generated**: Total count with trend analysis
 - **Response Time Improvement**: Average time saved through template usage
@@ -32,7 +38,8 @@ The Dashboard & Achievements System transforms IT support ticket management into
 - **Collective Impact**: Total issues resolved, time saved organization-wide
 
 #### Collaboration Features
-- **Team Feed**: Real-time updates on team achievements
+- **Team Feed**: Real-time updates on team achievements with member avatars
+- **Team Member Gallery**: Visual display of team members with profile pictures
 - **Template Sharing Hub**: Popular templates from team members
 - **Mentorship Tracking**: Senior members helping newcomers
 - **Cross-Department Projects**: Joint ticket resolution metrics

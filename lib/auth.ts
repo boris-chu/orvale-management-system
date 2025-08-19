@@ -14,6 +14,7 @@ export interface User {
     team_id: string;
     section_id: string;
     active: boolean;
+    profile_picture?: string;
 }
 
 export const authenticateUser = async (username: string, password: string): Promise<User | null> => {
@@ -43,7 +44,8 @@ export const authenticateUser = async (username: string, password: string): Prom
             role: user.role,
             team_id: user.team_id,
             section_id: user.section_id,
-            active: user.active
+            active: user.active,
+            profile_picture: user.profile_picture
         };
     } catch (error) {
         console.error('❌ Authentication error:', error);
@@ -199,6 +201,7 @@ export const verifyAuth = async (request: any): Promise<{success: boolean; user?
             team_id: user.team_id,
             section_id: user.section_id,
             active: user.active,
+            profile_picture: user.profile_picture,
             permissions: permissions
         };
 
