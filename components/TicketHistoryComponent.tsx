@@ -226,8 +226,9 @@ export default function TicketHistoryComponent({ ticketId, isVisible }: TicketHi
   }
 
   return (
-    <Card className="mt-4">
-      <CardHeader>
+    <div onClick={(e) => e.stopPropagation()}>
+      <Card className="mt-4">
+        <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Clock className="h-5 w-5" />
           Ticket History
@@ -315,5 +316,6 @@ export default function TicketHistoryComponent({ ticketId, isVisible }: TicketHi
         )}
       </CardContent>
     </Card>
+    </div>
   );
 }

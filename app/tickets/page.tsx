@@ -224,6 +224,11 @@ export default function TicketsPage() {
     loadAssignableUsers(); // Load users that can be assigned to
   };
 
+  // Handle tab change with proper event handling
+  const handleTabChange = (value: string) => {
+    setModalActiveTab(value);
+  };
+
   // Load assignable users
   const loadAssignableUsers = async () => {
     setLoadingAssignableUsers(true);
@@ -1133,7 +1138,7 @@ export default function TicketsPage() {
           onClick={() => setSelectedTicket(null)}
         >
           <div 
-            className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] min-h-[60vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-start mb-4">
@@ -1212,19 +1217,27 @@ export default function TicketsPage() {
             </div>
             
             {/* Tab Navigation */}
-            <Tabs value={modalActiveTab} onValueChange={setModalActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="details" className="flex items-center gap-2">
+            <Tabs value={modalActiveTab} onValueChange={handleTabChange} className="w-full">
+              <TabsList className="grid w-full grid-cols-2" onClick={(e) => e.stopPropagation()}>
+                <TabsTrigger 
+                  value="details" 
+                  className="flex items-center gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Eye className="h-4 w-4" />
                   Ticket Details
                 </TabsTrigger>
-                <TabsTrigger value="history" className="flex items-center gap-2">
+                <TabsTrigger 
+                  value="history" 
+                  className="flex items-center gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Clock className="h-4 w-4" />
                   History & Audit Trail
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="details" className="mt-4">
+              <TabsContent value="details" className="mt-4" onClick={(e) => e.stopPropagation()}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h3 className="font-semibold text-blue-600 mb-2">Request Information</h3>
@@ -1521,7 +1534,7 @@ export default function TicketsPage() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="history" className="mt-4">
+              <TabsContent value="history" className="mt-4" onClick={(e) => e.stopPropagation()}>
                 <TicketHistoryComponent 
                   ticketId={selectedTicket.id} 
                   isVisible={modalActiveTab === 'history'}
