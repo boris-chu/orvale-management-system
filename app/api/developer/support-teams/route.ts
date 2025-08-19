@@ -9,9 +9,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: authResult.error }, { status: 401 });
     }
 
-    // Check permissions
-    if (!authResult.user.permissions?.includes('admin.manage_support_teams') && 
-        !authResult.user.permissions?.includes('admin.view_support_teams')) {
+    // Check permissions - allow admin role or specific permissions
+    console.log('Support Teams API - User:', authResult.user.username, 'Role:', authResult.user.role);
+    console.log('Support Teams API - Permissions:', authResult.user.permissions);
+    
+    const hasPermission = authResult.user.role === 'admin' ||
+                         authResult.user.permissions?.includes('admin.manage_support_teams') || 
+                         authResult.user.permissions?.includes('admin.view_support_teams') ||
+                         authResult.user.permissions?.includes('admin.manage_categories'); // Allow category managers too
+    
+    if (!hasPermission) {
+      console.log('Support Teams API - Permission denied for user:', authResult.user.username);
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
@@ -56,7 +64,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: authResult.error }, { status: 401 });
     }
 
-    if (!authResult.user.permissions?.includes('admin.manage_support_teams')) {
+    const hasManagePermission = authResult.user.role === 'admin' ||
+                               authResult.user.permissions?.includes('admin.manage_support_teams') ||
+                               authResult.user.permissions?.includes('admin.manage_categories');
+    
+    if (!hasManagePermission) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
@@ -99,7 +111,11 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: authResult.error }, { status: 401 });
     }
 
-    if (!authResult.user.permissions?.includes('admin.manage_support_teams')) {
+    const hasManagePermission = authResult.user.role === 'admin' ||
+                               authResult.user.permissions?.includes('admin.manage_support_teams') ||
+                               authResult.user.permissions?.includes('admin.manage_categories');
+    
+    if (!hasManagePermission) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
@@ -144,7 +160,11 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: authResult.error }, { status: 401 });
     }
 
-    if (!authResult.user.permissions?.includes('admin.manage_support_teams')) {
+    const hasManagePermission = authResult.user.role === 'admin' ||
+                               authResult.user.permissions?.includes('admin.manage_support_teams') ||
+                               authResult.user.permissions?.includes('admin.manage_categories');
+    
+    if (!hasManagePermission) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
