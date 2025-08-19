@@ -2,6 +2,31 @@ import { NextRequest, NextResponse } from 'next/server';
 import { queryAsync, runAsync } from '@/lib/database';
 import { verifyToken } from '@/lib/auth';
 
+// Helper function to add history entry
+async function addHistoryEntry(ticketId: string, actionType: string, user: any, fromValue?: string, toValue?: string, fromTeam?: string, toTeam?: string, reason?: string, details?: any) {
+    try {
+        await runAsync(`
+            INSERT INTO ticket_history (
+                ticket_id, action_type, performed_by, performed_by_display,
+                from_value, to_value, from_team, to_team, reason, details
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            ticketId,
+            actionType,
+            user.username,
+            user.display_name,
+            fromValue,
+            toValue,
+            fromTeam,
+            toTeam,
+            reason,
+            details ? JSON.stringify(details) : null
+        ]);
+    } catch (error) {
+        console.error('Warning: Failed to add history entry:', error);
+    }
+}
+
 // Middleware to verify authentication
 async function authenticateRequest(request: NextRequest) {
     console.log('🔍 Authenticating request...');
@@ -74,6 +99,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         const ticketId = params.id;
         const body = await request.json();
         console.log('📄 Request body:', JSON.stringify(body, null, 2));
+        
+        // Get current ticket state for history tracking
+        const currentTickets = await queryAsync('SELECT * FROM user_tickets WHERE id = ?', [ticketId]);
+        if (currentTickets.length === 0) {
+            return NextResponse.json({
+                error: 'Not found',
+                message: 'Ticket not found'
+            }, { status: 404 });
+        }
+        const currentTicket = currentTickets[0];
         
         // Extract updateable fields
         const {
@@ -202,6 +237,142 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
                 message: 'Ticket not found or no changes made'
             }, { status: 404 });
         }
+
+        // Track history for significant changes
+        const historyPromises = [];
+
+        // Status change history
+        if (status !== undefined && status !== currentTicket.status) {
+            if (status === 'escalated') {
+                historyPromises.push(
+                    addHistoryEntry(
+                        ticketId,
+                        'escalated',
+                        user,
+                        currentTicket.status,
+                        status,
+                        currentTicket.assigned_team,
+                        'HELPDESK',
+                        escalation_reason || 'Escalated to Helpdesk team',
+                        { escalated_at: escalated_at }
+                    )
+                );
+            } else if (status === 'completed') {
+                historyPromises.push(
+                    addHistoryEntry(
+                        ticketId,
+                        'completed',
+                        user,
+                        currentTicket.status,
+                        status,
+                        null,
+                        null,
+                        'Ticket marked as completed',
+                        { completed_at: new Date().toISOString(), completion_notes }
+                    )
+                );
+            } else {
+                historyPromises.push(
+                    addHistoryEntry(
+                        ticketId,
+                        'status_changed',
+                        user,
+                        currentTicket.status,
+                        status,
+                        null,
+                        null,
+                        `Status changed from ${currentTicket.status} to ${status}`
+                    )
+                );
+            }
+        }
+
+        // Assignment change history
+        if ((assigned_to !== undefined && assigned_to !== currentTicket.assigned_to) ||
+            (assigned_team !== undefined && assigned_team !== currentTicket.assigned_team)) {
+            
+            const fromAssignee = currentTicket.assigned_to || 'unassigned';
+            const toAssignee = assigned_to !== undefined ? assigned_to : currentTicket.assigned_to;
+            const fromTeam = currentTicket.assigned_team || 'UNASSIGNED';
+            const toTeam = assigned_team !== undefined ? assigned_team : currentTicket.assigned_team;
+            
+            let reason = 'Assignment updated';
+            if (toAssignee && !fromAssignee) {
+                reason = `Assigned to ${toAssignee}`;
+            } else if (fromAssignee && !toAssignee) {
+                reason = `Unassigned from ${fromAssignee}`;
+            } else if (fromAssignee !== toAssignee) {
+                reason = `Reassigned from ${fromAssignee} to ${toAssignee}`;
+            }
+            
+            if (fromTeam !== toTeam) {
+                reason += ` (team: ${fromTeam} → ${toTeam})`;
+            }
+            
+            historyPromises.push(
+                addHistoryEntry(
+                    ticketId,
+                    'assigned',
+                    user,
+                    fromAssignee,
+                    toAssignee || 'unassigned',
+                    fromTeam,
+                    toTeam,
+                    reason,
+                    { team_changed: fromTeam !== toTeam }
+                )
+            );
+        }
+
+        // Priority change history
+        if (priority !== undefined && priority !== currentTicket.priority) {
+            historyPromises.push(
+                addHistoryEntry(
+                    ticketId,
+                    'priority_changed',
+                    user,
+                    currentTicket.priority,
+                    priority,
+                    null,
+                    null,
+                    `Priority changed from ${currentTicket.priority} to ${priority}`
+                )
+            );
+        }
+
+        // Category/classification change history
+        if ((category !== undefined && category !== currentTicket.category) ||
+            (request_type !== undefined && request_type !== currentTicket.request_type) ||
+            (subcategory !== undefined && subcategory !== currentTicket.subcategory)) {
+            
+            const changes = [];
+            if (category !== undefined && category !== currentTicket.category) {
+                changes.push(`category: ${currentTicket.category} → ${category}`);
+            }
+            if (request_type !== undefined && request_type !== currentTicket.request_type) {
+                changes.push(`type: ${currentTicket.request_type} → ${request_type}`);
+            }
+            if (subcategory !== undefined && subcategory !== currentTicket.subcategory) {
+                changes.push(`subcategory: ${currentTicket.subcategory} → ${subcategory}`);
+            }
+            
+            historyPromises.push(
+                addHistoryEntry(
+                    ticketId,
+                    'category_changed',
+                    user,
+                    null,
+                    null,
+                    null,
+                    null,
+                    `Classification updated: ${changes.join(', ')}`,
+                    { category, request_type, subcategory }
+                )
+            );
+        }
+
+        // Wait for all history entries to complete (but don't fail the request if they fail)
+        await Promise.allSettled(historyPromises);
 
         // Log the update action
         console.log(`✅ Ticket ${ticketId} updated by ${user.username}`);

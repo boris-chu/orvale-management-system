@@ -3,6 +3,31 @@ import { queryAsync, runAsync } from '@/lib/database';
 import { verifyAuth } from '@/lib/auth';
 import { generateTicketNumber } from '@/lib/ticket-numbering';
 
+// Helper function to add history entry
+async function addHistoryEntry(ticketId: string, actionType: string, user: any, fromValue?: string, toValue?: string, fromTeam?: string, toTeam?: string, reason?: string, details?: any) {
+    try {
+        await runAsync(`
+            INSERT INTO ticket_history (
+                ticket_id, action_type, performed_by, performed_by_display,
+                from_value, to_value, from_team, to_team, reason, details
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            ticketId,
+            actionType,
+            user.username || user.submitted_by || 'system',
+            user.display_name || user.submitted_by || 'System User',
+            fromValue,
+            toValue,
+            fromTeam,
+            toTeam,
+            reason,
+            details ? JSON.stringify(details) : null
+        ]);
+    } catch (error) {
+        console.error('Warning: Failed to add history entry:', error);
+    }
+}
+
 // Middleware to verify authentication with permissions
 async function authenticateRequest(request: NextRequest) {
     const authResult = await verifyAuth(request);
@@ -183,14 +208,33 @@ export async function POST(request: NextRequest) {
                 submission_id, user_name, employee_number, phone_number, location, section,
                 teleworking, submitted_by, submitted_by_employee_number, on_behalf,
                 issue_title, issue_description, computer_info, priority, status,
-                assigned_team, email_recipient, email_recipient_display
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
+                assigned_team, email_recipient, email_recipient_display, original_submitting_team
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)
         `, [
             submissionId, user_name, employee_number, phone_number, location, section,
             teleworking, submitted_by, submitted_by_employee_number, on_behalf,
             issue_title, issue_description, JSON.stringify(computer_info), priority,
-            assigned_team, email_recipient, email_recipient_display
+            assigned_team, email_recipient, email_recipient_display, assigned_team
         ]);
+
+        // Add initial history entry
+        await addHistoryEntry(
+            result.lastID.toString(),
+            'created',
+            { submitted_by, display_name: submitted_by },
+            null,
+            'pending',
+            null,
+            assigned_team || 'UNASSIGNED',
+            `Ticket created and assigned to ${assigned_team}`,
+            {
+                submission_id: submissionId,
+                issue_title,
+                priority,
+                on_behalf: Boolean(on_behalf),
+                initial_assignment: assigned_team
+            }
+        );
 
         return NextResponse.json({
             success: true,

@@ -40,6 +40,10 @@ interface Ticket {
   assigned_team?: string;
   submitted_at: string;
   updated_at: string;
+  escalated_at?: string;
+  completed_at?: string;
+  escalation_reason?: string;
+  completion_notes?: string;
 }
 
 interface QueueStats {
