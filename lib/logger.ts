@@ -108,7 +108,7 @@ let currentLevel: LogLevel = 'info';
 let logger = pino(createLoggerConfig(currentLevel));
 
 // Function to update logger level dynamically
-export const updateLogLevel = async (): Promise<void> => {
+const updateLogLevel = async (): Promise<void> => {
   try {
     const newLevel = await getLogLevel();
     if (newLevel !== currentLevel) {

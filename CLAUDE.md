@@ -44,6 +44,10 @@ sudo npm start
 
 # Run tests
 npm test
+
+# View application logs (production mode)
+tail -f logs/app.log
+tail -f logs/error.log
 ```
 
 ### Access Points (Port 80):
@@ -170,6 +174,33 @@ import { motion, AnimatePresence } from 'framer-motion';
 - Implement virtual scrolling for long lists
 - Use React.memo for expensive components
 - Optimize bundle size with dynamic imports
+
+### Logging System
+The system uses **Pino** for production-grade structured logging:
+
+```javascript
+// Import structured loggers
+import { ticketLogger, authLogger, systemLogger } from '@/lib/logger';
+
+// Ticket operations
+ticketLogger.created(ticketId, submittedBy, team);
+ticketLogger.updated(ticketId, updatedBy, changes);
+ticketLogger.escalated(ticketId, escalatedBy, reason);
+
+// Authentication events
+authLogger.login(username, ipAddress, success);
+authLogger.permissionDenied(username, action, resource);
+
+// System events
+systemLogger.startup(port);
+systemLogger.configUpdated(setting, updatedBy);
+```
+
+**Log Configuration:**
+- **Development**: Pretty-printed console output
+- **Production**: File output (`logs/app.log`, `logs/error.log`) + console
+- **Dynamic Control**: Change log level via Admin → System Settings → Advanced
+- **Structured Data**: All logs include context, timestamps, and event types
 
 ## 🎯 Component Selection Guide
 
