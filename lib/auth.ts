@@ -138,7 +138,24 @@ export const getUserPermissions = async (user: User): Promise<string[]> => {
                 'admin.system_settings',
                 // Portal settings permissions
                 'portal.manage_settings',
-                'portal.view_settings'
+                'portal.view_settings',
+                // Data management permissions
+                'portal.export_data',
+                'admin.manage_data',
+                // Template management permissions
+                'portal.manage_templates',
+                'portal.view_templates',
+                // Portal-specific management permissions
+                'portal.manage_teams',
+                'portal.view_teams',
+                'portal.manage_categories',
+                'portal.view_categories',
+                // Role management permissions
+                'admin.manage_roles',
+                'admin.view_roles',
+                // SLA management permissions
+                'admin.manage_sla',
+                'admin.view_sla'
             );
         }
         

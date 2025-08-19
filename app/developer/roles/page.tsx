@@ -249,6 +249,98 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     name: 'System Settings', 
     category: 'Administration', 
     description: 'Advanced system config\n• Security settings\n• Core behaviors\n• ⚠️ Highest level access' 
+  },
+  
+  // Portal Management Permissions
+  { 
+    id: 'portal.manage_settings', 
+    name: 'Manage Portal Settings', 
+    category: 'Portal Management', 
+    description: 'Configure portal settings\n• Form fields & validation\n• Display options\n• User experience controls' 
+  },
+  { 
+    id: 'portal.view_settings', 
+    name: 'View Portal Settings', 
+    category: 'Portal Management', 
+    description: 'Read portal configuration\n• See current settings\n• Review options\n• No modification rights' 
+  },
+  { 
+    id: 'portal.manage_teams', 
+    name: 'Manage Support Teams', 
+    category: 'Portal Management', 
+    description: 'Manage support teams\n• Create team assignments\n• Route categories to teams\n• Workflow configuration' 
+  },
+  { 
+    id: 'portal.view_teams', 
+    name: 'View Support Teams', 
+    category: 'Portal Management', 
+    description: 'View team assignments\n• See routing rules\n• Check configurations\n• Read-only access' 
+  },
+  { 
+    id: 'portal.manage_categories', 
+    name: 'Manage Portal Categories', 
+    category: 'Portal Management', 
+    description: 'Configure ticket categories\n• Add/edit categories\n• Set up routing\n• Classification management' 
+  },
+  { 
+    id: 'portal.view_categories', 
+    name: 'View Portal Categories', 
+    category: 'Portal Management', 
+    description: 'View category structure\n• See available options\n• Understand routing\n• No modifications' 
+  },
+  { 
+    id: 'portal.manage_templates', 
+    name: 'Manage Response Templates', 
+    category: 'Portal Management', 
+    description: 'Manage email templates\n• Create & edit templates\n• Set trigger conditions\n• Communication management' 
+  },
+  { 
+    id: 'portal.view_templates', 
+    name: 'View Response Templates', 
+    category: 'Portal Management', 
+    description: 'View email templates\n• See template content\n• Check configurations\n• Read-only access' 
+  },
+  { 
+    id: 'portal.export_data', 
+    name: 'Export Data', 
+    category: 'Portal Management', 
+    description: 'Export configuration data\n• Backup settings\n• Data migration\n• System maintenance' 
+  },
+  
+  // Data Management Permissions
+  { 
+    id: 'admin.manage_data', 
+    name: 'Manage Data', 
+    category: 'Data Management', 
+    description: 'Full data management\n• Import/export operations\n• Database maintenance\n• ⚠️ Critical system access' 
+  },
+  
+  // Role Management Permissions
+  { 
+    id: 'admin.manage_roles', 
+    name: 'Manage Roles', 
+    category: 'Role Management', 
+    description: 'Create & modify roles\n• Assign permissions\n• Define access levels\n• ⚠️ Security critical' 
+  },
+  { 
+    id: 'admin.view_roles', 
+    name: 'View Roles', 
+    category: 'Role Management', 
+    description: 'View role definitions\n• See permissions\n• Understand hierarchy\n• Read-only access' 
+  },
+  
+  // SLA Management Permissions
+  { 
+    id: 'admin.manage_sla', 
+    name: 'Manage SLA Configurations', 
+    category: 'SLA Management', 
+    description: 'Configure SLA rules\n• Set response times\n• Define escalation\n• Service level management' 
+  },
+  { 
+    id: 'admin.view_sla', 
+    name: 'View SLA Configurations', 
+    category: 'SLA Management', 
+    description: 'View SLA settings\n• See time limits\n• Check configurations\n• Read-only access' 
   }
 ];
 

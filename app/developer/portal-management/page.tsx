@@ -151,7 +151,7 @@ export default function PortalManagementPage() {
       color: 'from-gray-600 to-gray-700',
       stats: [
         { label: 'Last Export', value: 'Never' },
-        { label: 'Backups', value: '0' }
+        { label: 'Data Sections', value: '5' }
       ],
       permissions: ['portal.export_data', 'admin.manage_data']
     }

@@ -200,7 +200,7 @@ export default function DeveloperDashboard() {
       {
         id: 'portal_management',
         title: 'Public Portal Management',
-        description: 'Manage all aspects of the public ticket submission portal',
+        description: 'Configure public portal settings and features',
         icon: Globe,
         href: '/developer/portal-management',
         color: 'bg-cyan-500',

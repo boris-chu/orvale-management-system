@@ -10,6 +10,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Check permissions for role viewing
+    if (!authResult.user.permissions?.includes('admin.view_roles') && 
+        !authResult.user.permissions?.includes('admin.manage_roles')) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+
     // Get all roles from database
     const roles = await queryAsync(`
       SELECT r.*, 
@@ -52,7 +58,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!authResult.user.permissions?.includes('admin.manage_users')) {
+    if (!authResult.user.permissions?.includes('admin.manage_roles')) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
@@ -117,7 +123,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!authResult.user.permissions?.includes('admin.manage_users')) {
+    if (!authResult.user.permissions?.includes('admin.manage_roles')) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
@@ -209,7 +215,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!authResult.user.permissions?.includes('admin.manage_users')) {
+    if (!authResult.user.permissions?.includes('admin.manage_roles')) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 

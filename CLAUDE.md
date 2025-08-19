@@ -10,7 +10,8 @@ project management/
 │   ├── Team Ticket System.md                    # Core ticket system blueprint (READ FIRST)
 │   ├── Available Resources and Materials.md     # UI libraries and components catalog
 │   ├── Dashboard & Achievements System.md        # Gamification and user dashboard design
-│   └── Admin Dashboard Conceptual Design.md     # Admin control panel specifications
+│   ├── Admin Dashboard Conceptual Design.md     # Admin control panel specifications
+│   └── RBAC_PERMISSIONS_DOCUMENTATION.md        # Complete RBAC permissions reference
 ├── assets/                                      # Configuration data
 │   ├── main-categories.js                      # 9 main ticket categories
 │   ├── request-types.js                        # Request types for each category
@@ -265,12 +266,60 @@ try {
 }
 ```
 
-### Permission Checks
+### 🔒 RBAC Permission Checks
+
+**IMPORTANT: Always check permissions before showing UI or processing actions**
+
+#### Frontend Permission Checks
 ```javascript
-if (user.permissions.includes('ticket.assign_within_team')) {
+// Single permission check
+if (user.permissions?.includes('ticket.assign_within_team')) {
   // Show assignment UI
 }
+
+// Multiple permission check (OR logic)
+if (user.permissions?.includes('portal.manage_settings') || 
+    user.permissions?.includes('admin.system_settings')) {
+  // Show portal settings access
+}
+
+// Role-based shortcuts (use permissions instead)
+const hasAdminAccess = user.role === 'admin';  // ❌ Don't do this
+const hasAdminAccess = user.permissions?.includes('admin.system_settings'); // ✅ Correct
 ```
+
+#### API Permission Enforcement
+```javascript
+// In API routes - ALWAYS verify permissions
+const authResult = await verifyAuth(request);
+if (!authResult.success || !authResult.user) {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
+
+// Check specific permission
+if (!authResult.user.permissions?.includes('portal.manage_templates')) {
+  return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+}
+```
+
+#### Component-Level Permission Guards
+```javascript
+// Use permission guards in components
+const PermissionGuard = ({ permission, children, fallback = null }) => {
+  const { user } = useAuth();
+  if (!user?.permissions?.includes(permission)) {
+    return fallback;
+  }
+  return children;
+};
+
+// Usage
+<PermissionGuard permission="admin.manage_users">
+  <UserManagementButton />
+</PermissionGuard>
+```
+
+**📚 Complete Permission Reference:** See `/docs/RBAC_PERMISSIONS_DOCUMENTATION.md` for all 33 available permissions across 10 categories.
 
 ### Form Validation
 ```javascript
@@ -393,8 +442,9 @@ import { organizationalData } from './assets/organizational-data.js';
 3. **Available Resources and Materials.md** - Component catalog
 4. **Dashboard & Achievements System.md** - Gamification features
 5. **Admin Dashboard Conceptual Design.md** - Admin panel specs
-6. **shadcn:ui docs** - Component examples
-7. **evilcharts examples** - Chart implementations
+6. **RBAC_PERMISSIONS_DOCUMENTATION.md** - **COMPLETE RBAC PERMISSIONS REFERENCE** 🔒
+7. **shadcn:ui docs** - Component examples
+8. **evilcharts examples** - Chart implementations
 
 ## 🎮 Key Features to Implement
 
