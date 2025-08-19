@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Ticket, Monitor, Phone, Building, Clock } from 'lucide-react';
-import { organizationalData } from '../../config/organizational-data';
+// Import removed - will load dynamically from API
 
 interface FormData {
   emailRecipient: string;
@@ -120,6 +120,9 @@ export default function PublicPortal() {
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [organizationalData, setOrganizationalData] = useState<any>(null);
+  const [ticketCategories, setTicketCategories] = useState<any>(null);
+  const [dataLoading, setDataLoading] = useState(true);
   const formRef = useRef<HTMLFormElement>(null);
 
   // Platform detection function with Apple Silicon support
@@ -384,6 +387,56 @@ export default function PublicPortal() {
     detectComputerInfo();
   }, []);
 
+  // Load organizational data and ticket categories
+  useEffect(() => {
+    const loadTicketData = async () => {
+      try {
+        // Load organizational data and categories in parallel
+        const [orgResponse, categoriesResponse] = await Promise.all([
+          fetch('/api/ticket-data/organization'),
+          fetch('/api/ticket-data/categories')
+        ]);
+
+        if (orgResponse.ok) {
+          const orgData = await orgResponse.json();
+          setOrganizationalData(orgData);
+        } else {
+          console.error('Failed to load organizational data');
+          // Fallback to empty structure
+          setOrganizationalData({
+            offices: [],
+            bureaus: [],
+            divisions: [],
+            sections: []
+          });
+        }
+
+        if (categoriesResponse.ok) {
+          const categoriesData = await categoriesResponse.json();
+          setTicketCategories(categoriesData);
+        } else {
+          console.error('Failed to load ticket categories');
+          // Fallback to empty categories
+          setTicketCategories({});
+        }
+
+      } catch (error) {
+        console.error('Error loading ticket data:', error);
+        // Set fallback data
+        setOrganizationalData({
+          offices: [],
+          bureaus: [],
+          divisions: [],
+          sections: []
+        });
+        setTicketCategories({});
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    loadTicketData();
+  }, []);
 
   const showNotification = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     setNotification({ message, type });
