@@ -111,6 +111,15 @@ export default function SystemSettings() {
     lastUpdated: null as Date | null
   });
 
+  // Theme color mappings
+  const THEME_COLORS = {
+    'orvale-default': { primary: '#2563eb', bg: '#f8fafc', text: '#475569' },
+    'government-official': { primary: '#166534', bg: '#f0f9ff', text: '#374151' },
+    'maintenance-orange': { primary: '#ea580c', bg: '#fff7ed', text: '#451a03' },
+    'emergency-red': { primary: '#dc2626', bg: '#fef2f2', text: '#7f1d1d' },
+    'dark-mode': { primary: '#3b82f6', bg: '#0f172a', text: '#e2e8f0' }
+  };
+
   // Phone number formatting utility
   const formatPhoneNumber = (value: string): string => {
     // Remove all non-numeric characters
@@ -890,15 +899,42 @@ export default function SystemSettings() {
                               Refresh Preview
                             </Button>
                           </div>
-                          <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 min-h-[200px]">
+                          <div 
+                            className="p-4 min-h-[200px]"
+                            style={{ 
+                              backgroundColor: THEME_COLORS[previewData.selectedTheme as keyof typeof THEME_COLORS]?.bg || '#f8fafc'
+                            }}
+                          >
                             {/* Mini maintenance page preview */}
                             <div className="max-w-sm mx-auto bg-white rounded-lg shadow-sm border p-4 text-center">
-                              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <Database className="w-6 h-6 text-blue-600" />
+                              <div 
+                                className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
+                                style={{ 
+                                  backgroundColor: `${THEME_COLORS[previewData.selectedTheme as keyof typeof THEME_COLORS]?.primary || '#2563eb'}20`
+                                }}
+                              >
+                                <Database 
+                                  className="w-6 h-6" 
+                                  style={{ 
+                                    color: THEME_COLORS[previewData.selectedTheme as keyof typeof THEME_COLORS]?.primary || '#2563eb'
+                                  }}
+                                />
                               </div>
                               <h3 className="font-bold text-gray-900 mb-1">ORVALE MANAGEMENT SYSTEM</h3>
-                              <h4 className="text-lg font-semibold text-blue-600 mb-2">System Maintenance</h4>
-                              <div className="w-6 h-0.5 bg-blue-600 mx-auto mb-3"></div>
+                              <h4 
+                                className="text-lg font-semibold mb-2"
+                                style={{ 
+                                  color: THEME_COLORS[previewData.selectedTheme as keyof typeof THEME_COLORS]?.primary || '#2563eb'
+                                }}
+                              >
+                                System Maintenance
+                              </h4>
+                              <div 
+                                className="w-6 h-0.5 mx-auto mb-3"
+                                style={{ 
+                                  backgroundColor: THEME_COLORS[previewData.selectedTheme as keyof typeof THEME_COLORS]?.primary || '#2563eb'
+                                }}
+                              ></div>
                               
                               {/* Theme indicator */}
                               {previewData.selectedTheme !== 'orvale-default' && (
@@ -906,23 +942,38 @@ export default function SystemSettings() {
                                   Theme: {previewData.selectedTheme.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                                 </div>
                               )}
-                              <p className="text-sm text-gray-600 mb-3 leading-relaxed">
+                              <p 
+                                className="text-sm mb-3 leading-relaxed"
+                                style={{ 
+                                  color: THEME_COLORS[previewData.selectedTheme as keyof typeof THEME_COLORS]?.text || '#475569'
+                                }}
+                              >
                                 {previewData.message}
-                              </p>
-                              <p className="text-xs text-gray-500 mb-3">
-                                We're performing scheduled maintenance to improve your experience.
                               </p>
                               
                               {/* Emergency Contact in Preview */}
                               {previewData.emergencyContact && isValidPhoneNumber(previewData.emergencyContact) && (
-                                <div className="flex items-center justify-center space-x-1 p-2 bg-blue-50 rounded text-xs text-blue-600 mb-3">
+                                <div 
+                                  className="flex items-center justify-center space-x-1 p-2 rounded text-xs mb-3"
+                                  style={{ 
+                                    backgroundColor: `${THEME_COLORS[previewData.selectedTheme as keyof typeof THEME_COLORS]?.primary || '#2563eb'}10`,
+                                    color: THEME_COLORS[previewData.selectedTheme as keyof typeof THEME_COLORS]?.primary || '#2563eb'
+                                  }}
+                                >
                                   <Phone size={12} />
                                   <span>Emergency: {previewData.emergencyContact}</span>
                                 </div>
                               )}
                               
                               <div className="flex space-x-2 justify-center">
-                                <div className="bg-blue-600 text-white px-3 py-1 rounded text-xs">Refresh Page</div>
+                                <div 
+                                  className="text-white px-3 py-1 rounded text-xs"
+                                  style={{ 
+                                    backgroundColor: THEME_COLORS[previewData.selectedTheme as keyof typeof THEME_COLORS]?.primary || '#2563eb'
+                                  }}
+                                >
+                                  Refresh Page
+                                </div>
                                 <div className="border border-gray-300 px-3 py-1 rounded text-xs">Admin Login</div>
                               </div>
                             </div>
