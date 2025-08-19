@@ -15,10 +15,10 @@ interface MaintenanceStatus {
 function shouldShowMaintenance(
   pathname: string, 
   status: MaintenanceStatus,
-  userPermissions: string[]
+  userPermissions: string[] | null | undefined
 ): boolean {
   // If user has override permission, never show maintenance
-  if (userPermissions.includes('admin.maintenance_override')) {
+  if (userPermissions && userPermissions.includes('admin.maintenance_override')) {
     return false;
   }
 
@@ -42,7 +42,7 @@ interface MaintenanceWrapperProps {
 export default function MaintenanceWrapper({ children }: MaintenanceWrapperProps) {
   const [maintenanceStatus, setMaintenanceStatus] = useState<MaintenanceStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [userPermissions, setUserPermissions] = useState<string[] | null>(null);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -66,7 +66,7 @@ export default function MaintenanceWrapper({ children }: MaintenanceWrapperProps
         }
       } catch (error) {
         // User not authenticated or invalid data
-        setUserPermissions([]);
+        setUserPermissions(null);
       }
 
     } catch (error) {
