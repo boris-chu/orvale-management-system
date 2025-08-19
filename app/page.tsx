@@ -115,17 +115,6 @@ export default function Home() {
     }
   }, []);
 
-  // Auto-open login modal if admin parameter is present
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('admin') === 'true') {
-      setShowLogin(true);
-      // Clean the URL by removing the admin parameter
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, '', newUrl);
-    }
-  }, []);
-
   // Track ticket by confirmation number
   const trackTicket = async () => {
     if (!ticketNumber.trim()) {

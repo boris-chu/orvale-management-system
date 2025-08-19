@@ -92,24 +92,13 @@ export default function MaintenanceWrapper({ children }: MaintenanceWrapperProps
     );
   }
 
-  // Check for admin login parameter
-  const isAdminLogin = typeof window !== 'undefined' && 
-    new URLSearchParams(window.location.search).get('admin') === 'true';
-
   // Debug logging
   console.log('🔍 MaintenanceWrapper Debug:', {
     pathname,
     maintenanceStatus,
     userPermissions,
-    isAdminLogin,
-    shouldShow: maintenanceStatus && !isAdminLogin ? shouldShowMaintenance(pathname, maintenanceStatus, userPermissions) : false
+    shouldShow: maintenanceStatus ? shouldShowMaintenance(pathname, maintenanceStatus, userPermissions) : false
   });
-
-  // Skip maintenance mode if admin login is requested
-  if (isAdminLogin) {
-    console.log('🔑 Admin login requested - skipping maintenance mode');
-    return <>{children}</>;
-  }
 
   if (maintenanceStatus && shouldShowMaintenance(pathname, maintenanceStatus, userPermissions)) {
     console.log('✅ Showing maintenance page');

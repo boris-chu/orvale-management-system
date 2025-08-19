@@ -229,7 +229,7 @@ export default function MaintenancePage({ config, preview = false }: Maintenance
 
   const handleAdminLogin = () => {
     if (preview) return;
-    window.location.href = '/?admin=true';
+    window.location.href = '/admin-login';
   };
 
   // Dynamic styles based on theme with safe property access

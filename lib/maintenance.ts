@@ -336,9 +336,11 @@ export function shouldShowMaintenance(
     return false;
   }
 
-  // System maintenance affects everything except admin routes
+  // System maintenance affects everything except admin routes and admin login
   if (status.isSystemMaintenance) {
-    return !pathname.startsWith('/admin') && !pathname.startsWith('/developer');
+    return !pathname.startsWith('/admin') && 
+           !pathname.startsWith('/developer') && 
+           pathname !== '/admin-login';
   }
 
   // Portal maintenance only affects public-facing pages
