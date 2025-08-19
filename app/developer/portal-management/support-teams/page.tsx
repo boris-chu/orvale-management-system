@@ -115,13 +115,25 @@ export default function SupportTeamsManagement() {
   const loadData = async () => {
     try {
       const token = localStorage.getItem('authToken');
+      console.log('Support Teams - Loading data with token:', !!token);
+      
       const response = await fetch('/api/developer/support-teams', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
+      console.log('Support Teams - API response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Support Teams - API response data:', data);
         setGroups(data.groups || []);
         setTeams(data.teams || []);
+        console.log('Support Teams - Groups loaded:', data.groups?.length || 0);
+        console.log('Support Teams - Teams loaded:', data.teams?.length || 0);
+      } else {
+        const errorText = await response.text();
+        console.error('Support Teams - API error:', response.status, errorText);
+        showNotification(`Error loading support teams: ${response.status}`, 'error');
       }
     } catch (error) {
       console.error('Failed to load support teams:', error);
@@ -137,7 +149,10 @@ export default function SupportTeamsManagement() {
   };
 
   const handleCreateItem = async () => {
-    const hasPermission = currentUser?.permissions?.includes('admin.manage_support_teams');
+    const hasPermission = currentUser?.role === 'admin' ||
+                         currentUser?.permissions?.includes('admin.manage_support_teams') ||
+                         currentUser?.permissions?.includes('admin.manage_categories');
+    
     if (!hasPermission) {
       showNotification('Insufficient permissions', 'error');
       return;
@@ -173,7 +188,10 @@ export default function SupportTeamsManagement() {
   };
 
   const handleEditItem = async () => {
-    const hasPermission = currentUser?.permissions?.includes('admin.manage_support_teams');
+    const hasPermission = currentUser?.role === 'admin' ||
+                         currentUser?.permissions?.includes('admin.manage_support_teams') ||
+                         currentUser?.permissions?.includes('admin.manage_categories');
+    
     if (!hasPermission) {
       showNotification('Insufficient permissions', 'error');
       return;
@@ -209,7 +227,10 @@ export default function SupportTeamsManagement() {
   };
 
   const handleDeleteItem = async (itemId: string, type: string) => {
-    const hasPermission = currentUser?.permissions?.includes('admin.manage_support_teams');
+    const hasPermission = currentUser?.role === 'admin' ||
+                         currentUser?.permissions?.includes('admin.manage_support_teams') ||
+                         currentUser?.permissions?.includes('admin.manage_categories');
+    
     if (!hasPermission) {
       showNotification('Insufficient permissions', 'error');
       return;
@@ -242,6 +263,12 @@ export default function SupportTeamsManagement() {
   const openCreateModal = (type: 'group' | 'team') => {
     setModalType(type);
     resetForm();
+    // Refresh data to ensure latest groups are available for team creation
+    if (type === 'team') {
+      console.log('Opening team modal, available groups:', groups.length);
+      console.log('Groups:', groups.map(g => g.name));
+      loadData();
+    }
     setShowCreateModal(true);
   };
 
@@ -274,7 +301,9 @@ export default function SupportTeamsManagement() {
     });
   };
 
-  const canManage = currentUser?.permissions?.includes('admin.manage_support_teams');
+  const canManage = currentUser?.role === 'admin' ||
+                   currentUser?.permissions?.includes('admin.manage_support_teams') ||
+                   currentUser?.permissions?.includes('admin.manage_categories');
 
   if (loading) {
     return (
@@ -529,11 +558,15 @@ export default function SupportTeamsManagement() {
                       label="Select Group"
                       onChange={(e) => setFormData({...formData, group_id: e.target.value as string})}
                     >
-                      {groups.map((group) => (
-                        <MenuItem key={group.id} value={group.id}>
-                          {group.name}
-                        </MenuItem>
-                      ))}
+                      {groups.length === 0 ? (
+                        <MenuItem disabled>No groups available</MenuItem>
+                      ) : (
+                        groups.map((group) => (
+                          <MenuItem key={group.id} value={group.id}>
+                            {group.name}
+                          </MenuItem>
+                        ))
+                      )}
                     </Select>
                   </FormControl>
                 </div>
@@ -652,11 +685,15 @@ export default function SupportTeamsManagement() {
                       label="Select Group"
                       onChange={(e) => setFormData({...formData, group_id: e.target.value as string})}
                     >
-                      {groups.map((group) => (
-                        <MenuItem key={group.id} value={group.id}>
-                          {group.name}
-                        </MenuItem>
-                      ))}
+                      {groups.length === 0 ? (
+                        <MenuItem disabled>No groups available</MenuItem>
+                      ) : (
+                        groups.map((group) => (
+                          <MenuItem key={group.id} value={group.id}>
+                            {group.name}
+                          </MenuItem>
+                        ))
+                      )}
                     </Select>
                   </FormControl>
                 </div>
