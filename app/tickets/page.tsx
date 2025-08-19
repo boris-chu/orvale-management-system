@@ -98,6 +98,8 @@ export default function TicketsPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [assignableUsers, setAssignableUsers] = useState<any[]>([]);
+  const [loadingAssignableUsers, setLoadingAssignableUsers] = useState(false);
 
   // Show notification helper
   const showNotification = (message: string, type: 'success' | 'error') => {
@@ -174,6 +176,33 @@ export default function TicketsPage() {
     setSelectedTicket(ticket);
     setOriginalTicket({...ticket}); // Store original state
     setSaveStatus('idle');
+    loadAssignableUsers(); // Load users that can be assigned to
+  };
+
+  // Load assignable users
+  const loadAssignableUsers = async () => {
+    setLoadingAssignableUsers(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/users/assignable', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAssignableUsers(data.users || []);
+      } else {
+        console.error('Failed to load assignable users');
+        setAssignableUsers([]);
+      }
+    } catch (error) {
+      console.error('Error loading assignable users:', error);
+      setAssignableUsers([]);
+    } finally {
+      setLoadingAssignableUsers(false);
+    }
   };
 
   // Check authentication on load
@@ -645,8 +674,8 @@ export default function TicketsPage() {
   const cycleStatus = () => {
     if (!selectedTicket) return;
     
-    const statusOrder = ['pending', 'in_progress', 'complete', 'escalated'];
-    const currentIndex = statusOrder.indexOf(selectedTicket.status);
+    const statusOrder: Array<'pending' | 'in_progress' | 'complete' | 'escalated'> = ['pending', 'in_progress', 'complete', 'escalated'];
+    const currentIndex = statusOrder.indexOf(selectedTicket.status as any);
     const nextIndex = (currentIndex + 1) % statusOrder.length;
     const nextStatus = statusOrder[nextIndex];
     
@@ -657,7 +686,7 @@ export default function TicketsPage() {
   const cyclePriority = () => {
     if (!selectedTicket) return;
     
-    const priorityOrder = ['low', 'medium', 'high', 'urgent'];
+    const priorityOrder: Array<'low' | 'medium' | 'high' | 'urgent'> = ['low', 'medium', 'high', 'urgent'];
     const currentIndex = priorityOrder.indexOf(selectedTicket.priority);
     const nextIndex = (currentIndex + 1) % priorityOrder.length;
     const nextPriority = priorityOrder[nextIndex];
@@ -943,8 +972,9 @@ export default function TicketsPage() {
                           {ticket.status.replace('_', ' ').toUpperCase()}
                         </Badge>
                         {ticket.assigned_to && (
-                          <Badge variant="outline">
-                            ASSIGNED
+                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                            <User className="h-3 w-3 mr-1" />
+                            {ticket.assigned_to}
                           </Badge>
                         )}
                       </div>
@@ -959,8 +989,13 @@ export default function TicketsPage() {
                         {ticket.issue_description}
                       </p>
                       
-                      <div className="text-xs text-gray-500">
-                        Submitted: {formatDate(ticket.submitted_at)} | TKT:{ticket.submission_id}
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>Submitted: {formatDate(ticket.submitted_at)} | TKT:{ticket.submission_id}</span>
+                        {ticket.assigned_to && (
+                          <span className="text-purple-600 font-medium">
+                            Assigned to: {ticket.assigned_to}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -1093,6 +1128,29 @@ export default function TicketsPage() {
                   </div>
                   <div><strong>Submitted:</strong> {formatDate(selectedTicket.submitted_at)}</div>
                   <div><strong>Ticket ID:</strong> {selectedTicket.submission_id}</div>
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To:</label>
+                    <FormControl size="small" className="w-full">
+                      <InputLabel id="assigned-to-label">Select Assignee</InputLabel>
+                      <Select
+                        labelId="assigned-to-label"
+                        id="assigned-to-select"
+                        value={selectedTicket.assigned_to || ''}
+                        label="Select Assignee"
+                        onChange={(e) => updateTicketField('assigned_to', e.target.value)}
+                        disabled={loadingAssignableUsers}
+                      >
+                        <MenuItem value="">
+                          <em>Unassigned</em>
+                        </MenuItem>
+                        {assignableUsers.map((user) => (
+                          <MenuItem key={user.username} value={user.username}>
+                            {user.display_label || `${user.display_name} (${user.username})`}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </div>
                 </div>
               </div>
               
