@@ -22,7 +22,7 @@ import {
   Building2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Select, MenuItem, FormControl, InputLabel, ListSubheader } from '@mui/material';
+// Removed Material-UI imports since we're using simple text inputs for now
 
 interface SupportTeamGroup {
   id: string;
@@ -49,7 +49,7 @@ interface SupportTeam {
 export default function SupportTeamsManagement() {
   const [groups, setGroups] = useState<SupportTeamGroup[]>([]);
   const [teams, setTeams] = useState<SupportTeam[]>([]);
-  const [supportTeamGroups, setSupportTeamGroups] = useState<any>({});
+  // Removed supportTeamGroups state since we're using simple text input
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -118,34 +118,23 @@ export default function SupportTeamsManagement() {
       const token = localStorage.getItem('authToken');
       console.log('Support Teams - Loading data with token:', !!token);
       
-      // Load admin data for management
-      const adminResponse = await fetch('/api/developer/support-teams', {
+      const response = await fetch('/api/developer/support-teams', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      // Load public data for dropdown
-      const publicResponse = await fetch('/api/ticket-data/support-teams');
+      console.log('Support Teams - API response status:', response.status);
       
-      console.log('Support Teams - Admin API response status:', adminResponse.status);
-      console.log('Support Teams - Public API response status:', publicResponse.status);
-      
-      if (adminResponse.ok) {
-        const adminData = await adminResponse.json();
-        console.log('Support Teams - Admin API response data:', adminData);
-        setGroups(adminData.groups || []);
-        setTeams(adminData.teams || []);
-        console.log('Support Teams - Groups loaded:', adminData.groups?.length || 0);
-        console.log('Support Teams - Teams loaded:', adminData.teams?.length || 0);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Support Teams - API response data:', data);
+        setGroups(data.groups || []);
+        setTeams(data.teams || []);
+        console.log('Support Teams - Groups loaded:', data.groups?.length || 0);
+        console.log('Support Teams - Teams loaded:', data.teams?.length || 0);
       } else {
-        const errorText = await adminResponse.text();
-        console.error('Support Teams - Admin API error:', adminResponse.status, errorText);
-        showNotification(`Error loading support teams: ${adminResponse.status}`, 'error');
-      }
-
-      if (publicResponse.ok) {
-        const publicData = await publicResponse.json();
-        console.log('Support Teams - Public API response data:', publicData);
-        setSupportTeamGroups(publicData);
+        const errorText = await response.text();
+        console.error('Support Teams - API error:', response.status, errorText);
+        showNotification(`Error loading support teams: ${response.status}`, 'error');
       }
     } catch (error) {
       console.error('Failed to load support teams:', error);
@@ -552,30 +541,17 @@ export default function SupportTeamsManagement() {
               </>
             ) : (
               <>
-                {/* Support Group - First field for teams */}
+                {/* Support Group - Simple text input for now */}
                 <div>
-                  <Label htmlFor="support_group">Support Group</Label>
-                  <FormControl size="small" className="w-full" required>
-                    <InputLabel id="support-group-label">Select Support Team</InputLabel>
-                    <Select
-                      labelId="support-group-label"
-                      id="support_group"
-                      value={formData.group_id}
-                      label="Select Support Team"
-                      onChange={(e) => setFormData({...formData, group_id: e.target.value as string})}
-                    >
-                      {Object.entries(supportTeamGroups || {}).map(([groupName, teams]) => [
-                        <ListSubheader key={groupName} sx={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#1976d2' }}>
-                          {groupName}
-                        </ListSubheader>,
-                        ...(teams as any[]).map((team, index) => (
-                          <MenuItem key={`${team.value}-${index}`} value={team.value} sx={{ pl: 3 }}>
-                            {team.label}
-                          </MenuItem>
-                        ))
-                      ]).flat()}
-                    </Select>
-                  </FormControl>
+                  <Label htmlFor="support_group">Support Group ID</Label>
+                  <Input
+                    id="support_group"
+                    value={formData.group_id}
+                    onChange={(e) => setFormData({...formData, group_id: e.target.value})}
+                    placeholder="itts_region_7"
+                    className="font-mono"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Enter the group ID (e.g., itts_region_7, itts_region_8)</p>
                 </div>
 
                 {/* Display Label */}
@@ -719,30 +695,17 @@ export default function SupportTeamsManagement() {
               </>
             ) : (
               <>
-                {/* Support Group - First field for teams */}
+                {/* Support Group - Simple text input for now */}
                 <div>
-                  <Label htmlFor="edit_support_group">Support Group</Label>
-                  <FormControl size="small" className="w-full" required>
-                    <InputLabel id="edit-support-group-label">Select Support Team</InputLabel>
-                    <Select
-                      labelId="edit-support-group-label"
-                      id="edit_support_group"
-                      value={formData.group_id}
-                      label="Select Support Team"
-                      onChange={(e) => setFormData({...formData, group_id: e.target.value as string})}
-                    >
-                      {Object.entries(supportTeamGroups || {}).map(([groupName, teams]) => [
-                        <ListSubheader key={groupName} sx={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#1976d2' }}>
-                          {groupName}
-                        </ListSubheader>,
-                        ...(teams as any[]).map((team, index) => (
-                          <MenuItem key={`${team.value}-${index}`} value={team.value} sx={{ pl: 3 }}>
-                            {team.label}
-                          </MenuItem>
-                        ))
-                      ]).flat()}
-                    </Select>
-                  </FormControl>
+                  <Label htmlFor="edit_support_group">Support Group ID</Label>
+                  <Input
+                    id="edit_support_group"
+                    value={formData.group_id}
+                    onChange={(e) => setFormData({...formData, group_id: e.target.value})}
+                    placeholder="itts_region_7"
+                    className="font-mono"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Enter the group ID (e.g., itts_region_7, itts_region_8)</p>
                 </div>
 
                 {/* Display Label */}
