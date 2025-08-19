@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Users, 
@@ -22,7 +21,17 @@ import {
   Building2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { 
+  Select, 
+  MenuItem, 
+  FormControl, 
+  InputLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography
+} from '@mui/material';
 
 interface SupportTeamGroup {
   id: string;
@@ -301,6 +310,16 @@ export default function SupportTeamsManagement() {
     });
   };
 
+  // Auto-generate team ID from team name
+  const generateTeamId = (teamName: string): string => {
+    return teamName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '') // Remove special characters except spaces
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/_{2,}/g, '_') // Replace multiple underscores with single
+      .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+  };
+
   const canManage = currentUser?.role === 'admin' ||
                    currentUser?.permissions?.includes('admin.manage_support_teams') ||
                    currentUser?.permissions?.includes('admin.manage_categories');
@@ -495,36 +514,72 @@ export default function SupportTeamsManagement() {
       </div>
 
       {/* Create Modal */}
-      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <Plus className="h-5 w-5" />
-              <span>Create New {modalType === 'group' ? 'Group' : 'Team'}</span>
-            </DialogTitle>
-          </DialogHeader>
+      <Dialog open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <div className="flex items-center space-x-2">
+            <Plus className="h-5 w-5" />
+            <span>Create New {modalType === 'group' ? 'Group' : 'Team'}</span>
+          </div>
+        </DialogTitle>
+        <DialogContent>
           
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="item_id">{modalType === 'group' ? 'Group' : 'Team'} ID</Label>
-              <Input
-                id="item_id"
-                value={formData.id}
-                onChange={(e) => setFormData({...formData, id: e.target.value})}
-                placeholder={modalType === 'group' ? 'itts_region_8' : 'support_team_id'}
-                className="font-mono"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="item_name">{modalType === 'group' ? 'Group' : 'Team'} Name</Label>
-              <Input
-                id="item_name"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder={modalType === 'group' ? 'ITTS: Region 8' : 'Support Team Name'}
-              />
-            </div>
+            {modalType === 'group' ? (
+              <>
+                <div>
+                  <Label htmlFor="group_id">Group ID</Label>
+                  <Input
+                    id="group_id"
+                    value={formData.id}
+                    onChange={(e) => setFormData({...formData, id: e.target.value})}
+                    placeholder="itts_region_8"
+                    className="font-mono"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="group_name">Group Name</Label>
+                  <Input
+                    id="group_name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="ITTS: Region 8"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <Label htmlFor="team_name">Team Name</Label>
+                  <Input
+                    id="team_name"
+                    value={formData.name}
+                    onChange={(e) => {
+                      const newName = e.target.value;
+                      const generatedId = generateTeamId(newName);
+                      setFormData({
+                        ...formData, 
+                        name: newName,
+                        id: generatedId
+                      });
+                    }}
+                    placeholder="Support Team Name"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="team_id">Team ID (Auto-generated, editable)</Label>
+                  <Input
+                    id="team_id"
+                    value={formData.id}
+                    onChange={(e) => setFormData({...formData, id: e.target.value})}
+                    className="font-mono"
+                    placeholder="Will be generated from team name"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Generated automatically from team name, but you can edit it</p>
+                </div>
+              </>
+            )}
 
             {modalType === 'team' && (
               <>
@@ -595,70 +650,97 @@ export default function SupportTeamsManagement() {
               />
             </div>
             
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowCreateModal(false)}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleCreateItem}
-                disabled={saving || !formData.id || !formData.name || (modalType === 'team' && (!formData.email || !formData.group_id))}
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  `Create ${modalType === 'group' ? 'Group' : 'Team'}`
-                )}
-              </Button>
-            </div>
           </div>
         </DialogContent>
+        <DialogActions>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowCreateModal(false)}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleCreateItem}
+            disabled={saving || !formData.id || !formData.name || (modalType === 'team' && (!formData.email || !formData.group_id))}
+          >
+            {saving ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              `Create ${modalType === 'group' ? 'Group' : 'Team'}`
+            )}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Edit Modal - Similar structure to Create Modal */}
-      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <Edit className="h-5 w-5" />
-              <span>Edit {modalType === 'group' ? 'Group' : 'Team'}</span>
-            </DialogTitle>
-          </DialogHeader>
+      <Dialog open={showEditModal} onClose={() => setShowEditModal(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <div className="flex items-center space-x-2">
+            <Edit className="h-5 w-5" />
+            <span>Edit {modalType === 'group' ? 'Group' : 'Team'}</span>
+          </div>
+        </DialogTitle>
+        <DialogContent>
           
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit_item_id">{modalType === 'group' ? 'Group' : 'Team'} ID</Label>
-              <Input
-                id="edit_item_id"
-                value={formData.id}
-                disabled
-                className="font-mono bg-gray-100"
-              />
-              <p className="text-xs text-gray-500 mt-1">ID cannot be changed</p>
-            </div>
-            
-            <div>
-              <Label htmlFor="edit_item_name">{modalType === 'group' ? 'Group' : 'Team'} Name</Label>
-              <Input
-                id="edit_item_name"
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder={modalType === 'group' ? 'ITTS: Region 8' : 'Support Team Name'}
-              />
-            </div>
+            {modalType === 'group' ? (
+              <>
+                <div>
+                  <Label htmlFor="edit_group_id">Group ID</Label>
+                  <Input
+                    id="edit_group_id"
+                    value={formData.id}
+                    disabled
+                    className="font-mono bg-gray-100"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">ID cannot be changed</p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="edit_group_name">Group Name</Label>
+                  <Input
+                    id="edit_group_name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="ITTS: Region 8"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <Label htmlFor="edit_team_name">Team Name</Label>
+                  <Input
+                    id="edit_team_name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="Support Team Name"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit_team_id">Team ID</Label>
+                  <Input
+                    id="edit_team_id"
+                    value={formData.id}
+                    disabled
+                    className="font-mono bg-gray-100"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">ID cannot be changed</p>
+                </div>
+              </>
+            )}
 
             {modalType === 'team' && (
               <>
                 <div>
-                  <Label htmlFor="edit_item_label">Display Label</Label>
+                  <Label htmlFor="edit_display_label">Display Label</Label>
                   <Input
-                    id="edit_item_label"
+                    id="edit_display_label"
                     value={formData.label}
                     onChange={(e) => setFormData({...formData, label: e.target.value})}
                     placeholder="Crossroads Main"
@@ -666,9 +748,9 @@ export default function SupportTeamsManagement() {
                 </div>
 
                 <div>
-                  <Label htmlFor="edit_item_email">Email Address</Label>
+                  <Label htmlFor="edit_team_email">Email Address</Label>
                   <Input
-                    id="edit_item_email"
+                    id="edit_team_email"
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
@@ -733,30 +815,30 @@ export default function SupportTeamsManagement() {
               <Label htmlFor="edit_active">Active</Label>
             </div>
             
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowEditModal(false)}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleEditItem}
-                disabled={saving || !formData.name || (modalType === 'team' && (!formData.email || !formData.group_id))}
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  `Update ${modalType === 'group' ? 'Group' : 'Team'}`
-                )}
-              </Button>
-            </div>
           </div>
         </DialogContent>
+        <DialogActions>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowEditModal(false)}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleEditItem}
+            disabled={saving || !formData.name || (modalType === 'team' && (!formData.email || !formData.group_id))}
+          >
+            {saving ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              `Update ${modalType === 'group' ? 'Group' : 'Team'}`
+            )}
+          </Button>
+        </DialogActions>
       </Dialog>
     </div>
   );
