@@ -42,6 +42,33 @@ interface TicketCategory {
   request_type_count: number;
 }
 
+interface RequestType {
+  id: string;
+  category_id: string;
+  name: string;
+  description: string;
+  active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  category_name: string;
+  subcategory_count: number;
+}
+
+interface Subcategory {
+  id: string;
+  request_type_id: string;
+  name: string;
+  description: string;
+  active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  request_type_name: string;
+  category_id: string;
+  category_name: string;
+}
+
 interface DpssOrgItem {
   id: string;
   name: string;
@@ -62,17 +89,20 @@ interface DpssOrgItem {
 
 export default function CategoryManagement() {
   const [ticketCategories, setTicketCategories] = useState<TicketCategory[]>([]);
+  const [requestTypes, setRequestTypes] = useState<RequestType[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [dpssOffices, setDpssOffices] = useState<DpssOrgItem[]>([]);
   const [dpssBureaus, setDpssBureaus] = useState<DpssOrgItem[]>([]);
   const [dpssDivisions, setDpssDivisions] = useState<DpssOrgItem[]>([]);
   const [dpssSections, setDpssSections] = useState<DpssOrgItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('tickets');
+  const [ticketSubTab, setTicketSubTab] = useState('categories');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [modalType, setModalType] = useState<'category' | 'office' | 'bureau' | 'division' | 'section'>('category');
+  const [modalType, setModalType] = useState<'category' | 'request_type' | 'subcategory' | 'office' | 'bureau' | 'division' | 'section'>('category');
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState<{message: string; type: 'success' | 'error'} | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -83,6 +113,8 @@ export default function CategoryManagement() {
     name: '',
     description: '',
     parent_id: '',
+    category_id: '',
+    request_type_id: '',
     sort_order: 0,
     active: true
   });
@@ -130,6 +162,24 @@ export default function CategoryManagement() {
         setTicketCategories(categoriesData);
       }
 
+      // Load request types
+      const requestTypesResponse = await fetch('/api/developer/request-types', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (requestTypesResponse.ok) {
+        const requestTypesData = await requestTypesResponse.json();
+        setRequestTypes(requestTypesData);
+      }
+
+      // Load subcategories
+      const subcategoriesResponse = await fetch('/api/developer/subcategories', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (subcategoriesResponse.ok) {
+        const subcategoriesData = await subcategoriesResponse.json();
+        setSubcategories(subcategoriesData);
+      }
+
       // Load DPSS organizational data
       const dpssResponse = await fetch('/api/developer/dpss-org', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -156,7 +206,7 @@ export default function CategoryManagement() {
   };
 
   const handleCreateItem = async () => {
-    const hasPermission = modalType === 'category' 
+    const hasPermission = ['category', 'request_type', 'subcategory'].includes(modalType)
       ? currentUser?.permissions?.includes('admin.manage_categories')
       : currentUser?.permissions?.includes('admin.manage_organization');
 
@@ -168,11 +218,25 @@ export default function CategoryManagement() {
     setSaving(true);
     try {
       const token = localStorage.getItem('authToken');
-      const endpoint = modalType === 'category' ? '/api/developer/categories' : '/api/developer/dpss-org';
+      let endpoint, body;
       
-      const body = modalType === 'category' 
-        ? formData
-        : { ...formData, type: modalType, parent_id: formData.parent_id || undefined };
+      switch (modalType) {
+        case 'category':
+          endpoint = '/api/developer/categories';
+          body = formData;
+          break;
+        case 'request_type':
+          endpoint = '/api/developer/request-types';
+          body = { ...formData, category_id: formData.category_id };
+          break;
+        case 'subcategory':
+          endpoint = '/api/developer/subcategories';
+          body = { ...formData, request_type_id: formData.request_type_id };
+          break;
+        default:
+          endpoint = '/api/developer/dpss-org';
+          body = { ...formData, type: modalType, parent_id: formData.parent_id || undefined };
+      }
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -184,24 +248,24 @@ export default function CategoryManagement() {
       });
 
       if (response.ok) {
-        showNotification(`${modalType} created successfully`, 'success');
+        showNotification(`${modalType.replace('_', ' ')} created successfully`, 'success');
         setShowCreateModal(false);
         resetForm();
         loadData();
       } else {
         const error = await response.json();
-        showNotification(error.error || `Failed to create ${modalType}`, 'error');
+        showNotification(error.error || `Failed to create ${modalType.replace('_', ' ')}`, 'error');
       }
     } catch (error) {
       console.error(`Error creating ${modalType}:`, error);
-      showNotification(`Error creating ${modalType}`, 'error');
+      showNotification(`Error creating ${modalType.replace('_', ' ')}`, 'error');
     } finally {
       setSaving(false);
     }
   };
 
   const handleEditItem = async () => {
-    const hasPermission = modalType === 'category' 
+    const hasPermission = ['category', 'request_type', 'subcategory'].includes(modalType)
       ? currentUser?.permissions?.includes('admin.manage_categories')
       : currentUser?.permissions?.includes('admin.manage_organization');
 
@@ -213,11 +277,25 @@ export default function CategoryManagement() {
     setSaving(true);
     try {
       const token = localStorage.getItem('authToken');
-      const endpoint = modalType === 'category' ? '/api/developer/categories' : '/api/developer/dpss-org';
+      let endpoint, body;
       
-      const body = modalType === 'category' 
-        ? formData
-        : { ...formData, type: modalType, parent_id: formData.parent_id || undefined };
+      switch (modalType) {
+        case 'category':
+          endpoint = '/api/developer/categories';
+          body = formData;
+          break;
+        case 'request_type':
+          endpoint = '/api/developer/request-types';
+          body = { ...formData, category_id: formData.category_id };
+          break;
+        case 'subcategory':
+          endpoint = '/api/developer/subcategories';
+          body = { ...formData, request_type_id: formData.request_type_id };
+          break;
+        default:
+          endpoint = '/api/developer/dpss-org';
+          body = { ...formData, type: modalType, parent_id: formData.parent_id || undefined };
+      }
 
       const response = await fetch(endpoint, {
         method: 'PUT',
@@ -229,24 +307,24 @@ export default function CategoryManagement() {
       });
 
       if (response.ok) {
-        showNotification(`${modalType} updated successfully`, 'success');
+        showNotification(`${modalType.replace('_', ' ')} updated successfully`, 'success');
         setShowEditModal(false);
         setSelectedItem(null);
         loadData();
       } else {
         const error = await response.json();
-        showNotification(error.error || `Failed to update ${modalType}`, 'error');
+        showNotification(error.error || `Failed to update ${modalType.replace('_', ' ')}`, 'error');
       }
     } catch (error) {
       console.error(`Error updating ${modalType}:`, error);
-      showNotification(`Error updating ${modalType}`, 'error');
+      showNotification(`Error updating ${modalType.replace('_', ' ')}`, 'error');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteItem = async (itemId: string, type: string) => {
-    const hasPermission = type === 'category' 
+    const hasPermission = ['category', 'request_type', 'subcategory'].includes(type)
       ? currentUser?.permissions?.includes('admin.manage_categories')
       : currentUser?.permissions?.includes('admin.manage_organization');
 
@@ -261,9 +339,21 @@ export default function CategoryManagement() {
 
     try {
       const token = localStorage.getItem('authToken');
-      const endpoint = type === 'category' 
-        ? `/api/developer/categories?id=${itemId}`
-        : `/api/developer/dpss-org?type=${type}&id=${itemId}`;
+      let endpoint;
+      
+      switch (type) {
+        case 'category':
+          endpoint = `/api/developer/categories?id=${itemId}`;
+          break;
+        case 'request_type':
+          endpoint = `/api/developer/request-types?id=${itemId}`;
+          break;
+        case 'subcategory':
+          endpoint = `/api/developer/subcategories?id=${itemId}`;
+          break;
+        default:
+          endpoint = `/api/developer/dpss-org?type=${type}&id=${itemId}`;
+      }
 
       const response = await fetch(endpoint, {
         method: 'DELETE',
@@ -297,6 +387,8 @@ export default function CategoryManagement() {
       name: item.name,
       description: item.description || '',
       parent_id: item.office_id || item.bureau_id || item.division_id || '',
+      category_id: item.category_id || '',
+      request_type_id: item.request_type_id || '',
       sort_order: item.sort_order || 0,
       active: item.active
     });
@@ -309,13 +401,29 @@ export default function CategoryManagement() {
       name: '',
       description: '',
       parent_id: '',
+      category_id: '',
+      request_type_id: '',
       sort_order: 0,
       active: true
     });
   };
 
+  // Auto-generate ID from name
+  const generateId = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '') // Remove special characters except spaces
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/_{2,}/g, '_') // Replace multiple underscores with single
+      .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+  };
+
   const getParentOptions = () => {
     switch (modalType) {
+      case 'request_type':
+        return ticketCategories.map(category => ({ id: category.id, name: category.name }));
+      case 'subcategory':
+        return requestTypes.map(requestType => ({ id: requestType.id, name: `${requestType.category_name} > ${requestType.name}` }));
       case 'bureau':
         return dpssOffices.map(office => ({ id: office.id, name: office.name }));
       case 'division':
@@ -326,6 +434,7 @@ export default function CategoryManagement() {
         return [];
     }
   };
+
 
   const canManageCategories = currentUser?.permissions?.includes('admin.manage_categories');
   const canViewCategories = currentUser?.permissions?.includes('admin.view_categories');
@@ -413,87 +522,235 @@ export default function CategoryManagement() {
           <TabsContent value="tickets" className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Ticket Categories</h2>
-                <p className="text-sm text-gray-500">Manage ticket issue classification system</p>
+                <h2 className="text-xl font-semibold text-gray-900">Ticket Categories System</h2>
+                <p className="text-sm text-gray-500">Manage the complete hierarchical ticket classification system</p>
               </div>
-              {canManageCategories && (
-                <Button onClick={() => openCreateModal('category')} className="flex items-center space-x-2">
-                  <Plus className="h-4 w-4" />
-                  <span>Create Category</span>
-                </Button>
-              )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {ticketCategories.filter(cat => 
-                cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                cat.description.toLowerCase().includes(searchTerm.toLowerCase())
-              ).map((category) => (
-                <motion.div
-                  key={category.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="h-full"
-                >
-                  <Card className="h-full hover:shadow-lg transition-shadow">
-                    <CardHeader className="pb-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg font-semibold text-gray-900 mb-1">
-                            {category.name}
-                          </CardTitle>
-                          <code className="text-xs bg-gray-100 px-1 rounded mb-2 inline-block">{category.id}</code>
-                          {category.description && (
-                            <p className="text-sm text-gray-600 mb-3">{category.description}</p>
-                          )}
-                        </div>
-                        {category.active ? (
-                          <Badge className="bg-green-100 text-green-800">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Active
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary">
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Inactive
-                          </Badge>
-                        )}
-                      </div>
-                    </CardHeader>
-                    
-                    <CardContent className="pt-0">
-                      <div className="space-y-3">
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Folder className="h-4 w-4 text-blue-600" />
-                          <span className="text-gray-600">Request Types:</span>
-                          <span className="font-medium">{category.request_type_count}</span>
-                        </div>
-                        
-                        {canManageCategories && (
-                          <div className="flex justify-end space-x-2 pt-2 border-t">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEditModal(category, 'category')}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteItem(category.id, 'category')}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+            {/* Sub-tabs for Ticket Categories */}
+            <Tabs value={ticketSubTab} onValueChange={setTicketSubTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="categories" className="flex items-center space-x-2">
+                  <Folder className="h-4 w-4" />
+                  <span>Main Categories</span>
+                </TabsTrigger>
+                <TabsTrigger value="request_types" className="flex items-center space-x-2">
+                  <FileText className="h-4 w-4" />
+                  <span>Request Types</span>
+                </TabsTrigger>
+                <TabsTrigger value="subcategories" className="flex items-center space-x-2">
+                  <Hash className="h-4 w-4" />
+                  <span>Subcategories</span>
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Main Categories Sub-tab */}
+              <TabsContent value="categories" className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Main Categories</h3>
+                    <p className="text-sm text-gray-500">Top-level ticket categories (9 categories)</p>
+                  </div>
+                  {canManageCategories && (
+                    <Button onClick={() => openCreateModal('category')} className="flex items-center space-x-2">
+                      <Plus className="h-4 w-4" />
+                      <span>Create Category</span>
+                    </Button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {ticketCategories.filter(cat => 
+                    cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    cat.description.toLowerCase().includes(searchTerm.toLowerCase())
+                  ).map((category) => (
+                    <motion.div
+                      key={category.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="h-full"
+                    >
+                      <Card className="h-full hover:shadow-lg transition-shadow">
+                        <CardHeader className="pb-4">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg font-semibold text-gray-900 mb-1">
+                                {category.name}
+                              </CardTitle>
+                              <code className="text-xs bg-gray-100 px-1 rounded mb-2 inline-block">{category.id}</code>
+                              {category.description && (
+                                <p className="text-sm text-gray-600 mb-3">{category.description}</p>
+                              )}
+                            </div>
+                            {category.active ? (
+                              <Badge className="bg-green-100 text-green-800">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Active
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Inactive
+                              </Badge>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
+                        </CardHeader>
+                        
+                        <CardContent className="pt-0">
+                          <div className="space-y-3">
+                            <div className="flex items-center space-x-2 text-sm">
+                              <Folder className="h-4 w-4 text-blue-600" />
+                              <span className="text-gray-600">Request Types:</span>
+                              <span className="font-medium">{category.request_type_count}</span>
+                            </div>
+                            
+                            {canManageCategories && (
+                              <div className="flex justify-end space-x-2 pt-2 border-t">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEditModal(category, 'category')}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteItem(category.id, 'category')}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              </TabsContent>
+
+              {/* Request Types Sub-tab */}
+              <TabsContent value="request_types" className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Request Types</h3>
+                    <p className="text-sm text-gray-500">Specific request types within each category ({requestTypes.length} types)</p>
+                  </div>
+                  {canManageCategories && (
+                    <Button onClick={() => openCreateModal('request_type')} className="flex items-center space-x-2">
+                      <Plus className="h-4 w-4" />
+                      <span>Create Request Type</span>
+                    </Button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {requestTypes.filter(rt => 
+                    rt.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    rt.category_name.toLowerCase().includes(searchTerm.toLowerCase())
+                  ).map((requestType) => (
+                    <motion.div
+                      key={requestType.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <Card className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex-1">
+                              <h4 className="font-medium text-gray-900 mb-1">{requestType.name}</h4>
+                              <code className="text-xs bg-gray-100 px-1 rounded mb-2 inline-block">{requestType.id}</code>
+                              <div className="text-xs text-gray-500 flex items-center mb-2">
+                                <ChevronRight className="h-3 w-3" />
+                                <span>{requestType.category_name}</span>
+                              </div>
+                            </div>
+                            {canManageCategories && (
+                              <div className="flex space-x-1">
+                                <Button variant="ghost" size="sm" onClick={() => openEditModal(requestType, 'request_type')}>
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleDeleteItem(requestType.id, 'request_type')} className="text-red-600">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm">
+                            <Hash className="h-3 w-3 text-orange-600" />
+                            <span className="text-gray-600">Subcategories:</span>
+                            <span className="font-medium">{requestType.subcategory_count}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              </TabsContent>
+
+              {/* Subcategories Sub-tab */}
+              <TabsContent value="subcategories" className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Subcategories</h3>
+                    <p className="text-sm text-gray-500">Detailed subcategories for specific issues ({subcategories.length} subcategories)</p>
+                  </div>
+                  {canManageCategories && (
+                    <Button onClick={() => openCreateModal('subcategory')} className="flex items-center space-x-2">
+                      <Plus className="h-4 w-4" />
+                      <span>Create Subcategory</span>
+                    </Button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {subcategories.filter(sc => 
+                    sc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    sc.request_type_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    sc.category_name.toLowerCase().includes(searchTerm.toLowerCase())
+                  ).map((subcategory) => (
+                    <motion.div
+                      key={subcategory.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <Card className="hover:shadow-md transition-shadow border-orange-200">
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex-1">
+                              <h4 className="font-medium text-gray-900 text-sm mb-1">{subcategory.name}</h4>
+                              <code className="text-xs bg-gray-100 px-1 rounded mb-1 inline-block">{subcategory.id}</code>
+                              <div className="text-xs text-gray-500 space-y-1">
+                                <div className="flex items-center">
+                                  <ChevronRight className="h-3 w-3" />
+                                  <span>{subcategory.category_name}</span>
+                                </div>
+                                <div className="flex items-center ml-3">
+                                  <ChevronRight className="h-3 w-3" />
+                                  <span>{subcategory.request_type_name}</span>
+                                </div>
+                              </div>
+                            </div>
+                            {canManageCategories && (
+                              <div className="flex space-x-1">
+                                <Button variant="ghost" size="sm" onClick={() => openEditModal(subcategory, 'subcategory')}>
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleDeleteItem(subcategory.id, 'subcategory')} className="text-red-600">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           {/* DPSS Organization Tab */}
@@ -738,24 +995,41 @@ export default function CategoryManagement() {
           
           <div className="space-y-4">
             <div>
-              <Label htmlFor="item_id">{modalType} ID</Label>
-              <Input
-                id="item_id"
-                value={formData.id}
-                onChange={(e) => setFormData({...formData, id: e.target.value})}
-                placeholder={modalType === 'category' ? 'app_support' : 'office_main'}
-                className="font-mono"
-              />
-            </div>
-            
-            <div>
               <Label htmlFor="item_name">{modalType} Name</Label>
               <Input
                 id="item_name"
                 value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                placeholder={modalType === 'category' ? 'Application Support' : 'Main Office'}
+                onChange={(e) => {
+                  const newName = e.target.value;
+                  const generatedId = generateId(newName);
+                  setFormData({
+                    ...formData, 
+                    name: newName,
+                    id: generatedId
+                  });
+                }}
+                placeholder={
+                  modalType === 'category' ? 'Application Support' :
+                  modalType === 'request_type' ? 'Network Connectivity' :
+                  modalType === 'subcategory' ? 'Application Issue' : 'Main Office'
+                }
               />
+            </div>
+
+            <div>
+              <Label htmlFor="item_id">{modalType} ID (Auto-generated, editable)</Label>
+              <Input
+                id="item_id"
+                value={formData.id}
+                onChange={(e) => setFormData({...formData, id: e.target.value})}
+                placeholder={
+                  modalType === 'category' ? 'app_support' :
+                  modalType === 'request_type' ? 'network_connectivity' :
+                  modalType === 'subcategory' ? 'application_issue' : 'office_main'
+                }
+                className="font-mono"
+              />
+              <p className="text-xs text-gray-500 mt-1">Generated automatically from name, but you can edit it</p>
             </div>
             
             <div>
@@ -771,15 +1045,29 @@ export default function CategoryManagement() {
             
             {getParentOptions().length > 0 && (
               <div>
-                <Label htmlFor="parent">Parent {modalType === 'bureau' ? 'Office' : modalType === 'division' ? 'Bureau' : 'Division'}</Label>
+                <Label htmlFor="parent">
+                  {modalType === 'request_type' ? 'Category' : 
+                   modalType === 'subcategory' ? 'Request Type' :
+                   modalType === 'bureau' ? 'Office' : 
+                   modalType === 'division' ? 'Bureau' : 'Division'}
+                </Label>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Select Parent</InputLabel>
+                  <InputLabel>Select {modalType === 'request_type' ? 'Category' : modalType === 'subcategory' ? 'Request Type' : 'Parent'}</InputLabel>
                   <Select
-                    value={formData.parent_id}
-                    label="Select Parent"
-                    onChange={(e) => setFormData({...formData, parent_id: e.target.value as string})}
+                    value={modalType === 'request_type' ? formData.category_id : modalType === 'subcategory' ? formData.request_type_id : formData.parent_id}
+                    label={`Select ${modalType === 'request_type' ? 'Category' : modalType === 'subcategory' ? 'Request Type' : 'Parent'}`}
+                    onChange={(e) => {
+                      const value = e.target.value as string;
+                      if (modalType === 'request_type') {
+                        setFormData({...formData, category_id: value});
+                      } else if (modalType === 'subcategory') {
+                        setFormData({...formData, request_type_id: value});
+                      } else {
+                        setFormData({...formData, parent_id: value});
+                      }
+                    }}
                   >
-                    <MenuItem value="">No Parent</MenuItem>
+                    <MenuItem value="">No {modalType === 'request_type' ? 'Category' : modalType === 'subcategory' ? 'Request Type' : 'Parent'}</MenuItem>
                     {getParentOptions().map((option) => (
                       <MenuItem key={option.id} value={option.id}>
                         {option.name}
@@ -811,7 +1099,9 @@ export default function CategoryManagement() {
               </Button>
               <Button 
                 onClick={handleCreateItem}
-                disabled={saving || !formData.id || !formData.name}
+                disabled={saving || !formData.id || !formData.name || 
+                  (modalType === 'request_type' && !formData.category_id) || 
+                  (modalType === 'subcategory' && !formData.request_type_id)}
               >
                 {saving ? (
                   <>
