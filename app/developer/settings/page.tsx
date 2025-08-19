@@ -102,6 +102,14 @@ export default function SystemSettings() {
   const [notification, setNotification] = useState<SettingsNotification | null>(null);
   const [emergencyContactValue, setEmergencyContactValue] = useState<string>('');
   const [selectedTheme, setSelectedTheme] = useState<string>('orvale-default');
+  
+  // Preview state (separate from form state)
+  const [previewData, setPreviewData] = useState({
+    message: 'System is under maintenance. Please try again later.',
+    emergencyContact: '',
+    selectedTheme: 'orvale-default',
+    lastUpdated: null as Date | null
+  });
 
   // Phone number formatting utility
   const formatPhoneNumber = (value: string): string => {
@@ -128,6 +136,16 @@ export default function SystemSettings() {
   const isValidPhoneNumber = (value: string): boolean => {
     const numbers = extractPhoneNumbers(value);
     return numbers.length === 10;
+  };
+
+  // Refresh preview with current form values
+  const refreshPreview = () => {
+    setPreviewData({
+      message: settings.maintenanceMessage || 'System is under maintenance. Please try again later.',
+      emergencyContact: emergencyContactValue,
+      selectedTheme: selectedTheme,
+      lastUpdated: new Date()
+    });
   };
 
   useEffect(() => {
@@ -852,9 +870,25 @@ export default function SystemSettings() {
                       <div>
                         <Label>Live Preview</Label>
                         <div className="mt-2 border rounded-lg overflow-hidden">
-                          <div className="bg-gray-50 px-3 py-2 border-b flex items-center space-x-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span className="text-xs text-gray-600">Updates in real-time as you edit above</span>
+                          <div className="bg-gray-50 px-3 py-2 border-b flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              <span className="text-xs text-gray-600">
+                                {previewData.lastUpdated 
+                                  ? `Last updated: ${previewData.lastUpdated.toLocaleTimeString()}`
+                                  : 'Click refresh to load current settings'
+                                }
+                              </span>
+                            </div>
+                            <Button
+                              onClick={refreshPreview}
+                              size="sm"
+                              variant="outline"
+                              className="h-6 px-2 text-xs"
+                            >
+                              <RefreshCw size={12} className="mr-1" />
+                              Refresh Preview
+                            </Button>
                           </div>
                           <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 min-h-[200px]">
                             {/* Mini maintenance page preview */}
@@ -865,18 +899,25 @@ export default function SystemSettings() {
                               <h3 className="font-bold text-gray-900 mb-1">ORVALE MANAGEMENT SYSTEM</h3>
                               <h4 className="text-lg font-semibold text-blue-600 mb-2">System Maintenance</h4>
                               <div className="w-6 h-0.5 bg-blue-600 mx-auto mb-3"></div>
+                              
+                              {/* Theme indicator */}
+                              {previewData.selectedTheme !== 'orvale-default' && (
+                                <div className="text-xs text-gray-400 mb-2">
+                                  Theme: {previewData.selectedTheme.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                </div>
+                              )}
                               <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                                {settings.maintenanceMessage || 'System is under maintenance. Please try again later.'}
+                                {previewData.message}
                               </p>
                               <p className="text-xs text-gray-500 mb-3">
                                 We're performing scheduled maintenance to improve your experience.
                               </p>
                               
                               {/* Emergency Contact in Preview */}
-                              {emergencyContactValue && isValidPhoneNumber(emergencyContactValue) && (
+                              {previewData.emergencyContact && isValidPhoneNumber(previewData.emergencyContact) && (
                                 <div className="flex items-center justify-center space-x-1 p-2 bg-blue-50 rounded text-xs text-blue-600 mb-3">
                                   <Phone size={12} />
-                                  <span>Emergency: {emergencyContactValue}</span>
+                                  <span>Emergency: {previewData.emergencyContact}</span>
                                 </div>
                               )}
                               
