@@ -22,7 +22,7 @@ import {
   Building2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-// Removed Material-UI imports since we're using simple text inputs for now
+import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 
 interface SupportTeamGroup {
   id: string;
@@ -507,7 +507,7 @@ export default function SupportTeamsManagement() {
 
       {/* Create Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="max-w-md" style={{ zIndex: 1000 }}>
+        <DialogContent className="max-w-md" style={{ zIndex: 15000 }}>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Plus className="h-5 w-5" />
@@ -541,17 +541,67 @@ export default function SupportTeamsManagement() {
               </>
             ) : (
               <>
-                {/* Support Group - Simple text input for now */}
-                <div>
-                  <Label htmlFor="support_group">Support Group ID</Label>
-                  <Input
-                    id="support_group"
-                    value={formData.group_id}
-                    onChange={(e) => setFormData({...formData, group_id: e.target.value})}
-                    placeholder="itts_region_7"
-                    className="font-mono"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Enter the group ID (e.g., itts_region_7, itts_region_8)</p>
+                {/* Support Group - Dropdown for group selection */}
+                <div style={{ position: 'relative', zIndex: 20000 }}>
+                  <Label htmlFor="support_group">Support Group</Label>
+                  <FormControl 
+                    fullWidth 
+                    size="small"
+                    sx={{ 
+                      zIndex: 20000,
+                      '& .MuiInputBase-root': { zIndex: 20000 },
+                      '& .MuiOutlinedInput-root': { zIndex: 20000 }
+                    }}
+                  >
+                    <InputLabel 
+                      id="support-group-label"
+                      sx={{ zIndex: 20001 }}
+                    >
+                      Select Support Group
+                    </InputLabel>
+                    <Select
+                      labelId="support-group-label"
+                      id="support_group"
+                      value={formData.group_id}
+                      label="Select Support Group"
+                      onChange={(e) => setFormData({...formData, group_id: e.target.value as string})}
+                      MenuProps={{
+                        PaperProps: {
+                          sx: {
+                            zIndex: 25000,
+                            maxHeight: 200,
+                            '& .MuiMenuItem-root': {
+                              zIndex: 25001
+                            }
+                          }
+                        },
+                        anchorOrigin: {
+                          vertical: 'bottom',
+                          horizontal: 'left',
+                        },
+                        transformOrigin: {
+                          vertical: 'top',
+                          horizontal: 'left',
+                        },
+                      }}
+                      sx={{ zIndex: 20000 }}
+                    >
+                      {groups.length === 0 ? (
+                        <MenuItem disabled>No groups available</MenuItem>
+                      ) : (
+                        groups.map((group) => (
+                          <MenuItem 
+                            key={group.id} 
+                            value={group.id}
+                            sx={{ zIndex: 25002 }}
+                          >
+                            {group.name}
+                          </MenuItem>
+                        ))
+                      )}
+                    </Select>
+                  </FormControl>
+                  <p className="text-xs text-gray-500 mt-1">Select which group this team belongs to</p>
                 </div>
 
                 {/* Display Label */}
@@ -661,7 +711,7 @@ export default function SupportTeamsManagement() {
 
       {/* Edit Modal - Similar structure to Create Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-md" style={{ zIndex: 1000 }}>
+        <DialogContent className="max-w-md" style={{ zIndex: 15000 }}>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Edit className="h-5 w-5" />
@@ -695,17 +745,67 @@ export default function SupportTeamsManagement() {
               </>
             ) : (
               <>
-                {/* Support Group - Simple text input for now */}
-                <div>
-                  <Label htmlFor="edit_support_group">Support Group ID</Label>
-                  <Input
-                    id="edit_support_group"
-                    value={formData.group_id}
-                    onChange={(e) => setFormData({...formData, group_id: e.target.value})}
-                    placeholder="itts_region_7"
-                    className="font-mono"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Enter the group ID (e.g., itts_region_7, itts_region_8)</p>
+                {/* Support Group - Dropdown for group selection */}
+                <div style={{ position: 'relative', zIndex: 20000 }}>
+                  <Label htmlFor="edit_support_group">Support Group</Label>
+                  <FormControl 
+                    fullWidth 
+                    size="small"
+                    sx={{ 
+                      zIndex: 20000,
+                      '& .MuiInputBase-root': { zIndex: 20000 },
+                      '& .MuiOutlinedInput-root': { zIndex: 20000 }
+                    }}
+                  >
+                    <InputLabel 
+                      id="edit-support-group-label"
+                      sx={{ zIndex: 20001 }}
+                    >
+                      Select Support Group
+                    </InputLabel>
+                    <Select
+                      labelId="edit-support-group-label"
+                      id="edit_support_group"
+                      value={formData.group_id}
+                      label="Select Support Group"
+                      onChange={(e) => setFormData({...formData, group_id: e.target.value as string})}
+                      MenuProps={{
+                        PaperProps: {
+                          sx: {
+                            zIndex: 25000,
+                            maxHeight: 200,
+                            '& .MuiMenuItem-root': {
+                              zIndex: 25001
+                            }
+                          }
+                        },
+                        anchorOrigin: {
+                          vertical: 'bottom',
+                          horizontal: 'left',
+                        },
+                        transformOrigin: {
+                          vertical: 'top',
+                          horizontal: 'left',
+                        },
+                      }}
+                      sx={{ zIndex: 20000 }}
+                    >
+                      {groups.length === 0 ? (
+                        <MenuItem disabled>No groups available</MenuItem>
+                      ) : (
+                        groups.map((group) => (
+                          <MenuItem 
+                            key={group.id} 
+                            value={group.id}
+                            sx={{ zIndex: 25002 }}
+                          >
+                            {group.name}
+                          </MenuItem>
+                        ))
+                      )}
+                    </Select>
+                  </FormControl>
+                  <p className="text-xs text-gray-500 mt-1">Select which group this team belongs to</p>
                 </div>
 
                 {/* Display Label */}
