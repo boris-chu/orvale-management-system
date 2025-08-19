@@ -35,7 +35,7 @@ interface Ticket {
   issue_title: string;
   issue_description: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'pending' | 'assigned' | 'in_progress' | 'complete' | 'completed' | 'escalated' | 'deleted';
+  status: 'pending' | 'assigned' | 'in_progress' | 'complete' | 'completed' | 'escalate' | 'escalated' | 'deleted';
   assigned_to?: string;
   assigned_team?: string;
   submitted_at: string;
@@ -116,8 +116,19 @@ export default function TicketsPage() {
   // Check if ticket is editable based on status and permissions
   const isTicketEditable = (ticket: Ticket | null) => {
     if (!ticket) return false;
-    if (ticket.status !== 'completed') return true;
-    return canEditCompletedTicket();
+    
+    // Completed tickets require special permission
+    if (ticket.status === 'completed') {
+      return canEditCompletedTicket();
+    }
+    
+    // Escalated tickets require manage_escalated permission
+    if (ticket.status === 'escalated') {
+      return currentUser?.permissions?.includes('ticket.manage_escalated');
+    }
+    
+    // All other statuses are editable
+    return true;
   };
 
   // Load dynamic data from database APIs
@@ -489,7 +500,8 @@ export default function TicketsPage() {
       case 'in_progress': return 'bg-indigo-100 text-indigo-800';
       case 'complete': return 'bg-yellow-100 text-yellow-800';
       case 'completed': return 'bg-green-100 text-green-800';
-      case 'escalated': return 'bg-purple-100 text-purple-800';
+      case 'escalate': return 'bg-orange-100 text-orange-800';
+      case 'escalated': return 'bg-red-100 text-red-800';
       case 'deleted': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -586,6 +598,23 @@ export default function TicketsPage() {
       return;
     }
     
+    // Check if status is being changed to 'escalate' - auto-escalate to helpdesk
+    let ticketToSave = selectedTicket;
+    if (selectedTicket.status === 'escalate' && originalTicket?.status !== 'escalate') {
+      // Automatically change status to 'escalated' and assign to Helpdesk team
+      ticketToSave = {
+        ...selectedTicket,
+        status: 'escalated' as const,
+        assigned_team: 'HELPDESK',
+        assigned_to: '', // Clear individual assignment when escalating
+        escalated_at: new Date().toISOString(),
+        escalation_reason: 'Ticket escalated to Helpdesk team'
+      };
+      
+      // Update the selected ticket state immediately for UI
+      setSelectedTicket(ticketToSave);
+    }
+    
     setSaveStatus('saving');
     
     try {
@@ -599,19 +628,25 @@ export default function TicketsPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(selectedTicket)
+        body: JSON.stringify(ticketToSave)
       });
       
       if (response.ok) {
         // Update the ticket in the main list
         setTickets(prev => prev.map(ticket => 
-          ticket.id === selectedTicket.id ? selectedTicket : ticket
+          ticket.id === ticketToSave.id ? ticketToSave : ticket
         ));
         
         // Update original ticket state
-        setOriginalTicket({...selectedTicket});
+        setOriginalTicket({...ticketToSave});
         setSaveStatus('saved');
-        showNotification('Ticket updated successfully!', 'success');
+        
+        // Show appropriate notification
+        if (ticketToSave.status === 'escalated' && originalTicket?.status !== 'escalated') {
+          showNotification('Ticket escalated to Helpdesk team successfully!', 'success');
+        } else {
+          showNotification('Ticket updated successfully!', 'success');
+        }
         
         // Reset to idle after showing success
         setTimeout(() => setSaveStatus('idle'), 2000);
@@ -688,10 +723,10 @@ export default function TicketsPage() {
   const cycleStatus = () => {
     if (!selectedTicket) return;
     
-    // Don't allow status changes if ticket is completed
-    if (selectedTicket.status === 'completed') return;
+    // Don't allow status changes if ticket is not editable (completed or escalated without permission)
+    if (!isTicketEditable(selectedTicket)) return;
     
-    const statusOrder: Array<'pending' | 'in_progress' | 'complete' | 'escalated'> = ['pending', 'in_progress', 'complete', 'escalated'];
+    const statusOrder: Array<'pending' | 'in_progress' | 'complete' | 'escalate'> = ['pending', 'in_progress', 'complete', 'escalate'];
     const currentIndex = statusOrder.indexOf(selectedTicket.status as any);
     const nextIndex = (currentIndex + 1) % statusOrder.length;
     const nextStatus = statusOrder[nextIndex];

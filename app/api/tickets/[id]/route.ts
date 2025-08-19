@@ -92,6 +92,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             implementation,
             completion_notes,
             escalation_reason,
+            escalated_at,
             completed_at
         } = body;
 
@@ -158,6 +159,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         if (escalation_reason !== undefined) {
             updateFields.push('escalation_reason = ?');
             updateValues.push(escalation_reason);
+        }
+        if (escalated_at !== undefined) {
+            updateFields.push('escalated_at = ?');
+            updateValues.push(escalated_at);
         }
         if (completed_at !== undefined) {
             updateFields.push('completed_at = ?');
