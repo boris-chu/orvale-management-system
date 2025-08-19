@@ -98,6 +98,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
+    // Create portal_settings table if it doesn't exist
+    await runAsync(`
+      CREATE TABLE IF NOT EXISTS portal_settings (
+        id TEXT PRIMARY KEY,
+        settings_json TEXT NOT NULL,
+        updated_by TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Get portal settings from database
     const settings = await getAsync(
       'SELECT settings_json FROM portal_settings WHERE id = ?',

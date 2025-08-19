@@ -135,7 +135,10 @@ export const getUserPermissions = async (user: User): Promise<string[]> => {
                 'admin.manage_categories',
                 'admin.view_categories',
                 'admin.view_analytics',
-                'admin.system_settings'
+                'admin.system_settings',
+                // Portal settings permissions
+                'portal.manage_settings',
+                'portal.view_settings'
             );
         }
         
