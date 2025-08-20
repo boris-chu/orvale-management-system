@@ -100,7 +100,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const body = await request.json();
         console.log('📄 Request body:', JSON.stringify(body, null, 2));
         
-        // Get current ticket state for history tracking
+        // Get current ticket state for history tracking and permission checks
         const currentTickets = await queryAsync('SELECT * FROM user_tickets WHERE id = ?', [ticketId]);
         if (currentTickets.length === 0) {
             return NextResponse.json({
@@ -109,6 +109,36 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             }, { status: 404 });
         }
         const currentTicket = currentTickets[0];
+        
+        // Check for helpdesk team assignment permissions
+        if (body.assigned_team !== undefined) {
+            const currentTeam = currentTicket.assigned_team;
+            const newTeam = body.assigned_team;
+            
+            // If changing team assignment
+            if (currentTeam !== newTeam) {
+                // Check if user has helpdesk cross-team permission
+                const hasHelpdeskPermission = user.permissions?.includes('helpdesk.assign_cross_team');
+                
+                if (!hasHelpdeskPermission) {
+                    // Check if user belongs to either current or target team
+                    const userTeamCheck = await queryAsync(`
+                        SELECT COUNT(*) as count FROM users 
+                        WHERE username = ? AND (team_id = ? OR team_id = ?)
+                    `, [user.username, currentTeam, newTeam]);
+                    
+                    if (userTeamCheck[0].count === 0) {
+                        console.log(`❌ User ${user.username} denied cross-team assignment: ${currentTeam} → ${newTeam}`);
+                        return NextResponse.json({
+                            error: 'Forbidden',
+                            message: 'You do not have permission to assign tickets across teams. Contact helpdesk for assistance.'
+                        }, { status: 403 });
+                    }
+                } else {
+                    console.log(`🔓 Helpdesk user ${user.username} performing cross-team assignment: ${currentTeam} → ${newTeam}`);
+                }
+            }
+        }
         
         // Extract updateable fields
         const {
@@ -296,6 +326,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             const fromTeam = currentTicket.assigned_team || 'UNASSIGNED';
             const toTeam = assigned_team !== undefined ? assigned_team : currentTicket.assigned_team;
             
+            const isHelpdeskUser = user.permissions?.includes('helpdesk.assign_cross_team');
+            const isTeamChange = fromTeam !== toTeam;
+            
             let reason = 'Assignment updated';
             if (toAssignee && !fromAssignee) {
                 reason = `Assigned to ${toAssignee}`;
@@ -305,21 +338,32 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                 reason = `Reassigned from ${fromAssignee} to ${toAssignee}`;
             }
             
-            if (fromTeam !== toTeam) {
-                reason += ` (team: ${fromTeam} → ${toTeam})`;
+            if (isTeamChange) {
+                if (isHelpdeskUser) {
+                    reason += ` (Helpdesk cross-team assignment: ${fromTeam} → ${toTeam})`;
+                } else {
+                    reason += ` (team: ${fromTeam} → ${toTeam})`;
+                }
             }
+            
+            // Use specific action type for helpdesk team changes
+            const actionType = isTeamChange && isHelpdeskUser ? 'helpdesk_team_assignment' : 'assigned';
             
             historyPromises.push(
                 addHistoryEntry(
                     ticketId,
-                    'assigned',
+                    actionType,
                     user,
                     fromAssignee,
                     toAssignee || 'unassigned',
                     fromTeam,
                     toTeam,
                     reason,
-                    { team_changed: fromTeam !== toTeam }
+                    { 
+                        team_changed: isTeamChange,
+                        helpdesk_assignment: isHelpdeskUser,
+                        cross_team_assignment: isTeamChange && isHelpdeskUser
+                    }
                 )
             );
         }
