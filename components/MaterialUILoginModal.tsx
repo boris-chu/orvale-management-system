@@ -19,8 +19,6 @@ import {
   Avatar,
   Divider,
   Slide,
-  Zoom,
-  Fade
 } from '@mui/material';
 import {
   Close as CloseIcon,

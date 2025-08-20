@@ -8,5 +8,8 @@
     "@typescript-eslint/no-explicit-any": "off",
     "react-hooks/exhaustive-deps": "warn",
     "prefer-const": "warn"
+  },
+  "settings": {
+    "eslint.cache": false
   }
 }

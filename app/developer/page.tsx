@@ -537,7 +537,7 @@ export default function DeveloperDashboard() {
                 <ShieldCheck className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Limited Access</h3>
                 <p className="text-gray-500 mb-4">
-                  You have admin dashboard access, but your current permissions don't include 
+                  You have admin dashboard access, but your current permissions don&apos;t include 
                   access to any management features.
                 </p>
                 <p className="text-sm text-gray-400">

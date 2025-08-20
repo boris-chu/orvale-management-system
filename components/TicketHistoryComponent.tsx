@@ -279,7 +279,7 @@ export default function TicketHistoryComponent({ ticketId, isVisible }: TicketHi
                           
                           {entry.reason && (
                             <p className="text-sm text-gray-700 italic">
-                              "{entry.reason}"
+                              &ldquo;{entry.reason}&rdquo;
                             </p>
                           )}
                           
