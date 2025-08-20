@@ -70,6 +70,15 @@ const DEFAULT_SETTINGS = {
     enable_audit_logging: true
   },
   
+  // User Experience Settings
+  user_experience: {
+    enable_form_data_caching: true,
+    form_cache_duration_days: 30,
+    enable_auto_save_drafts: false,
+    enable_form_progress_indicator: true,
+    enable_smart_form_completion: false
+  },
+  
   // Advanced Settings
   advanced: {
     enable_auto_assignment: true,
@@ -79,8 +88,12 @@ const DEFAULT_SETTINGS = {
     enable_satisfaction_survey: true,
     enable_knowledge_base_suggestions: false,
     enable_priority_escalation: true,
-    maintenance_mode: false,
-    maintenance_message: 'The portal is currently under maintenance. Please try again later.'
+    portal_maintenance_mode: false,
+    portal_maintenance_message: 'The DPSS IT Support Portal is currently under maintenance. Please try again later or contact IT support directly.',
+    portal_maintenance_contact: '',
+    portal_maintenance_estimated_end: '',
+    allow_queue_access_during_maintenance: true,
+    show_system_status_page: true
   }
 };
 
@@ -125,6 +138,7 @@ export async function GET(request: NextRequest) {
           notifications: { ...DEFAULT_SETTINGS.notifications, ...storedSettings.notifications },
           integrations: { ...DEFAULT_SETTINGS.integrations, ...storedSettings.integrations },
           security: { ...DEFAULT_SETTINGS.security, ...storedSettings.security },
+          user_experience: { ...DEFAULT_SETTINGS.user_experience, ...storedSettings.user_experience },
           advanced: { ...DEFAULT_SETTINGS.advanced, ...storedSettings.advanced }
         };
       } catch (parseError) {

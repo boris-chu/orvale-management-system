@@ -31,7 +31,9 @@ import {
   Globe,
   Database,
   Bell,
-  Eye
+  Eye,
+  Heart,
+  Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -97,6 +99,13 @@ interface PortalSettings {
     max_login_attempts: number;
     enable_audit_logging: boolean;
   };
+  user_experience: {
+    enable_form_data_caching: boolean;
+    form_cache_duration_days: number;
+    enable_auto_save_drafts: boolean;
+    enable_form_progress_indicator: boolean;
+    enable_smart_form_completion: boolean;
+  };
   advanced: {
     enable_auto_assignment: boolean;
     enable_smart_routing: boolean;
@@ -105,8 +114,12 @@ interface PortalSettings {
     enable_satisfaction_survey: boolean;
     enable_knowledge_base_suggestions: boolean;
     enable_priority_escalation: boolean;
-    maintenance_mode: boolean;
-    maintenance_message: string;
+    portal_maintenance_mode: boolean;
+    portal_maintenance_message: string;
+    portal_maintenance_contact: string;
+    portal_maintenance_estimated_end: string;
+    allow_queue_access_during_maintenance: boolean;
+    show_system_status_page: boolean;
   };
 }
 
@@ -509,7 +522,7 @@ export default function PortalSettingsPage() {
 
         {/* Settings Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="form_fields" className="flex items-center space-x-2">
               <FormInput className="h-4 w-4" />
               <span>Form Fields</span>
@@ -517,6 +530,10 @@ export default function PortalSettingsPage() {
             <TabsTrigger value="display" className="flex items-center space-x-2">
               <Palette className="h-4 w-4" />
               <span>Display</span>
+            </TabsTrigger>
+            <TabsTrigger value="user_experience" className="flex items-center space-x-2">
+              <Heart className="h-4 w-4" />
+              <span>User Experience</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="flex items-center space-x-2">
               <Bell className="h-4 w-4" />
@@ -740,6 +757,147 @@ export default function PortalSettingsPage() {
                       <Label htmlFor={key}>{label}</Label>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* User Experience Tab */}
+          <TabsContent value="user_experience" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Heart className="h-5 w-5 text-pink-600" />
+                  <span>Form Data Caching</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="enable_form_data_caching"
+                    checked={settings.user_experience.enable_form_data_caching}
+                    onChange={(e) => updateSetting('user_experience', 'enable_form_data_caching', e.target.checked)}
+                    className="rounded"
+                    disabled={!canManageSettings}
+                  />
+                  <Label htmlFor="enable_form_data_caching" className="flex-1">
+                    Enable Form Data Caching
+                  </Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Saves user form data locally to improve user experience</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+
+                {settings.user_experience.enable_form_data_caching && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4 pl-6 border-l-2 border-pink-200"
+                  >
+                    <div>
+                      <Label htmlFor="form_cache_duration_days" className="flex items-center space-x-2">
+                        <Clock className="h-4 w-4" />
+                        <span>Cache Duration (Days)</span>
+                      </Label>
+                      <Input
+                        id="form_cache_duration_days"
+                        type="number"
+                        min="1"
+                        max="90"
+                        value={settings.user_experience.form_cache_duration_days}
+                        onChange={(e) => updateSetting('user_experience', 'form_cache_duration_days', parseInt(e.target.value) || 30)}
+                        className="mt-1 max-w-32"
+                        disabled={!canManageSettings}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        How long to keep cached form data (1-90 days). Default: 30 days.
+                      </p>
+                    </div>
+
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Privacy Notice:</strong> Form data is stored locally in the user's browser only. 
+                        No personal information is sent to servers until form submission. 
+                        Cache renews each time the user visits the portal.
+                      </AlertDescription>
+                    </Alert>
+                  </motion.div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Zap className="h-5 w-5 text-blue-600" />
+                  <span>Enhanced User Experience</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="enable_auto_save_drafts"
+                      checked={settings.user_experience.enable_auto_save_drafts}
+                      onChange={(e) => updateSetting('user_experience', 'enable_auto_save_drafts', e.target.checked)}
+                      className="rounded"
+                      disabled={!canManageSettings}
+                    />
+                    <Label htmlFor="enable_auto_save_drafts">Auto-Save Drafts</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="enable_form_progress_indicator"
+                      checked={settings.user_experience.enable_form_progress_indicator}
+                      onChange={(e) => updateSetting('user_experience', 'enable_form_progress_indicator', e.target.checked)}
+                      className="rounded"
+                      disabled={!canManageSettings}
+                    />
+                    <Label htmlFor="enable_form_progress_indicator">Form Progress Indicator</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="enable_smart_form_completion"
+                      checked={settings.user_experience.enable_smart_form_completion}
+                      onChange={(e) => updateSetting('user_experience', 'enable_smart_form_completion', e.target.checked)}
+                      className="rounded"
+                      disabled={!canManageSettings}
+                    />
+                    <Label htmlFor="enable_smart_form_completion">Smart Form Completion</Label>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800 font-medium mb-2">User Experience Features</p>
+                  <div className="text-sm text-blue-700 space-y-1">
+                    <div>• <strong>Auto-Save Drafts:</strong> Automatically saves form progress every 30 seconds</div>
+                    <div>• <strong>Progress Indicator:</strong> Shows completion percentage and required fields</div>
+                    <div>• <strong>Smart Completion:</strong> Suggests values based on user's previous submissions</div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-blue-200">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open('/form-cache-demo', '_blank')}
+                      className="flex items-center space-x-2 bg-white hover:bg-blue-50"
+                    >
+                      <TestTube className="h-4 w-4" />
+                      <span>Test Form Caching Demo</span>
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1083,40 +1241,150 @@ export default function PortalSettingsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-red-600">Maintenance Mode</CardTitle>
+                <CardTitle className="flex items-center space-x-2">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  <span className="text-red-600">Portal Maintenance Mode</span>
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
-                    id="maintenance_mode"
-                    checked={settings.advanced.maintenance_mode}
-                    onChange={(e) => updateSetting('advanced', 'maintenance_mode', e.target.checked)}
+                    id="portal_maintenance_mode"
+                    checked={settings.advanced.portal_maintenance_mode}
+                    onChange={(e) => updateSetting('advanced', 'portal_maintenance_mode', e.target.checked)}
                     className="rounded"
                     disabled={!canManageSettings}
                   />
-                  <Label htmlFor="maintenance_mode" className="text-red-600">Enable Maintenance Mode</Label>
+                  <Label htmlFor="portal_maintenance_mode" className="text-red-600 font-medium">
+                    Enable Portal Maintenance Mode
+                  </Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Blocks access to ticket submission and public portal only. Queue access remains available.</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
-                
-                <div>
-                  <Label htmlFor="maintenance_message">Maintenance Message</Label>
-                  <Textarea
-                    id="maintenance_message"
-                    value={settings.advanced.maintenance_message}
-                    onChange={(e) => updateSetting('advanced', 'maintenance_message', e.target.value)}
-                    rows={3}
-                    disabled={!canManageSettings}
-                  />
-                </div>
-                
-                {settings.advanced.maintenance_mode && (
-                  <Alert className="bg-red-50 border-red-200">
-                    <AlertTriangle className="h-4 w-4 text-red-600" />
-                    <AlertDescription className="text-red-800">
-                      <strong>Warning:</strong> Maintenance mode is enabled. The public portal will show the maintenance message to users.
-                    </AlertDescription>
-                  </Alert>
+
+                {settings.advanced.portal_maintenance_mode && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4 pl-6 border-l-2 border-red-200"
+                  >
+                    <div>
+                      <Label htmlFor="portal_maintenance_message">Maintenance Message</Label>
+                      <Textarea
+                        id="portal_maintenance_message"
+                        value={settings.advanced.portal_maintenance_message}
+                        onChange={(e) => updateSetting('advanced', 'portal_maintenance_message', e.target.value)}
+                        rows={4}
+                        placeholder="Enter the message users will see during maintenance..."
+                        disabled={!canManageSettings}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        This message will be displayed on the main page and public portal during maintenance.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="portal_maintenance_contact">Contact Information (Optional)</Label>
+                        <Input
+                          id="portal_maintenance_contact"
+                          value={settings.advanced.portal_maintenance_contact}
+                          onChange={(e) => updateSetting('advanced', 'portal_maintenance_contact', e.target.value)}
+                          placeholder="e.g., helpdesk@dpss.gov or (555) 123-4567"
+                          disabled={!canManageSettings}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Alternative contact method during maintenance
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="portal_maintenance_estimated_end">Estimated End Time (Optional)</Label>
+                        <Input
+                          id="portal_maintenance_estimated_end"
+                          type="datetime-local"
+                          value={settings.advanced.portal_maintenance_estimated_end}
+                          onChange={(e) => updateSetting('advanced', 'portal_maintenance_estimated_end', e.target.value)}
+                          disabled={!canManageSettings}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          When maintenance is expected to complete
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="allow_queue_access_during_maintenance"
+                          checked={settings.advanced.allow_queue_access_during_maintenance}
+                          onChange={(e) => updateSetting('advanced', 'allow_queue_access_during_maintenance', e.target.checked)}
+                          className="rounded"
+                          disabled={!canManageSettings}
+                        />
+                        <Label htmlFor="allow_queue_access_during_maintenance">
+                          Allow IT Staff Queue Access During Maintenance
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="show_system_status_page"
+                          checked={settings.advanced.show_system_status_page}
+                          onChange={(e) => updateSetting('advanced', 'show_system_status_page', e.target.checked)}
+                          className="rounded"
+                          disabled={!canManageSettings}
+                        />
+                        <Label htmlFor="show_system_status_page">
+                          Show System Status Page Link
+                        </Label>
+                      </div>
+                    </div>
+
+                    <Alert className="bg-red-50 border-red-200">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                      <AlertDescription className="text-red-800">
+                        <strong>Portal Maintenance Active:</strong> Public ticket submission and portal access will be blocked.
+                        <br />
+                        <span className="text-sm">
+                          • Main page "Submit Ticket" button → shows maintenance message
+                          <br />
+                          • /public-portal → shows maintenance page
+                          <br />
+                          • IT Staff queue access → {settings.advanced.allow_queue_access_during_maintenance ? 'remains available' : 'also blocked'}
+                        </span>
+                      </AlertDescription>
+                    </Alert>
+                  </motion.div>
                 )}
+
+                {!settings.advanced.portal_maintenance_mode && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-800 font-medium mb-1">Portal Operating Normally</p>
+                    <p className="text-sm text-green-700">
+                      All portal features are available. Enable maintenance mode when performing portal updates or maintenance.
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800 font-medium mb-2">Portal vs System Maintenance</p>
+                  <div className="text-sm text-blue-700 space-y-1">
+                    <div>• <strong>Portal Maintenance:</strong> Blocks public ticket submission only</div>
+                    <div>• <strong>System Maintenance:</strong> Blocks all user authentication and access</div>
+                    <div>• <strong>Use Case:</strong> Portal maintenance for form updates, System maintenance for server updates</div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
