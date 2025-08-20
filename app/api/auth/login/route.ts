@@ -48,7 +48,9 @@ export async function POST(request: NextRequest) {
                 permissions,
                 accessible_queues: accessibleQueues,
                 can_switch_queues: accessibleQueues.length > 1,
-                home_queue: user.team_id
+                home_queue: user.team_id,
+                login_preferences: user.login_preferences,
+                profile_picture: user.profile_picture
             },
             token
         });

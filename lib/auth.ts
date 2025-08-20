@@ -16,6 +16,7 @@ export interface User {
     section_id: string;
     active: boolean;
     profile_picture?: string;
+    login_preferences?: string;
 }
 
 export const authenticateUser = async (username: string, password: string): Promise<User | null> => {
@@ -46,7 +47,8 @@ export const authenticateUser = async (username: string, password: string): Prom
             team_id: user.team_id,
             section_id: user.section_id,
             active: user.active,
-            profile_picture: user.profile_picture
+            profile_picture: user.profile_picture,
+            login_preferences: user.login_preferences
         };
     } catch (error) {
         console.error('❌ Authentication error:', error);

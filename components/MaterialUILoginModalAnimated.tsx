@@ -29,6 +29,7 @@ import {
   Bolt as BoltIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
+import { getLoginRedirectUrl } from '@/lib/login-redirect';
 import React from 'react';
 
 interface MaterialUILoginModalAnimatedProps {
@@ -165,6 +166,9 @@ export default function MaterialUILoginModalAnimated({
         localStorage.setItem('authToken', result.token);
         localStorage.setItem('currentUser', JSON.stringify(result.user));
         
+        // Determine redirect URL based on user preferences
+        const redirectUrl = getLoginRedirectUrl(result.user);
+        
         // Success animation
         controls.start({
           scale: [1, 1.2, 0],
@@ -174,7 +178,7 @@ export default function MaterialUILoginModalAnimated({
 
         setTimeout(() => {
           onClose();
-          window.location.href = '/tickets';
+          window.location.href = redirectUrl;
         }, 500);
       } else {
         setError(result.message || 'Invalid username or password');

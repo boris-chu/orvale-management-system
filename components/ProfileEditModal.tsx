@@ -14,7 +14,11 @@ import {
   Mail, 
   RefreshCw,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  Settings,
+  LayoutDashboard,
+  Ticket,
+  Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -28,6 +32,8 @@ interface ProfileEditModalProps {
     email: string;
     profile_picture?: string;
     role_id: string;
+    permissions?: string[];
+    login_preferences?: string;
   };
   onProfileUpdate: (updatedUser: any) => void;
 }
@@ -35,12 +41,79 @@ interface ProfileEditModalProps {
 export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: ProfileEditModalProps) {
   const [formData, setFormData] = useState({
     display_name: user.display_name,
-    email: user.email
+    email: user.email,
+    login_destination: (() => {
+      try {
+        const prefs = JSON.parse(user.login_preferences || '{}');
+        return prefs.default_destination || 'tickets';
+      } catch {
+        return 'tickets';
+      }
+    })()
   });
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState<{message: string; type: 'success' | 'error'} | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Check if user has permission to access specific pages
+  const hasPermission = (permission: string) => {
+    return user.permissions?.includes(permission) || false;
+  };
+
+  // Get available login destinations based on user permissions
+  const getLoginDestinations = () => {
+    const destinations = [
+      {
+        value: 'tickets',
+        label: 'Ticket Queue',
+        description: 'Go directly to the ticket management system',
+        icon: Ticket
+      }
+    ];
+
+    // Add Admin Dashboard if user has any admin permissions
+    const adminPermissions = [
+      'admin.manage_users', 'admin.view_users',
+      'admin.manage_teams', 'admin.view_teams', 
+      'admin.manage_organization', 'admin.view_organization',
+      'admin.manage_categories', 'admin.view_categories',
+      'admin.manage_support_teams', 'admin.view_support_teams',
+      'admin.view_analytics', 'admin.system_settings'
+    ];
+    
+    if (adminPermissions.some(perm => hasPermission(perm))) {
+      destinations.push({
+        value: 'admin',
+        label: 'Admin Dashboard',
+        description: 'Go to the administrative control panel',
+        icon: LayoutDashboard
+      });
+    }
+
+    // Add more destinations based on specific permissions
+    // Example: Analytics dashboard for users with analytics permissions
+    if (hasPermission('analytics.view_reports')) {
+      destinations.push({
+        value: 'analytics',
+        label: 'Analytics Dashboard',
+        description: 'View reports and performance metrics',
+        icon: LayoutDashboard
+      });
+    }
+
+    // Example: User management for users with user management permissions
+    if (hasPermission('users.manage_team')) {
+      destinations.push({
+        value: 'team-management',
+        label: 'Team Management',
+        description: 'Manage your team members and assignments',
+        icon: Users
+      });
+    }
+
+    return destinations;
+  };
 
   const showNotification = (message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
@@ -139,7 +212,10 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
         },
         body: JSON.stringify({
           display_name: formData.display_name,
-          email: formData.email
+          email: formData.email,
+          login_preferences: JSON.stringify({
+            default_destination: formData.login_destination
+          })
         })
       });
 
@@ -160,7 +236,16 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
     }
   };
 
-  const hasChanges = formData.display_name !== user.display_name || formData.email !== user.email;
+  const hasChanges = formData.display_name !== user.display_name || 
+                     formData.email !== user.email ||
+                     formData.login_destination !== (() => {
+                       try {
+                         const prefs = JSON.parse(user.login_preferences || '{}');
+                         return prefs.default_destination || 'tickets';
+                       } catch {
+                         return 'tickets';
+                       }
+                     })();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -293,6 +378,62 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
               />
               <p className="text-xs text-gray-500 mt-1">Role is managed by administrators</p>
             </div>
+
+            {/* Login Destination Preferences - Only show if user has multiple options */}
+            {getLoginDestinations().length > 1 && (
+              <div>
+                <Label className="flex items-center space-x-2 mb-3">
+                  <Settings className="h-4 w-4" />
+                  <span>Login Destination</span>
+                </Label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Choose where you&apos;d like to go after logging in
+                </p>
+                <div className="space-y-2">
+                  {getLoginDestinations().map((destination) => {
+                    const IconComponent = destination.icon;
+                    return (
+                      <motion.div
+                        key={destination.value}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <label
+                          className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                            formData.login_destination === destination.value
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="login_destination"
+                            value={destination.value}
+                            checked={formData.login_destination === destination.value}
+                            onChange={(e) => setFormData({ ...formData, login_destination: e.target.value })}
+                            className="sr-only"
+                          />
+                          <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
+                            formData.login_destination === destination.value
+                              ? 'bg-blue-100 text-blue-600'
+                              : 'bg-gray-100 text-gray-500'
+                          }`}>
+                            <IconComponent className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">{destination.label}</div>
+                            <div className="text-xs text-gray-500">{destination.description}</div>
+                          </div>
+                          {formData.login_destination === destination.value && (
+                            <Check className="h-5 w-5 text-blue-600" />
+                          )}
+                        </label>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

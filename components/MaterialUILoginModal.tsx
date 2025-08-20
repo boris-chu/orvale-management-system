@@ -33,6 +33,7 @@ import {
 } from '@mui/icons-material';
 import { TransitionProps } from '@mui/material/transitions';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getLoginRedirectUrl } from '@/lib/login-redirect';
 import React from 'react';
 
 interface MaterialUILoginModalProps {
@@ -113,10 +114,13 @@ export default function MaterialUILoginModal({
         localStorage.setItem('authToken', result.token);
         localStorage.setItem('currentUser', JSON.stringify(result.user));
         
+        // Determine redirect URL based on user preferences
+        const redirectUrl = getLoginRedirectUrl(result.user);
+        
         // Close dialog and redirect
         onClose();
         setTimeout(() => {
-          window.location.href = '/tickets';
+          window.location.href = redirectUrl;
         }, 300);
       } else {
         setError(result.message || 'Invalid username or password');
