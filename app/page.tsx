@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { LogIn, Ticket, Users, Search, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import UnifiedLoginModal from '@/components/UnifiedLoginModal';
+import MaterialUILoginModal from '@/components/MaterialUILoginModal';
 
 
 export default function Home() {
@@ -246,8 +246,8 @@ export default function Home() {
         </div>
       </footer>
 
-      <UnifiedLoginModal 
-        isOpen={showLogin} 
+      <MaterialUILoginModal 
+        open={showLogin} 
         onClose={() => setShowLogin(false)}
         mode="regular"
         title="Staff Login"

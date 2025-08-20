@@ -236,6 +236,16 @@ export default function DeveloperDashboard() {
         color: 'bg-red-500',
         stats: '3 system roles',
         requiredPermissions: ['admin.manage_users', 'admin.system_settings']
+      },
+      {
+        id: 'login_modal_comparison',
+        title: 'Login Modal Comparison',
+        description: 'Compare UI library login implementations',
+        icon: Code,
+        href: '/developer/login-modal-comparison',
+        color: 'bg-amber-500',
+        stats: 'UI Component Testing',
+        requiredPermissions: ['admin.system_settings']
       }
     ];
 

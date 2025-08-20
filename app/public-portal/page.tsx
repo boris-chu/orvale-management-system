@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Ticket, Monitor, Phone, Building, Clock } from 'lucide-react';
-import UnifiedLoginModal from '@/components/UnifiedLoginModal';
+import MaterialUILoginModalAnimated from '@/components/MaterialUILoginModalAnimated';
 // Import removed - will load dynamically from API
 
 interface FormData {
@@ -1052,10 +1052,11 @@ Submitted via Orvale Management System`;
       />
 
       {/* Login Modal */}
-      <UnifiedLoginModal 
-        isOpen={showLoginModal} 
+      <MaterialUILoginModalAnimated 
+        open={showLoginModal} 
         onClose={() => setShowLoginModal(false)}
         mode="staff"
+        animationStyle="slide"
         title="IT Staff Access"
         description="Access internal staff management tools"
       />
