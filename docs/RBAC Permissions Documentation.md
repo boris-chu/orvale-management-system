@@ -1,9 +1,9 @@
 # RBAC Permissions Documentation
 ## Orvale Management System - Complete Permission Reference
 
-**Last Updated:** August 19, 2025  
-**Total Permissions:** 55  
-**Permission Categories:** 10  
+**Last Updated:** August 20, 2025  
+**Total Permissions:** 63  
+**Permission Categories:** 11  
 
 ---
 
@@ -39,10 +39,13 @@ Public portal configuration and management
 ### 8. **Data Management** (1 permission)
 Data export/import operations
 
-### 9. **Role Management** (2 permissions)
+### 9. **Helpdesk** (8 permissions)
+Specialized helpdesk operations and cross-team management
+
+### 10. **Role Management** (2 permissions)
 Role and permission management
 
-### 10. **SLA Management** (2 permissions)
+### 11. **SLA Management** (2 permissions)
 Service Level Agreement configuration
 
 ---
@@ -545,6 +548,88 @@ Service Level Agreement configuration
 - **Granted To:** Admins
 
 ---
+
+### **HELPDESK PERMISSIONS**
+
+#### `helpdesk.multi_queue_access`
+- **Name:** Helpdesk Multi-Queue Access
+- **Description:** Access helpdesk multi-queue interface
+- **Use Cases:**
+  - View escalated tickets from all teams
+  - Monitor multiple team queues simultaneously
+  - Configure team visibility settings
+  - Essential for helpdesk supervisors & staff
+- **Granted To:** Helpdesk Member, Helpdesk Supervisor, Admins
+
+#### `helpdesk.view_all_teams`
+- **Name:** View All Teams
+- **Description:** Read-only access to all team tickets
+- **Use Cases:**
+  - Monitor cross-team workloads
+  - Visibility into all queues
+  - No assignment permissions
+  - For helpdesk analysts and monitoring
+- **Granted To:** Helpdesk Member, Helpdesk Supervisor, Admins
+
+#### `helpdesk.assign_cross_team`
+- **Name:** Cross-Team Assignment
+- **Description:** Assign tickets to any team
+- **Use Cases:**
+  - Cross-team ticket routing
+  - Load balancing capability
+  - Override normal team boundaries
+  - ⚠️ Powerful helpdesk permission
+- **Granted To:** Helpdesk Supervisor, Admins
+
+#### `helpdesk.transfer_tickets`
+- **Name:** Transfer Tickets
+- **Description:** Transfer tickets between teams
+- **Use Cases:**
+  - Redirect misrouted requests
+  - Organizational flexibility
+  - Track transfer history
+  - For helpdesk coordinators
+- **Granted To:** Helpdesk Supervisor, Admins
+
+#### `helpdesk.escalate_tickets`
+- **Name:** Escalate Tickets
+- **Description:** Escalate tickets to management
+- **Use Cases:**
+  - Bypass normal workflows
+  - Urgent issue handling
+  - Management notification
+  - Crisis response capability
+- **Granted To:** Helpdesk Supervisor, Admins
+
+#### `helpdesk.add_internal_notes`
+- **Name:** Add Internal Notes
+- **Description:** Add internal-only notes
+- **Use Cases:**
+  - Team communication
+  - Hidden from requesters
+  - Collaboration tool
+  - For all helpdesk staff
+- **Granted To:** Helpdesk Member, Helpdesk Supervisor, Admins
+
+#### `helpdesk.override_priority`
+- **Name:** Override Priority
+- **Description:** Change ticket priority
+- **Use Cases:**
+  - Bump urgent issues
+  - Adjust based on impact
+  - Override initial assessment
+  - For supervisors & leads
+- **Granted To:** Helpdesk Supervisor, Admins
+
+#### `helpdesk.view_team_metrics`
+- **Name:** View Team Metrics
+- **Description:** Access team performance data
+- **Use Cases:**
+  - Resolution time analytics
+  - Workload distribution
+  - Quality metrics
+  - Management reporting tools
+- **Granted To:** Helpdesk Supervisor, Admins
 
 ### **SLA MANAGEMENT PERMISSIONS**
 
