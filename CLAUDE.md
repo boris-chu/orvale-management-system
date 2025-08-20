@@ -54,6 +54,8 @@ tail -f logs/error.log
 - **Public Portal**: http://localhost/ (Landing page with ticket submission)
 - **Submit Tickets**: http://localhost/public-portal/ (Original ticket submission form)
 - **Admin Queue**: http://localhost/tickets (IT staff ticket management)
+- **Helpdesk Queue**: http://localhost/helpdesk/queue (Multi-team queue for helpdesk staff)
+- **Developer Portal**: http://localhost/developer (System configuration and analytics)
 - **API Health**: http://localhost/api/health (Server status check)
 
 ## 🏗️ Architecture Guidelines
@@ -466,6 +468,95 @@ import { subcategories } from './assets/ticket-categories.js';
 import { organizationalData } from './assets/organizational-data.js';
 ```
 
+## 🗄️ Database Schema Documentation
+
+The Orvale Management System uses SQLite database (`orvale_tickets.db`) with 23 tables organized into 6 functional groups:
+
+### 1. **Authentication & Authorization Tables**
+- **users**: User accounts with authentication details
+- **roles**: System roles (admin, manager, support, user)
+- **role_permissions**: Maps permissions to roles (86 permissions total)
+
+### 2. **Ticket Management Tables**
+- **user_tickets**: Main ticket records with all ticket information
+- **ticket_history**: Legacy audit trail for tickets
+- **ticket_history_detailed**: Comprehensive ticket activity tracking
+- **ticket_sequences**: Generates unique ticket numbers per team
+
+### 3. **Organization Structure Tables**
+**DPSS Hierarchy:**
+- **dpss_offices**: Top-level offices (e.g., Director's Office)
+- **dpss_bureaus**: Bureaus within offices
+- **dpss_divisions**: Divisions within bureaus  
+- **dpss_sections**: Sections within divisions
+- **sections**: Legacy sections table
+
+**Ticket Classification:**
+- **ticket_categories**: 9 main categories (Application Support, Hardware, etc.)
+- **request_types**: Types for each category
+- **subcategories**: Detailed subcategories
+- **implementations**: Most specific classification level
+
+### 4. **Team Management Tables**
+- **teams**: Internal teams that receive and work on tickets (e.g., ITTS_Region1)
+- **support_teams**: Public portal teams for ticket submission
+- **support_team_groups**: Groups to organize support teams
+- **helpdesk_team_preferences**: User preferences for helpdesk multi-queue view
+
+### 5. **Configuration Tables**
+- **portal_settings**: Public portal configuration (branding, messages)
+- **system_settings**: System-wide settings (maintenance mode, logging)
+- **system_settings_audit**: Tracks all system setting changes
+
+### 6. **System Tables**
+- **backup_log**: Database backup history
+
+### Key Relationships
+
+```
+users ←→ roles (via role_id)
+roles ←→ role_permissions (via role_id)
+user_tickets ←→ teams (via assigned_team)
+user_tickets ←→ users (via assigned_to, submitted_by)
+ticket_history_detailed ←→ user_tickets (via ticket_id)
+helpdesk_team_preferences ←→ users & teams
+dpss_offices → dpss_bureaus → dpss_divisions → dpss_sections (hierarchical)
+ticket_categories → request_types → subcategories → implementations (hierarchical)
+support_teams ←→ support_team_groups (via group_id)
+```
+
+### Important Design Patterns
+
+1. **Audit Trails**: Both `ticket_history_detailed` and `system_settings_audit` provide comprehensive change tracking
+2. **Soft Deletes**: Most tables use `active` flags instead of hard deletes
+3. **Hierarchical Data**: Both DPSS structure and ticket categories use parent-child relationships
+4. **JSON Storage**: Used for flexible data like `computer_info` and permission overrides
+5. **Team Separation**: `teams` for internal use, `support_teams` for public portal
+
+### Common Operations
+
+**Get user with permissions:**
+```sql
+SELECT u.*, r.name as role_name, 
+       GROUP_CONCAT(rp.permission) as permissions
+FROM users u
+JOIN roles r ON u.role_id = r.id
+LEFT JOIN role_permissions rp ON r.id = rp.role_id
+WHERE u.username = ?
+GROUP BY u.id;
+```
+
+**Get tickets with team info:**
+```sql
+SELECT ut.*, t.name as team_name, 
+       u1.display_name as assigned_to_name,
+       u2.display_name as submitted_by_name
+FROM user_tickets ut
+LEFT JOIN teams t ON ut.assigned_team = t.id
+LEFT JOIN users u1 ON ut.assigned_to = u1.username
+LEFT JOIN users u2 ON ut.submitted_by = u2.username;
+```
+
 ## 📚 Key Resources
 
 1. **Team Ticket System.md** - Core system architecture
@@ -491,6 +582,14 @@ import { organizationalData } from './assets/organizational-data.js';
 - **86 Permissions**: Granular RBAC control
 - **Audit Logging**: Complete action tracking
 - **Analytics Platform**: Custom dashboards and reports
+
+### Helpdesk Queue Features
+- **Multi-Team View**: Monitor multiple teams simultaneously 
+- **Team Preferences**: Customize which teams to display
+- **Status Tabs**: Horizontal folder-style tabs for each status
+- **Escalated Tickets**: Dedicated view for cross-team escalations
+- **User Profile**: Integrated settings and sign-out functionality
+- **Real-time Updates**: Live ticket counts and status changes
 
 ## 💡 Tips for Success
 
