@@ -56,6 +56,7 @@ interface SystemSettings {
   autoBackupEnabled: boolean;
   backupRetentionDays: number;
   logLevel: string;
+  pinoEnabled: boolean;
 }
 
 interface SettingsNotification {
@@ -92,7 +93,8 @@ export default function SystemSettings() {
     maintenanceMessage: 'System is under maintenance. Please try again later.',
     autoBackupEnabled: true,
     backupRetentionDays: 30,
-    logLevel: 'info'
+    logLevel: 'info',
+    pinoEnabled: true
   });
   
   const [originalSettings, setOriginalSettings] = useState<SystemSettings | null>(null);
@@ -1043,23 +1045,56 @@ export default function SystemSettings() {
                     </AlertDescription>
                   </Alert>
                   
-                  <div>
-                    <Label htmlFor="logLevel">Log Level</Label>
-                    <select
-                      id="logLevel"
-                      className="w-full mt-1 rounded-md border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                      value={settings.logLevel}
-                      onChange={(e) => setSettings({
-                        ...settings, 
-                        logLevel: e.target.value
-                      })}
-                    >
-                      <option value="error">Error</option>
-                      <option value="warn">Warning</option>
-                      <option value="info">Info</option>
-                      <option value="debug">Debug</option>
-                    </select>
-                    <p className="text-sm text-gray-500 mt-1">System logging verbosity level</p>
+                  {/* Pino Logging Controls */}
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="pinoEnabled"
+                        checked={settings.pinoEnabled}
+                        onCheckedChange={(checked) => setSettings({
+                          ...settings, 
+                          pinoEnabled: checked
+                        })}
+                      />
+                      <Label htmlFor="pinoEnabled">Enable Pino Structured Logging</Label>
+                    </div>
+                    
+                    {settings.pinoEnabled && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <span className="text-blue-800 font-medium">Pino Logging Active</span>
+                        </div>
+                        <p className="text-blue-700 text-sm">
+                          Structured logging is enabled. Logs will appear in the development console and production log files.
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <Label htmlFor="logLevel">Log Level</Label>
+                      <select
+                        id="logLevel"
+                        className="w-full mt-1 rounded-md border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                        value={settings.logLevel}
+                        onChange={(e) => setSettings({
+                          ...settings, 
+                          logLevel: e.target.value
+                        })}
+                        disabled={!settings.pinoEnabled}
+                      >
+                        <option value="error">Error</option>
+                        <option value="warn">Warning</option>
+                        <option value="info">Info</option>
+                        <option value="debug">Debug</option>
+                      </select>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {settings.pinoEnabled 
+                          ? "System logging verbosity level" 
+                          : "Enable Pino logging to configure log level"
+                        }
+                      </p>
+                    </div>
                   </div>
 
                   {/* Log Location Information Box */}

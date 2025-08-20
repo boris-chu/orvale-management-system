@@ -32,7 +32,8 @@ const DEFAULT_SETTINGS = {
   maintenanceMessage: 'System is under maintenance. Please try again later.',
   autoBackupEnabled: true,
   backupRetentionDays: 30,
-  logLevel: 'info'
+  logLevel: 'info',
+  pinoEnabled: true
 };
 
 export async function GET(request: NextRequest) {
@@ -165,10 +166,10 @@ export async function PUT(request: NextRequest) {
 
     await Promise.all(updatePromises);
 
-    // If log level was updated, update the logger configuration
-    if (settings.logLevel) {
+    // If log level or pino enabled was updated, update the logger configuration
+    if (settings.logLevel || settings.pinoEnabled !== undefined) {
       await updateLogLevel();
-      systemLogger.configUpdated('log_level', authResult.user.username);
+      systemLogger.configUpdated('logging_settings', authResult.user.username);
     }
 
     return NextResponse.json({ 
