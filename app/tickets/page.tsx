@@ -599,7 +599,7 @@ export default function TicketsPage() {
         } : null);
         // Reload assignable users for the new team
         setTimeout(() => loadAssignableUsers(), 100);
-        showNotification('Team changed - assigned user cleared', 'info');
+        showNotification('Team changed - assigned user cleared', 'success');
         return; // Exit early since we've handled the update
       }
       

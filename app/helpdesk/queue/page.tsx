@@ -42,6 +42,7 @@ interface Ticket {
   employee_number: string;
   phone_number: string;
   location: string;
+  cubicle_room?: string;
   section: string;
   office?: string;
   bureau?: string;
@@ -53,6 +54,7 @@ interface Ticket {
   implementation?: string;
   issue_title: string;
   issue_description: string;
+  computer_info?: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   status: 'pending' | 'assigned' | 'in_progress' | 'complete' | 'completed' | 'escalate' | 'escalated' | 'deleted';
   assigned_to?: string;
