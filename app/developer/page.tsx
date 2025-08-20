@@ -260,11 +260,9 @@ export default function DeveloperDashboard() {
 
   // Logout function
   const handleLogout = () => {
-    if (confirm('Are you sure you want to logout?')) {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('currentUser');
-      window.location.href = '/';
-    }
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('currentUser');
+    window.location.href = '/';
   };
 
   // Return to ticket queue

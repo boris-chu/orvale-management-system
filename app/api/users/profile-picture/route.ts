@@ -21,8 +21,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Check if user can edit this profile (own profile or admin permissions)
+    // Check if user can edit this profile (own profile, profile management permission, or admin permissions)
     const canEdit = authResult.user.id === parseInt(userId) || 
+                   authResult.user.permissions?.includes('user.manage_own_profile') ||
                    authResult.user.permissions?.includes('admin.manage_users');
 
     if (!canEdit) {
@@ -45,10 +46,16 @@ export async function POST(request: NextRequest) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
-    // Generate unique filename
+    // Get username for filename
+    const user = await getAsync('SELECT username FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Generate unique filename using username instead of ID
     const timestamp = Date.now();
     const extension = path.extname(file.name) || '.jpg';
-    const filename = `user-${userId}-${timestamp}${extension}`;
+    const filename = `${user.username}-${timestamp}${extension}`;
     const filepath = path.join(uploadsDir, filename);
 
     // Convert file to buffer and resize/optimize with sharp
@@ -66,9 +73,9 @@ export async function POST(request: NextRequest) {
       .toFile(filepath);
 
     // Remove old profile picture if it exists
-    const user = await getAsync('SELECT profile_picture FROM users WHERE id = ?', [userId]);
-    if (user?.profile_picture) {
-      const oldFilePath = path.join(uploadsDir, path.basename(user.profile_picture));
+    const existingUser = await getAsync('SELECT profile_picture FROM users WHERE id = ?', [userId]);
+    if (existingUser?.profile_picture) {
+      const oldFilePath = path.join(uploadsDir, path.basename(existingUser.profile_picture));
       if (fs.existsSync(oldFilePath)) {
         fs.unlinkSync(oldFilePath);
       }
@@ -112,8 +119,9 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });
     }
 
-    // Check if user can edit this profile (own profile or admin permissions)
+    // Check if user can edit this profile (own profile, profile management permission, or admin permissions)
     const canEdit = authResult.user.id === parseInt(userId) || 
+                   authResult.user.permissions?.includes('user.manage_own_profile') ||
                    authResult.user.permissions?.includes('admin.manage_users');
 
     if (!canEdit) {

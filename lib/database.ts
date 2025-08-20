@@ -200,8 +200,17 @@ export const initDB = () => {
                 );
             });
 
-            // Create default users
-            const defaultUsers = [
+            // Check if users already exist before seeding
+            db.get('SELECT COUNT(*) as count FROM users', (err, row: any) => {
+                if (err || row.count > 0) {
+                    console.log(`✅ Database already initialized with ${row?.count || 0} users`);
+                    resolve();
+                    return;
+                }
+
+                // Create default users only if database is empty
+                console.log('🌱 Seeding database with default users...');
+                const defaultUsers = [
                 {
                     username: 'admin',
                     display_name: 'System Administrator',
@@ -229,29 +238,30 @@ export const initDB = () => {
                     team_id: 'ITTS_Region7',
                     section_id: 'ITD'
                 }
-            ];
+                ];
 
-            let usersCreated = 0;
-            defaultUsers.forEach(userData => {
-                const hashedPassword = bcrypt.hashSync(userData.password, 10);
-                db.run(
-                    `INSERT OR REPLACE INTO users (username, display_name, email, password_hash, role, team_id, section_id) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                    [userData.username, userData.display_name, userData.email, hashedPassword, userData.role, userData.team_id, userData.section_id],
-                    function(err) {
-                        if (err) {
-                            console.error('Error creating user:', err);
-                        } else {
-                            usersCreated++;
-                            if (usersCreated === defaultUsers.length) {
-                                console.log('✅ Database tables created successfully');
-                                console.log(`📊 Database ready with ${usersCreated} users`);
-                                resolve();
+                let usersCreated = 0;
+                defaultUsers.forEach(userData => {
+                    const hashedPassword = bcrypt.hashSync(userData.password, 10);
+                    db.run(
+                        `INSERT OR IGNORE INTO users (username, display_name, email, password_hash, role, team_id, section_id) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                        [userData.username, userData.display_name, userData.email, hashedPassword, userData.role, userData.team_id, userData.section_id],
+                        function(err) {
+                            if (err) {
+                                console.error('Error creating user:', err);
+                            } else {
+                                usersCreated++;
+                                if (usersCreated === defaultUsers.length) {
+                                    console.log('✅ Database tables created successfully');
+                                    console.log(`📊 Database ready with ${usersCreated} users`);
+                                    resolve();
+                                }
                             }
                         }
-                    }
-                );
-            });
+                    );
+                });
+            }); // Close the db.get callback
         });
     });
 };

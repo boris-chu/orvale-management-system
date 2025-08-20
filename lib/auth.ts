@@ -99,7 +99,8 @@ export const getUserPermissions = async (user: User): Promise<string[]> => {
                 'ticket.update_own', 
                 'ticket.comment_own',
                 'queue.view_own_team',
-                'system.view_basic_info'
+                'system.view_basic_info',
+                'user.manage_own_profile'
             );
         }
         
@@ -136,7 +137,8 @@ export const getUserPermissions = async (user: User): Promise<string[]> => {
                 'queue.access_helpdesk',
                 'system.view_basic_info',
                 'reporting.view_all',
-                'reporting.view_team_metrics'
+                'reporting.view_team_metrics',
+                'user.manage_own_profile'
             );
         }
         
@@ -153,7 +155,8 @@ export const getUserPermissions = async (user: User): Promise<string[]> => {
                 'queue.view_own_team',
                 'queue.view_escalated',
                 'queue.access_helpdesk',
-                'system.view_basic_info'
+                'system.view_basic_info',
+                'user.manage_own_profile'
             );
         }
         
