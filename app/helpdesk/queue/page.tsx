@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+// Material-UI imports for working Select components
+import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   AlertTriangle, 
@@ -18,7 +20,13 @@ import {
   ChevronRight,
   Filter,
   ArrowLeft,
-  LogOut
+  LogOut,
+  Eye,
+  Save,
+  Check,
+  Building2,
+  Monitor,
+  CheckCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -106,6 +114,16 @@ export default function HelpdeskQueue() {
   const [showSettings, setShowSettings] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  
+  // Ticket modal state
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [modalActiveTab, setModalActiveTab] = useState('details');
+  const [assignableUsers, setAssignableUsers] = useState<any[]>([]);
+  const [loadingAssignableUsers, setLoadingAssignableUsers] = useState(false);
+  const [availableTeams, setAvailableTeams] = useState<any[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [originalTicket, setOriginalTicket] = useState<Ticket | null>(null);
 
   useEffect(() => {
     checkPermissions();
@@ -308,6 +326,90 @@ export default function HelpdeskQueue() {
     }
   };
 
+  // Ticket modal helper functions
+  const canAssignCrossTeam = () => {
+    return currentUser?.permissions?.includes('helpdesk.assign_cross_team');
+  };
+
+  const isTicketEditable = (ticket: Ticket | null) => {
+    if (!ticket) return false;
+    return ticket.status !== 'completed';
+  };
+
+  const openTicketModal = (ticket: Ticket) => {
+    setSelectedTicket(ticket);
+    setOriginalTicket({...ticket});
+    setSaveStatus('idle');
+    setModalActiveTab('details');
+    loadAssignableUsers();
+    loadAvailableTeams();
+  };
+
+  const loadAssignableUsers = async () => {
+    setLoadingAssignableUsers(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/users/assignable', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAssignableUsers(data.users || []);
+      }
+    } catch (error) {
+      console.error('Error loading assignable users:', error);
+    } finally {
+      setLoadingAssignableUsers(false);
+    }
+  };
+
+  const loadAvailableTeams = async () => {
+    if (!canAssignCrossTeam()) return;
+    setLoadingTeams(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/helpdesk/teams', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableTeams(data.data?.all_teams || []);
+      }
+    } catch (error) {
+      console.error('Error loading available teams:', error);
+    } finally {
+      setLoadingTeams(false);
+    }
+  };
+
+  const updateTicketField = (field: string, value: string) => {
+    if (selectedTicket && isTicketEditable(selectedTicket)) {
+      if (field === 'assigned_team' && value !== selectedTicket.assigned_team) {
+        setSelectedTicket(prev => prev ? {
+          ...prev,
+          assigned_team: value,
+          assigned_to: ''
+        } : null);
+        setTimeout(() => loadAssignableUsers(), 100);
+        showNotification('Team changed - assigned user cleared', 'success');
+        return;
+      }
+      setSelectedTicket(prev => prev ? { ...prev, [field]: value } : null);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return formatRegularTime(dateString);
+  };
+
+  const formatStatus = (status: string) => {
+    return status.replace('_', ' ').toUpperCase();
+  };
+
+  const formatPriority = (priority: string) => {
+    return priority.toUpperCase();
+  };
+
   const filterTickets = (tickets: Ticket[]) => {
     return tickets.filter(ticket => 
       ticket.issue_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -322,7 +424,8 @@ export default function HelpdeskQueue() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="border rounded-lg p-4 hover:shadow-md transition-shadow bg-white"
+      className="border rounded-lg p-4 hover:shadow-md transition-shadow bg-white cursor-pointer"
+      onClick={() => openTicketModal(ticket)}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
@@ -343,6 +446,17 @@ export default function HelpdeskQueue() {
           <p className="text-sm text-gray-600 line-clamp-2 mb-2">
             {ticket.issue_description}
           </p>
+        </div>
+        <div className="ml-4" onClick={(e) => e.stopPropagation()}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
+            onClick={() => openTicketModal(ticket)}
+          >
+            <Eye className="h-4 w-4 mr-1" />
+            View
+          </Button>
         </div>
       </div>
       
@@ -739,6 +853,157 @@ export default function HelpdeskQueue() {
           localStorage.setItem('currentUser', JSON.stringify(updatedUser));
         }}
       />
+
+      {/* Ticket Detail Modal */}
+      {selectedTicket && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setSelectedTicket(null)}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] min-h-[60vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex-1">
+                <h2 className="text-xl font-bold">{selectedTicket.issue_title}</h2>
+                {selectedTicket.status === 'completed' && (
+                  <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="text-sm text-green-800 font-medium">
+                      This ticket has been completed and is now read-only
+                    </span>
+                  </div>
+                )}
+                {canAssignCrossTeam() && (
+                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-blue-600" />
+                    <span className="text-sm text-blue-800 font-medium">
+                      Helpdesk Mode - Cross-team assignment available
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setSelectedTicket(null)}>
+                  ✕ Close
+                </Button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-semibold text-blue-600 mb-2">Request Information</h3>
+                <div className="space-y-2 text-sm">
+                  <div><strong>Status:</strong> 
+                    <Badge className={`${getStatusColor(selectedTicket.status)} ml-2`}>
+                      {formatStatus(selectedTicket.status)}
+                    </Badge>
+                  </div>
+                  <div><strong>Priority:</strong> 
+                    <Badge className={`${getPriorityColor(selectedTicket.priority)} ml-2`}>
+                      {formatPriority(selectedTicket.priority)}
+                    </Badge>
+                  </div>
+                  <div><strong>Submitted:</strong> {formatDate(selectedTicket.submitted_at)}</div>
+                  <div><strong>Ticket ID:</strong> {selectedTicket.submission_id}</div>
+                  
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To:</label>
+                    <FormControl size="small" className="w-full">
+                      <InputLabel id="assigned-to-label">Select Assignee</InputLabel>
+                      <Select
+                        labelId="assigned-to-label"
+                        value={selectedTicket.assigned_to || ''}
+                        label="Select Assignee"
+                        onChange={(e) => updateTicketField('assigned_to', e.target.value)}
+                        disabled={loadingAssignableUsers || !isTicketEditable(selectedTicket)}
+                      >
+                        <MenuItem value=""><em>Unassigned</em></MenuItem>
+                        {assignableUsers.map((user) => (
+                          <MenuItem key={user.username} value={user.username}>
+                            {user.display_label || `${user.display_name} (${user.username})`}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </div>
+                  
+                  {/* Team Assignment - Only for helpdesk users */}
+                  {canAssignCrossTeam() && (
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Assigned Team:
+                        <Badge variant="outline" className="ml-2 text-xs">Helpdesk</Badge>
+                      </label>
+                      <FormControl size="small" className="w-full">
+                        <InputLabel id="assigned-team-label">Select Team</InputLabel>
+                        <Select
+                          labelId="assigned-team-label"
+                          value={selectedTicket.assigned_team || ''}
+                          label="Select Team"
+                          onChange={(e) => updateTicketField('assigned_team', e.target.value)}
+                          disabled={loadingTeams || !isTicketEditable(selectedTicket)}
+                        >
+                          <MenuItem value=""><em>Unassigned</em></MenuItem>
+                          {availableTeams.map((team) => (
+                            <MenuItem key={team.id} value={team.id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{team.name}</span>
+                                <span className="text-xs text-gray-500">
+                                  {team.section_name} • {team.active_tickets} active tickets
+                                  {team.team_lead_name && ` • Lead: ${team.team_lead_name}`}
+                                </span>
+                              </div>
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="font-semibold text-blue-600 mb-2">User Information</h3>
+                <div className="space-y-2 text-sm">
+                  <div><strong>Name:</strong> {selectedTicket.user_name}</div>
+                  <div><strong>Employee #:</strong> {selectedTicket.employee_number}</div>
+                  <div><strong>Phone:</strong> {selectedTicket.phone_number}</div>
+                  <div><strong>Location:</strong> {selectedTicket.location}</div>
+                  <div><strong>Section:</strong> {selectedTicket.section}</div>
+                  {selectedTicket.request_creator_display_name && (
+                    <div><strong>Request Creator:</strong> {selectedTicket.request_creator_display_name}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Issue Details */}
+            <div className="mt-6">
+              <h3 className="font-semibold text-blue-600 mb-2">Issue Details</h3>
+              <div className="bg-gray-50 p-4 rounded border-l-4 border-blue-500">
+                <p className="text-sm whitespace-pre-wrap">{selectedTicket.issue_description}</p>
+              </div>
+            </div>
+            
+            {/* System Information */}
+            {selectedTicket.computer_info && (
+              <div className="mt-6">
+                <h3 className="font-semibold text-blue-600 mb-2 flex items-center gap-2">
+                  <Monitor className="h-5 w-5" />
+                  System Information
+                </h3>
+                <div className="bg-gray-50 p-4 rounded border-l-4 border-green-500">
+                  <pre className="text-xs overflow-x-auto">
+                    {JSON.stringify(JSON.parse(selectedTicket.computer_info), null, 2)}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
