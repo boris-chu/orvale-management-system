@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Removed static imports - will load dynamically from database APIs
 import CategoryBrowserModal from '../../components/CategoryBrowserModal';
 import OrganizationalBrowserModal from '../../components/OrganizationalBrowserModal';
+import { formatRegularTime } from '@/lib/time-utils';
 import { UserAvatar } from '@/components/UserAvatar';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
 import TicketHistoryComponent from '../../components/TicketHistoryComponent';
@@ -507,7 +508,7 @@ export default function TicketsPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+    return formatRegularTime(dateString);
   };
 
   const getPriorityColor = (priority: string) => {

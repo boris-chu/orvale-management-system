@@ -7,7 +7,7 @@ const logger = createContextLogger('users-api');
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify authentication
@@ -16,7 +16,8 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = parseInt(params.id);
+    const resolvedParams = await params;
+    const userId = parseInt(resolvedParams.id);
     const currentUser = authResult.user;
 
     // Users can only update their own profile unless they have admin permissions
@@ -69,8 +70,9 @@ export async function PUT(
     });
 
   } catch (error) {
+    const resolvedParams = await params;
     logger.error({
-      userId: params.id,
+      userId: resolvedParams.id,
       error,
       event: 'profile_update_error'
     }, 'Error updating user profile');

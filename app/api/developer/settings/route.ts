@@ -32,6 +32,7 @@ const DEFAULT_SETTINGS = {
   maintenanceMessage: 'System is under maintenance. Please try again later.',
   autoBackupEnabled: true,
   backupRetentionDays: 30,
+  backupLocation: './backups',
   logLevel: 'info',
   pinoEnabled: true
 };

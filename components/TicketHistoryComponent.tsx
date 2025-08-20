@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, User, ArrowRight, AlertTriangle, CheckCircle, UserCheck, Users, Tag, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatRegularTime } from '@/lib/time-utils';
 
 interface HistoryEntry {
   id: number;
@@ -167,12 +168,9 @@ export default function TicketHistoryComponent({ ticketId, isVisible }: TicketHi
     } else if (diffDays < 7) {
       return `${Math.floor(diffDays)} days ago`;
     } else {
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+      return formatRegularTime(date, {
+        dateFormat: 'short',
+        includeSeconds: false
       });
     }
   };

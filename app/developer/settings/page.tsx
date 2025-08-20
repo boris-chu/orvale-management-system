@@ -27,6 +27,7 @@ import {
   Phone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { format24Hour } from '@/lib/time-utils';
 
 interface SystemSettings {
   // Security Settings
@@ -55,6 +56,7 @@ interface SystemSettings {
   maintenanceMessage: string;
   autoBackupEnabled: boolean;
   backupRetentionDays: number;
+  backupLocation: string;
   logLevel: string;
   pinoEnabled: boolean;
 }
@@ -93,6 +95,7 @@ export default function SystemSettings() {
     maintenanceMessage: 'System is under maintenance. Please try again later.',
     autoBackupEnabled: true,
     backupRetentionDays: 30,
+    backupLocation: './backups',
     logLevel: 'info',
     pinoEnabled: true
   });
@@ -104,6 +107,12 @@ export default function SystemSettings() {
   const [notification, setNotification] = useState<SettingsNotification | null>(null);
   const [emergencyContactValue, setEmergencyContactValue] = useState<string>('');
   const [selectedTheme, setSelectedTheme] = useState<string>('orvale-default');
+  
+  // Backup-related state
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [showBackupHistory, setShowBackupHistory] = useState(false);
+  const [backupList, setBackupList] = useState<any[]>([]);
+  const [backupStats, setBackupStats] = useState<any>(null);
   
   // Preview state (separate from form state)
   const [previewData, setPreviewData] = useState({
@@ -287,6 +296,134 @@ export default function SystemSettings() {
       showNotification('Email connection test failed', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Backup functions
+  const createManualBackup = async () => {
+    setBackupLoading(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/developer/backup', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: 'create' })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        showNotification(`Manual backup created successfully: ${result.backup.filename}`, 'success');
+        // Refresh backup list if it's open
+        if (showBackupHistory) {
+          loadBackupHistory();
+        }
+      } else {
+        showNotification(result.error || 'Failed to create backup', 'error');
+      }
+    } catch (error) {
+      console.error('Backup creation failed:', error);
+      showNotification('Failed to create backup. Please try again.', 'error');
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const loadBackupHistory = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const [listResponse, statsResponse] = await Promise.all([
+        fetch('/api/developer/backup?action=list', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('/api/developer/backup?action=stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ]);
+      
+      if (listResponse.ok && statsResponse.ok) {
+        const listData = await listResponse.json();
+        const statsData = await statsResponse.json();
+        
+        setBackupList(listData.backups || []);
+        setBackupStats(statsData.stats || null);
+      } else {
+        showNotification('Failed to load backup history', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to load backup history:', error);
+      showNotification('Failed to load backup history', 'error');
+    }
+  };
+
+  const toggleBackupHistory = async () => {
+    if (!showBackupHistory) {
+      setShowBackupHistory(true);
+      await loadBackupHistory();
+    } else {
+      setShowBackupHistory(false);
+    }
+  };
+
+  const cleanOldBackups = async () => {
+    setBackupLoading(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/developer/backup', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: 'cleanup' })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        showNotification(`Cleanup completed - deleted ${result.deleted} old backup files`, 'success');
+        // Refresh backup list if it's open
+        if (showBackupHistory) {
+          loadBackupHistory();
+        }
+      } else {
+        showNotification(result.error || 'Failed to cleanup backups', 'error');
+      }
+    } catch (error) {
+      console.error('Backup cleanup failed:', error);
+      showNotification('Failed to cleanup backups. Please try again.', 'error');
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const downloadBackup = async (filename: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/developer/backup/download?filename=${filename}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        showNotification(`Backup downloaded: ${filename}`, 'success');
+      } else {
+        showNotification('Failed to download backup', 'error');
+      }
+    } catch (error) {
+      console.error('Download failed:', error);
+      showNotification('Failed to download backup', 'error');
     }
   };
 
@@ -992,38 +1129,235 @@ export default function SystemSettings() {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Database className="h-5 w-5" />
-                    <span>Backup Configuration</span>
+                    <span>Database Backup System</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label htmlFor="backupRetentionDays">Backup Retention (days)</Label>
-                      <Input
-                        id="backupRetentionDays"
-                        type="number"
-                        min="1"
-                        max="365"
-                        value={settings.backupRetentionDays}
-                        onChange={(e) => setSettings({
+                <CardContent className="space-y-6">
+                  {/* Backup Configuration */}
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-3">Backup Configuration</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="backupLocation">Backup Location</Label>
+                        <Input
+                          id="backupLocation"
+                          value={settings.backupLocation}
+                          onChange={(e) => setSettings({
+                            ...settings, 
+                            backupLocation: e.target.value
+                          })}
+                          placeholder="./backups"
+                        />
+                        <p className="text-sm text-gray-500 mt-1">Directory path where backup files will be stored (relative to application root)</p>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="backupRetentionDays">Backup Retention (days)</Label>
+                        <Input
+                          id="backupRetentionDays"
+                          type="number"
+                          min="1"
+                          max="365"
+                          value={settings.backupRetentionDays}
+                          onChange={(e) => setSettings({
+                            ...settings, 
+                            backupRetentionDays: parseInt(e.target.value) || 30
+                          })}
+                        />
+                        <p className="text-sm text-gray-500 mt-1">Old backups will be automatically deleted after this many days</p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4">
+                      <Label>Backup Schedule</Label>
+                      <div className="mt-1 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800 font-medium">Automatic Daily Backups</p>
+                        <p className="text-sm text-blue-700 mt-1">
+                          When enabled, the system will create automatic backups every 24 hours
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 mt-4">
+                      <Switch
+                        id="autoBackupEnabled"
+                        checked={settings.autoBackupEnabled}
+                        onCheckedChange={(checked) => setSettings({
                           ...settings, 
-                          backupRetentionDays: parseInt(e.target.value) || 30
+                          autoBackupEnabled: checked
                         })}
                       />
+                      <Label htmlFor="autoBackupEnabled">Enable Automatic Backup</Label>
+                    </div>
+                    
+                    {settings.autoBackupEnabled && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-3">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="text-green-800 font-medium">Automatic Backup Active</span>
+                        </div>
+                        <p className="text-green-700 text-sm">
+                          The system will automatically create daily backups and clean up old files based on your retention settings.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Manual Backup Actions */}
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-3">Manual Backup Actions</h4>
+                    <div className="flex flex-wrap gap-3">
+                      <Button 
+                        variant="outline" 
+                        onClick={createManualBackup}
+                        disabled={backupLoading}
+                        className="flex items-center space-x-2"
+                      >
+                        <Database className="h-4 w-4" />
+                        <span>{backupLoading ? 'Creating...' : 'Create Manual Backup'}</span>
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        onClick={toggleBackupHistory}
+                        className="flex items-center space-x-2"
+                      >
+                        <Clock className="h-4 w-4" />
+                        <span>{showBackupHistory ? 'Hide' : 'View'} Backup History</span>
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        onClick={cleanOldBackups}
+                        disabled={backupLoading}
+                        className="flex items-center space-x-2"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        <span>{backupLoading ? 'Cleaning...' : 'Clean Old Backups'}</span>
+                      </Button>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="autoBackupEnabled"
-                      checked={settings.autoBackupEnabled}
-                      onCheckedChange={(checked) => setSettings({
-                        ...settings, 
-                        autoBackupEnabled: checked
-                      })}
-                    />
-                    <Label htmlFor="autoBackupEnabled">Enable Auto Backup</Label>
+
+                  {/* Backup History */}
+                  {showBackupHistory && (
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-3">Backup History</h4>
+                      
+                      {/* Backup Statistics */}
+                      {backupStats && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm font-medium text-blue-600">Total Backups</p>
+                            <p className="text-lg font-bold text-blue-900">{backupStats.totalBackups}</p>
+                          </div>
+                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <p className="text-sm font-medium text-green-600">Manual</p>
+                            <p className="text-lg font-bold text-green-900">{backupStats.manualBackups}</p>
+                          </div>
+                          <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                            <p className="text-sm font-medium text-purple-600">Automatic</p>
+                            <p className="text-lg font-bold text-purple-900">{backupStats.automaticBackups}</p>
+                          </div>
+                          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <p className="text-sm font-medium text-yellow-600">Total Size</p>
+                            <p className="text-lg font-bold text-yellow-900">{backupStats.totalSizeMB} MB</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Backup List */}
+                      <div className="border rounded-lg overflow-hidden">
+                        {backupList.length === 0 ? (
+                          <div className="p-6 text-center text-gray-500">
+                            <Database className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                            <p>No backup files found</p>
+                            <p className="text-sm">Create your first backup using the button above</p>
+                          </div>
+                        ) : (
+                          <div className="max-h-96 overflow-y-auto">
+                            <table className="w-full">
+                              <thead className="bg-gray-50 border-b">
+                                <tr>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Filename</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-200">
+                                {backupList.map((backup, index) => (
+                                  <tr key={backup.filename} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                    <td className="px-4 py-3">
+                                      <span className="text-sm font-mono text-gray-900">{backup.filename}</span>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                        backup.type === 'manual' 
+                                          ? 'bg-green-100 text-green-800' 
+                                          : 'bg-blue-100 text-blue-800'
+                                      }`}>
+                                        {backup.type}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-900">
+                                      {backup.sizeMB} MB
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-900">
+                                      {format24Hour(backup.createdAt)}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => downloadBackup(backup.filename)}
+                                        className="text-xs"
+                                      >
+                                        Download
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="mt-3 text-sm text-gray-500">
+                        <p>💡 Tip: Backup files are automatically cleaned up after {settings.backupRetentionDays} days</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Backup Information */}
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-3">Backup Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-3 bg-gray-50 border rounded-lg">
+                        <p className="text-sm font-medium text-gray-600">Current Backup Location</p>
+                        <p className="text-sm text-gray-900 mt-1 font-mono">{settings.backupLocation || './backups'}/</p>
+                      </div>
+                      
+                      <div className="p-3 bg-gray-50 border rounded-lg">
+                        <p className="text-sm font-medium text-gray-600">Database Size</p>
+                        <p className="text-sm text-gray-900 mt-1">~{Math.round(1.2)} MB</p>
+                      </div>
+                      
+                      <div className="p-3 bg-gray-50 border rounded-lg">
+                        <p className="text-sm font-medium text-gray-600">Backup Format</p>
+                        <p className="text-sm text-gray-900 mt-1">SQLite .db files</p>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Security Notice */}
+                  <Alert className="bg-yellow-50 border-yellow-200">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-yellow-800">
+                      <strong>Security Note:</strong> Backup files contain sensitive data. Store them securely and ensure proper access controls.
+                    </AlertDescription>
+                  </Alert>
                 </CardContent>
               </Card>
             </TabsContent>

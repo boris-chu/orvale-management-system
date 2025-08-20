@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { LogIn, Ticket, Users, Search, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import MaterialUILoginModalAnimated from '@/components/MaterialUILoginModalAnimated';
+import { formatRegularTime } from '@/lib/time-utils';
 
 
 export default function Home() {
@@ -201,7 +202,7 @@ export default function Home() {
                     </div>
                     <div className="text-sm text-gray-600">
                       <div><strong>Issue:</strong> {ticketStatus.issue_title}</div>
-                      <div><strong>Submitted:</strong> {new Date(ticketStatus.submitted_at).toLocaleDateString()}</div>
+                      <div><strong>Submitted:</strong> {formatRegularTime(ticketStatus.submitted_at)}</div>
                       {ticketStatus.assigned_team && (
                         <div><strong>Team:</strong> {formatTeamName(ticketStatus.assigned_team)}</div>
                       )}

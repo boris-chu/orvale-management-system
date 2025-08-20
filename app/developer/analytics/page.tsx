@@ -20,6 +20,7 @@ import {
   Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatRegularTime } from '@/lib/time-utils';
 
 // Placeholder chart components - will be replaced with actual evilcharts
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Cell, BarChart, Bar, Pie } from 'recharts';
@@ -383,7 +384,7 @@ export default function SystemAnalytics() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="date" tickFormatter={(date) => new Date(date).getDate().toString()} />
                         <YAxis />
-                        <Tooltip labelFormatter={(date) => new Date(date).toLocaleDateString()} />
+                        <Tooltip labelFormatter={(date) => formatRegularTime(date)} />
                         <Line type="monotone" dataKey="tickets" stroke="#8884d8" strokeWidth={2} />
                         <Line type="monotone" dataKey="resolved" stroke="#82ca9d" strokeWidth={2} />
                       </LineChart>
@@ -451,7 +452,7 @@ export default function SystemAnalytics() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" tickFormatter={(date) => new Date(date).getDate().toString()} />
                       <YAxis />
-                      <Tooltip labelFormatter={(date) => new Date(date).toLocaleDateString()} />
+                      <Tooltip labelFormatter={(date) => formatRegularTime(date)} />
                       <Bar dataKey="tickets" fill="#8884d8" name="New Tickets" />
                       <Bar dataKey="resolved" fill="#82ca9d" name="Resolved" />
                     </BarChart>

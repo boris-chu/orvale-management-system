@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog as RadixDialog, DialogContent as RadixDialogContent, DialogHeader as RadixDialogHeader, DialogTitle as RadixDialogTitle, DialogTrigger as RadixDialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Users, 
@@ -27,8 +27,23 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { 
+  Select, 
+  MenuItem, 
+  FormControl, 
+  InputLabel, 
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Checkbox,
+  FormControlLabel,
+  Box,
+  Typography
+} from '@mui/material';
 import { UserAvatar } from '@/components/UserAvatar';
+import { formatRegularTime } from '@/lib/time-utils';
 
 interface User {
   id: number;
@@ -548,7 +563,7 @@ export default function UserManagement() {
                         )}
                       </td>
                       <td className="py-3 px-4 text-sm text-gray-500">
-                        {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
+                        {user.last_login ? formatRegularTime(user.last_login) : 'Never'}
                       </td>
                       {canManage && (
                         <td className="py-3 px-4">
@@ -596,329 +611,331 @@ export default function UserManagement() {
       </div>
 
       {/* Create User Modal */}
-      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <UserPlus className="h-5 w-5" />
-              <span>Create New User</span>
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                value={formData.username}
-                onChange={(e) => setFormData({...formData, username: e.target.value})}
-                placeholder="john.doe"
-              />
-            </div>
+      <Dialog 
+        open={showCreateModal} 
+        onClose={() => setShowCreateModal(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center" gap={1}>
+            <UserPlus className="h-5 w-5" />
+            <Typography variant="h6">Create New User</Typography>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={3} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Username"
+              value={formData.username}
+              onChange={(e) => setFormData({...formData, username: e.target.value})}
+              placeholder="john.doe"
+              size="small"
+            />
             
-            <div>
-              <Label htmlFor="display_name">Display Name</Label>
-              <Input
-                id="display_name"
-                value={formData.display_name}
-                onChange={(e) => setFormData({...formData, display_name: e.target.value})}
-                placeholder="John Doe"
-              />
-            </div>
+            <TextField
+              fullWidth
+              label="Display Name"
+              value={formData.display_name}
+              onChange={(e) => setFormData({...formData, display_name: e.target.value})}
+              placeholder="John Doe"
+              size="small"
+            />
             
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                placeholder="john.doe@example.com"
-              />
-            </div>
+            <TextField
+              fullWidth
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              placeholder="john.doe@example.com"
+              size="small"
+            />
             
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
-                placeholder="Enter password"
-              />
-            </div>
+            <TextField
+              fullWidth
+              label="Password"
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              placeholder="Enter password"
+              size="small"
+            />
             
-            <div>
-              <Label htmlFor="team">Team</Label>
-              <FormControl fullWidth size="small">
-                <InputLabel>Select Team</InputLabel>
-                <Select
-                  value={formData.team_id}
-                  label="Select Team"
-                  onChange={(e) => setFormData({...formData, team_id: e.target.value as string})}
-                >
-                  <MenuItem value="">No Team</MenuItem>
-                  {teams.map((team) => (
-                    <MenuItem key={team.id} value={team.id}>
-                      {team.name} ({team.section_name})
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </div>
-            
-            <div>
-              <Label htmlFor="role">Role</Label>
-              <FormControl fullWidth size="small">
-                <InputLabel>Select Role</InputLabel>
-                <Select
-                  value={formData.role_id}
-                  label="Select Role"
-                  onChange={(e) => setFormData({...formData, role_id: e.target.value as string})}
-                >
-                  {roles.map((role) => (
-                    <MenuItem key={role.id} value={role.id}>
-                      {role.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="active"
-                checked={formData.active}
-                onChange={(e) => setFormData({...formData, active: e.target.checked})}
-                className="rounded"
-              />
-              <Label htmlFor="active">Active user</Label>
-            </div>
-            
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowCreateModal(false)}
-                disabled={saving}
+            <FormControl fullWidth size="small">
+              <InputLabel>Select Team</InputLabel>
+              <Select
+                value={formData.team_id}
+                label="Select Team"
+                onChange={(e) => setFormData({...formData, team_id: e.target.value as string})}
               >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleCreateUser}
-                disabled={saving}
+                <MenuItem value="">No Team</MenuItem>
+                {teams.map((team) => (
+                  <MenuItem key={team.id} value={team.id}>
+                    {team.name} ({team.section_name})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <FormControl fullWidth size="small">
+              <InputLabel>Select Role</InputLabel>
+              <Select
+                value={formData.role_id}
+                label="Select Role"
+                onChange={(e) => setFormData({...formData, role_id: e.target.value as string})}
               >
-                {saving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  'Create User'
-                )}
-              </Button>
-            </div>
-          </div>
+                {roles.map((role) => (
+                  <MenuItem key={role.id} value={role.id}>
+                    {role.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formData.active}
+                  onChange={(e) => setFormData({...formData, active: e.target.checked})}
+                />
+              }
+              label="Active user"
+            />
+          </Box>
         </DialogContent>
+        
+        <DialogActions sx={{ p: 3, pt: 2 }}>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowCreateModal(false)}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleCreateUser}
+            disabled={saving}
+          >
+            {saving ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              'Create User'
+            )}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Edit User Modal */}
-      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <Edit className="h-5 w-5" />
-              <span>Edit User</span>
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit_username">Username</Label>
-              <Input
-                id="edit_username"
-                value={formData.username}
-                onChange={(e) => setFormData({...formData, username: e.target.value})}
-                placeholder="john.doe"
-              />
-            </div>
+      <Dialog 
+        open={showEditModal} 
+        onClose={() => setShowEditModal(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Edit className="h-5 w-5" />
+            <Typography variant="h6">Edit User</Typography>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={3} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Username"
+              value={formData.username}
+              onChange={(e) => setFormData({...formData, username: e.target.value})}
+              placeholder="john.doe"
+              size="small"
+            />
             
-            <div>
-              <Label htmlFor="edit_display_name">Display Name</Label>
-              <Input
-                id="edit_display_name"
-                value={formData.display_name}
-                onChange={(e) => setFormData({...formData, display_name: e.target.value})}
-                placeholder="John Doe"
-              />
-            </div>
+            <TextField
+              fullWidth
+              label="Display Name"
+              value={formData.display_name}
+              onChange={(e) => setFormData({...formData, display_name: e.target.value})}
+              placeholder="John Doe"
+              size="small"
+            />
             
-            <div>
-              <Label htmlFor="edit_email">Email</Label>
-              <Input
-                id="edit_email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                placeholder="john.doe@example.com"
-              />
-            </div>
+            <TextField
+              fullWidth
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              placeholder="john.doe@example.com"
+              size="small"
+            />
             
-            <div>
-              <Label htmlFor="edit_password">New Password (leave blank to keep current)</Label>
-              <Input
-                id="edit_password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
-                placeholder="Enter new password"
-              />
-            </div>
+            <TextField
+              fullWidth
+              label="New Password (leave blank to keep current)"
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              placeholder="Enter new password"
+              size="small"
+            />
             
-            <div>
-              <Label htmlFor="edit_team">Team</Label>
-              <FormControl fullWidth size="small">
-                <InputLabel>Select Team</InputLabel>
-                <Select
-                  value={formData.team_id}
-                  label="Select Team"
-                  onChange={(e) => setFormData({...formData, team_id: e.target.value as string})}
-                >
-                  <MenuItem value="">No Team</MenuItem>
-                  {teams.map((team) => (
-                    <MenuItem key={team.id} value={team.id}>
-                      {team.name} ({team.section_name})
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </div>
-            
-            <div>
-              <Label htmlFor="edit_role">Role</Label>
-              <FormControl fullWidth size="small">
-                <InputLabel>Select Role</InputLabel>
-                <Select
-                  value={formData.role_id}
-                  label="Select Role"
-                  onChange={(e) => setFormData({...formData, role_id: e.target.value as string})}
-                >
-                  {roles.map((role) => (
-                    <MenuItem key={role.id} value={role.id}>
-                      {role.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="edit_active"
-                checked={formData.active}
-                onChange={(e) => setFormData({...formData, active: e.target.checked})}
-                className="rounded"
-              />
-              <Label htmlFor="edit_active">Active user</Label>
-            </div>
-            
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowEditModal(false)}
-                disabled={saving}
+            <FormControl fullWidth size="small">
+              <InputLabel>Select Team</InputLabel>
+              <Select
+                value={formData.team_id}
+                label="Select Team"
+                onChange={(e) => setFormData({...formData, team_id: e.target.value as string})}
               >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleEditUser}
-                disabled={saving}
+                <MenuItem value="">No Team</MenuItem>
+                {teams.map((team) => (
+                  <MenuItem key={team.id} value={team.id}>
+                    {team.name} ({team.section_name})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <FormControl fullWidth size="small">
+              <InputLabel>Select Role</InputLabel>
+              <Select
+                value={formData.role_id}
+                label="Select Role"
+                onChange={(e) => setFormData({...formData, role_id: e.target.value as string})}
               >
-                {saving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  'Update User'
-                )}
-              </Button>
-            </div>
-          </div>
+                {roles.map((role) => (
+                  <MenuItem key={role.id} value={role.id}>
+                    {role.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formData.active}
+                  onChange={(e) => setFormData({...formData, active: e.target.checked})}
+                />
+              }
+              label="Active user"
+            />
+          </Box>
         </DialogContent>
+        
+        <DialogActions sx={{ p: 3, pt: 2 }}>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowEditModal(false)}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleEditUser}
+            disabled={saving}
+          >
+            {saving ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              'Update User'
+            )}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Password Reset Modal */}
-      <Dialog open={showPasswordResetModal} onOpenChange={setShowPasswordResetModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <Key className="h-5 w-5" />
-              <span>Reset Password</span>
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-start space-x-2">
+      <Dialog 
+        open={showPasswordResetModal} 
+        onClose={() => {
+          setShowPasswordResetModal(false);
+          setSelectedUser(null);
+          setResetPassword('');
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Key className="h-5 w-5" />
+            <Typography variant="h6">Reset Password</Typography>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={3} sx={{ mt: 1 }}>
+            <Box 
+              sx={{ 
+                p: 2, 
+                backgroundColor: '#fefce8', 
+                border: '1px solid #fde047', 
+                borderRadius: 1 
+              }}
+            >
+              <Box display="flex" alignItems="flex-start" gap={1}>
                 <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-yellow-800">Password Reset</p>
-                  <p className="text-sm text-yellow-700 mt-1">
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: '#92400e' }}>
+                    Password Reset
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#a16207', mt: 0.5 }}>
                     You are about to reset the password for <strong>{selectedUser?.display_name}</strong> (@{selectedUser?.username}).
-                  </p>
-                </div>
-              </div>
-            </div>
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
 
-            <div>
-              <Label htmlFor="new_password">New Password</Label>
-              <Input
-                id="new_password"
-                type="password"
-                value={resetPassword}
-                onChange={(e) => setResetPassword(e.target.value)}
-                placeholder="Enter new password (min 6 characters)"
-                className="mt-1"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Password must be at least 6 characters long
-              </p>
-            </div>
-            
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setShowPasswordResetModal(false);
-                  setSelectedUser(null);
-                  setResetPassword('');
-                }}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handlePasswordReset}
-                disabled={saving || !resetPassword}
-                className="bg-orange-600 hover:bg-orange-700"
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Resetting...
-                  </>
-                ) : (
-                  <>
-                    <Key className="h-4 w-4 mr-2" />
-                    Reset Password
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+            <TextField
+              fullWidth
+              label="New Password"
+              type="password"
+              value={resetPassword}
+              onChange={(e) => setResetPassword(e.target.value)}
+              placeholder="Enter new password (min 6 characters)"
+              size="small"
+              helperText="Password must be at least 6 characters long"
+            />
+          </Box>
         </DialogContent>
+        
+        <DialogActions sx={{ p: 3, pt: 2 }}>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setShowPasswordResetModal(false);
+              setSelectedUser(null);
+              setResetPassword('');
+            }}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handlePasswordReset}
+            disabled={saving || !resetPassword}
+            className="bg-orange-600 hover:bg-orange-700"
+          >
+            {saving ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Resetting...
+              </>
+            ) : (
+              <>
+                <Key className="h-4 w-4 mr-2" />
+                Reset Password
+              </>
+            )}
+          </Button>
+        </DialogActions>
       </Dialog>
     </div>
   );
