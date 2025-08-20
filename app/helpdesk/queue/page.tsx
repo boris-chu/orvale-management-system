@@ -459,6 +459,7 @@ export default function HelpdeskQueue() {
                   <UserAvatar 
                     user={currentUser}
                     size="md"
+                    showOnlineIndicator={true}
                     className="border-2 border-gray-200 hover:border-blue-400 transition-colors duration-200"
                   />
                 </button>

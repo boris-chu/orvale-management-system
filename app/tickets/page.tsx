@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 // Material-UI imports for working Select components
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings, LogOut, ChevronDown, CheckCircle } from 'lucide-react';
+import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings, LogOut, CheckCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 // Removed static imports - will load dynamically from database APIs
@@ -884,18 +884,14 @@ export default function TicketsPage() {
                           e.stopPropagation();
                           setShowUserMenu(!showUserMenu);
                         }}
-                        className="flex items-center space-x-3 p-2 rounded-lg hover:bg-blue-700 transition-all duration-200 border border-blue-400 hover:border-white"
+                        className="flex items-center rounded-full p-1 hover:bg-blue-700 transition-colors duration-200"
                       >
                         <UserAvatar 
                           user={currentUser}
                           size="lg"
                           showOnlineIndicator={true}
+                          className="border-2 border-white/30 hover:border-white transition-colors duration-200"
                         />
-                        <div className="text-left min-w-0">
-                          <p className="text-sm font-medium text-white truncate">{currentUser?.display_name}</p>
-                          <p className="text-xs text-blue-100 truncate">{currentUser?.role_id}</p>
-                        </div>
-                        <ChevronDown className={`h-4 w-4 text-white/70 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>

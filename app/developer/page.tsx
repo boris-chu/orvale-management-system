@@ -22,7 +22,6 @@ import {
   Ticket,
   ArrowLeft,
   User,
-  ChevronDown,
   Globe
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -340,18 +339,14 @@ export default function DeveloperDashboard() {
                     <TooltipTrigger asChild>
                       <button
                         onClick={() => setShowUserMenu(!showUserMenu)}
-                        className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 hover:shadow-sm"
+                        className="flex items-center rounded-full p-1 hover:bg-gray-100 transition-colors duration-200"
                       >
                         <UserAvatar 
                           user={currentUser}
                           size="lg"
                           showOnlineIndicator={true}
+                          className="border-2 border-gray-200 hover:border-blue-400 transition-colors duration-200"
                         />
-                        <div className="text-left min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{currentUser?.display_name}</p>
-                          <p className="text-xs text-gray-500 truncate">{currentUser?.role_id}</p>
-                        </div>
-                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
