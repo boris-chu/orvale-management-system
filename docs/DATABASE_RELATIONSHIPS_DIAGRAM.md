@@ -74,6 +74,16 @@ graph TD
     end
 ```
 
+#### Helpdesk Permissions (Core Set)
+- `helpdesk.multi_queue_access` - View and manage multiple team queues
+- `helpdesk.view_all_teams` - Read-only access to all team tickets
+- `helpdesk.add_internal_notes` - Add internal notes to tickets
+- `helpdesk.assign_cross_team` - Assign tickets to any team
+- `helpdesk.transfer_tickets` - Transfer tickets between teams
+- `helpdesk.escalate_tickets` - Escalate tickets to management
+- `helpdesk.override_priority` - Change priority on any ticket
+- `helpdesk.view_team_metrics` - View performance metrics for all teams
+
 ### 2. Ticket System Relationships
 
 ```mermaid
@@ -228,6 +238,18 @@ graph TD
 3. User selects bureau, loads dpss_divisions
 4. User selects division, loads dpss_sections
 5. Selection stored in user_tickets
+```
+
+### Helpdesk Role Configuration
+```
+Current helpdesk role assignments:
+- helpdesk_member: helpdesk.multi_queue_access, helpdesk.view_all_teams, helpdesk.add_internal_notes
+- helpdesk_supervisor: All member permissions + helpdesk.assign_cross_team, helpdesk.transfer_tickets, 
+                      helpdesk.escalate_tickets, helpdesk.override_priority, helpdesk.view_team_metrics
+
+Users with helpdesk roles:
+- John Smith (john.smith) - helpdesk_member 
+- Jane Smith (jane.smith) - helpdesk_supervisor
 ```
 
 This relationship structure ensures data integrity while supporting complex workflows and maintaining a complete audit trail of all system activities.

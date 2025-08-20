@@ -565,8 +565,9 @@ LEFT JOIN users u2 ON ut.submitted_by = u2.username;
 4. **Dashboard & Achievements System.md** - Gamification features
 5. **Admin Dashboard Conceptual Design.md** - Admin panel specs
 6. **RBAC_PERMISSIONS_DOCUMENTATION.md** - **COMPLETE RBAC PERMISSIONS REFERENCE** 🔒
-7. **shadcn:ui docs** - Component examples
-8. **evilcharts examples** - Chart implementations
+7. **Helpdesk_Permissions_Design.md** - **HELPDESK PERMISSIONS & FEATURES GUIDE** 🎧
+8. **shadcn:ui docs** - Component examples
+9. **evilcharts examples** - Chart implementations
 
 ## 🎮 Key Features to Implement
 
