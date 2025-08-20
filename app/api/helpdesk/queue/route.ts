@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
           ut.*,
           u.display_name as assigned_to_name,
           st.name as assigned_team_name,
-          st.label as assigned_team_label,
+          st.name as assigned_team_label,
           COALESCE(
             (SELECT COUNT(*) FROM ticket_history_detailed 
              WHERE ticket_id = ut.id AND action_type IN ('commented', 'updated', 'status_changed')),
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
           ) as activity_count
         FROM user_tickets ut
         LEFT JOIN users u ON ut.assigned_to = u.username
-        LEFT JOIN support_teams st ON ut.assigned_team = st.id
+        LEFT JOIN teams st ON ut.assigned_team = st.id
         WHERE ut.status = 'escalated'
         ORDER BY 
           CASE ut.priority 
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
           ut.*,
           u.display_name as assigned_to_name,
           st.name as assigned_team_name,
-          st.label as assigned_team_label,
+          st.name as assigned_team_label,
           COALESCE(
             (SELECT COUNT(*) FROM ticket_history_detailed 
              WHERE ticket_id = ut.id AND action_type IN ('commented', 'updated', 'status_changed')),
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
           ) as activity_count
         FROM user_tickets ut
         LEFT JOIN users u ON ut.assigned_to = u.username
-        LEFT JOIN support_teams st ON ut.assigned_team = st.id
+        LEFT JOIN teams st ON ut.assigned_team = st.id
         WHERE ut.assigned_team = ? ${statusFilter}
         ORDER BY 
           CASE ut.priority 
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
 
       // Get team information
       const teamInfo = await queryAsync(
-        'SELECT id, name, label, description FROM support_teams WHERE id = ?',
+        'SELECT id, name, name as label, description FROM teams WHERE id = ?',
         [teamId]
       );
 
