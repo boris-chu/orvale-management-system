@@ -74,6 +74,9 @@ export default function PublicPortal() {
   const [dataLoading, setDataLoading] = useState(true);
   const formRef = useRef<HTMLFormElement>(null);
 
+  // Computed value for all support teams
+  const allSupportTeams = Object.values(supportTeamGroups).flat() as any[];
+
   // Platform detection function with Apple Silicon support
   const getPlatformInfo = () => {
     const userAgent = navigator.userAgent;
@@ -85,8 +88,8 @@ export default function PublicPortal() {
       try {
         const canvas = document.createElement('canvas');
         const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-        if (gl) {
-          const renderer = gl.getParameter(gl.RENDERER);
+        if (gl && 'getParameter' in gl && 'RENDERER' in gl) {
+          const renderer = (gl as WebGLRenderingContext).getParameter((gl as WebGLRenderingContext).RENDERER);
           
           // Apple Silicon GPUs show as "Apple M1/M2/M3" or contain "Apple"
           if (renderer && (renderer.includes('Apple M') || renderer.includes('Apple GPU'))) {
@@ -148,10 +151,10 @@ export default function PublicPortal() {
         // Windows 11 detection (NT 10.0 with specific build numbers)
         if (userAgent.includes('Windows NT 10.0')) {
           // Check for Windows 11 indicators
-          if (userAgent.includes('WebView') || navigator.userAgentData?.platform === 'Windows') {
+          if (userAgent.includes('WebView') || (navigator as any).userAgentData?.platform === 'Windows') {
             // Try to detect Windows 11 vs 10 through available APIs
-            const isWindows11 = navigator.userAgentData?.platformVersion && 
-                               parseFloat(navigator.userAgentData.platformVersion) >= 13;
+            const isWindows11 = (navigator as any).userAgentData?.platformVersion && 
+                               parseFloat((navigator as any).userAgentData.platformVersion) >= 13;
             if (isWindows11) {
               return 'Windows 11';
             }

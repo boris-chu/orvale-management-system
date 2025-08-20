@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -262,7 +262,7 @@ export default function CategoryBrowserModal({
 
   const renderGroupedPaths = () => {
     let currentCategory = '';
-    const elements: JSX.Element[] = [];
+    const elements: React.JSX.Element[] = [];
     
     filteredPaths.forEach((path, index) => {
       // Add category header if changed

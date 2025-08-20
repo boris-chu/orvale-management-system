@@ -64,10 +64,13 @@ export async function GET(request: NextRequest) {
     `);
 
     // Convert to object format
-    const settings = { ...DEFAULT_SETTINGS };
+    const settings: Record<string, any> = { ...DEFAULT_SETTINGS };
     settingsRows.forEach((row: any) => {
       try {
-        settings[row.setting_key as keyof typeof settings] = JSON.parse(row.setting_value);
+        const key = row.setting_key as string;
+        if (key in settings) {
+          settings[key] = JSON.parse(row.setting_value);
+        }
       } catch (error) {
         console.warn(`Failed to parse setting ${row.setting_key}:`, row.setting_value);
       }

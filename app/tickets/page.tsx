@@ -1448,7 +1448,7 @@ export default function TicketsPage() {
                         >
                           {Object.entries(categories || {}).map(([key, value]) => (
                             <MenuItem key={key} value={key}>
-                              {value}
+                              {String(value)}
                             </MenuItem>
                           ))}
                         </Select>
