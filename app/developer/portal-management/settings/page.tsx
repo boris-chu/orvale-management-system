@@ -522,34 +522,41 @@ export default function PortalSettingsPage() {
 
         {/* Settings Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="form_fields" className="flex items-center space-x-2">
+          <TabsList className="w-full justify-start overflow-x-auto">
+            <TabsTrigger value="form_fields" className="flex items-center space-x-1 px-3">
               <FormInput className="h-4 w-4" />
-              <span>Form Fields</span>
+              <span className="hidden sm:inline">Form Fields</span>
+              <span className="sm:hidden">Form</span>
             </TabsTrigger>
-            <TabsTrigger value="display" className="flex items-center space-x-2">
+            <TabsTrigger value="display" className="flex items-center space-x-1 px-3">
               <Palette className="h-4 w-4" />
-              <span>Display</span>
+              <span className="hidden sm:inline">Display</span>
+              <span className="sm:hidden">UI</span>
             </TabsTrigger>
-            <TabsTrigger value="user_experience" className="flex items-center space-x-2">
+            <TabsTrigger value="user_experience" className="flex items-center space-x-1 px-3">
               <Heart className="h-4 w-4" />
-              <span>User Experience</span>
+              <span className="hidden sm:inline">User Experience</span>
+              <span className="sm:hidden">UX</span>
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex items-center space-x-2">
+            <TabsTrigger value="notifications" className="flex items-center space-x-1 px-3">
               <Bell className="h-4 w-4" />
-              <span>Notifications</span>
+              <span className="hidden sm:inline">Notifications</span>
+              <span className="sm:hidden">Notify</span>
             </TabsTrigger>
-            <TabsTrigger value="integrations" className="flex items-center space-x-2">
+            <TabsTrigger value="integrations" className="flex items-center space-x-1 px-3">
               <Zap className="h-4 w-4" />
-              <span>Integrations</span>
+              <span className="hidden sm:inline">Integrations</span>
+              <span className="sm:hidden">API</span>
             </TabsTrigger>
-            <TabsTrigger value="security" className="flex items-center space-x-2">
+            <TabsTrigger value="security" className="flex items-center space-x-1 px-3">
               <Lock className="h-4 w-4" />
-              <span>Security</span>
+              <span className="hidden sm:inline">Security</span>
+              <span className="sm:hidden">Sec</span>
             </TabsTrigger>
-            <TabsTrigger value="advanced" className="flex items-center space-x-2">
+            <TabsTrigger value="advanced" className="flex items-center space-x-1 px-3">
               <Database className="h-4 w-4" />
-              <span>Advanced</span>
+              <span className="hidden sm:inline">Advanced</span>
+              <span className="sm:hidden">Adv</span>
             </TabsTrigger>
           </TabsList>
 
