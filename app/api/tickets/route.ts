@@ -190,10 +190,7 @@ export async function POST(request: NextRequest) {
             cubicle_room,
             section,
             teleworking,
-            submitted_by,
-            submitted_by_employee_number,
-            submitted_by_display_name,
-            on_behalf,
+            request_creator_display_name,
             issue_title,
             issue_description,
             computer_info,
@@ -209,13 +206,13 @@ export async function POST(request: NextRequest) {
         const result = await runAsync(`
             INSERT INTO user_tickets (
                 submission_id, user_name, employee_number, phone_number, location, cubicle_room, section,
-                teleworking, submitted_by, submitted_by_employee_number, submitted_by_display_name, on_behalf,
+                teleworking, request_creator_display_name,
                 issue_title, issue_description, computer_info, priority, status,
                 assigned_team, email_recipient, email_recipient_display, original_submitting_team
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)
         `, [
             submissionId, user_name, employee_number, phone_number, location, cubicle_room, section,
-            teleworking, submitted_by, submitted_by_employee_number, submitted_by_display_name, on_behalf,
+            teleworking, request_creator_display_name,
             issue_title, issue_description, JSON.stringify(computer_info), priority,
             assigned_team, email_recipient, email_recipient_display, assigned_team
         ]);
@@ -224,7 +221,7 @@ export async function POST(request: NextRequest) {
         await addHistoryEntry(
             result.lastID.toString(),
             'created',
-            { submitted_by, display_name: submitted_by },
+            { submitted_by: request_creator_display_name || user_name, display_name: request_creator_display_name || user_name },
             null,
             'pending',
             null,
@@ -234,13 +231,12 @@ export async function POST(request: NextRequest) {
                 submission_id: submissionId,
                 issue_title,
                 priority,
-                on_behalf: Boolean(on_behalf),
                 initial_assignment: assigned_team
             }
         );
 
         // Log ticket creation
-        ticketLogger.created(submissionId, submitted_by, assigned_team);
+        ticketLogger.created(submissionId, request_creator_display_name || user_name, assigned_team);
 
         return NextResponse.json({
             success: true,

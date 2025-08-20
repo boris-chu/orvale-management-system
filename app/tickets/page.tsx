@@ -27,9 +27,7 @@ interface Ticket {
   location: string;
   cubicle_room?: string;
   section: string;
-  submitted_by?: string;
-  submitted_by_employee_number?: string;
-  submitted_by_display_name?: string;
+  request_creator_display_name?: string;
   office?: string;
   bureau?: string;
   division?: string;
@@ -1323,8 +1321,8 @@ export default function TicketsPage() {
                     <div><strong>Cubicle/Room:</strong> {selectedTicket.cubicle_room}</div>
                   )}
                   <div><strong>Section:</strong> {selectedTicket.section}</div>
-                  {selectedTicket.submitted_by_display_name && (
-                    <div><strong>Request Submitter:</strong> {selectedTicket.submitted_by_display_name}</div>
+                  {selectedTicket.request_creator_display_name && (
+                    <div><strong>Request Creator:</strong> {selectedTicket.request_creator_display_name}</div>
                   )}
                 </div>
               </div>

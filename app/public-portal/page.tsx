@@ -24,10 +24,7 @@ interface FormData {
   cubicleRoom: string;
   section: string;
   teleworking: string;
-  onBehalf: boolean;
-  submittedBy: string;
-  submittedByEmployeeNumber: string;
-  submittedByDisplayName: string;
+  requestCreatorDisplayName: string;
   issueTitle: string;
   issueDescription: string;
 }
@@ -52,10 +49,7 @@ export default function PublicPortal() {
     cubicleRoom: '',
     section: '',
     teleworking: 'No',
-    onBehalf: false,
-    submittedBy: '',
-    submittedByEmployeeNumber: '',
-    submittedByDisplayName: '',
+    requestCreatorDisplayName: '',
     issueTitle: '',
     issueDescription: ''
   });
@@ -526,10 +520,7 @@ export default function PublicPortal() {
           cubicle_room: formData.cubicleRoom,
           section: formData.section,
           teleworking: formData.teleworking,
-          submitted_by: formData.onBehalf ? formData.submittedBy : formData.userName,
-          submitted_by_employee_number: formData.onBehalf ? formData.submittedByEmployeeNumber : formData.employeeNumber,
-          submitted_by_display_name: formData.submittedByDisplayName,
-          on_behalf: formData.onBehalf,
+          request_creator_display_name: formData.requestCreatorDisplayName,
           issue_title: formData.issueTitle,
           issue_description: formData.issueDescription,
           computer_info: computerInfo,
@@ -972,13 +963,13 @@ Submitted via Orvale Management System`;
                 </FormControl>
               </div>
 
-              {/* Request Submitter */}
+              {/* Request Creator */}
               <div>
-                <Label htmlFor="submittedByDisplayName">Request Submitter (Your Name)</Label>
+                <Label htmlFor="requestCreatorDisplayName">Request Creator (Your Name)</Label>
                 <Input
-                  id="submittedByDisplayName"
-                  value={formData.submittedByDisplayName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, submittedByDisplayName: e.target.value }))}
+                  id="requestCreatorDisplayName"
+                  value={formData.requestCreatorDisplayName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, requestCreatorDisplayName: e.target.value }))}
                   placeholder="Enter your full name"
                 />
               </div>

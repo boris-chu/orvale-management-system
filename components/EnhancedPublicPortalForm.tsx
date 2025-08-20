@@ -31,10 +31,7 @@ interface FormData {
   cubicleRoom: string;
   section: string;
   teleworking: string;
-  onBehalf: boolean;
-  submittedBy: string;
-  submittedByEmployeeNumber: string;
-  submittedByDisplayName: string;
+  requestCreatorDisplayName: string;
   issueTitle: string;
   issueDescription: string;
 }
@@ -57,10 +54,7 @@ export default function EnhancedPublicPortalForm() {
     cubicleRoom: '',
     section: '',
     teleworking: '',
-    onBehalf: false,
-    submittedBy: '',
-    submittedByEmployeeNumber: '',
-    submittedByDisplayName: '',
+    requestCreatorDisplayName: '',
     issueTitle: '',
     issueDescription: ''
   });
@@ -445,64 +439,31 @@ export default function EnhancedPublicPortalForm() {
             
             {/* Additional Options */}
             <div className="space-y-4 mt-4 p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="onBehalf"
-                  checked={formData.onBehalf}
-                  onChange={(e) => updateFormData('onBehalf', e.target.checked)}
-                  className="rounded"
-                />
-                <Label htmlFor="onBehalf">Submitting on behalf of someone else</Label>
-              </div>
-              
-              {formData.onBehalf && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-6">
-                  <div>
-                    <Label htmlFor="submittedBy">Submitted By</Label>
-                    <Input
-                      id="submittedBy"
-                      value={formData.submittedBy}
-                      onChange={(e) => updateFormData('submittedBy', e.target.value)}
-                      placeholder="Person submitting on behalf"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="submittedByEmployeeNumber">Submitter Employee Number</Label>
-                    <Input
-                      id="submittedByEmployeeNumber"
-                      value={formData.submittedByEmployeeNumber}
-                      onChange={(e) => updateFormData('submittedByEmployeeNumber', e.target.value)}
-                      placeholder="Employee number of submitter"
-                    />
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="teleworking">Work Status</Label>
+                  <select
+                    id="teleworking"
+                    value={formData.teleworking}
+                    onChange={(e) => updateFormData('teleworking', e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="">Select work status</option>
+                    <option value="onsite">On-site</option>
+                    <option value="remote">Remote/Teleworking</option>
+                    <option value="hybrid">Hybrid</option>
+                  </select>
                 </div>
-              )}
-              
-              <div>
-                <Label htmlFor="submittedByDisplayName">Request Submitter (Your Name)</Label>
-                <Input
-                  id="submittedByDisplayName"
-                  value={formData.submittedByDisplayName}
-                  onChange={(e) => updateFormData('submittedByDisplayName', e.target.value)}
-                  placeholder="Enter your full name"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="teleworking">Work Status</Label>
-                <select
-                  id="teleworking"
-                  value={formData.teleworking}
-                  onChange={(e) => updateFormData('teleworking', e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                >
-                  <option value="">Select work status</option>
-                  <option value="onsite">On-site</option>
-                  <option value="remote">Remote/Teleworking</option>
-                  <option value="hybrid">Hybrid</option>
-                </select>
+                
+                <div>
+                  <Label htmlFor="requestCreatorDisplayName">Request Creator</Label>
+                  <Input
+                    id="requestCreatorDisplayName"
+                    value={formData.requestCreatorDisplayName}
+                    onChange={(e) => updateFormData('requestCreatorDisplayName', e.target.value)}
+                    placeholder="Enter your full name (optional)"
+                  />
+                </div>
               </div>
             </div>
           </CardContent>
