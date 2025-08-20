@@ -31,9 +31,13 @@ import {
   XCircle,
   RefreshCw,
   Key,
-  HelpCircle
+  HelpCircle,
+  User,
+  LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { UserAvatar } from '@/components/UserAvatar';
+import { ProfileEditModal } from '@/components/ProfileEditModal';
 
 interface Permission {
   id: string;
@@ -376,6 +380,8 @@ export default function RoleManagement() {
   const [notification, setNotification] = useState<{message: string; type: 'success' | 'error'} | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('all');
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -389,6 +395,19 @@ export default function RoleManagement() {
     checkPermissions();
     loadRoles();
   }, []);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showUserMenu) {
+        setShowUserMenu(false);
+      }
+    };
+    if (showUserMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showUserMenu]);
 
   const checkPermissions = async () => {
     try {
@@ -444,6 +463,24 @@ export default function RoleManagement() {
   const showNotification = (message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
+  };
+
+  // Logout function
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('currentUser');
+    window.location.href = '/';
+  };
+
+  // Handle profile update
+  const handleProfileUpdate = (updatedUser: any) => {
+    setCurrentUser(updatedUser);
+    // Also update localStorage
+    const currentUserData = localStorage.getItem('currentUser');
+    if (currentUserData) {
+      const userData = JSON.parse(currentUserData);
+      localStorage.setItem('currentUser', JSON.stringify({ ...userData, ...updatedUser }));
+    }
   };
 
   const handleCreateRole = async () => {
@@ -625,7 +662,10 @@ export default function RoleManagement() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-gray-50">
+      <div 
+        className="min-h-screen bg-gray-50"
+        onClick={() => setShowUserMenu(false)}
+      >
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -651,13 +691,100 @@ export default function RoleManagement() {
               </div>
             </div>
             
-            <Button 
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center space-x-2"
-            >
-              <ShieldPlus className="h-4 w-4" />
-              <span>Create Role</span>
-            </Button>
+            <div className="flex items-center space-x-4">
+              <Button 
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center space-x-2"
+              >
+                <ShieldPlus className="h-4 w-4" />
+                <span>Create Role</span>
+              </Button>
+
+              {/* User Profile Menu */}
+              {currentUser && (
+                <div className="relative">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowUserMenu(!showUserMenu);
+                        }}
+                        className="flex items-center rounded-full p-1 hover:bg-gray-100 transition-colors duration-200"
+                      >
+                        <UserAvatar 
+                          user={currentUser}
+                          size="lg"
+                          showOnlineIndicator={true}
+                          className="border-2 border-gray-200 hover:border-blue-400 transition-colors duration-200"
+                        />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>User Menu</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  {/* User Dropdown Menu */}
+                  <AnimatePresence>
+                    {showUserMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                        transition={{ duration: 0.15, ease: "easeOut" }}
+                        className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {/* User Info Section */}
+                        <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                          <div className="flex items-center space-x-3">
+                            <UserAvatar 
+                              user={currentUser}
+                              size="lg"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-900 truncate">{currentUser?.display_name}</p>
+                              <p className="text-xs text-gray-600 truncate">{currentUser?.email}</p>
+                              <div className="mt-1">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {currentUser?.role_id}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Menu Items */}
+                        <div className="py-1">
+                          <button
+                            onClick={() => {
+                              setShowUserMenu(false);
+                              setShowProfileModal(true);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors duration-150"
+                          >
+                            <div className="w-5 h-5 flex items-center justify-center">
+                              <User className="h-4 w-4" />
+                            </div>
+                            <span className="font-medium">Edit Profile</span>
+                          </button>
+                          <button
+                            onClick={handleLogout}
+                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-3 transition-colors duration-150"
+                          >
+                            <div className="w-5 h-5 flex items-center justify-center">
+                              <LogOut className="h-4 w-4" />
+                            </div>
+                            <span className="font-medium">Sign Out</span>
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1191,6 +1318,14 @@ export default function RoleManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Profile Edit Modal */}
+      <ProfileEditModal
+        open={showProfileModal}
+        onOpenChange={setShowProfileModal}
+        user={currentUser}
+        onProfileUpdate={handleProfileUpdate}
+      />
       </div>
     </TooltipProvider>
   );

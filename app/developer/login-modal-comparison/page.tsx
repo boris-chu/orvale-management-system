@@ -7,8 +7,11 @@ import UnifiedLoginModal from '@/components/UnifiedLoginModal';
 import MaterialUILoginModal from '@/components/MaterialUILoginModal';
 import MaterialUILoginModalAnimated from '@/components/MaterialUILoginModalAnimated';
 import { Badge } from '@/components/ui/badge';
-import { LogIn, Shield, Users, Sparkles } from 'lucide-react';
+import { LogIn, Shield, Users, Sparkles, User, LogOut } from 'lucide-react';
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { UserAvatar } from '@/components/UserAvatar';
+import { ProfileEditModal } from '@/components/ProfileEditModal';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function LoginModalComparison() {
   const [showShadcn, setShowShadcn] = useState(false);
@@ -16,6 +19,18 @@ export default function LoginModalComparison() {
   const [showMUIAnimated, setShowMUIAnimated] = useState(false);
   const [modalMode, setModalMode] = useState<'regular' | 'admin' | 'staff'>('regular');
   const [animationStyle, setAnimationStyle] = useState<'bounce' | 'slide' | 'zoom' | 'flip'>('bounce');
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  // Mock current user for demo
+  const currentUser = {
+    id: 1,
+    username: 'demo',
+    display_name: 'Demo User',
+    email: 'demo@example.com',
+    role_id: 'admin',
+    profile_picture: null
+  };
 
   const openModal = (type: 'shadcn' | 'mui' | 'mui-animated', mode: 'regular' | 'admin' | 'staff') => {
     setModalMode(mode);
@@ -28,6 +43,17 @@ export default function LoginModalComparison() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('currentUser');
+    window.location.href = '/';
+  };
+
+  const handleProfileUpdate = (updatedUser: any) => {
+    // For demo purposes, just show a success message
+    console.log('Profile updated:', updatedUser);
+  };
+
   const modeConfigs = [
     { mode: 'regular' as const, icon: LogIn, color: 'bg-blue-100 text-blue-800', label: 'Regular Login' },
     { mode: 'admin' as const, icon: Shield, color: 'bg-red-100 text-red-800', label: 'Admin Login' },
@@ -37,8 +63,87 @@ export default function LoginModalComparison() {
   return (
     <div className="container mx-auto py-8 max-w-6xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Login Modal Comparison</h1>
-        <p className="text-gray-600">Compare shadcn/ui + Framer Motion vs Material UI Dialog implementations</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Login Modal Comparison</h1>
+            <p className="text-gray-600">Compare shadcn/ui + Framer Motion vs Material UI Dialog implementations</p>
+          </div>
+          
+          {/* User Profile Menu */}
+          {currentUser && (
+            <TooltipProvider>
+              <div className="relative">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setShowUserMenu(!showUserMenu)}
+                      className="flex items-center rounded-full p-1 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <UserAvatar 
+                        user={currentUser}
+                        size="lg"
+                        showOnlineIndicator={true}
+                        className="border-2 border-gray-200 hover:border-blue-400 transition-colors duration-200"
+                      />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>User Menu</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* User Dropdown Menu */}
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 overflow-hidden">
+                    {/* User Info Section */}
+                    <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                      <div className="flex items-center space-x-3">
+                        <UserAvatar 
+                          user={currentUser}
+                          size="lg"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{currentUser?.display_name}</p>
+                          <p className="text-xs text-gray-600 truncate">{currentUser?.email}</p>
+                          <div className="mt-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {currentUser?.role_id}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Menu Items */}
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          setShowProfileModal(true);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors duration-150"
+                      >
+                        <div className="w-5 h-5 flex items-center justify-center">
+                          <User className="h-4 w-4" />
+                        </div>
+                        <span className="font-medium">Edit Profile</span>
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-3 transition-colors duration-150"
+                      >
+                        <div className="w-5 h-5 flex items-center justify-center">
+                          <LogOut className="h-4 w-4" />
+                        </div>
+                        <span className="font-medium">Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </TooltipProvider>
+          )}
+        </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">
@@ -238,6 +343,14 @@ export default function LoginModalComparison() {
         onClose={() => setShowMUIAnimated(false)}
         mode={modalMode}
         animationStyle={animationStyle}
+      />
+
+      {/* Profile Edit Modal */}
+      <ProfileEditModal
+        open={showProfileModal}
+        onOpenChange={setShowProfileModal}
+        user={currentUser}
+        onProfileUpdate={handleProfileUpdate}
       />
     </div>
   );
