@@ -826,6 +826,28 @@ export default function TicketsPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold">📋 Support Ticket Queue</h1>
             <div className="flex items-center space-x-4">
+              {/* Helpdesk Queue Button - only show if user has helpdesk permissions */}
+              {currentUser?.permissions?.includes('helpdesk.multi_queue_access') && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={() => window.location.href = '/helpdesk/queue'}
+                        variant="outline"
+                        className="bg-transparent border-white text-white hover:bg-white hover:text-blue-600 transition-all duration-200"
+                        size="sm"
+                      >
+                        <AlertTriangle className="h-4 w-4 mr-2" />
+                        Helpdesk Queue
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Multi-Team Helpdesk Queue</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              
               {/* Admin Dashboard Button - only show if user has admin permissions */}
               {currentUser?.permissions?.some((perm: string) => 
                 ['admin.manage_users', 'admin.view_users', 'admin.manage_teams', 'admin.view_teams', 

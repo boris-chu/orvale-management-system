@@ -141,6 +141,14 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     description: 'Create & manage queues\n• Set rules & priorities\n• Configure routing\n• Administrator only' 
   },
   
+  // Helpdesk Permissions
+  { 
+    id: 'helpdesk.multi_queue_access', 
+    name: 'Helpdesk Multi-Queue Access', 
+    category: 'Helpdesk', 
+    description: 'Access helpdesk multi-queue interface\n• View escalated tickets from all teams\n• Monitor multiple team queues\n• Configure team visibility settings\n• Essential for helpdesk supervisors & staff' 
+  },
+  
   // User Permissions
   { 
     id: 'user.view_all', 
@@ -591,6 +599,7 @@ export default function RoleManagement() {
     switch(category) {
       case 'Tickets': return FileText;
       case 'Queues': return Users;
+      case 'Helpdesk': return AlertTriangle;
       case 'Users': return Users;
       case 'Reporting': return BarChart3;
       case 'System': return Settings;

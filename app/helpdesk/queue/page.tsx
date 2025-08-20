@@ -17,19 +17,34 @@ import {
   Tag,
   ChevronRight,
   Filter,
-  ArrowLeft
+  ArrowLeft,
+  LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserAvatar } from '@/components/UserAvatar';
 import { formatRegularTime } from '@/lib/time-utils';
+import HelpdeskTeamSettings from '@/components/HelpdeskTeamSettings';
 
 interface Ticket {
   id: string;
   submission_id: string;
-  title: string;
-  description: string;
+  user_name: string;
+  employee_number: string;
+  phone_number: string;
+  location: string;
+  section: string;
+  office?: string;
+  bureau?: string;
+  division?: string;
+  category?: string;
+  request_type?: string;
+  subcategory?: string;
+  sub_subcategory?: string;
+  implementation?: string;
+  issue_title: string;
+  issue_description: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'pending' | 'in_progress' | 'completed' | 'escalated' | 'deleted';
+  status: 'pending' | 'assigned' | 'in_progress' | 'complete' | 'completed' | 'escalate' | 'escalated' | 'deleted';
   assigned_to?: string;
   assigned_to_name?: string;
   assigned_team?: string;
@@ -38,6 +53,11 @@ interface Ticket {
   submitted_by: string;
   submitted_by_name?: string;
   submitted_at: string;
+  updated_at: string;
+  escalated_at?: string;
+  completed_at?: string;
+  escalation_reason?: string;
+  completion_notes?: string;
   activity_count: number;
 }
 
@@ -82,6 +102,8 @@ export default function HelpdeskQueue() {
   const [activeTeamTabs, setActiveTeamTabs] = useState<{[key: string]: string}>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   useEffect(() => {
     checkPermissions();
@@ -92,6 +114,24 @@ export default function HelpdeskQueue() {
       loadSummaryData();
     }
   }, [currentUser]);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.user-menu-container')) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUserMenu]);
 
   const checkPermissions = async () => {
     try {
@@ -240,6 +280,12 @@ export default function HelpdeskQueue() {
     setRefreshing(false);
   };
 
+  const handleSettingsSaved = () => {
+    // Refresh data when settings are saved
+    loadSummaryData();
+    showNotification('Team settings updated successfully', 'success');
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgent': return 'bg-red-100 text-red-800 border-red-200';
@@ -262,8 +308,9 @@ export default function HelpdeskQueue() {
 
   const filterTickets = (tickets: Ticket[]) => {
     return tickets.filter(ticket => 
-      ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.issue_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.submission_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.submitted_by_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.assigned_to_name?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -289,10 +336,10 @@ export default function HelpdeskQueue() {
             )}
           </div>
           <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">
-            {ticket.title}
+            {ticket.issue_title}
           </h3>
           <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-            {ticket.description}
+            {ticket.issue_description}
           </p>
         </div>
       </div>
@@ -301,7 +348,7 @@ export default function HelpdeskQueue() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1">
             <User className="h-3 w-3" />
-            <span>{ticket.submitted_by_name || ticket.submitted_by}</span>
+            <span>{ticket.submitted_by_name || ticket.user_name}</span>
           </div>
           {ticket.assigned_to_name && (
             <div className="flex items-center gap-1">
@@ -386,6 +433,15 @@ export default function HelpdeskQueue() {
             <div className="flex items-center space-x-3">
               <Button 
                 variant="outline"
+                onClick={() => window.location.href = '/tickets'}
+                className="flex items-center space-x-2"
+              >
+                <Clock className="h-4 w-4" />
+                <span>Ticket Queue</span>
+              </Button>
+              
+              <Button 
+                variant="outline"
                 onClick={handleRefresh}
                 disabled={refreshing}
                 className="flex items-center space-x-2"
@@ -394,13 +450,81 @@ export default function HelpdeskQueue() {
                 <span>Refresh</span>
               </Button>
               
-              <Button 
-                variant="ghost"
-                className="flex items-center space-x-2"
-              >
-                <Settings className="h-4 w-4" />
-                <span>Settings</span>
-              </Button>
+              {/* User Profile Menu */}
+              <div className="relative user-menu-container">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center space-x-2 rounded-full p-1 hover:bg-gray-100 transition-colors duration-200"
+                >
+                  <UserAvatar 
+                    user={currentUser}
+                    size="md"
+                    className="border-2 border-gray-200 hover:border-blue-400 transition-colors duration-200"
+                  />
+                </button>
+
+                {/* User Dropdown Menu */}
+                <AnimatePresence>
+                  {showUserMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      transition={{ duration: 0.15, ease: "easeOut" }}
+                      className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 overflow-hidden"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {/* User Info Section */}
+                      <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                        <div className="flex items-center space-x-3">
+                          <UserAvatar 
+                            user={currentUser}
+                            size="lg"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{currentUser?.display_name}</p>
+                            <p className="text-xs text-gray-600 truncate">{currentUser?.email}</p>
+                            <div className="mt-1">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {currentUser?.role_id || 'Helpdesk'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Menu Items */}
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            setShowSettings(true);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors duration-150"
+                        >
+                          <div className="w-5 h-5 flex items-center justify-center">
+                            <Settings className="h-4 w-4" />
+                          </div>
+                          <span className="font-medium">Team Settings</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            localStorage.removeItem('authToken');
+                            localStorage.removeItem('currentUser');
+                            window.location.href = '/';
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-3 transition-colors duration-150"
+                        >
+                          <div className="w-5 h-5 flex items-center justify-center">
+                            <LogOut className="h-4 w-4" />
+                          </div>
+                          <span className="font-medium">Sign Out</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
         </div>
@@ -516,46 +640,36 @@ export default function HelpdeskQueue() {
                       value={activeTeamTabs[team.team_id] || 'pending'} 
                       onValueChange={(value) => handleTeamTabChange(team.team_id, value)}
                     >
-                      <TabsList className="grid w-full grid-cols-5">
-                        <TabsTrigger value="pending" className="flex items-center space-x-2">
-                          <span>Pending</span>
-                          {team.statusCounts.pending > 0 && (
-                            <Badge variant="outline" className="text-xs">
-                              {team.statusCounts.pending}
-                            </Badge>
-                          )}
+                      <TabsList className="h-12 w-full justify-start rounded-none border-b bg-transparent">
+                        <TabsTrigger 
+                          value="pending" 
+                          className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-t-lg"
+                        >
+                          Pending ({team.statusCounts.pending})
                         </TabsTrigger>
-                        <TabsTrigger value="in_progress" className="flex items-center space-x-2">
-                          <span>In Progress</span>
-                          {team.statusCounts.in_progress > 0 && (
-                            <Badge variant="outline" className="text-xs">
-                              {team.statusCounts.in_progress}
-                            </Badge>
-                          )}
+                        <TabsTrigger 
+                          value="in_progress" 
+                          className="data-[state=active]:bg-purple-500 data-[state=active]:text-white rounded-t-lg"
+                        >
+                          In Progress ({team.statusCounts.in_progress})
                         </TabsTrigger>
-                        <TabsTrigger value="completed" className="flex items-center space-x-2">
-                          <span>Completed</span>
-                          {team.statusCounts.completed > 0 && (
-                            <Badge variant="outline" className="text-xs">
-                              {team.statusCounts.completed}
-                            </Badge>
-                          )}
+                        <TabsTrigger 
+                          value="completed" 
+                          className="data-[state=active]:bg-green-500 data-[state=active]:text-white rounded-t-lg"
+                        >
+                          Completed ({team.statusCounts.completed})
                         </TabsTrigger>
-                        <TabsTrigger value="escalated" className="flex items-center space-x-2">
-                          <span>Escalated</span>
-                          {team.statusCounts.escalated > 0 && (
-                            <Badge variant="outline" className="text-xs">
-                              {team.statusCounts.escalated}
-                            </Badge>
-                          )}
+                        <TabsTrigger 
+                          value="escalated" 
+                          className="data-[state=active]:bg-red-500 data-[state=active]:text-white rounded-t-lg"
+                        >
+                          Escalated ({team.statusCounts.escalated})
                         </TabsTrigger>
-                        <TabsTrigger value="deleted" className="flex items-center space-x-2">
-                          <span>Deleted</span>
-                          {team.statusCounts.deleted > 0 && (
-                            <Badge variant="outline" className="text-xs">
-                              {team.statusCounts.deleted}
-                            </Badge>
-                          )}
+                        <TabsTrigger 
+                          value="deleted" 
+                          className="data-[state=active]:bg-gray-500 data-[state=active]:text-white rounded-t-lg"
+                        >
+                          Deleted ({team.statusCounts.deleted})
                         </TabsTrigger>
                       </TabsList>
 
@@ -583,6 +697,13 @@ export default function HelpdeskQueue() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Team Settings Modal */}
+      <HelpdeskTeamSettings
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        onSaved={handleSettingsSaved}
+      />
     </div>
   );
 }

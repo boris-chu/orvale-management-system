@@ -17,11 +17,29 @@ export default function Home() {
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [trackingError, setTrackingError] = useState('');
 
-  // Check if user is already logged in
+  // Check if user is already logged in and redirect based on permissions
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     if (token) {
-      window.location.href = '/tickets';
+      // Check user permissions to determine redirect
+      fetch('/api/auth/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      .then(response => response.json())
+      .then(user => {
+        // Redirect helpdesk users to helpdesk queue by default
+        if (user.permissions?.includes('helpdesk.multi_queue_access')) {
+          window.location.href = '/helpdesk/queue';
+        } else {
+          window.location.href = '/tickets';
+        }
+      })
+      .catch(() => {
+        // Fallback to tickets if API call fails
+        window.location.href = '/tickets';
+      });
     }
   }, []);
 

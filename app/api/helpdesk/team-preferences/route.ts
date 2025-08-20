@@ -14,24 +14,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    // Get user's team preferences
+    // Get user's team preferences (if any exist)
     const preferences = await queryAsync(`
       SELECT 
         htp.team_id,
         htp.is_visible,
         htp.tab_order,
-        st.name as team_name,
-        st.label as team_label
+        t.name as team_name,
+        t.name as team_label
       FROM helpdesk_team_preferences htp
-      JOIN support_teams st ON htp.team_id = st.id
-      WHERE htp.user_id = ? AND st.active = 1
+      JOIN teams t ON htp.team_id = t.id
+      WHERE htp.user_id = ? AND t.active = 1
       ORDER BY htp.tab_order ASC
     `, [authResult.user.id]);
 
     // Get all available teams for this user to choose from
     const allTeams = await queryAsync(`
-      SELECT id, name, label, description
-      FROM support_teams 
+      SELECT id, name, name as label, description
+      FROM teams 
       WHERE active = 1
       ORDER BY name ASC
     `);

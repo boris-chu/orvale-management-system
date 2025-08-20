@@ -111,18 +111,33 @@ export async function GET(request: NextRequest) {
       });
 
     } else {
-      // Get summary data for all teams the user has access to
-      const userTeams = await queryAsync(`
+      // Get teams that are actually receiving tickets (from user preferences or all teams with tickets)
+      let userTeams = await queryAsync(`
         SELECT 
           htp.team_id,
-          st.name as team_name,
-          st.label as team_label,
+          t.name as team_name,
+          t.name as team_label,
           htp.tab_order
         FROM helpdesk_team_preferences htp
-        JOIN support_teams st ON htp.team_id = st.id
-        WHERE htp.user_id = ? AND htp.is_visible = 1 AND st.active = 1
+        JOIN teams t ON htp.team_id = t.id
+        WHERE htp.user_id = ? AND htp.is_visible = 1 AND t.active = 1
         ORDER BY htp.tab_order ASC
       `, [authResult.user.id]);
+
+      // If no preferences set, show all teams that have tickets
+      if (userTeams.length === 0) {
+        userTeams = await queryAsync(`
+          SELECT DISTINCT
+            ut.assigned_team as team_id,
+            COALESCE(t.name, ut.assigned_team) as team_name,
+            COALESCE(t.name, ut.assigned_team) as team_label,
+            ROW_NUMBER() OVER (ORDER BY COALESCE(t.name, ut.assigned_team)) as tab_order
+          FROM user_tickets ut
+          LEFT JOIN teams t ON ut.assigned_team = t.id
+          WHERE ut.assigned_team IS NOT NULL
+          ORDER BY team_name ASC
+        `);
+      }
 
       // Get ticket counts for each status per team
       const teamStats = await Promise.all(

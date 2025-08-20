@@ -31,6 +31,13 @@ export function getLoginRedirectUrl(user: any): string {
           }
           break;
 
+        case 'helpdesk':
+          if (user.permissions?.includes('helpdesk.multi_queue_access')) {
+            console.log('🔧 getLoginRedirectUrl - redirecting to helpdesk queue');
+            return '/helpdesk/queue';
+          }
+          break;
+
         case 'analytics':
           if (user.permissions?.includes('analytics.view_reports')) {
             console.log('🔧 getLoginRedirectUrl - redirecting to analytics');

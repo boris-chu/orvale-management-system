@@ -41,9 +41,9 @@ export async function GET(request: NextRequest) {
     teams.forEach(team => {
       if (supportTeamGroups[team.group_name]) {
         supportTeamGroups[team.group_name].push({
-          value: team.id,
+          value: team.name,
           label: team.label,
-          team_id: team.group_id,
+          team_id: team.id,
           email: team.email,
           description: team.description
         });
