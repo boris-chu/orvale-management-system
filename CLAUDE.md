@@ -497,11 +497,33 @@ The Orvale Management System uses SQLite database (`orvale_tickets.db`) with 23 
 - **subcategories**: Detailed subcategories
 - **implementations**: Most specific classification level
 
-### 4. **Team Management Tables**
-- **teams**: Internal teams that receive and work on tickets (e.g., ITTS_Region1)
-- **support_teams**: Public portal teams for ticket submission
-- **support_team_groups**: Groups to organize support teams
+### 4. **Team Management Tables** ⚠️ **CRITICAL DISTINCTION**
+
+#### **teams** vs **support_teams** - DO NOT CONFUSE THESE:
+
+**`teams` Table (Internal/Queue Teams):**
+- Used by: Ticket queue, helpdesk queue, team assignment
+- Purpose: Internal teams that actually work on tickets
+- Examples: `ITTS_Region7`, `HELPDESK`, `NET_North`, `DEV_Alpha`
+- Used in: `user_tickets.assigned_team`, helpdesk functionality
+- Schema: `id, name, description, section_id, lead_user_id, active`
+
+**`support_teams` Table (Public Portal Teams):**
+- Used by: Public portal ticket submission form
+- Purpose: User-facing team options for ticket routing
+- Examples: `dpss_academy`, `crossroads_main`, `bhr_tech`
+- Used in: Public portal dropdowns, initial ticket routing
+- Schema: `id, group_id, name, label, email, description, sort_order, active`
+
+**Additional Team Tables:**
+- **support_team_groups**: Groups to organize support_teams (for public portal)
 - **helpdesk_team_preferences**: User preferences for helpdesk multi-queue view
+
+#### **When to Use Which:**
+- **Helpdesk APIs**: Use `teams` table (internal teams that work tickets)
+- **Public Portal**: Use `support_teams` table (user-facing options)
+- **Ticket Assignment**: Use `teams` table (where tickets get assigned)
+- **Team Metrics**: Use `teams` table (teams that handle workload)
 
 ### 5. **Configuration Tables**
 - **portal_settings**: Public portal configuration (branding, messages)
@@ -531,7 +553,7 @@ support_teams ←→ support_team_groups (via group_id)
 2. **Soft Deletes**: Most tables use `active` flags instead of hard deletes
 3. **Hierarchical Data**: Both DPSS structure and ticket categories use parent-child relationships
 4. **JSON Storage**: Used for flexible data like `computer_info` and permission overrides
-5. **Team Separation**: `teams` for internal use, `support_teams` for public portal
+5. **Team Separation**: **CRITICAL** - `teams` for internal ticket processing/helpdesk, `support_teams` for public portal submission only
 
 ### Common Operations
 
@@ -601,5 +623,6 @@ LEFT JOIN users u2 ON ut.submitted_by = u2.username;
 5. **Implement gamification thoughtfully** - Make achievements meaningful
 6. **Maintain simplicity** - The goal is 90% functionality with 20% complexity
 7. **Test incrementally** - Verify each phase before moving forward
+8. **⚠️ CRITICAL: Use correct team tables** - `teams` for helpdesk/queue functionality, `support_teams` for public portal only
 
 Remember: Orvale Management System should be minimal, maintainable, and focused on delivering core functionality efficiently while providing an engaging user experience through dashboards, achievements, and seamless communication.
