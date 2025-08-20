@@ -21,9 +21,11 @@ import {
   LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { UserAvatar } from '@/components/UserAvatar';
 import { formatRegularTime } from '@/lib/time-utils';
 import HelpdeskTeamSettings from '@/components/HelpdeskTeamSettings';
+import { ProfileEditModal } from '@/components/ProfileEditModal';
 
 interface Ticket {
   id: string;
@@ -104,6 +106,7 @@ export default function HelpdeskQueue() {
   const [refreshing, setRefreshing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   useEffect(() => {
     checkPermissions();
@@ -451,18 +454,26 @@ export default function HelpdeskQueue() {
               </Button>
               
               {/* User Profile Menu */}
-              <div className="relative user-menu-container">
-                <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center space-x-2 rounded-full p-1 hover:bg-gray-100 transition-colors duration-200"
-                >
-                  <UserAvatar 
-                    user={currentUser}
-                    size="md"
-                    showOnlineIndicator={true}
-                    className="border-2 border-gray-200 hover:border-blue-400 transition-colors duration-200"
-                  />
-                </button>
+              <TooltipProvider>
+                <div className="relative user-menu-container">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setShowUserMenu(!showUserMenu)}
+                        className="flex items-center space-x-2 rounded-full p-1 hover:bg-gray-100 transition-colors duration-200"
+                      >
+                        <UserAvatar 
+                          user={currentUser}
+                          size="md"
+                          showOnlineIndicator={true}
+                          className="border-2 border-gray-200 hover:border-blue-400 transition-colors duration-200"
+                        />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>User Menu</p>
+                    </TooltipContent>
+                  </Tooltip>
 
                 {/* User Dropdown Menu */}
                 <AnimatePresence>
@@ -499,6 +510,18 @@ export default function HelpdeskQueue() {
                         <button
                           onClick={() => {
                             setShowUserMenu(false);
+                            setShowProfileModal(true);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors duration-150"
+                        >
+                          <div className="w-5 h-5 flex items-center justify-center">
+                            <User className="h-4 w-4" />
+                          </div>
+                          <span className="font-medium">Edit Profile</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
                             setShowSettings(true);
                           }}
                           className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors duration-150"
@@ -525,7 +548,8 @@ export default function HelpdeskQueue() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
+                </div>
+              </TooltipProvider>
             </div>
           </div>
         </div>
@@ -704,6 +728,17 @@ export default function HelpdeskQueue() {
         open={showSettings}
         onClose={() => setShowSettings(false)}
         onSaved={handleSettingsSaved}
+      />
+      
+      {/* Profile Edit Modal */}
+      <ProfileEditModal
+        open={showProfileModal}
+        onOpenChange={setShowProfileModal}
+        user={currentUser}
+        onProfileUpdate={(updatedUser) => {
+          setCurrentUser(updatedUser);
+          localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        }}
       />
     </div>
   );
