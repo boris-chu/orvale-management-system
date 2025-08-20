@@ -152,6 +152,48 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     category: 'Helpdesk', 
     description: 'Access helpdesk multi-queue interface\n• View escalated tickets from all teams\n• Monitor multiple team queues\n• Configure team visibility settings\n• Essential for helpdesk supervisors & staff' 
   },
+  { 
+    id: 'helpdesk.view_all_teams', 
+    name: 'View All Teams', 
+    category: 'Helpdesk', 
+    description: 'Read-only access to all team tickets\n• Monitor cross-team workloads\n• Visibility into all queues\n• No assignment permissions\n• For helpdesk analysts' 
+  },
+  { 
+    id: 'helpdesk.assign_cross_team', 
+    name: 'Cross-Team Assignment', 
+    category: 'Helpdesk', 
+    description: 'Assign tickets to any team\n• Cross-team ticket routing\n• Load balancing capability\n• Override normal boundaries\n• ⚠️ Powerful helpdesk permission' 
+  },
+  { 
+    id: 'helpdesk.transfer_tickets', 
+    name: 'Transfer Tickets', 
+    category: 'Helpdesk', 
+    description: 'Transfer tickets between teams\n• Redirect misrouted requests\n• Organizational flexibility\n• Track transfer history\n• For helpdesk coordinators' 
+  },
+  { 
+    id: 'helpdesk.escalate_tickets', 
+    name: 'Escalate Tickets', 
+    category: 'Helpdesk', 
+    description: 'Escalate tickets to management\n• Bypass normal workflows\n• Urgent issue handling\n• Management notification\n• Crisis response capability' 
+  },
+  { 
+    id: 'helpdesk.add_internal_notes', 
+    name: 'Add Internal Notes', 
+    category: 'Helpdesk', 
+    description: 'Add internal-only notes\n• Team communication\n• Hidden from requesters\n• Collaboration tool\n• For all helpdesk staff' 
+  },
+  { 
+    id: 'helpdesk.override_priority', 
+    name: 'Override Priority', 
+    category: 'Helpdesk', 
+    description: 'Change ticket priority\n• Bump urgent issues\n• Adjust based on impact\n• Override initial assessment\n• For supervisors & leads' 
+  },
+  { 
+    id: 'helpdesk.view_team_metrics', 
+    name: 'View Team Metrics', 
+    category: 'Helpdesk', 
+    description: 'Access team performance data\n• Resolution time analytics\n• Workload distribution\n• Quality metrics\n• Management reporting tools' 
+  },
   
   // User Permissions
   { 
