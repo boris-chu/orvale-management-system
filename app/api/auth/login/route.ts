@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
         }
 
         const token = generateToken(user);
-        const permissions = getUserPermissions(user);
+        const permissions = await getUserPermissions(user);
         const accessibleQueues = await getAccessibleQueues(user);
 
         return NextResponse.json({

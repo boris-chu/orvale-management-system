@@ -52,6 +52,22 @@ export const initDB = () => {
                 )
             `);
 
+            // Helpdesk team preferences table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS helpdesk_team_preferences (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    team_id TEXT NOT NULL,
+                    is_visible BOOLEAN DEFAULT TRUE,
+                    tab_order INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(user_id, team_id),
+                    FOREIGN KEY (user_id) REFERENCES users(id),
+                    FOREIGN KEY (team_id) REFERENCES teams(id)
+                )
+            `);
+
             // Main tickets table
             db.run(`
                 CREATE TABLE IF NOT EXISTS user_tickets (

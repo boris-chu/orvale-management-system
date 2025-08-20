@@ -123,14 +123,18 @@ export async function GET(request: NextRequest) {
       // If no preferences set, show all teams that have tickets
       if (userTeams.length === 0) {
         userTeams = await queryAsync(`
-          SELECT DISTINCT
-            ut.assigned_team as team_id,
-            COALESCE(t.name, ut.assigned_team) as team_name,
-            COALESCE(t.name, ut.assigned_team) as team_label,
-            ROW_NUMBER() OVER (ORDER BY COALESCE(t.name, ut.assigned_team)) as tab_order
-          FROM user_tickets ut
-          LEFT JOIN teams t ON ut.assigned_team = t.id
-          WHERE ut.assigned_team IS NOT NULL
+          WITH distinct_teams AS (
+            SELECT DISTINCT assigned_team
+            FROM user_tickets
+            WHERE assigned_team IS NOT NULL
+          )
+          SELECT 
+            dt.assigned_team as team_id,
+            COALESCE(t.name, dt.assigned_team) as team_name,
+            COALESCE(t.name, dt.assigned_team) as team_label,
+            ROW_NUMBER() OVER (ORDER BY COALESCE(t.name, dt.assigned_team)) as tab_order
+          FROM distinct_teams dt
+          LEFT JOIN teams t ON dt.assigned_team = t.id
           ORDER BY team_name ASC
         `);
       }
