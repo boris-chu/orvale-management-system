@@ -335,10 +335,11 @@ export default function PortalSettingsPage() {
   }
 
   return (
-    <div 
-      className="min-h-screen bg-gray-50"
-      onClick={() => setShowUserMenu(false)}
-    >
+    <TooltipProvider>
+      <div 
+        className="min-h-screen bg-gray-50"
+        onClick={() => setShowUserMenu(false)}
+      >
       <div className="max-w-7xl mx-auto p-8">
         {/* Header */}
         <div className="mb-8">
@@ -359,8 +360,7 @@ export default function PortalSettingsPage() {
             </div>
             
             {/* User Profile Menu */}
-            <TooltipProvider>
-              <div className="relative">
+            <div className="relative">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
@@ -445,8 +445,7 @@ export default function PortalSettingsPage() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
-            </TooltipProvider>
+            </div>
           </div>
         </div>
 
@@ -525,38 +524,31 @@ export default function PortalSettingsPage() {
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="form_fields" className="flex items-center space-x-1 px-3">
               <FormInput className="h-4 w-4" />
-              <span className="hidden sm:inline">Form Fields</span>
-              <span className="sm:hidden">Form</span>
+              <span>Form Fields</span>
             </TabsTrigger>
             <TabsTrigger value="display" className="flex items-center space-x-1 px-3">
               <Palette className="h-4 w-4" />
-              <span className="hidden sm:inline">Display</span>
-              <span className="sm:hidden">UI</span>
+              <span>Display</span>
             </TabsTrigger>
             <TabsTrigger value="user_experience" className="flex items-center space-x-1 px-3">
               <Heart className="h-4 w-4" />
-              <span className="hidden sm:inline">User Experience</span>
-              <span className="sm:hidden">UX</span>
+              <span>User Experience</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="flex items-center space-x-1 px-3">
               <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">Notifications</span>
-              <span className="sm:hidden">Notify</span>
+              <span>Notifications</span>
             </TabsTrigger>
             <TabsTrigger value="integrations" className="flex items-center space-x-1 px-3">
               <Zap className="h-4 w-4" />
-              <span className="hidden sm:inline">Integrations</span>
-              <span className="sm:hidden">API</span>
+              <span>Integrations</span>
             </TabsTrigger>
             <TabsTrigger value="security" className="flex items-center space-x-1 px-3">
               <Lock className="h-4 w-4" />
-              <span className="hidden sm:inline">Security</span>
-              <span className="sm:hidden">Sec</span>
+              <span>Security</span>
             </TabsTrigger>
             <TabsTrigger value="advanced" className="flex items-center space-x-1 px-3">
               <Database className="h-4 w-4" />
-              <span className="hidden sm:inline">Advanced</span>
-              <span className="sm:hidden">Adv</span>
+              <span>Advanced</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1405,6 +1397,7 @@ export default function PortalSettingsPage() {
         user={currentUser}
         onProfileUpdate={setCurrentUser}
       />
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }

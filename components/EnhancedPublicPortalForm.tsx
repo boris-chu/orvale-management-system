@@ -16,7 +16,8 @@ import {
   Info,
   RefreshCw,
   Database,
-  Shield
+  Shield,
+  Lightbulb
 } from 'lucide-react';
 import { useFormCacheIntegration } from '@/hooks/useFormCacheIntegration';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -27,11 +28,13 @@ interface FormData {
   employeeNumber: string;
   phoneNumber: string;
   location: string;
+  cubicleRoom: string;
   section: string;
   teleworking: string;
   onBehalf: boolean;
   submittedBy: string;
   submittedByEmployeeNumber: string;
+  submittedByDisplayName: string;
   issueTitle: string;
   issueDescription: string;
 }
@@ -41,6 +44,7 @@ interface FormCacheSettings {
   form_cache_duration_days: number;
   enable_auto_save_drafts: boolean;
   enable_form_progress_indicator: boolean;
+  enable_smart_form_completion: boolean;
 }
 
 export default function EnhancedPublicPortalForm() {
@@ -50,17 +54,20 @@ export default function EnhancedPublicPortalForm() {
     employeeNumber: '',
     phoneNumber: '',
     location: '',
+    cubicleRoom: '',
     section: '',
     teleworking: '',
     onBehalf: false,
     submittedBy: '',
     submittedByEmployeeNumber: '',
+    submittedByDisplayName: '',
     issueTitle: '',
     issueDescription: ''
   });
 
   const [portalSettings, setPortalSettings] = useState<FormCacheSettings | null>(null);
   const [showCacheInfo, setShowCacheInfo] = useState(false);
+  const [smartSuggestions, setSmartSuggestions] = useState<Record<string, string[]>>({});
 
   // Form cache integration
   const { 
@@ -84,6 +91,11 @@ export default function EnhancedPublicPortalForm() {
         if (response.ok) {
           const settings = await response.json();
           setPortalSettings(settings.user_experience);
+          
+          // Initialize smart suggestions if enabled
+          if (settings.user_experience.enable_smart_form_completion) {
+            initializeSmartSuggestions();
+          }
         }
       } catch (error) {
         console.error('Failed to load portal settings:', error);
@@ -92,6 +104,50 @@ export default function EnhancedPublicPortalForm() {
     
     loadSettings();
   }, []);
+
+  // Initialize smart suggestions with common DPSS data
+  const initializeSmartSuggestions = () => {
+    setSmartSuggestions({
+      location: [
+        'LAPD Headquarters',
+        'Parker Center',
+        'Metropolitan Division',
+        'Olympic Division',
+        'Central Division',
+        'Northeast Division',
+        'Southwest Division'
+      ],
+      section: [
+        'Information Technology',
+        'Communications Division',
+        'Records Division',
+        'Administrative Services',
+        'Operations Support',
+        'Training Division',
+        'Human Resources'
+      ],
+      issueTitle: [
+        'Email access issue',
+        'Computer won\'t start',
+        'Software installation request',
+        'Network connectivity problem',
+        'Printer not working',
+        'Password reset request',
+        'New equipment request'
+      ]
+    });
+  };
+
+  // Get smart suggestions for a field
+  const getSmartSuggestions = (fieldName: string, currentValue: string): string[] => {
+    if (!portalSettings?.enable_smart_form_completion || !currentValue) return [];
+    
+    const suggestions = smartSuggestions[fieldName] || [];
+    return suggestions.filter(suggestion => 
+      suggestion.toLowerCase().includes(currentValue.toLowerCase()) && 
+      suggestion.toLowerCase() !== currentValue.toLowerCase()
+    ).slice(0, 3); // Show max 3 suggestions
+  };
 
   // Update form data
   const updateFormData = (field: keyof FormData, value: string | boolean) => {
@@ -113,6 +169,69 @@ export default function EnhancedPublicPortalForm() {
   // Get cache information
   const cacheInfo = getCacheInfo();
   const progress = calculateProgress();
+
+  // Smart Input Component with suggestions
+  const SmartInput = ({ 
+    fieldName, 
+    label, 
+    value, 
+    onChange, 
+    placeholder, 
+    required = false,
+    type = 'text'
+  }: {
+    fieldName: string;
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    placeholder: string;
+    required?: boolean;
+    type?: string;
+  }) => {
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const suggestions = getSmartSuggestions(fieldName, value);
+    const hasSuggestions = portalSettings?.enable_smart_form_completion && suggestions.length > 0;
+
+    return (
+      <div className="relative">
+        <Label htmlFor={fieldName} className="flex items-center space-x-1">
+          <span>{label} {required && '*'}</span>
+          {hasSuggestions && (
+            <Lightbulb className="h-3 w-3 text-yellow-500" />
+          )}
+        </Label>
+        <Input
+          id={fieldName}
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          onFocus={() => setShowSuggestions(true)}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+        />
+        {showSuggestions && hasSuggestions && (
+          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+            {suggestions.map((suggestion, index) => (
+              <button
+                key={index}
+                type="button"
+                className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm border-b border-gray-100 last:border-b-0"
+                onClick={() => {
+                  onChange(suggestion);
+                  setShowSuggestions(false);
+                }}
+              >
+                <div className="flex items-center space-x-2">
+                  <Lightbulb className="h-3 w-3 text-yellow-500" />
+                  <span>{suggestion}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <TooltipProvider>
@@ -277,6 +396,17 @@ export default function EnhancedPublicPortalForm() {
               </div>
               
               <div>
+                <Label htmlFor="emailRecipient">Email Address *</Label>
+                <Input
+                  id="emailRecipient"
+                  value={formData.emailRecipient}
+                  onChange={(e) => updateFormData('emailRecipient', e.target.value)}
+                  placeholder="Enter your email address"
+                  type="email"
+                />
+              </div>
+              
+              <div>
                 <Label htmlFor="phoneNumber">Phone Number</Label>
                 <Input
                   id="phoneNumber"
@@ -286,14 +416,93 @@ export default function EnhancedPublicPortalForm() {
                 />
               </div>
               
+              <SmartInput
+                fieldName="location"
+                label="Location"
+                value={formData.location}
+                onChange={(value) => updateFormData('location', value)}
+                placeholder="Enter your building/floor"
+              />
+              
               <div>
-                <Label htmlFor="location">Location</Label>
+                <Label htmlFor="cubicleRoom">Cubicle/Room</Label>
                 <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => updateFormData('location', e.target.value)}
-                  placeholder="Enter your location"
+                  id="cubicleRoom"
+                  value={formData.cubicleRoom}
+                  onChange={(e) => updateFormData('cubicleRoom', e.target.value)}
+                  placeholder="Enter cubicle number or room"
                 />
+              </div>
+              
+              <SmartInput
+                fieldName="section"
+                label="Department/Section"
+                value={formData.section}
+                onChange={(value) => updateFormData('section', value)}
+                placeholder="Enter your department or section"
+              />
+            </div>
+            
+            {/* Additional Options */}
+            <div className="space-y-4 mt-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="onBehalf"
+                  checked={formData.onBehalf}
+                  onChange={(e) => updateFormData('onBehalf', e.target.checked)}
+                  className="rounded"
+                />
+                <Label htmlFor="onBehalf">Submitting on behalf of someone else</Label>
+              </div>
+              
+              {formData.onBehalf && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-6">
+                  <div>
+                    <Label htmlFor="submittedBy">Submitted By</Label>
+                    <Input
+                      id="submittedBy"
+                      value={formData.submittedBy}
+                      onChange={(e) => updateFormData('submittedBy', e.target.value)}
+                      placeholder="Person submitting on behalf"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="submittedByEmployeeNumber">Submitter Employee Number</Label>
+                    <Input
+                      id="submittedByEmployeeNumber"
+                      value={formData.submittedByEmployeeNumber}
+                      onChange={(e) => updateFormData('submittedByEmployeeNumber', e.target.value)}
+                      placeholder="Employee number of submitter"
+                    />
+                  </div>
+                </div>
+              )}
+              
+              <div>
+                <Label htmlFor="submittedByDisplayName">Request Submitter (Your Name)</Label>
+                <Input
+                  id="submittedByDisplayName"
+                  value={formData.submittedByDisplayName}
+                  onChange={(e) => updateFormData('submittedByDisplayName', e.target.value)}
+                  placeholder="Enter your full name"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="teleworking">Work Status</Label>
+                <select
+                  id="teleworking"
+                  value={formData.teleworking}
+                  onChange={(e) => updateFormData('teleworking', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  <option value="">Select work status</option>
+                  <option value="onsite">On-site</option>
+                  <option value="remote">Remote/Teleworking</option>
+                  <option value="hybrid">Hybrid</option>
+                </select>
               </div>
             </div>
           </CardContent>
@@ -305,15 +514,14 @@ export default function EnhancedPublicPortalForm() {
             <CardTitle>Issue Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="issueTitle">Issue Title *</Label>
-              <Input
-                id="issueTitle"
-                value={formData.issueTitle}
-                onChange={(e) => updateFormData('issueTitle', e.target.value)}
-                placeholder="Brief description of the issue"
-              />
-            </div>
+            <SmartInput
+              fieldName="issueTitle"
+              label="Issue Title"
+              value={formData.issueTitle}
+              onChange={(value) => updateFormData('issueTitle', value)}
+              placeholder="Brief description of the issue"
+              required
+            />
             
             <div>
               <Label htmlFor="issueDescription">Issue Description *</Label>
@@ -370,6 +578,7 @@ export default function EnhancedPublicPortalForm() {
               <p><strong>Cache Duration:</strong> {portalSettings?.form_cache_duration_days || 30} days</p>
               <p><strong>Auto-Save:</strong> {portalSettings?.enable_auto_save_drafts ? 'Enabled' : 'Disabled'}</p>
               <p><strong>Progress Indicator:</strong> {portalSettings?.enable_form_progress_indicator ? 'Enabled' : 'Disabled'}</p>
+              <p><strong>Smart Completion:</strong> {portalSettings?.enable_smart_form_completion ? 'Enabled (Demo)' : 'Disabled'}</p>
               <p><strong>Form Completion:</strong> {progress}%</p>
             </div>
           </CardContent>

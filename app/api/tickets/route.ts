@@ -187,10 +187,12 @@ export async function POST(request: NextRequest) {
             employee_number,
             phone_number,
             location,
+            cubicle_room,
             section,
             teleworking,
             submitted_by,
             submitted_by_employee_number,
+            submitted_by_display_name,
             on_behalf,
             issue_title,
             issue_description,
@@ -206,14 +208,14 @@ export async function POST(request: NextRequest) {
 
         const result = await runAsync(`
             INSERT INTO user_tickets (
-                submission_id, user_name, employee_number, phone_number, location, section,
-                teleworking, submitted_by, submitted_by_employee_number, on_behalf,
+                submission_id, user_name, employee_number, phone_number, location, cubicle_room, section,
+                teleworking, submitted_by, submitted_by_employee_number, submitted_by_display_name, on_behalf,
                 issue_title, issue_description, computer_info, priority, status,
                 assigned_team, email_recipient, email_recipient_display, original_submitting_team
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)
         `, [
-            submissionId, user_name, employee_number, phone_number, location, section,
-            teleworking, submitted_by, submitted_by_employee_number, on_behalf,
+            submissionId, user_name, employee_number, phone_number, location, cubicle_room, section,
+            teleworking, submitted_by, submitted_by_employee_number, submitted_by_display_name, on_behalf,
             issue_title, issue_description, JSON.stringify(computer_info), priority,
             assigned_team, email_recipient, email_recipient_display, assigned_team
         ]);

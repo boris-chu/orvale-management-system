@@ -21,11 +21,13 @@ interface FormData {
   employeeNumber: string;
   phoneNumber: string;
   location: string;
+  cubicleRoom: string;
   section: string;
   teleworking: string;
   onBehalf: boolean;
   submittedBy: string;
   submittedByEmployeeNumber: string;
+  submittedByDisplayName: string;
   issueTitle: string;
   issueDescription: string;
 }
@@ -47,11 +49,13 @@ export default function PublicPortal() {
     employeeNumber: '',
     phoneNumber: '',
     location: '',
+    cubicleRoom: '',
     section: '',
     teleworking: 'No',
     onBehalf: false,
     submittedBy: '',
     submittedByEmployeeNumber: '',
+    submittedByDisplayName: '',
     issueTitle: '',
     issueDescription: ''
   });
@@ -519,10 +523,12 @@ export default function PublicPortal() {
           employee_number: formData.employeeNumber,
           phone_number: formData.phoneNumber,
           location: formData.location,
+          cubicle_room: formData.cubicleRoom,
           section: formData.section,
           teleworking: formData.teleworking,
           submitted_by: formData.onBehalf ? formData.submittedBy : formData.userName,
           submitted_by_employee_number: formData.onBehalf ? formData.submittedByEmployeeNumber : formData.employeeNumber,
+          submitted_by_display_name: formData.submittedByDisplayName,
           on_behalf: formData.onBehalf,
           issue_title: formData.issueTitle,
           issue_description: formData.issueDescription,
@@ -853,7 +859,7 @@ Submitted via Orvale Management System`;
                     id="userName"
                     value={formData.userName}
                     onChange={(e) => setFormData(prev => ({ ...prev, userName: e.target.value }))}
-                    placeholder="John Doe"
+                    placeholder="Name of person who needs assistance"
                     required
                   />
                 </div>
@@ -873,6 +879,7 @@ Submitted via Orvale Management System`;
                 </div>
               </div>
 
+              {/* Phone Number and Cubicle/Room - side by side */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Label htmlFor="phoneNumber">Phone Number</Label>
@@ -889,6 +896,19 @@ Submitted via Orvale Management System`;
                   )}
                 </div>
                 <div>
+                  <Label htmlFor="cubicleRoom">Cubicle/Room</Label>
+                  <Input
+                    id="cubicleRoom"
+                    value={formData.cubicleRoom}
+                    onChange={(e) => setFormData(prev => ({ ...prev, cubicleRoom: e.target.value }))}
+                    placeholder="Enter cubicle number or room"
+                  />
+                </div>
+              </div>
+
+              {/* Location and Teleworking - side by side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
                   <FormControl size="small" fullWidth>
                     <InputLabel id="location-label">Location</InputLabel>
                     <Select
@@ -904,30 +924,6 @@ Submitted via Orvale Management System`;
                       {organizationalData?.offices?.map((office) => (
                         <MenuItem key={office} value={office}>
                           {office}
-                        </MenuItem>
-                      )) || []}
-                    </Select>
-                  </FormControl>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <FormControl size="small" fullWidth>
-                    <InputLabel id="section-label">Section</InputLabel>
-                    <Select
-                      labelId="section-label"
-                      id="section"
-                      value={formData.section}
-                      label="Section"
-                      onChange={(e) => {
-                        console.log('Section selected:', e.target.value);
-                        handleSelectChange('section', e.target.value);
-                      }}
-                    >
-                      {organizationalData?.sections?.map((section) => (
-                        <MenuItem key={section} value={section}>
-                          {section}
                         </MenuItem>
                       )) || []}
                     </Select>
@@ -951,6 +947,40 @@ Submitted via Orvale Management System`;
                     </Select>
                   </FormControl>
                 </div>
+              </div>
+
+              {/* Section - standalone */}
+              <div>
+                <FormControl size="small" fullWidth>
+                  <InputLabel id="section-label">Section</InputLabel>
+                  <Select
+                    labelId="section-label"
+                    id="section"
+                    value={formData.section}
+                    label="Section"
+                    onChange={(e) => {
+                      console.log('Section selected:', e.target.value);
+                      handleSelectChange('section', e.target.value);
+                    }}
+                  >
+                    {organizationalData?.sections?.map((section) => (
+                      <MenuItem key={section} value={section}>
+                        {section}
+                      </MenuItem>
+                    )) || []}
+                  </Select>
+                </FormControl>
+              </div>
+
+              {/* Request Submitter */}
+              <div>
+                <Label htmlFor="submittedByDisplayName">Request Submitter (Your Name)</Label>
+                <Input
+                  id="submittedByDisplayName"
+                  value={formData.submittedByDisplayName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, submittedByDisplayName: e.target.value }))}
+                  placeholder="Enter your full name"
+                />
               </div>
 
               {/* Issue Details */}

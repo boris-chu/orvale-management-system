@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 // Material-UI imports for working Select components
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings, LogOut, CheckCircle } from 'lucide-react';
+import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings, LogOut, CheckCircle, Monitor } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 // Removed static imports - will load dynamically from database APIs
@@ -25,7 +25,11 @@ interface Ticket {
   employee_number: string;
   phone_number: string;
   location: string;
+  cubicle_room?: string;
   section: string;
+  submitted_by?: string;
+  submitted_by_employee_number?: string;
+  submitted_by_display_name?: string;
   office?: string;
   bureau?: string;
   division?: string;
@@ -36,6 +40,7 @@ interface Ticket {
   implementation?: string;
   issue_title: string;
   issue_description: string;
+  computer_info?: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   status: 'pending' | 'assigned' | 'in_progress' | 'complete' | 'completed' | 'escalate' | 'escalated' | 'deleted';
   assigned_to?: string;
@@ -1314,7 +1319,13 @@ export default function TicketsPage() {
                   <div><strong>Employee #:</strong> {selectedTicket.employee_number}</div>
                   <div><strong>Phone:</strong> {selectedTicket.phone_number}</div>
                   <div><strong>Location:</strong> {selectedTicket.location}</div>
+                  {selectedTicket.cubicle_room && (
+                    <div><strong>Cubicle/Room:</strong> {selectedTicket.cubicle_room}</div>
+                  )}
                   <div><strong>Section:</strong> {selectedTicket.section}</div>
+                  {selectedTicket.submitted_by_display_name && (
+                    <div><strong>Request Submitter:</strong> {selectedTicket.submitted_by_display_name}</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1551,6 +1562,36 @@ export default function TicketsPage() {
                     {selectedTicket.issue_description}
                   </div>
                 </div>
+                
+                {/* System Information Section */}
+                {selectedTicket.computer_info && (
+                  <div className="mt-6">
+                    <h3 className="font-semibold text-blue-600 mb-2 flex items-center gap-2">
+                      <Monitor className="h-5 w-5" />
+                      System Information
+                    </h3>
+                    <div className="bg-gray-50 p-4 rounded border-l-4 border-green-500">
+                      <div className="space-y-2 text-sm">
+                        {(() => {
+                          try {
+                            const computerInfo = JSON.parse(selectedTicket.computer_info);
+                            return (
+                              <>
+                                {computerInfo.ip && <div><strong>IP Address:</strong> {computerInfo.ip}</div>}
+                                {computerInfo.domain && <div><strong>Domain:</strong> {computerInfo.domain}</div>}
+                                {computerInfo.browser && <div><strong>Browser:</strong> {computerInfo.browser}</div>}
+                                {computerInfo.platform && <div><strong>Platform:</strong> {computerInfo.platform}</div>}
+                                {computerInfo.timestamp && <div><strong>Captured:</strong> {new Date(computerInfo.timestamp).toLocaleString()}</div>}
+                              </>
+                            );
+                          } catch (error) {
+                            return <div>System information unavailable</div>;
+                          }
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="history" className="mt-4" onClick={(e) => e.stopPropagation()}>
