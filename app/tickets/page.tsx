@@ -110,6 +110,8 @@ export default function TicketsPage() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [assignableUsers, setAssignableUsers] = useState<any[]>([]);
   const [loadingAssignableUsers, setLoadingAssignableUsers] = useState(false);
+  const [availableTeams, setAvailableTeams] = useState<any[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(false);
 
   // Show notification helper
   const showNotification = (message: string, type: 'success' | 'error') => {
@@ -126,6 +128,11 @@ export default function TicketsPage() {
   // Check if current user can override ticket assignments
   const canOverrideAssignment = () => {
     return currentUser?.permissions?.includes('ticket.override_assignment');
+  };
+
+  // Check if current user can assign tickets to different teams
+  const canAssignCrossTeam = () => {
+    return currentUser?.permissions?.includes('helpdesk.assign_cross_team');
   };
 
   // Check if ticket is editable based on status, assignment, and permissions
@@ -226,6 +233,7 @@ export default function TicketsPage() {
     setSaveStatus('idle');
     setModalActiveTab('details'); // Reset to details tab
     loadAssignableUsers(); // Load users that can be assigned to
+    loadAvailableTeams(); // Load teams for helpdesk users
   };
 
   // Handle tab change with proper event handling
@@ -256,6 +264,34 @@ export default function TicketsPage() {
       setAssignableUsers([]);
     } finally {
       setLoadingAssignableUsers(false);
+    }
+  };
+
+  // Load available teams for helpdesk users
+  const loadAvailableTeams = async () => {
+    if (!canAssignCrossTeam()) return;
+    
+    setLoadingTeams(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/helpdesk/teams', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableTeams(data.data?.all_teams || []);
+      } else {
+        console.error('Failed to load available teams');
+        setAvailableTeams([]);
+      }
+    } catch (error) {
+      console.error('Error loading available teams:', error);
+      setAvailableTeams([]);
+    } finally {
+      setLoadingTeams(false);
     }
   };
 
@@ -553,6 +589,19 @@ export default function TicketsPage() {
       }
       
       setSelectedTicket(updatedTicket);
+      
+      // Special handling for team changes - clear assigned user and reload assignable users
+      if (field === 'assigned_team' && value !== selectedTicket.assigned_team) {
+        setSelectedTicket(prev => prev ? {
+          ...prev,
+          assigned_team: value,
+          assigned_to: '' // Clear assigned user when team changes
+        } : null);
+        // Reload assignable users for the new team
+        setTimeout(() => loadAssignableUsers(), 100);
+        showNotification('Team changed - assigned user cleared', 'info');
+        return; // Exit early since we've handled the update
+      }
       
       // Clear dependent fields when parent category changes
       if (field === 'category') {
@@ -1307,6 +1356,44 @@ export default function TicketsPage() {
                       </Select>
                     </FormControl>
                   </div>
+                  
+                  {/* Team Assignment - Only for helpdesk users */}
+                  {canAssignCrossTeam() && (
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Assigned Team:
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          Helpdesk
+                        </Badge>
+                      </label>
+                      <FormControl size="small" className="w-full">
+                        <InputLabel id="assigned-team-label">Select Team</InputLabel>
+                        <Select
+                          labelId="assigned-team-label"
+                          id="assigned-team-select"
+                          value={selectedTicket.assigned_team || ''}
+                          label="Select Team"
+                          onChange={(e) => updateTicketField('assigned_team', e.target.value)}
+                          disabled={loadingTeams || !isTicketEditable(selectedTicket)}
+                        >
+                          <MenuItem value="">
+                            <em>Unassigned</em>
+                          </MenuItem>
+                          {availableTeams.map((team) => (
+                            <MenuItem key={team.id} value={team.id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{team.name}</span>
+                                <span className="text-xs text-gray-500">
+                                  {team.section_name} • {team.active_tickets} active tickets
+                                  {team.team_lead_name && ` • Lead: ${team.team_lead_name}`}
+                                </span>
+                              </div>
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </div>
+                  )}
                 </div>
               </div>
               
