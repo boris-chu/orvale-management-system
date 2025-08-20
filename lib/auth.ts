@@ -260,6 +260,7 @@ export const verifyAuth = async (request: any): Promise<{success: boolean; user?
         }
 
         console.log('✅ User found in database:', user.username);
+        console.log('🔧 Raw user.login_preferences from database:', user.login_preferences);
 
         // Add permissions to user object
         const permissions = await getUserPermissions(user);
@@ -274,10 +275,12 @@ export const verifyAuth = async (request: any): Promise<{success: boolean; user?
             section_id: user.section_id,
             active: user.active,
             profile_picture: user.profile_picture,
+            login_preferences: user.login_preferences,
             permissions: permissions
         };
 
         console.log('✅ User with permissions created, permission count:', userWithPermissions.permissions.length);
+        console.log('🔧 Final user object login_preferences:', userWithPermissions.login_preferences);
 
         return { success: true, user: userWithPermissions };
     } catch (error) {

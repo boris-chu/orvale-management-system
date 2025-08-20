@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
-import { runAsync } from '@/lib/database';
+import { runAsync, getAsync } from '@/lib/database';
+import { createContextLogger } from '@/lib/logger';
+
+const logger = createContextLogger('users-api');
 
 export async function PUT(
   request: NextRequest,
@@ -24,7 +27,21 @@ export async function PUT(
     const body = await request.json();
     const { display_name, email, login_preferences } = body;
 
+    logger.info({
+      userId,
+      display_name,
+      email,
+      login_preferences,
+      requestBody: body,
+      event: 'profile_update_request'
+    }, 'Profile update request received');
+
     // Update user profile
+    logger.debug({
+      query_params: [display_name, email, login_preferences || '{}', userId],
+      event: 'database_update'
+    }, 'Executing profile UPDATE query');
+    
     await runAsync(`
       UPDATE users 
       SET display_name = ?, 
@@ -33,13 +50,31 @@ export async function PUT(
       WHERE id = ?
     `, [display_name, email, login_preferences || '{}', userId]);
 
+    logger.info({
+      userId,
+      event: 'database_update_completed'
+    }, 'Profile UPDATE query completed successfully');
+    
+    // Verify the update by reading back the data
+    const updatedUser = await getAsync('SELECT * FROM users WHERE id = ?', [userId]);
+    logger.debug({
+      userId,
+      login_preferences: updatedUser?.login_preferences,
+      event: 'database_verification'
+    }, 'Profile update verification - login_preferences in database');
+
     return NextResponse.json({ 
       success: true, 
       message: 'Profile updated successfully' 
     });
 
   } catch (error) {
-    console.error('Error updating user profile:', error);
+    logger.error({
+      userId: params.id,
+      error,
+      event: 'profile_update_error'
+    }, 'Error updating user profile');
+    
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

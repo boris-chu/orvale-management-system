@@ -255,25 +255,6 @@ export default function MaterialUILoginModalAnimated({
               transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
             />
 
-            {/* Close button */}
-            <IconButton
-              onClick={handleClose}
-              disabled={loading}
-              sx={{
-                position: 'absolute',
-                right: 16,
-                top: 16,
-                zIndex: 1,
-                backgroundColor: 'rgba(255,255,255,0.9)',
-                '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,1)',
-                  transform: 'rotate(90deg)'
-                },
-                transition: 'all 0.3s ease'
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
 
             {/* Header with animated avatar */}
             <Box sx={{ 

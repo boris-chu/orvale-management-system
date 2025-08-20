@@ -134,12 +134,16 @@ export default function MaterialUILoginModal({
   };
 
   const handleClose = () => {
+    console.log('🔧 MaterialUILoginModal - handleClose called, loading:', loading);
     if (!loading) {
       setUsername('');
       setPassword('');
       setError('');
       setShowPassword(false);
+      console.log('🔧 MaterialUILoginModal - calling onClose()');
       onClose();
+    } else {
+      console.log('🔧 MaterialUILoginModal - handleClose blocked by loading state');
     }
   };
 
@@ -175,31 +179,6 @@ export default function MaterialUILoginModal({
           }}
         >
           <Box sx={{ position: 'relative' }}>
-            {/* Close button with animation */}
-            <motion.div
-              initial={{ opacity: 0, rotate: -90 }}
-              animate={{ opacity: 1, rotate: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <IconButton
-                onClick={handleClose}
-                disabled={loading}
-                sx={{
-                  position: 'absolute',
-                  right: 8,
-                  top: 8,
-                  color: 'grey.500',
-                  zIndex: 1,
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                    transform: 'rotate(90deg)',
-                    transition: 'transform 0.3s ease'
-                  }
-                }}
-              >
-                <CloseIcon />
-              </IconButton>
-            </motion.div>
 
             {/* Dialog Header with Icon */}
             <Box sx={{ 

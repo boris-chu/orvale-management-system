@@ -3,9 +3,14 @@
  */
 export function getLoginRedirectUrl(user: any): string {
   try {
+    console.log('🔧 getLoginRedirectUrl - user object:', user);
+    
     // Parse user login preferences
     const preferences = user.login_preferences ? JSON.parse(user.login_preferences) : {};
+    console.log('🔧 getLoginRedirectUrl - parsed preferences:', preferences);
+    
     const preferredDestination = preferences.default_destination;
+    console.log('🔧 getLoginRedirectUrl - preferred destination:', preferredDestination);
 
     // Check if user has permissions for their preferred destination
     if (preferredDestination) {
@@ -21,29 +26,34 @@ export function getLoginRedirectUrl(user: any): string {
             'admin.view_analytics', 'admin.system_settings'
           ];
           if (adminPermissions.some(perm => user.permissions?.includes(perm))) {
+            console.log('🔧 getLoginRedirectUrl - redirecting to admin dashboard');
             return '/developer';
           }
           break;
 
         case 'analytics':
           if (user.permissions?.includes('analytics.view_reports')) {
+            console.log('🔧 getLoginRedirectUrl - redirecting to analytics');
             return '/developer/analytics';
           }
           break;
 
         case 'team-management':
           if (user.permissions?.includes('users.manage_team')) {
+            console.log('🔧 getLoginRedirectUrl - redirecting to team management');
             return '/developer/teams';
           }
           break;
 
         case 'tickets':
         default:
+          console.log('🔧 getLoginRedirectUrl - redirecting to tickets (case match)');
           return '/tickets';
       }
     }
 
     // Default fallback to tickets
+    console.log('🔧 getLoginRedirectUrl - redirecting to tickets (fallback)');
     return '/tickets';
     
   } catch (error) {

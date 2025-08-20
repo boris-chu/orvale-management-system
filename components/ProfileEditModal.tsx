@@ -39,18 +39,42 @@ interface ProfileEditModalProps {
 }
 
 export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: ProfileEditModalProps) {
+  console.log('🔧 ProfileEditModal - received user object:', user);
+  
   const [formData, setFormData] = useState({
     display_name: user.display_name,
     email: user.email,
     login_destination: (() => {
       try {
+        console.log('🔧 ProfileEditModal - user.login_preferences:', user.login_preferences);
         const prefs = JSON.parse(user.login_preferences || '{}');
-        return prefs.default_destination || 'tickets';
-      } catch {
+        console.log('🔧 ProfileEditModal - parsed prefs:', prefs);
+        const destination = prefs.default_destination || 'tickets';
+        console.log('🔧 ProfileEditModal - initial destination:', destination);
+        return destination;
+      } catch (error) {
+        console.log('🔧 ProfileEditModal - error parsing preferences:', error);
         return 'tickets';
       }
     })()
   });
+
+  // Update formData when user prop changes
+  React.useEffect(() => {
+    console.log('🔧 ProfileEditModal - useEffect user changed:', user);
+    setFormData({
+      display_name: user.display_name,
+      email: user.email,
+      login_destination: (() => {
+        try {
+          const prefs = JSON.parse(user.login_preferences || '{}');
+          return prefs.default_destination || 'tickets';
+        } catch (error) {
+          return 'tickets';
+        }
+      })()
+    });
+  }, [user]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState<{message: string; type: 'success' | 'error'} | null>(null);
@@ -204,23 +228,37 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
     
     try {
       const token = localStorage.getItem('authToken');
+      const requestData = {
+        display_name: formData.display_name,
+        email: formData.email,
+        login_preferences: JSON.stringify({
+          default_destination: formData.login_destination
+        })
+      };
+      
+      console.log('🔧 ProfileEditModal - sending save request:', requestData);
+      
       const response = await fetch(`/api/users/${user.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
+        body: JSON.stringify(requestData)
+      });
+      
+      console.log('🔧 ProfileEditModal - save response status:', response.status);
+
+      if (response.ok) {
+        const updatedUser = { 
+          ...user, 
           display_name: formData.display_name,
           email: formData.email,
           login_preferences: JSON.stringify({
             default_destination: formData.login_destination
           })
-        })
-      });
-
-      if (response.ok) {
-        const updatedUser = { ...user, ...formData };
+        };
+        console.log('🔧 ProfileEditModal - sending updated user to parent:', updatedUser);
         onProfileUpdate(updatedUser);
         showNotification('Profile updated successfully', 'success');
         setTimeout(() => onOpenChange(false), 1500);
