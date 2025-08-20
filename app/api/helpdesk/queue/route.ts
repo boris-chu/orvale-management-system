@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
         SELECT 
           ut.*,
           u.display_name as assigned_to_name,
-          u2.display_name as submitted_by_name,
           st.name as assigned_team_name,
           st.label as assigned_team_label,
           COALESCE(
@@ -35,7 +34,6 @@ export async function GET(request: NextRequest) {
           ) as activity_count
         FROM user_tickets ut
         LEFT JOIN users u ON ut.assigned_to = u.username
-        LEFT JOIN users u2 ON ut.submitted_by = u2.username
         LEFT JOIN support_teams st ON ut.assigned_team = st.id
         WHERE ut.status = 'escalated'
         ORDER BY 
@@ -70,7 +68,6 @@ export async function GET(request: NextRequest) {
         SELECT 
           ut.*,
           u.display_name as assigned_to_name,
-          u2.display_name as submitted_by_name,
           st.name as assigned_team_name,
           st.label as assigned_team_label,
           COALESCE(
@@ -80,7 +77,6 @@ export async function GET(request: NextRequest) {
           ) as activity_count
         FROM user_tickets ut
         LEFT JOIN users u ON ut.assigned_to = u.username
-        LEFT JOIN users u2 ON ut.submitted_by = u2.username
         LEFT JOIN support_teams st ON ut.assigned_team = st.id
         WHERE ut.assigned_team = ? ${statusFilter}
         ORDER BY 

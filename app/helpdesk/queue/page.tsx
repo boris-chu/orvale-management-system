@@ -52,8 +52,7 @@ interface Ticket {
   assigned_team?: string;
   assigned_team_name?: string;
   assigned_team_label?: string;
-  submitted_by: string;
-  submitted_by_name?: string;
+  request_creator_display_name?: string;
   submitted_at: string;
   updated_at: string;
   escalated_at?: string;
@@ -314,7 +313,7 @@ export default function HelpdeskQueue() {
       ticket.issue_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.submission_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.submitted_by_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.request_creator_display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.assigned_to_name?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   };
@@ -351,7 +350,7 @@ export default function HelpdeskQueue() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1">
             <User className="h-3 w-3" />
-            <span>{ticket.submitted_by_name || ticket.user_name}</span>
+            <span>{ticket.request_creator_display_name || ticket.user_name}</span>
           </div>
           {ticket.assigned_to_name && (
             <div className="flex items-center gap-1">

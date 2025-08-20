@@ -82,7 +82,7 @@ async function getOverviewAnalytics(startDate: string, endDate: string) {
     // Get user activity stats
     const userStats = await getAsync(`
       SELECT 
-        COUNT(DISTINCT submitted_by_employee_number) as active_users,
+        COUNT(DISTINCT employee_number) as active_users,
         COUNT(*) as total_submissions
       FROM user_tickets 
       WHERE DATE(submitted_at) BETWEEN ? AND ?

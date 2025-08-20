@@ -210,14 +210,13 @@ router.post('/', async (req, res) => {
             employee_number,
             phone_number,
             location,
+            cubicle_room,
             section,
             teleworking,
             issue_title,
             issue_description,
             computer_info,
-            on_behalf = false,
-            submitted_by,
-            submitted_by_employee_number,
+            request_creator_display_name,
             priority = 'medium',
             email_recipient,
             email_recipient_display
@@ -236,15 +235,14 @@ router.post('/', async (req, res) => {
 
         const result = await runAsync(`
             INSERT INTO user_tickets (
-                submission_id, user_name, employee_number, phone_number, location,
-                section, teleworking, submitted_by, submitted_by_employee_number,
-                on_behalf, issue_title, issue_description, computer_info,
+                submission_id, user_name, employee_number, phone_number, location, cubicle_room,
+                section, teleworking, request_creator_display_name,
+                issue_title, issue_description, computer_info,
                 priority, email_recipient, email_recipient_display
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
-            submission_id, user_name, employee_number, phone_number, location,
-            section, teleworking, submitted_by || user_name, 
-            submitted_by_employee_number || employee_number, on_behalf,
+            submission_id, user_name, employee_number, phone_number, location, cubicle_room,
+            section, teleworking, request_creator_display_name,
             issue_title, issue_description, computer_info_json,
             priority, email_recipient, email_recipient_display
         ]);
