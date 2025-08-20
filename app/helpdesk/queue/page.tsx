@@ -816,11 +816,11 @@ export default function HelpdeskQueue() {
           <CardContent className="p-6">
             <Tabs value={activeMainTab} onValueChange={handleMainTabChange}>
               <div className="flex items-center justify-between mb-4">
-                <TabsList className="h-12 overflow-x-auto min-w-0 flex-1 justify-start">
+                <TabsList className="h-12 overflow-x-auto min-w-0 flex-1 justify-start scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition-colors">
                   {/* ESCALATED Tab */}
                   <TabsTrigger 
                     value="escalated" 
-                    className="flex items-center space-x-2 px-4 data-[state=active]:bg-red-100 data-[state=active]:text-red-800"
+                    className="flex items-center space-x-2 px-4 data-[state=active]:bg-red-100 data-[state=active]:text-red-800 whitespace-nowrap min-w-fit flex-shrink-0"
                   >
                     <AlertTriangle className="h-4 w-4" />
                     <span>ESCALATED</span>
@@ -836,7 +836,7 @@ export default function HelpdeskQueue() {
                     <TabsTrigger 
                       key={team.team_id}
                       value={team.team_id}
-                      className="flex items-center space-x-2 px-4"
+                      className="flex items-center space-x-2 px-4 whitespace-nowrap min-w-fit flex-shrink-0"
                     >
                       <span>{team.team_label}</span>
                       {team.totalTickets > 0 && (
@@ -901,34 +901,34 @@ export default function HelpdeskQueue() {
                       value={activeTeamTabs[team.team_id] || 'pending'} 
                       onValueChange={(value) => handleTeamTabChange(team.team_id, value)}
                     >
-                      <TabsList className="h-12 w-full justify-start rounded-none border-b bg-transparent">
+                      <TabsList className="h-12 w-full justify-start rounded-none border-b bg-transparent overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition-colors">
                         <TabsTrigger 
                           value="pending" 
-                          className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-t-lg"
+                          className="data-[state=active]:bg-blue-500 data-[state=active]:text-white rounded-t-lg whitespace-nowrap min-w-fit flex-shrink-0"
                         >
                           Pending ({team.statusCounts.pending})
                         </TabsTrigger>
                         <TabsTrigger 
                           value="in_progress" 
-                          className="data-[state=active]:bg-purple-500 data-[state=active]:text-white rounded-t-lg"
+                          className="data-[state=active]:bg-purple-500 data-[state=active]:text-white rounded-t-lg whitespace-nowrap min-w-fit flex-shrink-0"
                         >
                           In Progress ({team.statusCounts.in_progress})
                         </TabsTrigger>
                         <TabsTrigger 
                           value="completed" 
-                          className="data-[state=active]:bg-green-500 data-[state=active]:text-white rounded-t-lg"
+                          className="data-[state=active]:bg-green-500 data-[state=active]:text-white rounded-t-lg whitespace-nowrap min-w-fit flex-shrink-0"
                         >
                           Completed ({team.statusCounts.completed})
                         </TabsTrigger>
                         <TabsTrigger 
                           value="escalated" 
-                          className="data-[state=active]:bg-red-500 data-[state=active]:text-white rounded-t-lg"
+                          className="data-[state=active]:bg-red-500 data-[state=active]:text-white rounded-t-lg whitespace-nowrap min-w-fit flex-shrink-0"
                         >
                           Escalated ({team.statusCounts.escalated})
                         </TabsTrigger>
                         <TabsTrigger 
                           value="deleted" 
-                          className="data-[state=active]:bg-gray-500 data-[state=active]:text-white rounded-t-lg"
+                          className="data-[state=active]:bg-gray-500 data-[state=active]:text-white rounded-t-lg whitespace-nowrap min-w-fit flex-shrink-0"
                         >
                           Deleted ({team.statusCounts.deleted})
                         </TabsTrigger>
