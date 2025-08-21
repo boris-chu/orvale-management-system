@@ -150,3 +150,139 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    // Verify authentication and permissions
+    const authResult = await verifyAuth(request);
+    if (!authResult.success || !authResult.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check for tables management permission
+    if (!authResult.user.permissions?.includes('tables.manage_columns')) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { table, rowData } = body;
+
+    if (!table || !rowData) {
+      return NextResponse.json(
+        { error: 'Missing required fields: table, rowData' },
+        { status: 400 }
+      );
+    }
+
+    // Validate table name
+    const allowedTables = [
+      'user_tickets', 'users', 'teams', 'support_teams', 'ticket_categories',
+      'request_types', 'subcategories', 'dpss_offices', 'dpss_bureaus', 
+      'dpss_divisions', 'dpss_sections', 'portal_settings', 'system_settings'
+    ];
+
+    if (!allowedTables.includes(table)) {
+      return NextResponse.json({ error: 'Invalid table name' }, { status: 400 });
+    }
+
+    // Filter out temporary IDs and prepare data
+    const filteredData = { ...rowData };
+    if (typeof filteredData.id === 'string' && filteredData.id.startsWith('new_')) {
+      delete filteredData.id;
+    }
+
+    // Build column names and values
+    const columns = Object.keys(filteredData).filter(key => filteredData[key] !== '');
+    const values = columns.map(col => filteredData[col]);
+    const placeholders = columns.map(() => '?').join(', ');
+
+    // Add created_at if table has it
+    if (['user_tickets', 'users', 'teams', 'portal_settings', 'system_settings'].includes(table)) {
+      columns.push('created_at');
+      values.push(new Date().toISOString());
+      placeholders.replace(/,$/, ', ?');
+    }
+
+    // Insert new row
+    await queryAsync(
+      `INSERT INTO \`${table}\` (${columns.map(col => `\`${col}\``).join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
+      values
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: 'Record created successfully',
+      data: {
+        table,
+        columns: columns.length,
+        values: values.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creating table data:', error);
+    return NextResponse.json(
+      { error: 'Failed to create table data' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    // Verify authentication and permissions
+    const authResult = await verifyAuth(request);
+    if (!authResult.success || !authResult.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check for tables management permission
+    if (!authResult.user.permissions?.includes('tables.manage_columns')) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { table, rowId, primaryKey = 'id' } = body;
+
+    if (!table || !rowId) {
+      return NextResponse.json(
+        { error: 'Missing required fields: table, rowId' },
+        { status: 400 }
+      );
+    }
+
+    // Validate table name
+    const allowedTables = [
+      'user_tickets', 'users', 'teams', 'support_teams', 'ticket_categories',
+      'request_types', 'subcategories', 'dpss_offices', 'dpss_bureaus', 
+      'dpss_divisions', 'dpss_sections', 'portal_settings', 'system_settings'
+    ];
+
+    if (!allowedTables.includes(table)) {
+      return NextResponse.json({ error: 'Invalid table name' }, { status: 400 });
+    }
+
+    // Delete the row
+    await queryAsync(
+      `DELETE FROM \`${table}\` WHERE \`${primaryKey}\` = ?`,
+      [rowId]
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: 'Record deleted successfully',
+      data: {
+        table,
+        rowId,
+        primaryKey
+      }
+    });
+
+  } catch (error) {
+    console.error('Error deleting table data:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete table data' },
+      { status: 500 }
+    );
+  }
+}

@@ -158,6 +158,7 @@ export default function TablesManagementPage() {
   const [editingColumn, setEditingColumn] = useState<ColumnDefinition | null>(null);
   const [showAddColumnDialog, setShowAddColumnDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<{ open: boolean; columnId?: string; columnName?: string }>({ open: false });
+  const [showDeleteRowConfirm, setShowDeleteRowConfirm] = useState<{ open: boolean; rowId?: any; rowLabel?: string }>({ open: false });
   
   // Available tables for editor (actual database tables)
   const [editorTables] = useState([
@@ -602,34 +603,115 @@ export default function TablesManagementPage() {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // Update multiple fields at once
-      const promises = Object.entries(rowData)
-        .filter(([field, value]) => editingRow && editingRow[field] !== value)
-        .map(([field, value]) => 
-          fetch('/api/admin/table-data', {
-            method: 'PUT',
-            headers,
-            body: JSON.stringify({
-              table: selectedEditorTable,
-              rowId: rowData.id || rowData.ID,
-              field,
-              value,
-              primaryKey: 'id'
-            }),
-          })
+      const isNewRow = typeof rowData.id === 'string' && rowData.id.startsWith('new_');
+
+      if (isNewRow) {
+        // Create new row
+        const response = await fetch('/api/admin/table-data', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            table: selectedEditorTable,
+            rowData
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to create row: ${response.statusText}`);
+        }
+
+        // Reload table data to get the new row with proper ID
+        await loadEditorColumns(selectedEditorTable);
+        
+        toast({
+          title: 'Success',
+          description: 'New row created successfully',
+        });
+        
+      } else {
+        // Update existing row - multiple fields at once
+        const promises = Object.entries(rowData)
+          .filter(([field, value]) => editingRow && editingRow[field] !== value)
+          .map(([field, value]) => 
+            fetch('/api/admin/table-data', {
+              method: 'PUT',
+              headers,
+              body: JSON.stringify({
+                table: selectedEditorTable,
+                rowId: rowData.id || rowData.ID,
+                field,
+                value,
+                primaryKey: 'id'
+              }),
+            })
+          );
+
+        await Promise.all(promises);
+
+        // Update local data with all changes
+        const updatedData = editorTableData.map(row => 
+          row.id === rowData.id || row.ID === rowData.id ? { ...row, ...rowData } : row
         );
-
-      await Promise.all(promises);
-
-      // Update local data with all changes
-      const updatedData = editorTableData.map(row => 
-        row.id === rowData.id || row.ID === rowData.id ? { ...row, ...rowData } : row
-      );
-      setEditorTableData(updatedData);
+        setEditorTableData(updatedData);
+        
+        toast({
+          title: 'Success',
+          description: 'Row updated successfully',
+        });
+      }
 
     } catch (error) {
       console.error('Error saving row:', error);
       throw error; // Re-throw for the dialog to handle
+    }
+  };
+
+  // Handle row deletion
+  const handleDeleteRow = async (rowId: any) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const headers: any = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('/api/admin/table-data', {
+        method: 'DELETE',
+        headers,
+        body: JSON.stringify({
+          table: selectedEditorTable,
+          rowId,
+          primaryKey: 'id'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete row: ${response.statusText}`);
+      }
+
+      // Remove row from local data
+      const updatedData = editorTableData.filter(row => 
+        (row.id || row.ID) !== rowId
+      );
+      setEditorTableData(updatedData);
+
+      toast({
+        title: 'Success',
+        description: 'Row deleted successfully',
+      });
+
+      setShowDeleteRowConfirm({ open: false });
+
+    } catch (error) {
+      console.error('Error deleting row:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete row',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -1430,19 +1512,32 @@ export default function TablesManagementPage() {
                                 key={table.name}
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
-                                className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                                className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
                                   selectedEditorTable === table.name 
-                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-sm ring-1 ring-blue-200 dark:ring-blue-800' 
+                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-sm'
                                 }`}
                                 onClick={() => setSelectedEditorTable(table.name)}
                               >
                                 <div className="flex items-center gap-3">
-                                  <Database className="h-4 w-4 text-blue-600" />
-                                  <div>
-                                    <div className="font-medium text-sm">{table.label}</div>
-                                    <div className="text-xs text-gray-600 dark:text-gray-400">{table.description}</div>
+                                  <Database className={`h-4 w-4 ${
+                                    selectedEditorTable === table.name ? 'text-blue-600' : 'text-gray-500'
+                                  }`} />
+                                  <div className="flex-1">
+                                    <div className={`font-medium text-sm ${
+                                      selectedEditorTable === table.name ? 'text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-gray-100'
+                                    }`}>
+                                      {table.label}
+                                    </div>
+                                    <div className={`text-xs ${
+                                      selectedEditorTable === table.name ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'
+                                    }`}>
+                                      {table.description}
+                                    </div>
                                   </div>
+                                  {selectedEditorTable === table.name && (
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                                  )}
                                 </div>
                               </motion.div>
                             ))}
@@ -1450,14 +1545,6 @@ export default function TablesManagementPage() {
                         </Select>
                       </div>
 
-                      <Button
-                        onClick={() => setShowAddColumnDialog(true)}
-                        className="w-full"
-                        disabled={editorLoading}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add New Column
-                      </Button>
                     </div>
                   </div>
 
@@ -1473,14 +1560,43 @@ export default function TablesManagementPage() {
                             {editorTableData.length} record{editorTableData.length !== 1 ? 's' : ''} • {editorColumns.length} column{editorColumns.length !== 1 ? 's' : ''}
                           </p>
                         </div>
-                        <Button
-                          variant="outline"
-                          onClick={() => loadEditorColumns(selectedEditorTable)}
-                          disabled={editorLoading}
-                        >
-                          <RefreshCw className={`h-4 w-4 mr-2 ${editorLoading ? 'animate-spin' : ''}`} />
-                          Refresh
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              // Create a new empty row for editing
+                              const newRow = editorColumns.reduce((acc, col) => {
+                                acc[col.column_key] = col.column_type === 'date' ? new Date().toISOString() : '';
+                                return acc;
+                              }, {} as any);
+                              newRow.id = `new_${Date.now()}`;
+                              setEditingRow(newRow);
+                              setShowRowEditor(true);
+                            }}
+                            disabled={editorLoading}
+                            size="sm"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Row
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowAddColumnDialog(true)}
+                            disabled={editorLoading}
+                            size="sm"
+                          >
+                            <Columns className="h-4 w-4 mr-2" />
+                            Add Column
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => loadEditorColumns(selectedEditorTable)}
+                            disabled={editorLoading}
+                          >
+                            <RefreshCw className={`h-4 w-4 mr-2 ${editorLoading ? 'animate-spin' : ''}`} />
+                            Refresh
+                          </Button>
+                        </div>
                       </div>
 
                       {editorLoading ? (
@@ -1492,15 +1608,65 @@ export default function TablesManagementPage() {
                         </div>
                       ) : editorTableData.length > 0 ? (
                         <div className="border rounded-lg overflow-hidden">
+                          {editorColumns.length > 8 && (
+                            <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b text-xs text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                              <span>📱</span>
+                              Showing all {editorColumns.length} columns • Scroll horizontally to view more →
+                            </div>
+                          )}
                           <div className="overflow-x-auto max-h-[600px]">
                             <Table>
                               <TableHeader>
                                 <TableRow className="bg-gray-50 dark:bg-gray-800">
-                                  {editorColumns.slice(0, 8).map((column) => ( // Show first 8 columns
-                                    <TableHead key={column.column_key} className="font-semibold">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-xs">{getColumnTypeIcon(column.column_type)}</span>
-                                        {column.column_label}
+                                  {editorColumns.map((column) => ( // Show all columns
+                                    <TableHead key={column.column_key} className="font-semibold min-w-32 max-w-64">
+                                      <div className="flex items-center justify-between group">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs">{getColumnTypeIcon(column.column_type)}</span>
+                                          {column.column_label}
+                                        </div>
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button 
+                                                  variant="ghost" 
+                                                  size="sm"
+                                                  className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setEditingColumn(column);
+                                                  }}
+                                                >
+                                                  <Edit className="h-3 w-3" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Edit Column</TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button 
+                                                  variant="ghost" 
+                                                  size="sm"
+                                                  className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setShowDeleteConfirm({
+                                                      open: true,
+                                                      columnId: column.id?.toString(),
+                                                      columnName: column.column_label
+                                                    });
+                                                  }}
+                                                >
+                                                  <Trash2 className="h-3 w-3 text-red-600" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Delete Column</TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        </div>
                                       </div>
                                     </TableHead>
                                   ))}
@@ -1510,8 +1676,8 @@ export default function TablesManagementPage() {
                               <TableBody>
                                 {editorTableData.slice(0, 50).map((row, index) => (
                                   <TableRow key={row.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                                    {editorColumns.slice(0, 8).map((column) => (
-                                      <TableCell key={column.column_key} className="max-w-48">
+                                    {editorColumns.map((column) => (
+                                      <TableCell key={column.column_key} className="min-w-32 max-w-64">
                                         <div className="truncate">
                                           {editingCell?.rowId === row.id && editingCell?.field === column.column_key ? (
                                             <Input
@@ -1575,6 +1741,27 @@ export default function TablesManagementPage() {
                                               </Button>
                                             </TooltipTrigger>
                                             <TooltipContent>Edit Row</TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button 
+                                                variant="outline" 
+                                                size="sm"
+                                                onClick={() => {
+                                                  setShowDeleteRowConfirm({
+                                                    open: true,
+                                                    rowId: row.id || row.ID,
+                                                    rowLabel: row.title || row.name || row.username || `Row ${row.id || row.ID}`
+                                                  });
+                                                }}
+                                                className="hover:bg-red-50 hover:border-red-200 dark:hover:bg-red-900/20"
+                                              >
+                                                <Trash2 className="h-3 w-3 text-red-600" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Delete Row</TooltipContent>
                                           </Tooltip>
                                         </TooltipProvider>
                                       </div>
@@ -1806,6 +1993,36 @@ export default function TablesManagementPage() {
               onClick={() => showDeleteConfirm.columnId && handleDeleteColumn(showDeleteConfirm.columnId)}
             >
               Delete Column
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Row Confirmation Dialog */}
+      <Dialog 
+        open={showDeleteRowConfirm.open} 
+        onOpenChange={(open) => setShowDeleteRowConfirm({ open, rowId: '', rowLabel: '' })}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Row</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &quot;{showDeleteRowConfirm.rowLabel}&quot;? 
+              This action cannot be undone and will permanently remove the data from the database.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteRowConfirm({ open: false })}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => showDeleteRowConfirm.rowId && handleDeleteRow(showDeleteRowConfirm.rowId)}
+            >
+              Delete Row
             </Button>
           </DialogFooter>
         </DialogContent>
