@@ -298,31 +298,63 @@ export function StaffTicketModal({
   const loadUsers = async () => {
     try {
       const token = localStorage.getItem('authToken');
+      const allUsers: User[] = [];
       
-      // Load users from the current user's team only
+      // Load system users from the current user's team
       if (currentUser?.team_id) {
-        const response = await fetch(`/api/developer/teams/${currentUser.team_id}/users`, {
+        try {
+          const systemUsersResponse = await fetch(`/api/developer/teams/${currentUser.team_id}/users`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (systemUsersResponse.ok) {
+            const systemUserData = await systemUsersResponse.json();
+            const filteredSystemUsers = systemUserData.filter((user: User) => user.username && user.active !== false);
+            allUsers.push(...filteredSystemUsers);
+          }
+        } catch (error) {
+          console.warn('Failed to load system users:', error);
+        }
+      }
+      
+      // Load ticket users (available to all staff who can create tickets)
+      try {
+        const ticketUsersResponse = await fetch('/api/staff/ticket-users', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
         
-        if (response.ok) {
-          const userData = await response.json();
-          const filteredUsers = userData.filter((user: User) => user.username && user.active !== false);
-          setUsers(filteredUsers);
-        } else {
-          console.error('Failed to load team users:', response.status);
-          // No fallback - if the user doesn't have proper permissions, they shouldn't see any users
-          setUsers([]);
+        if (ticketUsersResponse.ok) {
+          const ticketUsersData = await ticketUsersResponse.json();
+          if (ticketUsersData.success && ticketUsersData.users) {
+            // Convert ticket user format to User format
+            const formattedTicketUsers = ticketUsersData.users.map((ticketUser: any) => ({
+              ...ticketUser,
+              team_name: ticketUser.section || 'Ticket User', // Show section as team
+              active: true
+            }));
+            allUsers.push(...formattedTicketUsers);
+          }
         }
-      } else {
-        // User has no team assignment - they can't create tickets for others
-        setUsers([]);
+      } catch (error) {
+        console.warn('Failed to load ticket users:', error);
       }
+      
+      // Remove duplicates (prefer system users over ticket users)
+      const uniqueUsers = allUsers.reduce((acc: User[], current: User) => {
+        const existing = acc.find(user => user.username === current.username);
+        if (!existing) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+      
+      setUsers(uniqueUsers);
     } catch (error) {
-      console.error('Failed to load users:', error);
-      // No fallback for security - users without proper access get empty list
+      console.error('Error loading users:', error);
       setUsers([]);
     }
   };
@@ -382,8 +414,28 @@ export function StaffTicketModal({
         return;
       }
 
-      // No need to create user in database - just populate the form with the entered information
-      // The user information will be saved when the ticket is created
+      console.log('💾 Creating new ticket user:', newUserData);
+      
+      // Create ticket user in database so they can be searched next time
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/staff/ticket-users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(newUserData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create ticket user');
+      }
+
+      const result = await response.json();
+      console.log('✅ Ticket user created:', result);
+
+      // Populate the form with the new user information
       setFormData(prev => ({
         ...prev,
         submittedBy: newUserData.username,
@@ -415,9 +467,12 @@ export function StaffTicketModal({
       });
       setShowNewUserDialog(false);
       
+      // Refresh the user list to include the new ticket user
+      await loadUsers();
+      
       toast({
-        title: 'User Information Added',
-        description: `User information for ${newUserData.displayName} has been added to the ticket.`
+        title: 'Ticket User Created',
+        description: `${newUserData.displayName} has been created as a ticket user and added to the ticket.`
       });
 
     } catch (error) {
@@ -544,10 +599,10 @@ export function StaffTicketModal({
 
   // Validate form
   const isFormValid = () => {
-    return formData.title && 
-           formData.category && 
-           formData.description && 
-           formData.submittedBy;
+    return !!(formData.title && 
+             formData.category && 
+             formData.description && 
+             formData.submittedBy);
   };
 
   // Format phone number for display (XXX) XXX-XXXX
@@ -617,7 +672,17 @@ export function StaffTicketModal({
 
   // Handle form submission
   const handleSubmit = async () => {
+    console.log('🚀 handleSubmit called - Form Data:', formData);
+    console.log('✅ Form validation check:', {
+      title: !!formData.title,
+      category: !!formData.category,
+      description: !!formData.description,
+      submittedBy: !!formData.submittedBy,
+      isValid: isFormValid()
+    });
+    
     if (!isFormValid()) {
+      console.log('❌ Form validation failed');
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields',
@@ -626,6 +691,7 @@ export function StaffTicketModal({
       return;
     }
 
+    console.log('🔄 Starting ticket creation...');
     setSaving(true);
     try {
       if (onSubmit) {
@@ -633,24 +699,33 @@ export function StaffTicketModal({
       } else {
         // Default submission logic
         const token = localStorage.getItem('authToken');
+        const payload = {
+          ...formData,
+          createdByStaff: currentUser?.username,
+          submittedDate: new Date().toISOString()
+        };
+        
+        console.log('📤 Sending API request to /api/staff/tickets with payload:', payload);
+        
         const response = await fetch('/api/staff/tickets', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({
-            ...formData,
-            createdByStaff: currentUser?.username,
-            submittedDate: new Date().toISOString()
-          })
+          body: JSON.stringify(payload)
         });
 
+        console.log('📥 API Response status:', response.status);
+        
         if (!response.ok) {
-          throw new Error('Failed to create ticket');
+          const errorText = await response.text();
+          console.error('❌ API Error response:', errorText);
+          throw new Error(`Failed to create ticket: ${response.status} ${errorText}`);
         }
 
         const result = await response.json();
+        console.log('✅ API Success response:', result);
         
         toast({
           title: 'Success',
@@ -661,13 +736,14 @@ export function StaffTicketModal({
         resetForm();
       }
     } catch (error) {
-      console.error('Error creating ticket:', error);
+      console.error('❌ Error creating ticket:', error);
       toast({
         title: 'Error',
         description: 'Failed to create ticket. Please try again.',
         variant: 'destructive',
       });
     } finally {
+      console.log('🏁 Ticket creation process finished, setting saving to false');
       setSaving(false);
     }
   };

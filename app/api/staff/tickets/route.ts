@@ -142,18 +142,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate user exists
-    const userExists = await dbGet(
-      'SELECT username FROM users WHERE username = ?',
-      [ticketData.submittedBy]
-    );
-    
-    if (!userExists) {
-      return NextResponse.json(
-        { error: `User ${ticketData.submittedBy} not found` },
-        { status: 400 }
-      );
-    }
+    // Note: For staff-created tickets, submittedBy can be any user identifier
+    // We don't require them to exist in the users table since this could be
+    // a ticket for someone not yet in the system
 
     // Handle team assignment based on permissions
     let finalAssignedTeam = ticketData.assignedTeam;

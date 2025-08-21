@@ -1763,9 +1763,40 @@ export default function TicketsPage() {
           open={showStaffTicketModal}
           onOpenChange={setShowStaffTicketModal}
           onSubmit={async (ticketData) => {
-            // After successful ticket creation, refresh the tickets
-            await loadTickets();
-            showNotification('Ticket created successfully', 'success');
+            try {
+              console.log('🎫 Creating ticket via tickets page onSubmit:', ticketData);
+              
+              // Create the ticket via API
+              const token = localStorage.getItem('authToken');
+              const response = await fetch('/api/staff/tickets', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  ...ticketData,
+                  createdByStaff: currentUser?.username,
+                  submittedDate: new Date().toISOString()
+                })
+              });
+
+              if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to create ticket: ${response.status} ${errorText}`);
+              }
+
+              const result = await response.json();
+              console.log('✅ Ticket created successfully:', result);
+
+              // After successful ticket creation, refresh the tickets
+              await loadTickets();
+              showNotification(`Ticket ${result.ticketId} created successfully`, 'success');
+            } catch (error) {
+              console.error('❌ Error creating ticket:', error);
+              showNotification('Failed to create ticket. Please try again.', 'error');
+              throw error; // Re-throw so the modal can handle it
+            }
           }}
         />
       )}
