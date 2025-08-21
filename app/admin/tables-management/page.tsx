@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Card,
@@ -55,7 +56,8 @@ import {
   LogOut,
   User,
   Play,
-  Database
+  Database,
+  ArrowLeft
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -108,6 +110,7 @@ interface SavedView {
 export default function TablesManagementPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   
   // State
   const [configurations, setConfigurations] = useState<TableConfiguration[]>([]);
@@ -749,6 +752,22 @@ export default function TablesManagementPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Back Navigation */}
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="flex items-center gap-2"
+      >
+        <Button
+          variant="ghost"
+          onClick={() => router.push('/admin')}
+          className="text-gray-600 hover:text-gray-900 -ml-2"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Admin Dashboard
+        </Button>
+      </motion.div>
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
