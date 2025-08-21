@@ -24,6 +24,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -57,10 +58,12 @@ import {
   Database
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { IconButton } from '@mui/material';
 import { UserAvatar } from '@/components/UserAvatar';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
 import { ConfigurableDataTableDemo } from '@/components/ConfigurableDataTableDemo';
 import { DragDropColumnManager } from '@/components/DragDropColumnManager';
+import { ColumnEditorDialog } from '@/components/ColumnEditorDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -146,6 +149,30 @@ export default function TablesManagementPage() {
     { name: 'portal_settings', label: 'Portal Settings', description: 'Public portal configuration' },
     { name: 'system_settings', label: 'System Settings', description: 'System-wide settings' }
   ]);
+
+  // Table Editor states
+  const [selectedEditorTable, setSelectedEditorTable] = useState<string>('user_tickets');
+  const [editorColumns, setEditorColumns] = useState<ColumnDefinition[]>([]);
+  const [editorLoading, setEditorLoading] = useState(false);
+  const [editingColumn, setEditingColumn] = useState<ColumnDefinition | null>(null);
+  const [showAddColumnDialog, setShowAddColumnDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<{ open: boolean; columnId?: string; columnName?: string }>({ open: false });
+  
+  // Available tables for editor (actual database tables)
+  const [editorTables] = useState([
+    { name: 'user_tickets', label: 'User Tickets', description: 'Main ticket records from the system', table_id: 'tickets_queue' },
+    { name: 'users', label: 'Users', description: 'System users and authentication data', table_id: 'users_list' },
+    { name: 'teams', label: 'Teams', description: 'Internal teams for ticket processing', table_id: 'teams_list' },
+    { name: 'support_teams', label: 'Support Teams', description: 'Public portal team options', table_id: 'support_teams' },
+    { name: 'ticket_categories', label: 'Ticket Categories', description: 'Main ticket categories', table_id: 'categories_list' },
+    { name: 'dpss_offices', label: 'DPSS Offices', description: 'Top-level office structure', table_id: 'offices_list' },
+    { name: 'portal_settings', label: 'Portal Settings', description: 'Public portal configuration', table_id: 'portal_config' },
+    { name: 'system_settings', label: 'System Settings', description: 'System-wide settings', table_id: 'system_config' }
+  ]);
+  
+  // Table data for editor
+  const [editorTableData, setEditorTableData] = useState<any[]>([]);
+  const [editingCell, setEditingCell] = useState<{ rowId: any; field: string; value: any } | null>(null);
 
   // Check permissions with debugging
   console.log('🔍 Tables Management Debug:', {
@@ -340,6 +367,232 @@ export default function TablesManagementPage() {
       default: return '📄';
     }
   };
+
+  // Table Editor Functions
+  const loadEditorColumns = async (tableIdentifier: string) => {
+    try {
+      setEditorLoading(true);
+      console.log('🔍 Loading editor data for table:', tableIdentifier);
+      
+      const token = localStorage.getItem('authToken');
+      const headers: any = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Load actual table data instead of column definitions
+      const response = await fetch(`/api/admin/table-data?table=${tableIdentifier}&limit=25`, {
+        headers,
+      });
+
+      console.log('🔍 API Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔍 API Error response:', errorText);
+        throw new Error(`Failed to fetch table data: ${response.statusText} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('🔍 API Response data:', data);
+      
+      const tableData = data.data?.rows || [];
+      const columnInfo = data.data?.columns || [];
+      
+      console.log('🔍 Extracted data for', tableIdentifier, ':', tableData.length, 'rows');
+      
+      // Convert column info to our format
+      const columns = columnInfo.map((col: any, index: number) => ({
+        id: `${tableIdentifier}_${col.name}`,
+        table_identifier: tableIdentifier,
+        column_key: col.name,
+        column_label: col.name.charAt(0).toUpperCase() + col.name.slice(1).replace(/_/g, ' '),
+        column_type: col.type.toLowerCase().includes('int') ? 'number' : 
+                    col.type.toLowerCase().includes('date') || col.type.toLowerCase().includes('time') ? 'date' :
+                    col.name.includes('status') || col.name.includes('priority') ? 'badge' :
+                    col.name.includes('user') || col.name.includes('assigned') ? 'user' :
+                    col.name.includes('team') ? 'team' : 'text',
+        is_sortable: true,
+        is_filterable: !col.pk,
+        default_visible: true,
+        display_order: index
+      }));
+      
+      setEditorColumns(columns);
+      setEditorTableData(tableData);
+      
+      toast({
+        title: 'Success',
+        description: `Loaded ${tableData.length} rows and ${columns.length} columns for ${tableIdentifier}`,
+      });
+      
+    } catch (error) {
+      console.error('🔍 Error loading editor data:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to load table data for editing: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'destructive',
+      });
+    } finally {
+      setEditorLoading(false);
+    }
+  };
+
+  const handleSaveColumn = async (columnData: Partial<ColumnDefinition>) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const headers: any = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      let response;
+      if (editingColumn) {
+        // Update existing column
+        response = await fetch(`/api/admin/tables-columns/${editingColumn.id}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({
+            ...columnData,
+            table_identifier: selectedEditorTable,
+          }),
+        });
+      } else {
+        // Create new column
+        response = await fetch('/api/admin/tables-columns', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            ...columnData,
+            table_identifier: selectedEditorTable,
+          }),
+        });
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to save column: ${response.statusText}`);
+      }
+
+      toast({
+        title: 'Success',
+        description: editingColumn ? 'Column updated successfully' : 'Column created successfully',
+      });
+
+      // Reload columns
+      loadEditorColumns(selectedEditorTable);
+      setEditingColumn(null);
+      setShowAddColumnDialog(false);
+      
+    } catch (error) {
+      console.error('Error saving column:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save column',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteColumn = async (columnId: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const headers: any = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`/api/admin/tables-columns/${columnId}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete column: ${response.statusText}`);
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Column deleted successfully',
+      });
+
+      // Reload columns
+      loadEditorColumns(selectedEditorTable);
+      setShowDeleteConfirm({ open: false });
+      
+    } catch (error) {
+      console.error('Error deleting column:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete column',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Handle cell edit
+  const handleCellEdit = async (rowId: any, field: string, newValue: any) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const headers: any = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('/api/admin/table-data', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          table: selectedEditorTable,
+          rowId,
+          field,
+          value: newValue,
+          primaryKey: 'id'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update cell: ${response.statusText}`);
+      }
+
+      // Update local data
+      const updatedData = editorTableData.map(row => 
+        row.id === rowId ? { ...row, [field]: newValue } : row
+      );
+      setEditorTableData(updatedData);
+
+      toast({
+        title: 'Success',
+        description: `Updated ${field} successfully`,
+      });
+
+    } catch (error) {
+      console.error('Error updating cell:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update cell value',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Load editor columns when selected table changes
+  useEffect(() => {
+    if (selectedEditorTable && hasManagePermission) {
+      loadEditorColumns(selectedEditorTable);
+    }
+  }, [selectedEditorTable, hasManagePermission]);
 
   // SECURITY: Pure permission-based access control - no overrides
   if (!hasViewPermission) {
@@ -562,7 +815,7 @@ export default function TablesManagementPage() {
 
       {/* Main Content */}
       <Tabs defaultValue="configurations" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto p-1">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 h-auto p-1">
           <TabsTrigger value="configurations" className="flex items-center gap-2 px-3 py-2 text-sm">
             <TableIcon className="h-4 w-4" />
             <span className="hidden sm:inline">Configurations</span>
@@ -582,6 +835,11 @@ export default function TablesManagementPage() {
             <Save className="h-4 w-4" />
             <span className="hidden sm:inline">Saved Views</span>
             <span className="sm:hidden">Views</span>
+          </TabsTrigger>
+          <TabsTrigger value="editor" className="flex items-center gap-2 px-3 py-2 text-sm">
+            <Edit className="h-4 w-4" />
+            <span className="hidden sm:inline">Table Editor</span>
+            <span className="sm:hidden">Editor</span>
           </TabsTrigger>
           <TabsTrigger value="demo" className="flex items-center gap-2 px-3 py-2 text-sm">
             <Play className="h-4 w-4" />
@@ -1099,6 +1357,211 @@ export default function TablesManagementPage() {
           </Card>
         </TabsContent>
 
+        {/* Table Editor Tab */}
+        <TabsContent value="editor" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Edit className="h-5 w-5" />
+                Table Column Editor
+              </CardTitle>
+              <CardDescription>
+                Edit table column definitions with live data from the system database
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {hasManagePermission ? (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Left Panel - Table Selection */}
+                  <div className="lg:col-span-1">
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium">Select Table to Edit</Label>
+                        <Select value={selectedEditorTable} onValueChange={setSelectedEditorTable}>
+                          <div className="space-y-2 mt-2">
+                            {editorTables.map((table) => (
+                              <motion.div
+                                key={table.name}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                                  selectedEditorTable === table.name 
+                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                }`}
+                                onClick={() => setSelectedEditorTable(table.name)}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Database className="h-4 w-4 text-blue-600" />
+                                  <div>
+                                    <div className="font-medium text-sm">{table.label}</div>
+                                    <div className="text-xs text-gray-600 dark:text-gray-400">{table.description}</div>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </Select>
+                      </div>
+
+                      <Button
+                        onClick={() => setShowAddColumnDialog(true)}
+                        className="w-full"
+                        disabled={editorLoading}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add New Column
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Right Panel - Live Table Data */}
+                  <div className="lg:col-span-2">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-medium">
+                            Data in {editorTables.find(t => t.name === selectedEditorTable)?.label}
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {editorTableData.length} record{editorTableData.length !== 1 ? 's' : ''} • {editorColumns.length} column{editorColumns.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() => loadEditorColumns(selectedEditorTable)}
+                          disabled={editorLoading}
+                        >
+                          <RefreshCw className={`h-4 w-4 mr-2 ${editorLoading ? 'animate-spin' : ''}`} />
+                          Refresh
+                        </Button>
+                      </div>
+
+                      {editorLoading ? (
+                        <div className="space-y-3">
+                          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className="h-12 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+                          ))}
+                        </div>
+                      ) : editorTableData.length > 0 ? (
+                        <div className="border rounded-lg overflow-hidden">
+                          <div className="overflow-x-auto max-h-96">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-gray-50 dark:bg-gray-800">
+                                  {editorColumns.slice(0, 8).map((column) => ( // Show first 8 columns
+                                    <TableHead key={column.column_key} className="font-semibold">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs">{getColumnTypeIcon(column.column_type)}</span>
+                                        {column.column_label}
+                                      </div>
+                                    </TableHead>
+                                  ))}
+                                  <TableHead className="w-20">Actions</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {editorTableData.slice(0, 25).map((row, index) => (
+                                  <TableRow key={row.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                    {editorColumns.slice(0, 8).map((column) => (
+                                      <TableCell key={column.column_key} className="max-w-48">
+                                        <div className="truncate">
+                                          {editingCell?.rowId === row.id && editingCell?.field === column.column_key ? (
+                                            <Input
+                                              value={editingCell.value}
+                                              onChange={(e) => setEditingCell({
+                                                ...editingCell,
+                                                value: e.target.value
+                                              })}
+                                              onBlur={() => {
+                                                handleCellEdit(row.id, column.column_key, editingCell.value);
+                                                setEditingCell(null);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  handleCellEdit(row.id, column.column_key, editingCell.value);
+                                                  setEditingCell(null);
+                                                } else if (e.key === 'Escape') {
+                                                  setEditingCell(null);
+                                                }
+                                              }}
+                                              className="h-8"
+                                              autoFocus
+                                            />
+                                          ) : (
+                                            <div
+                                              onClick={() => setEditingCell({
+                                                rowId: row.id,
+                                                field: column.column_key,
+                                                value: row[column.column_key] || ''
+                                              })}
+                                              className="cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded px-2 py-1 min-h-6"
+                                            >
+                                              {column.column_type === 'date' && row[column.column_key] ? (
+                                                new Date(row[column.column_key]).toLocaleDateString()
+                                              ) : column.column_type === 'badge' ? (
+                                                <Badge variant="outline" className="text-xs">
+                                                  {row[column.column_key] || 'N/A'}
+                                                </Badge>
+                                              ) : (
+                                                row[column.column_key]?.toString() || <span className="text-gray-400">NULL</span>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </TableCell>
+                                    ))}
+                                    <TableCell>
+                                      <div className="flex gap-1">
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button variant="outline" size="sm">
+                                                <Edit className="h-3 w-3" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Edit Row</TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                          {editorTableData.length > 25 && (
+                            <div className="p-3 bg-gray-50 dark:bg-gray-800 border-t text-center text-sm text-gray-600 dark:text-gray-400">
+                              Showing first 25 of {editorTableData.length} records
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                          <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p>No data found in this table</p>
+                          <p className="text-sm">The table may be empty or you may need appropriate permissions</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Settings className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                    Insufficient Permissions
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    You need &apos;tables.manage_columns&apos; permission to edit table columns.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Live Demo Tab */}
         <TabsContent value="demo" className="space-y-4">
           <Card>
@@ -1248,6 +1711,50 @@ export default function TablesManagementPage() {
               className="h-[60vh] overflow-y-auto"
             />
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Column Editor Dialog */}
+      <ColumnEditorDialog
+        open={showAddColumnDialog || !!editingColumn}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowAddColumnDialog(false);
+            setEditingColumn(null);
+          }
+        }}
+        column={editingColumn}
+        onSave={handleSaveColumn}
+        tableIdentifier={selectedEditorTable}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog 
+        open={showDeleteConfirm.open} 
+        onOpenChange={(open) => setShowDeleteConfirm({ open, columnId: '', columnName: '' })}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Column</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the column &quot;{showDeleteConfirm.columnName}&quot;? 
+              This action cannot be undone and may affect existing table configurations.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteConfirm({ open: false })}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => showDeleteConfirm.columnId && handleDeleteColumn(showDeleteConfirm.columnId)}
+            >
+              Delete Column
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

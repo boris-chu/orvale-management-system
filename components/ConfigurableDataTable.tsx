@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DataGrid, GridColDef, GridRowParams } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridRowParams, GridRowSelectionModel } from '@mui/x-data-grid';
 import { 
   Box, 
   Typography, 
@@ -23,7 +23,13 @@ import {
   Paper,
   Divider,
   IconButton,
-  Tooltip
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+  Collapse
 } from '@mui/material';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,7 +43,18 @@ import {
   MoreVert,
   Search,
   Clear,
-  Tune
+  Tune,
+  Delete,
+  Archive,
+  Unarchive,
+  AssignmentInd,
+  Launch,
+  GetApp,
+  Share,
+  ContentCopy,
+  PlaylistAddCheck,
+  VisibilityOff,
+  Visibility
 } from '@mui/icons-material';
 import { FilterBuilder, FilterGroup } from './FilterBuilder';
 
@@ -48,12 +65,15 @@ interface TableColumn {
   column_key: string;
   column_type: 'text' | 'number' | 'date' | 'badge' | 'user' | 'team' | 'custom';
   display_name: string;
+  column_label: string; // API returns this field
   data_source: string;
   is_system_column: boolean;
   default_visible: boolean;
   default_width?: number;
   sortable: boolean;
+  is_sortable: boolean; // API returns this field
   filterable: boolean;
+  is_filterable: boolean; // API returns this field
   groupable: boolean;
   exportable: boolean;
   render_component?: string;
@@ -207,7 +227,7 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
   });
   const [sortModel, setSortModel] = useState([]);
   const [filterModel, setFilterModel] = useState({ items: [] });
-  const [selectionModel, setSelectionModel] = useState([]);
+  const [selectionModel, setSelectionModel] = useState<any[]>([]);
   
   // UI Control States
   const [columnMenuAnchor, setColumnMenuAnchor] = useState<null | HTMLElement>(null);
@@ -216,6 +236,17 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
   const [activeFilters, setActiveFilters] = useState<Array<{ field: string; operator: string; value: any }>>([]);
   const [advancedFilter, setAdvancedFilter] = useState<FilterGroup | null>(null);
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
+  
+  // Bulk Operations State
+  const [bulkActionMenuAnchor, setBulkActionMenuAnchor] = useState<null | HTMLElement>(null);
+  const [bulkConfirmDialog, setBulkConfirmDialog] = useState<{
+    open: boolean;
+    action: string;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }>({ open: false, action: '', title: '', description: '', onConfirm: () => {} });
+  const [showBulkActions, setShowBulkActions] = useState(false);
 
   // Fetch table configuration and columns
   const fetchConfiguration = useCallback(async () => {
@@ -474,7 +505,7 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
         operator: 'contains',
         value: value.trim()
       }];
-      setFilterModel({ items: filterItems, quickFilterValues: [value.trim()] });
+      setFilterModel({ items: filterItems });
     } else {
       setFilterModel({ items: [] });
     }
@@ -488,10 +519,79 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
     setAdvancedFilter(null);
   };
 
+  // Handle selection change and bulk actions visibility
+  useEffect(() => {
+    const hasSelection = Array.isArray(selectionModel) && selectionModel.length > 0;
+    setShowBulkActions(hasSelection);
+    
+    if (onSelectionChange) {
+      onSelectionChange(selectionModel);
+    }
+  }, [selectionModel, onSelectionChange]);
+
   // Export functionality
-  const handleExport = (format: 'csv' | 'excel') => {
-    // Implementation would depend on your export requirements
-    console.log(`Exporting as ${format}`);
+  const handleExport = (format: 'csv' | 'excel' | 'pdf', selectedOnly = false) => {
+    const dataToExport = selectedOnly && selectionModel.length > 0 
+      ? filteredData.filter((row, index) => selectionModel.includes(getRowId(row, index)))
+      : filteredData;
+    
+    console.log(`Exporting ${dataToExport.length} rows as ${format}`);
+    
+    if (format === 'csv') {
+      exportToCSV(dataToExport);
+    } else if (format === 'excel') {
+      exportToExcel(dataToExport);
+    } else if (format === 'pdf') {
+      exportToPDF(dataToExport);
+    }
+  };
+  
+  // Helper function to get row ID consistently
+  const getRowId = (row: any, index?: number) => {
+    return row.id || row.ticket_id || row.username || row.title || index || Math.random();
+  };
+  
+  // CSV Export
+  const exportToCSV = (data: any[]) => {
+    if (!data.length) return;
+    
+    const headers = gridColumns.map(col => col.headerName).join(',');
+    const rows = data.map(row => 
+      gridColumns.map(col => {
+        let value = row[col.field] || '';
+        // Escape quotes and wrap in quotes if contains comma
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+          value = '"' + value.replace(/"/g, '""') + '"';
+        }
+        return value;
+      }).join(',')
+    ).join('\n');
+    
+    const csvContent = headers + '\n' + rows;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${tableIdentifier}_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  // Excel Export (simplified - would need a library like xlsx for full Excel support)
+  const exportToExcel = (data: any[]) => {
+    // For now, export as CSV with .xlsx extension
+    // In a real implementation, you'd use a library like xlsx
+    exportToCSV(data);
+    console.log('Excel export would require xlsx library for full functionality');
+  };
+  
+  // PDF Export (simplified)
+  const exportToPDF = (data: any[]) => {
+    console.log('PDF export would require jsPDF library for implementation');
+    // For now, show alert
+    alert('PDF export feature would be implemented with jsPDF library');
   };
 
   // Advanced filter handlers
@@ -548,6 +648,55 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
     
     return filtered;
   }, [data, quickFilterValue, activeFilters, advancedFilter]);
+  
+  // Bulk Operations Handlers
+  const handleBulkDelete = () => {
+    setBulkConfirmDialog({
+      open: true,
+      action: 'delete',
+      title: 'Delete Selected Items',
+      description: `Are you sure you want to delete ${selectionModel.length} selected item(s)? This action cannot be undone.`,
+      onConfirm: () => {
+        console.log('Bulk delete:', selectionModel);
+        // Implementation would call API to delete selected items
+        setSelectionModel([]);
+        setBulkConfirmDialog({ ...bulkConfirmDialog, open: false });
+      }
+    });
+  };
+  
+  const handleBulkArchive = () => {
+    setBulkConfirmDialog({
+      open: true,
+      action: 'archive',
+      title: 'Archive Selected Items', 
+      description: `Are you sure you want to archive ${selectionModel.length} selected item(s)?`,
+      onConfirm: () => {
+        console.log('Bulk archive:', selectionModel);
+        // Implementation would call API to archive selected items
+        setSelectionModel([]);
+        setBulkConfirmDialog({ ...bulkConfirmDialog, open: false });
+      }
+    });
+  };
+  
+  const handleBulkAssign = () => {
+    console.log('Bulk assign:', selectionModel);
+    // Implementation would open assignment dialog
+  };
+  
+  const handleBulkExport = () => {
+    handleExport('csv', true);
+  };
+  
+  const handleSelectAll = () => {
+    const allIds = filteredData.map((row, index) => getRowId(row, index));
+    setSelectionModel(allIds);
+  };
+  
+  const handleDeselectAll = () => {
+    setSelectionModel([]);
+  };
 
   // Evaluate individual filter condition
   const evaluateFilter = (row: any, filter: { field: string; operator: string; value: any }) => {
@@ -719,6 +868,118 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
           </Stack>
         </Stack>
       </Paper>
+
+      {/* Bulk Actions Toolbar */}
+      <Collapse in={showBulkActions}>
+        <Paper 
+          elevation={2} 
+          sx={{ 
+            p: 2, 
+            mb: 1, 
+            borderRadius: 1,
+            background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+            border: '1px solid #2196f3'
+          }}
+        >
+          <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+            {/* Selection Info */}
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Chip
+                icon={<PlaylistAddCheck />}
+                label={`${selectionModel.length} item${selectionModel.length !== 1 ? 's' : ''} selected`}
+                color="primary"
+                variant="filled"
+              />
+              
+              {/* Select All/Deselect All */}
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<Visibility />}
+                onClick={handleSelectAll}
+                disabled={selectionModel.length === filteredData.length}
+              >
+                Select All ({filteredData.length})
+              </Button>
+              
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<VisibilityOff />}
+                onClick={handleDeselectAll}
+              >
+                Deselect All
+              </Button>
+            </Stack>
+            
+            {/* Bulk Actions */}
+            <Stack direction="row" spacing={1}>
+              {/* Export Selected */}
+              <Tooltip title="Export Selected Items">
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<GetApp />}
+                  onClick={handleBulkExport}
+                  color="primary"
+                >
+                  Export
+                </Button>
+              </Tooltip>
+              
+              {/* Assign Selected */}
+              <Tooltip title="Assign Selected Items">
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<AssignmentInd />}
+                  onClick={handleBulkAssign}
+                  color="primary"
+                >
+                  Assign
+                </Button>
+              </Tooltip>
+              
+              {/* Archive Selected */}
+              <Tooltip title="Archive Selected Items">
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<Archive />}
+                  onClick={handleBulkArchive}
+                  color="warning"
+                >
+                  Archive
+                </Button>
+              </Tooltip>
+              
+              {/* More Actions Menu */}
+              <Tooltip title="More Actions">
+                <IconButton
+                  size="small"
+                  onClick={(e) => setBulkActionMenuAnchor(e.currentTarget)}
+                  color="primary"
+                >
+                  <MoreVert />
+                </IconButton>
+              </Tooltip>
+              
+              {/* Delete Selected */}
+              <Tooltip title="Delete Selected Items">
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<Delete />}
+                  onClick={handleBulkDelete}
+                  color="error"
+                >
+                  Delete
+                </Button>
+              </Tooltip>
+            </Stack>
+          </Stack>
+        </Paper>
+      </Collapse>
       
       {/* Advanced Filter Builder */}
       <AnimatePresence>
@@ -735,7 +996,7 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
                 columns={columns.map(col => ({
                   column_key: col.column_key,
                   display_name: col.column_label || col.display_name,
-                  column_type: col.column_type,
+                  column_type: col.column_type === 'custom' ? 'text' : col.column_type as 'text' | 'number' | 'date' | 'badge' | 'user' | 'team',
                   is_filterable: col.is_filterable || col.filterable || false
                 }))}
                 initialFilter={advancedFilter || undefined}
@@ -755,15 +1016,15 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
             columns={gridColumns}
             pagination
             paginationMode="client"
-            pageSize={paginationModel.pageSize}
-            page={paginationModel.page}
-            onPageChange={(newPage) => setPaginationModel(prev => ({ ...prev, page: newPage }))}
-            onPageSizeChange={(newPageSize) => setPaginationModel(prev => ({ ...prev, pageSize: newPageSize }))}
+            paginationModel={paginationModel}
+            onPaginationModelChange={setPaginationModel}
             rowsPerPageOptions={[10, 25, 50, 100]}
             loading={loading}
             onRowClick={onRowClick}
             checkboxSelection={enableSelection}
             disableRowSelectionOnClick={!enableSelection}
+            rowSelectionModel={selectionModel}
+            onRowSelectionModelChange={setSelectionModel}
             density="comfortable"
             autoHeight={false}
             getRowId={(row) => row.id || row.ticket_id || row.username || row.title || Math.random()}
@@ -834,6 +1095,94 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
           ))}
         </Box>
       </Menu>
+
+      {/* Bulk Actions Menu */}
+      <Menu
+        anchorEl={bulkActionMenuAnchor}
+        open={Boolean(bulkActionMenuAnchor)}
+        onClose={() => setBulkActionMenuAnchor(null)}
+        PaperProps={{
+          sx: { maxWidth: 250 }
+        }}
+      >
+        <MenuItem onClick={() => {
+          handleExport('excel', true);
+          setBulkActionMenuAnchor(null);
+        }}>
+          <GetApp sx={{ mr: 1 }} />
+          Export as Excel
+        </MenuItem>
+        <MenuItem onClick={() => {
+          handleExport('pdf', true);
+          setBulkActionMenuAnchor(null);
+        }}>
+          <GetApp sx={{ mr: 1 }} />
+          Export as PDF
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => {
+          console.log('Mark as priority:', selectionModel);
+          setBulkActionMenuAnchor(null);
+        }}>
+          <Launch sx={{ mr: 1 }} />
+          Mark as Priority
+        </MenuItem>
+        <MenuItem onClick={() => {
+          console.log('Copy selected:', selectionModel);
+          setBulkActionMenuAnchor(null);
+        }}>
+          <ContentCopy sx={{ mr: 1 }} />
+          Duplicate Selected
+        </MenuItem>
+        <MenuItem onClick={() => {
+          console.log('Share selected:', selectionModel);
+          setBulkActionMenuAnchor(null);
+        }}>
+          <Share sx={{ mr: 1 }} />
+          Share Selected
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => {
+          console.log('Unarchive selected:', selectionModel);
+          setBulkActionMenuAnchor(null);
+        }} color="success">
+          <Unarchive sx={{ mr: 1 }} />
+          Unarchive Selected
+        </MenuItem>
+      </Menu>
+
+      {/* Bulk Action Confirmation Dialog */}
+      <Dialog
+        open={bulkConfirmDialog.open}
+        onClose={() => setBulkConfirmDialog({ ...bulkConfirmDialog, open: false })}
+        aria-labelledby="bulk-action-dialog-title"
+        aria-describedby="bulk-action-dialog-description"
+      >
+        <DialogTitle id="bulk-action-dialog-title">
+          {bulkConfirmDialog.title}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="bulk-action-dialog-description">
+            {bulkConfirmDialog.description}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setBulkConfirmDialog({ ...bulkConfirmDialog, open: false })}
+            color="inherit"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={bulkConfirmDialog.onConfirm} 
+            color={bulkConfirmDialog.action === 'delete' ? 'error' : 'primary'}
+            variant="contained"
+            autoFocus
+          >
+            {bulkConfirmDialog.action === 'delete' ? 'Delete' : 'Confirm'}
+          </Button>
+        </DialogActions>
+      </Dialog>
       
     </Box>
   );
