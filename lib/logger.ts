@@ -165,19 +165,29 @@ const updateLogLevel = async (): Promise<void> => {
 
 // Enhanced logger with context and structured logging
 export const createContextLogger = (context: string) => {
+  const safeLog = (level: string, logFn: Function, obj: any, msg?: string) => {
+    if (!pinoEnabled) return;
+    try {
+      logFn({ ...obj, context }, msg);
+    } catch (error) {
+      // Fallback to console logging if Pino fails
+      console.log(`[${level.toUpperCase()}] ${context}:`, msg || '', obj);
+    }
+  };
+
   return {
-    error: (obj: any, msg?: string) => pinoEnabled && logger.error({ ...obj, context }, msg),
-    warn: (obj: any, msg?: string) => pinoEnabled && logger.warn({ ...obj, context }, msg),
-    info: (obj: any, msg?: string) => pinoEnabled && logger.info({ ...obj, context }, msg),
-    debug: (obj: any, msg?: string) => pinoEnabled && logger.debug({ ...obj, context }, msg),
+    error: (obj: any, msg?: string) => safeLog('error', logger.error.bind(logger), obj, msg),
+    warn: (obj: any, msg?: string) => safeLog('warn', logger.warn.bind(logger), obj, msg),
+    info: (obj: any, msg?: string) => safeLog('info', logger.info.bind(logger), obj, msg),
+    debug: (obj: any, msg?: string) => safeLog('debug', logger.debug.bind(logger), obj, msg),
     
     // Convenience methods for simple logging
     logError: (message: string, error?: any) => 
-      pinoEnabled && logger.error({ error, context, event: 'error' }, message),
+      safeLog('error', logger.error.bind(logger), { error, event: 'error' }, message),
     logInfo: (message: string, data?: any) => 
-      pinoEnabled && logger.info({ ...data, context, event: 'info' }, message),
+      safeLog('info', logger.info.bind(logger), { ...data, event: 'info' }, message),
     logDebug: (message: string, data?: any) => 
-      pinoEnabled && logger.debug({ ...data, context, event: 'debug' }, message),
+      safeLog('debug', logger.debug.bind(logger), { ...data, event: 'debug' }, message),
   };
 };
 
