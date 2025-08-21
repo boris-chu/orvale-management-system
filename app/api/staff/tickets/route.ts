@@ -20,8 +20,14 @@ interface StaffTicketData {
   submittedBy: string;
   userDisplayName: string;
   userEmail: string;
-  userDepartment: string;
-  userLocation: string;
+  userEmployeeNumber?: string;
+  userPhone?: string;
+  userLocation?: string;
+  userCubicleRoom?: string;
+  userOffice?: string;
+  userBureau?: string;
+  userDivision?: string;
+  userSection?: string;
   status: 'open' | 'in_progress' | 'pending' | 'resolved' | 'closed';
   assignedTeam: string;
   assignedTo: string;
@@ -210,8 +216,14 @@ export async function POST(request: NextRequest) {
         submitted_by,
         submitted_by_name,
         submitted_by_email,
-        department,
+        employee_number,
+        phone_number,
         location,
+        cubicle_room,
+        office,
+        bureau,
+        division,
+        section,
         assigned_team,
         assigned_to,
         internal_notes,
@@ -220,7 +232,7 @@ export async function POST(request: NextRequest) {
         submitted_date,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       ticketId,
       ticketData.title,
@@ -232,8 +244,14 @@ export async function POST(request: NextRequest) {
       ticketData.submittedBy,
       ticketData.userDisplayName,
       ticketData.userEmail,
-      ticketData.userDepartment || null,
+      ticketData.userEmployeeNumber || null,
+      ticketData.userPhone || null,
       ticketData.userLocation || null,
+      ticketData.userCubicleRoom || null,
+      ticketData.userOffice || null,
+      ticketData.userBureau || null,
+      ticketData.userDivision || null,
+      ticketData.userSection || null,
       finalAssignedTeam || null,
       ticketData.assignedTo || null,
       ticketData.internalNotes || null,

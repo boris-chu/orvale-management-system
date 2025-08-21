@@ -51,6 +51,7 @@ interface StaffTicketFormData {
   userEmployeeNumber: string;
   userPhone: string;
   userLocation: string;
+  userCubicleRoom: string;
   userOffice: string;
   userBureau: string;
   userDivision: string;
@@ -76,10 +77,18 @@ interface NewUserFormData {
   employeeNumber: string;
   phone: string;
   location: string;
+  cubicleRoom: string;
   office: string;
   bureau: string;
   division: string;
   section: string;
+}
+
+interface OrganizationData {
+  offices: string[];
+  bureaus: string[];
+  divisions: string[];
+  sections: string[];
 }
 
 interface Category {
@@ -103,6 +112,7 @@ interface User {
   employee_number?: string;
   phone?: string;
   location?: string;
+  cubicle_room?: string;
   office?: string;
   bureau?: string;
   division?: string;
@@ -141,6 +151,7 @@ export function StaffTicketModal({
     userEmployeeNumber: '',
     userPhone: '',
     userLocation: '',
+    userCubicleRoom: '',
     userOffice: '',
     userBureau: '',
     userDivision: '',
@@ -169,10 +180,17 @@ export function StaffTicketModal({
     employeeNumber: '',
     phone: '',
     location: '',
+    cubicleRoom: '',
     office: '',
     bureau: '',
     division: '',
     section: ''
+  });
+  const [organizationData, setOrganizationData] = useState<OrganizationData>({
+    offices: [],
+    bureaus: [],
+    divisions: [],
+    sections: []
   });
 
   // Auto-generated system info
@@ -189,6 +207,7 @@ export function StaffTicketModal({
       loadCategories();
       loadTeams();
       loadUsers();
+      loadOrganizationData();
       
       // Apply default values if provided
       if (defaultValues) {
@@ -290,6 +309,18 @@ export function StaffTicketModal({
     }
   };
 
+  const loadOrganizationData = async () => {
+    try {
+      const response = await fetch('/api/ticket-data/organization');
+      if (response.ok) {
+        const data = await response.json();
+        setOrganizationData(data);
+      }
+    } catch (error) {
+      console.error('Failed to load organization data:', error);
+    }
+  };
+
   // Handle form field changes
   const handleFieldChange = (field: keyof StaffTicketFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -310,6 +341,7 @@ export function StaffTicketModal({
       userEmployeeNumber: user.employee_number || '',
       userPhone: user.phone || '',
       userLocation: user.location || '',
+      userCubicleRoom: user.cubicle_room || '',
       userOffice: user.office || '',
       userBureau: user.bureau || '',
       userDivision: user.division || '',
@@ -347,6 +379,7 @@ export function StaffTicketModal({
           employee_number: newUserData.employeeNumber,
           phone: newUserData.phone,
           location: newUserData.location,
+          cubicle_room: newUserData.cubicleRoom,
           office: newUserData.office,
           bureau: newUserData.bureau,
           division: newUserData.division,
@@ -368,6 +401,7 @@ export function StaffTicketModal({
           userEmployeeNumber: newUserData.employeeNumber,
           userPhone: newUserData.phone,
           userLocation: newUserData.location,
+          userCubicleRoom: newUserData.cubicleRoom,
           userOffice: newUserData.office,
           userBureau: newUserData.bureau,
           userDivision: newUserData.division,
@@ -382,6 +416,7 @@ export function StaffTicketModal({
           employeeNumber: '',
           phone: '',
           location: '',
+          cubicleRoom: '',
           office: '',
           bureau: '',
           division: '',
@@ -431,6 +466,27 @@ export function StaffTicketModal({
            formData.category && 
            formData.description && 
            formData.submittedBy;
+  };
+
+  // Format phone number for display (XXX) XXX-XXXX
+  const formatPhoneNumber = (value: string) => {
+    const cleaned = value.replace(/\D/g, '');
+    const limited = cleaned.slice(0, 10);
+    
+    if (limited.length === 0) return '';
+    if (limited.length <= 3) return `(${limited}`;
+    if (limited.length <= 6) return `(${limited.slice(0, 3)}) ${limited.slice(3)}`;
+    return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`;
+  };
+
+  // Handle phone number change
+  const handlePhoneChange = (field: 'userPhone' | 'phone', value: string) => {
+    const cleaned = value.replace(/\D/g, '').slice(0, 10);
+    if (field === 'userPhone') {
+      handleFieldChange('userPhone', cleaned);
+    } else {
+      setNewUserData(prev => ({ ...prev, phone: cleaned }));
+    }
   };
 
   // Handle form submission
@@ -504,6 +560,7 @@ export function StaffTicketModal({
       userEmployeeNumber: '',
       userPhone: '',
       userLocation: '',
+      userCubicleRoom: '',
       userOffice: '',
       userBureau: '',
       userDivision: '',
@@ -754,10 +811,13 @@ export function StaffTicketModal({
                           <Typography variant="body2"><strong>Employee #:</strong> {formData.userEmployeeNumber}</Typography>
                         )}
                         {formData.userPhone && (
-                          <Typography variant="body2"><strong>Phone:</strong> {formData.userPhone}</Typography>
+                          <Typography variant="body2"><strong>Phone:</strong> {formatPhoneNumber(formData.userPhone)}</Typography>
                         )}
                         {formData.userLocation && (
                           <Typography variant="body2"><strong>Location:</strong> {formData.userLocation}</Typography>
+                        )}
+                        {formData.userCubicleRoom && (
+                          <Typography variant="body2"><strong>Cubicle/Room:</strong> {formData.userCubicleRoom}</Typography>
                         )}
                         {formData.userOffice && (
                           <Typography variant="body2"><strong>Office:</strong> {formData.userOffice}</Typography>
@@ -786,12 +846,14 @@ export function StaffTicketModal({
                     fullWidth
                   />
                   <TextField
-                    label="Phone"
-                    value={formData.userPhone}
-                    onChange={(e) => handleFieldChange('userPhone', e.target.value)}
-                    placeholder="Phone number or extension"
+                    label="Phone (10 digits)"
+                    value={formatPhoneNumber(formData.userPhone)}
+                    onChange={(e) => handlePhoneChange('userPhone', e.target.value)}
+                    placeholder="(555) 123-4567"
                     size="small"
                     fullWidth
+                    helperText={formData.userPhone.length > 0 && formData.userPhone.length < 10 ? 'Phone number must be 10 digits' : ''}
+                    error={formData.userPhone.length > 0 && formData.userPhone.length < 10}
                   />
                 </Box>
                 
@@ -800,48 +862,76 @@ export function StaffTicketModal({
                     label="Location"
                     value={formData.userLocation}
                     onChange={(e) => handleFieldChange('userLocation', e.target.value)}
-                    placeholder="Office, building, or room number"
+                    placeholder="Building name or address"
                     size="small"
                     fullWidth
                   />
                   <TextField
-                    label="Office"
-                    value={formData.userOffice}
-                    onChange={(e) => handleFieldChange('userOffice', e.target.value)}
-                    placeholder="DPSS Office"
+                    label="Cubicle/Room #"
+                    value={formData.userCubicleRoom}
+                    onChange={(e) => handleFieldChange('userCubicleRoom', e.target.value)}
+                    placeholder="Room 123 or Cubicle A-45"
                     size="small"
                     fullWidth
                   />
+                </Box>
+                
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Office</InputLabel>
+                    <Select
+                      value={formData.userOffice}
+                      onChange={(e) => handleFieldChange('userOffice', e.target.value)}
+                      label="Office"
+                    >
+                      <MenuItem value="">Select Office</MenuItem>
+                      {organizationData.offices.map((office) => (
+                        <MenuItem key={office} value={office}>{office}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Bureau</InputLabel>
+                    <Select
+                      value={formData.userBureau}
+                      onChange={(e) => handleFieldChange('userBureau', e.target.value)}
+                      label="Bureau"
+                    >
+                      <MenuItem value="">Select Bureau</MenuItem>
+                      {organizationData.bureaus.map((bureau) => (
+                        <MenuItem key={bureau} value={bureau}>{bureau}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 </Box>
                 
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
-                  <TextField
-                    label="Bureau"
-                    value={formData.userBureau}
-                    onChange={(e) => handleFieldChange('userBureau', e.target.value)}
-                    placeholder="DPSS Bureau"
-                    size="small"
-                    fullWidth
-                  />
-                  <TextField
-                    label="Division"
-                    value={formData.userDivision}
-                    onChange={(e) => handleFieldChange('userDivision', e.target.value)}
-                    placeholder="DPSS Division"
-                    size="small"
-                    fullWidth
-                  />
-                </Box>
-                
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 2, mt: 2 }}>
-                  <TextField
-                    label="Section"
-                    value={formData.userSection}
-                    onChange={(e) => handleFieldChange('userSection', e.target.value)}
-                    placeholder="DPSS Section"
-                    size="small"
-                    fullWidth
-                  />
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Division</InputLabel>
+                    <Select
+                      value={formData.userDivision}
+                      onChange={(e) => handleFieldChange('userDivision', e.target.value)}
+                      label="Division"
+                    >
+                      <MenuItem value="">Select Division</MenuItem>
+                      {organizationData.divisions.map((division) => (
+                        <MenuItem key={division} value={division}>{division}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Section</InputLabel>
+                    <Select
+                      value={formData.userSection}
+                      onChange={(e) => handleFieldChange('userSection', e.target.value)}
+                      label="Section"
+                    >
+                      <MenuItem value="">Select Section</MenuItem>
+                      {organizationData.sections.map((section) => (
+                        <MenuItem key={section} value={section}>{section}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 </Box>
               </Paper>
             </Box>
@@ -1079,18 +1169,31 @@ export function StaffTicketModal({
         
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
           <TextField
-            label="Phone"
-            value={newUserData.phone}
-            onChange={(e) => setNewUserData(prev => ({ ...prev, phone: e.target.value }))}
+            label="Phone (10 digits)"
+            value={formatPhoneNumber(newUserData.phone)}
+            onChange={(e) => handlePhoneChange('phone', e.target.value)}
             placeholder="(555) 123-4567"
             size="small"
             fullWidth
+            helperText={newUserData.phone.length > 0 && newUserData.phone.length < 10 ? 'Phone number must be 10 digits' : ''}
+            error={newUserData.phone.length > 0 && newUserData.phone.length < 10}
           />
           <TextField
             label="Location"
             value={newUserData.location}
             onChange={(e) => setNewUserData(prev => ({ ...prev, location: e.target.value }))}
-            placeholder="Building A, Room 101"
+            placeholder="Building name or address"
+            size="small"
+            fullWidth
+          />
+        </Box>
+        
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 2, mb: 2 }}>
+          <TextField
+            label="Cubicle/Room #"
+            value={newUserData.cubicleRoom}
+            onChange={(e) => setNewUserData(prev => ({ ...prev, cubicleRoom: e.target.value }))}
+            placeholder="Room 123 or Cubicle A-45"
             size="small"
             fullWidth
           />
@@ -1101,41 +1204,61 @@ export function StaffTicketModal({
         </Typography>
         
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
-          <TextField
-            label="Office"
-            value={newUserData.office}
-            onChange={(e) => setNewUserData(prev => ({ ...prev, office: e.target.value }))}
-            placeholder="DPSS Office"
-            size="small"
-            fullWidth
-          />
-          <TextField
-            label="Bureau"
-            value={newUserData.bureau}
-            onChange={(e) => setNewUserData(prev => ({ ...prev, bureau: e.target.value }))}
-            placeholder="DPSS Bureau"
-            size="small"
-            fullWidth
-          />
+          <FormControl fullWidth size="small">
+            <InputLabel>Office</InputLabel>
+            <Select
+              value={newUserData.office}
+              onChange={(e) => setNewUserData(prev => ({ ...prev, office: e.target.value }))}
+              label="Office"
+            >
+              <MenuItem value="">Select Office</MenuItem>
+              {organizationData.offices.map((office) => (
+                <MenuItem key={office} value={office}>{office}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth size="small">
+            <InputLabel>Bureau</InputLabel>
+            <Select
+              value={newUserData.bureau}
+              onChange={(e) => setNewUserData(prev => ({ ...prev, bureau: e.target.value }))}
+              label="Bureau"
+            >
+              <MenuItem value="">Select Bureau</MenuItem>
+              {organizationData.bureaus.map((bureau) => (
+                <MenuItem key={bureau} value={bureau}>{bureau}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
         
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
-          <TextField
-            label="Division"
-            value={newUserData.division}
-            onChange={(e) => setNewUserData(prev => ({ ...prev, division: e.target.value }))}
-            placeholder="DPSS Division"
-            size="small"
-            fullWidth
-          />
-          <TextField
-            label="Section"
-            value={newUserData.section}
-            onChange={(e) => setNewUserData(prev => ({ ...prev, section: e.target.value }))}
-            placeholder="DPSS Section"
-            size="small"
-            fullWidth
-          />
+          <FormControl fullWidth size="small">
+            <InputLabel>Division</InputLabel>
+            <Select
+              value={newUserData.division}
+              onChange={(e) => setNewUserData(prev => ({ ...prev, division: e.target.value }))}
+              label="Division"
+            >
+              <MenuItem value="">Select Division</MenuItem>
+              {organizationData.divisions.map((division) => (
+                <MenuItem key={division} value={division}>{division}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth size="small">
+            <InputLabel>Section</InputLabel>
+            <Select
+              value={newUserData.section}
+              onChange={(e) => setNewUserData(prev => ({ ...prev, section: e.target.value }))}
+              label="Section"
+            >
+              <MenuItem value="">Select Section</MenuItem>
+              {organizationData.sections.map((section) => (
+                <MenuItem key={section} value={section}>{section}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
       </DialogContent>
       <DialogActions sx={{ p: 3 }}>
