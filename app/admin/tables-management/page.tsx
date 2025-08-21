@@ -1505,44 +1505,42 @@ export default function TablesManagementPage() {
                     <div className="space-y-4">
                       <div>
                         <Label className="text-sm font-medium">Select Table to Edit</Label>
-                        <Select value={selectedEditorTable} onValueChange={setSelectedEditorTable}>
-                          <div className="space-y-2 mt-2">
-                            {editorTables.map((table) => (
-                              <motion.div
-                                key={table.name}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
-                                  selectedEditorTable === table.name 
-                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-sm ring-1 ring-blue-200 dark:ring-blue-800' 
-                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-sm'
-                                }`}
-                                onClick={() => setSelectedEditorTable(table.name)}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <Database className={`h-4 w-4 ${
-                                    selectedEditorTable === table.name ? 'text-blue-600' : 'text-gray-500'
-                                  }`} />
-                                  <div className="flex-1">
-                                    <div className={`font-medium text-sm ${
-                                      selectedEditorTable === table.name ? 'text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-gray-100'
-                                    }`}>
-                                      {table.label}
-                                    </div>
-                                    <div className={`text-xs ${
-                                      selectedEditorTable === table.name ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'
-                                    }`}>
-                                      {table.description}
-                                    </div>
+                        <div className="space-y-2 mt-2">
+                          {editorTables.map((table) => (
+                            <motion.div
+                              key={table.name}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                                selectedEditorTable === table.name 
+                                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-sm ring-1 ring-blue-200 dark:ring-blue-800' 
+                                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-sm'
+                              }`}
+                              onClick={() => setSelectedEditorTable(table.name)}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Database className={`h-4 w-4 ${
+                                  selectedEditorTable === table.name ? 'text-blue-600' : 'text-gray-500'
+                                }`} />
+                                <div className="flex-1">
+                                  <div className={`font-medium text-sm ${
+                                    selectedEditorTable === table.name ? 'text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-gray-100'
+                                  }`}>
+                                    {table.label}
                                   </div>
-                                  {selectedEditorTable === table.name && (
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-                                  )}
+                                  <div className={`text-xs ${
+                                    selectedEditorTable === table.name ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'
+                                  }`}>
+                                    {table.description}
+                                  </div>
                                 </div>
-                              </motion.div>
-                            ))}
-                          </div>
-                        </Select>
+                                {selectedEditorTable === table.name && (
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                                )}
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
                       </div>
 
                     </div>
