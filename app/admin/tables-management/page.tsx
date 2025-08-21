@@ -752,33 +752,31 @@ export default function TablesManagementPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Back Navigation */}
-      <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="flex items-center gap-2"
-      >
-        <Button
-          variant="ghost"
-          onClick={() => router.push('/developer')}
-          className="text-gray-600 hover:text-gray-900 -ml-2"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Admin Dashboard
-        </Button>
-      </motion.div>
-
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex justify-between items-center"
       >
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Tables Management</h1>
-          <p className="text-gray-500 mt-1">
-            Configure and customize data tables across the system
-          </p>
+        <div className="flex items-center space-x-4">
+          <Button 
+            variant="ghost" 
+            onClick={() => router.push('/developer')}
+            className="flex items-center space-x-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Dashboard</span>
+          </Button>
+          
+          <div className="h-6 border-l border-gray-300"></div>
+          
+          <div className="flex items-center space-x-3">
+            <Settings className="h-6 w-6 text-blue-600" />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Tables Management</h1>
+              <p className="text-sm text-gray-500">Configure and customize data tables across the system</p>
+            </div>
+          </div>
         </div>
         
         <div className="flex items-center gap-3">
