@@ -31,7 +31,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -46,11 +45,8 @@ import {
   Trash2,
   Eye,
   Copy,
-  Download,
-  Upload,
   Table as TableIcon,
   Columns,
-  Filter,
   Save,
   RefreshCw,
   Users,
@@ -118,7 +114,6 @@ export default function TablesManagementPage() {
   
   // Dialog states
   const [createConfigOpen, setCreateConfigOpen] = useState(false);
-  const [editConfigOpen, setEditConfigOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [columnManagerOpen, setColumnManagerOpen] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState<TableConfiguration | null>(null);
