@@ -48,8 +48,13 @@ interface StaffTicketFormData {
   submittedBy: string;
   userDisplayName: string;
   userEmail: string;
-  userDepartment: string;
+  userEmployeeNumber: string;
+  userPhone: string;
   userLocation: string;
+  userOffice: string;
+  userBureau: string;
+  userDivision: string;
+  userSection: string;
   
   // Staff Controls
   status: 'open' | 'in_progress' | 'pending' | 'resolved' | 'closed';
@@ -62,6 +67,19 @@ interface StaffTicketFormData {
   submittedDate?: string;
   createdByStaff?: string;
   ticketSource: 'staff_created';
+}
+
+interface NewUserFormData {
+  displayName: string;
+  username: string;
+  email: string;
+  employeeNumber: string;
+  phone: string;
+  location: string;
+  office: string;
+  bureau: string;
+  division: string;
+  section: string;
 }
 
 interface Category {
@@ -82,6 +100,13 @@ interface User {
   display_name: string;
   email: string;
   team_name?: string;
+  employee_number?: string;
+  phone?: string;
+  location?: string;
+  office?: string;
+  bureau?: string;
+  division?: string;
+  section?: string;
 }
 
 interface StaffTicketModalProps {
@@ -113,8 +138,13 @@ export function StaffTicketModal({
     submittedBy: '',
     userDisplayName: '',
     userEmail: '',
-    userDepartment: '',
+    userEmployeeNumber: '',
+    userPhone: '',
     userLocation: '',
+    userOffice: '',
+    userBureau: '',
+    userDivision: '',
+    userSection: '',
     status: 'open',
     assignedTeam: '',
     assignedTo: '',
@@ -131,6 +161,19 @@ export function StaffTicketModal({
   const [users, setUsers] = useState<User[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [showUserSearch, setShowUserSearch] = useState(false);
+  const [showNewUserDialog, setShowNewUserDialog] = useState(false);
+  const [newUserData, setNewUserData] = useState<NewUserFormData>({
+    displayName: '',
+    username: '',
+    email: '',
+    employeeNumber: '',
+    phone: '',
+    location: '',
+    office: '',
+    bureau: '',
+    division: '',
+    section: ''
+  });
 
   // Auto-generated system info
   const [systemInfo, setSystemInfo] = useState({
@@ -264,10 +307,111 @@ export function StaffTicketModal({
       submittedBy: user.username,
       userDisplayName: user.display_name,
       userEmail: user.email,
-      userDepartment: user.team_name || ''
+      userEmployeeNumber: user.employee_number || '',
+      userPhone: user.phone || '',
+      userLocation: user.location || '',
+      userOffice: user.office || '',
+      userBureau: user.bureau || '',
+      userDivision: user.division || '',
+      userSection: user.section || user.team_name || ''
     }));
     setShowUserSearch(false);
     setUserSearchTerm('');
+  };
+
+  // Handle new user creation
+  const handleNewUserSubmit = async () => {
+    try {
+      // Validate required fields
+      if (!newUserData.displayName || !newUserData.username || !newUserData.email) {
+        toast({
+          title: 'Validation Error',
+          description: 'Name, Username, and Email are required fields.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Create the user in the database
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/developer/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          username: newUserData.username,
+          display_name: newUserData.displayName,
+          email: newUserData.email,
+          employee_number: newUserData.employeeNumber,
+          phone: newUserData.phone,
+          location: newUserData.location,
+          office: newUserData.office,
+          bureau: newUserData.bureau,
+          division: newUserData.division,
+          section: newUserData.section,
+          role_id: 4, // Default to 'user' role
+          active: true
+        })
+      });
+
+      if (response.ok) {
+        const createdUser = await response.json();
+        
+        // Select the newly created user
+        setFormData(prev => ({
+          ...prev,
+          submittedBy: newUserData.username,
+          userDisplayName: newUserData.displayName,
+          userEmail: newUserData.email,
+          userEmployeeNumber: newUserData.employeeNumber,
+          userPhone: newUserData.phone,
+          userLocation: newUserData.location,
+          userOffice: newUserData.office,
+          userBureau: newUserData.bureau,
+          userDivision: newUserData.division,
+          userSection: newUserData.section
+        }));
+        
+        // Reset form and close dialog
+        setNewUserData({
+          displayName: '',
+          username: '',
+          email: '',
+          employeeNumber: '',
+          phone: '',
+          location: '',
+          office: '',
+          bureau: '',
+          division: '',
+          section: ''
+        });
+        setShowNewUserDialog(false);
+        
+        toast({
+          title: 'User Created',
+          description: `User ${newUserData.displayName} has been created and selected.`
+        });
+        
+        // Reload users list
+        loadUsers();
+      } else {
+        const error = await response.text();
+        toast({
+          title: 'Error Creating User',
+          description: error,
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      console.error('Failed to create user:', error);
+      toast({
+        title: 'Error Creating User',
+        description: 'Failed to create user. Please try again.',
+        variant: 'destructive'
+      });
+    }
   };
 
   // Filter users based on search term
@@ -357,8 +501,13 @@ export function StaffTicketModal({
       submittedBy: '',
       userDisplayName: '',
       userEmail: '',
-      userDepartment: '',
+      userEmployeeNumber: '',
+      userPhone: '',
       userLocation: '',
+      userOffice: '',
+      userBureau: '',
+      userDivision: '',
+      userSection: '',
       status: 'open',
       assignedTeam: '',
       assignedTo: '',
@@ -376,6 +525,7 @@ export function StaffTicketModal({
   };
 
   return (
+    <>
     <Dialog 
       open={open} 
       onClose={() => onOpenChange(false)}
@@ -580,7 +730,11 @@ export function StaffTicketModal({
                         </Paper>
                       )}
                     </Box>
-                    <Button variant="outlined" sx={{ minWidth: 'auto' }}>
+                    <Button 
+                      variant="outlined" 
+                      sx={{ minWidth: 'auto' }}
+                      onClick={() => setShowNewUserDialog(true)}
+                    >
                       <UserPlus className="h-4 w-4 mr-2" />
                       New User
                     </Button>
@@ -592,19 +746,56 @@ export function StaffTicketModal({
                         <User className="h-4 w-4" />
                         Selected User
                       </Typography>
-                      <Box sx={{ '& > div': { mb: 0.5 } }}>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
                         <Typography variant="body2"><strong>Name:</strong> {formData.userDisplayName}</Typography>
                         <Typography variant="body2"><strong>Username:</strong> @{formData.submittedBy}</Typography>
                         <Typography variant="body2"><strong>Email:</strong> {formData.userEmail}</Typography>
-                        {formData.userDepartment && (
-                          <Typography variant="body2"><strong>Department:</strong> {formData.userDepartment}</Typography>
+                        {formData.userEmployeeNumber && (
+                          <Typography variant="body2"><strong>Employee #:</strong> {formData.userEmployeeNumber}</Typography>
+                        )}
+                        {formData.userPhone && (
+                          <Typography variant="body2"><strong>Phone:</strong> {formData.userPhone}</Typography>
+                        )}
+                        {formData.userLocation && (
+                          <Typography variant="body2"><strong>Location:</strong> {formData.userLocation}</Typography>
+                        )}
+                        {formData.userOffice && (
+                          <Typography variant="body2"><strong>Office:</strong> {formData.userOffice}</Typography>
+                        )}
+                        {formData.userBureau && (
+                          <Typography variant="body2"><strong>Bureau:</strong> {formData.userBureau}</Typography>
+                        )}
+                        {formData.userDivision && (
+                          <Typography variant="body2"><strong>Division:</strong> {formData.userDivision}</Typography>
+                        )}
+                        {formData.userSection && (
+                          <Typography variant="body2"><strong>Section:</strong> {formData.userSection}</Typography>
                         )}
                       </Box>
                     </Paper>
                   )}
                 </Box>
 
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
+                  <TextField
+                    label="Employee Number"
+                    value={formData.userEmployeeNumber}
+                    onChange={(e) => handleFieldChange('userEmployeeNumber', e.target.value)}
+                    placeholder="Employee ID or badge number"
+                    size="small"
+                    fullWidth
+                  />
+                  <TextField
+                    label="Phone"
+                    value={formData.userPhone}
+                    onChange={(e) => handleFieldChange('userPhone', e.target.value)}
+                    placeholder="Phone number or extension"
+                    size="small"
+                    fullWidth
+                  />
+                </Box>
+                
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
                   <TextField
                     label="Location"
                     value={formData.userLocation}
@@ -614,10 +805,40 @@ export function StaffTicketModal({
                     fullWidth
                   />
                   <TextField
-                    label="Department"
-                    value={formData.userDepartment}
-                    onChange={(e) => handleFieldChange('userDepartment', e.target.value)}
-                    placeholder="User's department or team"
+                    label="Office"
+                    value={formData.userOffice}
+                    onChange={(e) => handleFieldChange('userOffice', e.target.value)}
+                    placeholder="DPSS Office"
+                    size="small"
+                    fullWidth
+                  />
+                </Box>
+                
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+                  <TextField
+                    label="Bureau"
+                    value={formData.userBureau}
+                    onChange={(e) => handleFieldChange('userBureau', e.target.value)}
+                    placeholder="DPSS Bureau"
+                    size="small"
+                    fullWidth
+                  />
+                  <TextField
+                    label="Division"
+                    value={formData.userDivision}
+                    onChange={(e) => handleFieldChange('userDivision', e.target.value)}
+                    placeholder="DPSS Division"
+                    size="small"
+                    fullWidth
+                  />
+                </Box>
+                
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 2, mt: 2 }}>
+                  <TextField
+                    label="Section"
+                    value={formData.userSection}
+                    onChange={(e) => handleFieldChange('userSection', e.target.value)}
+                    placeholder="DPSS Section"
                     size="small"
                     fullWidth
                   />
@@ -802,5 +1023,135 @@ export function StaffTicketModal({
         </Button>
       </DialogActions>
     </Dialog>
+
+    {/* New User Creation Dialog */}
+    <Dialog open={showNewUserDialog} onClose={() => setShowNewUserDialog(false)} maxWidth="md" fullWidth>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <UserPlus className="h-5 w-5" />
+        Create New User
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Create a new user account for the ticket system. Required fields are marked with *.
+        </Typography>
+        
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
+          <TextField
+            label="Full Name *"
+            value={newUserData.displayName}
+            onChange={(e) => setNewUserData(prev => ({ ...prev, displayName: e.target.value }))}
+            placeholder="John Doe"
+            size="small"
+            fullWidth
+            required
+          />
+          <TextField
+            label="Username *"
+            value={newUserData.username}
+            onChange={(e) => setNewUserData(prev => ({ ...prev, username: e.target.value }))}
+            placeholder="john.doe"
+            size="small"
+            fullWidth
+            required
+          />
+        </Box>
+        
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
+          <TextField
+            label="Email *"
+            value={newUserData.email}
+            onChange={(e) => setNewUserData(prev => ({ ...prev, email: e.target.value }))}
+            placeholder="john.doe@company.com"
+            type="email"
+            size="small"
+            fullWidth
+            required
+          />
+          <TextField
+            label="Employee Number"
+            value={newUserData.employeeNumber}
+            onChange={(e) => setNewUserData(prev => ({ ...prev, employeeNumber: e.target.value }))}
+            placeholder="EMP123456"
+            size="small"
+            fullWidth
+          />
+        </Box>
+        
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
+          <TextField
+            label="Phone"
+            value={newUserData.phone}
+            onChange={(e) => setNewUserData(prev => ({ ...prev, phone: e.target.value }))}
+            placeholder="(555) 123-4567"
+            size="small"
+            fullWidth
+          />
+          <TextField
+            label="Location"
+            value={newUserData.location}
+            onChange={(e) => setNewUserData(prev => ({ ...prev, location: e.target.value }))}
+            placeholder="Building A, Room 101"
+            size="small"
+            fullWidth
+          />
+        </Box>
+        
+        <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
+          DPSS Organizational Information
+        </Typography>
+        
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
+          <TextField
+            label="Office"
+            value={newUserData.office}
+            onChange={(e) => setNewUserData(prev => ({ ...prev, office: e.target.value }))}
+            placeholder="DPSS Office"
+            size="small"
+            fullWidth
+          />
+          <TextField
+            label="Bureau"
+            value={newUserData.bureau}
+            onChange={(e) => setNewUserData(prev => ({ ...prev, bureau: e.target.value }))}
+            placeholder="DPSS Bureau"
+            size="small"
+            fullWidth
+          />
+        </Box>
+        
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
+          <TextField
+            label="Division"
+            value={newUserData.division}
+            onChange={(e) => setNewUserData(prev => ({ ...prev, division: e.target.value }))}
+            placeholder="DPSS Division"
+            size="small"
+            fullWidth
+          />
+          <TextField
+            label="Section"
+            value={newUserData.section}
+            onChange={(e) => setNewUserData(prev => ({ ...prev, section: e.target.value }))}
+            placeholder="DPSS Section"
+            size="small"
+            fullWidth
+          />
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ p: 3 }}>
+        <Button onClick={() => setShowNewUserDialog(false)} color="inherit">
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleNewUserSubmit}
+          variant="contained" 
+          color="primary"
+          disabled={!newUserData.displayName || !newUserData.username || !newUserData.email}
+        >
+          Create User
+        </Button>
+      </DialogActions>
+    </Dialog>
+    </>
   );
 }

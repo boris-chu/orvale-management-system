@@ -1007,7 +1007,7 @@ export default function HelpdeskQueue() {
           onOpenChange={setShowStaffTicketModal}
           onSubmit={async (ticketData) => {
             // After successful ticket creation, refresh the tickets
-            await loadTickets();
+            await handleRefresh();
             showNotification('Ticket created successfully', 'success');
           }}
         />
