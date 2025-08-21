@@ -56,11 +56,13 @@ import {
   Users,
   Share2,
   LogOut,
-  User
+  User,
+  Play
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { UserAvatar } from '@/components/UserAvatar';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
+import { ConfigurableDataTableDemo } from '@/components/ConfigurableDataTableDemo';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -328,7 +330,7 @@ export default function TablesManagementPage() {
               <Settings className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Access Denied</h3>
               <p className="text-gray-500">
-                You don't have permission to view tables management.
+                You don&apos;t have permission to view tables management.
               </p>
               <div className="mt-4 p-3 bg-gray-100 rounded text-sm text-left">
                 <strong>Debug Info:</strong><br/>
@@ -526,7 +528,7 @@ export default function TablesManagementPage() {
 
       {/* Main Content */}
       <Tabs defaultValue="configurations" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="configurations" className="flex items-center gap-2">
             <TableIcon className="h-4 w-4" />
             Configurations
@@ -538,6 +540,10 @@ export default function TablesManagementPage() {
           <TabsTrigger value="views" className="flex items-center gap-2">
             <Save className="h-4 w-4" />
             Saved Views
+          </TabsTrigger>
+          <TabsTrigger value="demo" className="flex items-center gap-2">
+            <Play className="h-4 w-4" />
+            Live Demo
           </TabsTrigger>
         </TabsList>
 
@@ -802,6 +808,21 @@ export default function TablesManagementPage() {
                   </TableBody>
                 </Table>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Live Demo Tab */}
+        <TabsContent value="demo" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>ConfigurableDataTable Live Demo</CardTitle>
+              <CardDescription>
+                Interactive demonstration of the configurable data table component with sample data
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ConfigurableDataTableDemo />
             </CardContent>
           </Card>
         </TabsContent>
