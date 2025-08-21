@@ -275,6 +275,8 @@ export function StaffTicketModal({
   const loadUsers = async () => {
     try {
       const token = localStorage.getItem('authToken');
+      console.log('Current user object:', currentUser);
+      console.log('Current user team_id:', currentUser?.team_id);
       
       // First, try to get the current user's team
       if (currentUser?.team_id) {
@@ -287,11 +289,14 @@ export function StaffTicketModal({
         
         if (response.ok) {
           const userData = await response.json();
+          console.log('Raw team user data:', userData);
           const filteredUsers = userData.filter((user: User) => user.username && user.active !== false);
+          console.log('Filtered team users:', filteredUsers);
           setUsers(filteredUsers);
           return; // Success, exit early
         } else {
-          console.error('Failed to load team users:', response.status, await response.text());
+          const errorText = await response.text();
+          console.error('Failed to load team users:', response.status, errorText);
         }
       }
       
