@@ -53,7 +53,8 @@ import {
   Share2,
   LogOut,
   User,
-  Play
+  Play,
+  Database
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -126,6 +127,25 @@ export default function TablesManagementPage() {
   // User menu states
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+
+  // Table browser states
+  const [selectedBrowserTable, setSelectedBrowserTable] = useState<string>('user_tickets');
+  const [availableTables] = useState([
+    { name: 'user_tickets', label: 'User Tickets', description: 'All ticket records with details' },
+    { name: 'users', label: 'Users', description: 'System users and authentication' },
+    { name: 'roles', label: 'Roles', description: 'User roles and permissions' },
+    { name: 'teams', label: 'Teams', description: 'Internal teams for ticket processing' },
+    { name: 'support_teams', label: 'Support Teams', description: 'Public portal team options' },
+    { name: 'ticket_categories', label: 'Ticket Categories', description: 'Main ticket categories' },
+    { name: 'request_types', label: 'Request Types', description: 'Types for each category' },
+    { name: 'subcategories', label: 'Subcategories', description: 'Detailed subcategories' },
+    { name: 'dpss_offices', label: 'DPSS Offices', description: 'Top-level office structure' },
+    { name: 'dpss_bureaus', label: 'DPSS Bureaus', description: 'Bureau organizational level' },
+    { name: 'dpss_divisions', label: 'DPSS Divisions', description: 'Division organizational level' },
+    { name: 'dpss_sections', label: 'DPSS Sections', description: 'Section organizational level' },
+    { name: 'portal_settings', label: 'Portal Settings', description: 'Public portal configuration' },
+    { name: 'system_settings', label: 'System Settings', description: 'System-wide settings' }
+  ]);
 
   // Check permissions with debugging
   console.log('🔍 Tables Management Debug:', {
@@ -542,7 +562,7 @@ export default function TablesManagementPage() {
 
       {/* Main Content */}
       <Tabs defaultValue="configurations" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto p-1">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto p-1">
           <TabsTrigger value="configurations" className="flex items-center gap-2 px-3 py-2 text-sm">
             <TableIcon className="h-4 w-4" />
             <span className="hidden sm:inline">Configurations</span>
@@ -552,6 +572,11 @@ export default function TablesManagementPage() {
             <Columns className="h-4 w-4" />
             <span className="hidden sm:inline">Column Definitions</span>
             <span className="sm:hidden">Columns</span>
+          </TabsTrigger>
+          <TabsTrigger value="browser" className="flex items-center gap-2 px-3 py-2 text-sm">
+            <Database className="h-4 w-4" />
+            <span className="hidden sm:inline">Table Browser</span>
+            <span className="sm:hidden">Browser</span>
           </TabsTrigger>
           <TabsTrigger value="views" className="flex items-center gap-2 px-3 py-2 text-sm">
             <Save className="h-4 w-4" />
@@ -750,6 +775,250 @@ export default function TablesManagementPage() {
                   })}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Table Browser Tab */}
+        <TabsContent value="browser" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Database Table Browser</CardTitle>
+              <CardDescription>
+                Explore database tables and their column structures
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[600px]">
+                {/* Left Panel - Table List */}
+                <div className="lg:col-span-1">
+                  <Card className="h-full">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                        <Database className="h-4 w-4" />
+                        Database Tables
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="space-y-1">
+                        {availableTables.map((table) => (
+                          <motion.div
+                            key={table.name}
+                            whileHover={{ x: 2 }}
+                            className={`cursor-pointer p-3 mx-3 rounded-lg border transition-all duration-200 ${
+                              selectedBrowserTable === table.name
+                                ? 'bg-blue-50 border-blue-200 shadow-sm'
+                                : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                            }`}
+                            onClick={() => setSelectedBrowserTable(table.name)}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <h4 className={`text-sm font-medium truncate ${
+                                  selectedBrowserTable === table.name ? 'text-blue-900' : 'text-gray-900'
+                                }`}>
+                                  {table.label}
+                                </h4>
+                                <p className={`text-xs mt-1 ${
+                                  selectedBrowserTable === table.name ? 'text-blue-700' : 'text-gray-600'
+                                }`}>
+                                  {table.description}
+                                </p>
+                                <div className="flex items-center mt-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    {table.name}
+                                  </Badge>
+                                </div>
+                              </div>
+                              {selectedBrowserTable === table.name && (
+                                <div className="ml-2 flex-shrink-0">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Right Panel - Table Details */}
+                <div className="lg:col-span-2">
+                  <Card className="h-full">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                          <TableIcon className="h-4 w-4" />
+                          {availableTables.find(t => t.name === selectedBrowserTable)?.label || selectedBrowserTable}
+                        </CardTitle>
+                        <Badge variant="default" className="text-xs">
+                          {selectedBrowserTable}
+                        </Badge>
+                      </div>
+                      <CardDescription className="text-xs">
+                        {availableTables.find(t => t.name === selectedBrowserTable)?.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {/* Column Information */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-medium">Column Structure</h3>
+                          <Button variant="outline" size="sm">
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            Refresh
+                          </Button>
+                        </div>
+                        
+                        {/* Columns Display */}
+                        <div className="border rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-gray-50">
+                                <TableHead className="text-xs font-semibold">Column Name</TableHead>
+                                <TableHead className="text-xs font-semibold">Type</TableHead>
+                                <TableHead className="text-xs font-semibold">Properties</TableHead>
+                                <TableHead className="text-xs font-semibold">Description</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {/* Show columns from columnDefinitions for the selected table */}
+                              {columnDefinitions
+                                .filter(col => {
+                                  // Map our column definitions to actual table names
+                                  const tableMapping: { [key: string]: string[] } = {
+                                    'user_tickets': ['tickets_queue'],
+                                    'users': ['users_list'],
+                                    'teams': ['helpdesk_queue'],
+                                    'support_teams': ['support_teams'],
+                                    'support_team_groups': ['support_team_groups'],
+                                    'portal_settings': ['public_portal']
+                                  };
+                                  const mappedTables = tableMapping[selectedBrowserTable] || [selectedBrowserTable];
+                                  return mappedTables.some(table => col.table_identifier === table);
+                                })
+                                .slice(0, 10) // Show first 10 columns
+                                .map((column, index) => (
+                                  <TableRow key={index} className="hover:bg-gray-50">
+                                    <TableCell className="text-sm font-medium">
+                                      {column.column_label || column.display_name || column.column_key}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge variant="outline" className="text-xs">
+                                        {column.column_type}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex gap-1 flex-wrap">
+                                        {column.is_sortable && <Badge variant="secondary" className="text-xs">Sortable</Badge>}
+                                        {column.is_filterable && <Badge variant="secondary" className="text-xs">Filterable</Badge>}
+                                        {column.default_visible && <Badge variant="default" className="text-xs">Visible</Badge>}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-xs text-gray-600">
+                                      {column.column_key}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              
+                              {/* Show placeholder if no columns found */}
+                              {columnDefinitions.filter(col => {
+                                const tableMapping: { [key: string]: string[] } = {
+                                  'user_tickets': ['tickets_queue'],
+                                  'users': ['users_list'],
+                                  'teams': ['helpdesk_queue'],
+                                  'support_teams': ['support_teams'],
+                                  'support_team_groups': ['support_team_groups'],
+                                  'portal_settings': ['public_portal']
+                                };
+                                const mappedTables = tableMapping[selectedBrowserTable] || [selectedBrowserTable];
+                                return mappedTables.some(table => col.table_identifier === table);
+                              }).length === 0 && (
+                                <TableRow>
+                                  <TableCell colSpan={4} className="text-center py-8">
+                                    <Database className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                                    <p className="text-sm text-gray-500">
+                                      No column definitions found for this table.
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                      This may be a system table not configured for display.
+                                    </p>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+
+                        {/* Table Statistics */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+                          <Card className="p-3">
+                            <div className="text-xs text-gray-600">Table Type</div>
+                            <div className="text-sm font-semibold mt-1">
+                              {selectedBrowserTable.includes('dpss') ? 'Organization' :
+                               selectedBrowserTable.includes('ticket') ? 'Tickets' :
+                               selectedBrowserTable.includes('user') || selectedBrowserTable.includes('team') ? 'Users & Teams' :
+                               selectedBrowserTable.includes('setting') ? 'Configuration' : 'System'}
+                            </div>
+                          </Card>
+                          <Card className="p-3">
+                            <div className="text-xs text-gray-600">Columns</div>
+                            <div className="text-sm font-semibold mt-1">
+                              {columnDefinitions.filter(col => {
+                                const tableMapping: { [key: string]: string[] } = {
+                                  'user_tickets': ['tickets_queue'],
+                                  'users': ['users_list'],
+                                  'teams': ['helpdesk_queue'],
+                                  'support_teams': ['support_teams'],
+                                  'support_team_groups': ['support_team_groups'],
+                                  'portal_settings': ['public_portal']
+                                };
+                                const mappedTables = tableMapping[selectedBrowserTable] || [selectedBrowserTable];
+                                return mappedTables.some(table => col.table_identifier === table);
+                              }).length}
+                            </div>
+                          </Card>
+                          <Card className="p-3">
+                            <div className="text-xs text-gray-600">Filterable</div>
+                            <div className="text-sm font-semibold mt-1">
+                              {columnDefinitions.filter(col => {
+                                const tableMapping: { [key: string]: string[] } = {
+                                  'user_tickets': ['tickets_queue'],
+                                  'users': ['users_list'],
+                                  'teams': ['helpdesk_queue'],
+                                  'support_teams': ['support_teams'],
+                                  'support_team_groups': ['support_team_groups'],
+                                  'portal_settings': ['public_portal']
+                                };
+                                const mappedTables = tableMapping[selectedBrowserTable] || [selectedBrowserTable];
+                                return mappedTables.some(table => col.table_identifier === table) && col.is_filterable;
+                              }).length}
+                            </div>
+                          </Card>
+                          <Card className="p-3">
+                            <div className="text-xs text-gray-600">Default Visible</div>
+                            <div className="text-sm font-semibold mt-1">
+                              {columnDefinitions.filter(col => {
+                                const tableMapping: { [key: string]: string[] } = {
+                                  'user_tickets': ['tickets_queue'],
+                                  'users': ['users_list'],
+                                  'teams': ['helpdesk_queue'],
+                                  'support_teams': ['support_teams'],
+                                  'support_team_groups': ['support_team_groups'],
+                                  'portal_settings': ['public_portal']
+                                };
+                                const mappedTables = tableMapping[selectedBrowserTable] || [selectedBrowserTable];
+                                return mappedTables.some(table => col.table_identifier === table) && col.default_visible;
+                              }).length}
+                            </div>
+                          </Card>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
