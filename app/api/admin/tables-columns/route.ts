@@ -23,12 +23,12 @@ export async function GET(request: NextRequest) {
         id,
         table_identifier,
         column_key,
-        column_label,
+        display_name as column_label,
         column_type,
-        is_sortable,
-        is_filterable,
+        sortable as is_sortable,
+        filterable as is_filterable,
         default_visible,
-        display_order
+        0 as display_order
       FROM table_column_definitions 
       WHERE 1=1
     `;
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       params.push(tableFilter);
     }
     
-    query += ' ORDER BY table_identifier, display_order';
+    query += ' ORDER BY table_identifier, column_key';
 
     const columns = await queryAsync(query, params);
 
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       is_sortable = false,
       is_filterable = false,
       default_visible = true,
-      display_order = 999
+      data_source = column_key
     } = body;
 
     // Validate required fields
@@ -121,11 +121,12 @@ export async function POST(request: NextRequest) {
     // Insert new column definition
     const result = await queryAsync(`
       INSERT INTO table_column_definitions (
-        table_identifier, column_key, column_label, column_type,
-        is_sortable, is_filterable, default_visible, display_order,
-        created_by, created_at
+        id, table_identifier, column_key, display_name, column_type,
+        sortable, filterable, default_visible, data_source,
+        created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `, [
+      `${table_identifier}_${column_key}_${Date.now()}`,
       table_identifier,
       column_key,
       column_label,
@@ -133,22 +134,20 @@ export async function POST(request: NextRequest) {
       is_sortable ? 1 : 0,
       is_filterable ? 1 : 0,
       default_visible ? 1 : 0,
-      display_order,
-      authResult.user.username
+      data_source
     ]);
 
     return NextResponse.json({
       success: true,
       data: {
-        id: (result as any).lastID,
+        id: `${table_identifier}_${column_key}_${Date.now()}`,
         table_identifier,
         column_key,
         column_label,
         column_type,
         is_sortable,
         is_filterable,
-        default_visible,
-        display_order
+        default_visible
       }
     }, { status: 201 });
 
