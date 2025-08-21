@@ -127,9 +127,10 @@ const createLoggerConfig = (level: LogLevel, enabled: boolean) => {
   return config;
 };
 
-// Initialize logger with default settings
+// Initialize logger with default settings  
+// Temporarily disable Pino to avoid worker thread issues in development
 let currentLevel: LogLevel = 'info';
-let pinoEnabled = true;
+let pinoEnabled = false; // Disabled to prevent worker thread crashes
 let logger = pino(createLoggerConfig(currentLevel, pinoEnabled));
 
 // Function to update logger settings dynamically
@@ -166,7 +167,11 @@ const updateLogLevel = async (): Promise<void> => {
 // Enhanced logger with context and structured logging
 export const createContextLogger = (context: string) => {
   const safeLog = (level: string, logFn: Function, obj: any, msg?: string) => {
-    if (!pinoEnabled) return;
+    if (!pinoEnabled) {
+      // Use console logging when Pino is disabled
+      console.log(`[${level.toUpperCase()}] ${context}:`, msg || '', obj);
+      return;
+    }
     try {
       logFn({ ...obj, context }, msg);
     } catch (error) {
