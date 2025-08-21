@@ -407,6 +407,80 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     name: 'View SLA Configurations', 
     category: 'SLA Management', 
     description: 'View SLA settings\n• See time limits\n• Check configurations\n• Read-only access' 
+  },
+
+  // Tables Management Permissions
+  { 
+    id: 'tables.view_config', 
+    name: 'View Table Configurations', 
+    category: 'Tables Management', 
+    description: 'View table configurations\n• See table layouts\n• Review saved views\n• Read-only access' 
+  },
+  { 
+    id: 'tables.manage_columns', 
+    name: 'Manage Columns', 
+    category: 'Tables Management', 
+    description: 'Add/remove/reorder columns\n• Configure column properties\n• Set visibility rules\n• Define column types' 
+  },
+  { 
+    id: 'tables.manage_filters', 
+    name: 'Manage Filters', 
+    category: 'Tables Management', 
+    description: 'Configure filters and search\n• Create filter presets\n• Set default filters\n• Build complex queries' 
+  },
+  { 
+    id: 'tables.manage_sorting', 
+    name: 'Manage Sorting', 
+    category: 'Tables Management', 
+    description: 'Set up sorting rules\n• Define default sort order\n• Configure multi-column sorts\n• Priority ordering' 
+  },
+  { 
+    id: 'tables.manage_grouping', 
+    name: 'Manage Grouping', 
+    category: 'Tables Management', 
+    description: 'Configure row grouping\n• Set grouping criteria\n• Define collapse behavior\n• Summary calculations' 
+  },
+  { 
+    id: 'tables.manage_styles', 
+    name: 'Manage Styles', 
+    category: 'Tables Management', 
+    description: 'Customize appearance\n• Color schemes\n• Typography settings\n• Visual themes' 
+  },
+  { 
+    id: 'tables.manage_exports', 
+    name: 'Manage Exports', 
+    category: 'Tables Management', 
+    description: 'Configure export options\n• Set export formats\n• Define export rules\n• Custom templates' 
+  },
+  { 
+    id: 'tables.manage_actions', 
+    name: 'Manage Actions', 
+    category: 'Tables Management', 
+    description: 'Add/remove row actions\n• Configure bulk actions\n• Set action permissions\n• Custom actions' 
+  },
+  { 
+    id: 'tables.create_views', 
+    name: 'Create Views', 
+    category: 'Tables Management', 
+    description: 'Create saved views\n• Personal table configs\n• Custom layouts\n• View templates' 
+  },
+  { 
+    id: 'tables.share_views', 
+    name: 'Share Views', 
+    category: 'Tables Management', 
+    description: 'Share views with others\n• Team configurations\n• Public view access\n• View distribution' 
+  },
+  { 
+    id: 'tables.manage_permissions', 
+    name: 'Manage Permissions', 
+    category: 'Tables Management', 
+    description: 'Set column-level permissions\n• Data access control\n• Field visibility rules\n• Security configuration' 
+  },
+  { 
+    id: 'tables.reset_defaults', 
+    name: 'Reset Defaults', 
+    category: 'Tables Management', 
+    description: 'Reset to system defaults\n• Restore original configs\n• Clear customizations\n• Admin override capability' 
   }
 ];
 

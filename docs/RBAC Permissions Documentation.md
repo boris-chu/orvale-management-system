@@ -1,15 +1,15 @@
 # RBAC Permissions Documentation
 ## Orvale Management System - Complete Permission Reference
 
-**Last Updated:** August 20, 2025  
-**Total Permissions:** 63  
-**Permission Categories:** 11  
+**Last Updated:** August 21, 2025  
+**Total Permissions:** 75  
+**Permission Categories:** 12  
 
 ---
 
 ## 🎯 Overview
 
-The Orvale Management System implements a comprehensive Role-Based Access Control (RBAC) system with 33 granular permissions across 8 functional categories. This document provides complete documentation of all available permissions, their purposes, and implementation details.
+The Orvale Management System implements a comprehensive Role-Based Access Control (RBAC) system with 75 granular permissions across 12 functional categories. This document provides complete documentation of all available permissions, their purposes, and implementation details.
 
 ---
 
@@ -47,6 +47,9 @@ Role and permission management
 
 ### 11. **SLA Management** (2 permissions)
 Service Level Agreement configuration
+
+### 12. **Tables Management** (12 permissions)
+Visual tables and data grid configuration system
 
 ---
 
@@ -649,6 +652,116 @@ Service Level Agreement configuration
   - See time limits
   - Check configurations
   - Read-only access
+- **Granted To:** Admins
+
+### **TABLES MANAGEMENT PERMISSIONS**
+
+#### `tables.view_config`
+- **Name:** View Table Configurations
+- **Description:** View table configurations
+- **Use Cases:**
+  - See table layouts
+  - Review saved views
+  - Read-only access
+- **Granted To:** Admins, Modal Designers
+
+#### `tables.manage_columns`
+- **Name:** Manage Columns
+- **Description:** Add/remove/reorder columns
+- **Use Cases:**
+  - Configure column properties
+  - Set visibility rules
+  - Define column types
+- **Granted To:** Admins, Developers
+
+#### `tables.manage_filters`
+- **Name:** Manage Filters
+- **Description:** Configure filters and search
+- **Use Cases:**
+  - Create filter presets
+  - Set default filters
+  - Build complex queries
+- **Granted To:** Admins, Developers
+
+#### `tables.manage_sorting`
+- **Name:** Manage Sorting
+- **Description:** Set up sorting rules
+- **Use Cases:**
+  - Define default sort order
+  - Configure multi-column sorts
+  - Priority ordering
+- **Granted To:** Admins, Developers
+
+#### `tables.manage_grouping`
+- **Name:** Manage Grouping
+- **Description:** Configure row grouping
+- **Use Cases:**
+  - Set grouping criteria
+  - Define collapse behavior
+  - Summary calculations
+- **Granted To:** Admins, Developers
+
+#### `tables.manage_styles`
+- **Name:** Manage Styles
+- **Description:** Customize appearance
+- **Use Cases:**
+  - Color schemes
+  - Typography settings
+  - Visual themes
+- **Granted To:** Admins, Modal Designers
+
+#### `tables.manage_exports`
+- **Name:** Manage Exports
+- **Description:** Configure export options
+- **Use Cases:**
+  - Set export formats
+  - Define export rules
+  - Custom templates
+- **Granted To:** Admins, Developers
+
+#### `tables.manage_actions`
+- **Name:** Manage Actions
+- **Description:** Add/remove row actions
+- **Use Cases:**
+  - Configure bulk actions
+  - Set action permissions
+  - Custom actions
+- **Granted To:** Admins, Developers
+
+#### `tables.create_views`
+- **Name:** Create Views
+- **Description:** Create saved views
+- **Use Cases:**
+  - Personal table configs
+  - Custom layouts
+  - View templates
+- **Granted To:** Admins, Developers, Modal Designers
+
+#### `tables.share_views`
+- **Name:** Share Views
+- **Description:** Share views with others
+- **Use Cases:**
+  - Team configurations
+  - Public view access
+  - View distribution
+- **Granted To:** Admins, Developers
+
+#### `tables.manage_permissions`
+- **Name:** Manage Permissions
+- **Description:** Set column-level permissions
+- **Use Cases:**
+  - Data access control
+  - Field visibility rules
+  - Security configuration
+- **Granted To:** Admins
+
+#### `tables.reset_defaults`
+- **Name:** Reset Defaults
+- **Description:** Reset to system defaults
+- **Use Cases:**
+  - Restore original configs
+  - Clear customizations
+  - Admin override capability
 - **Granted To:** Admins
 
 ---

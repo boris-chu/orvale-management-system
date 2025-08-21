@@ -22,7 +22,8 @@ import {
   Ticket,
   ArrowLeft,
   User,
-  Globe
+  Globe,
+  Table
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -245,6 +246,16 @@ export default function DeveloperDashboard() {
         color: 'bg-amber-500',
         stats: 'UI Component Testing',
         requiredPermissions: ['admin.system_settings']
+      },
+      {
+        id: 'tables_management',
+        title: 'Tables Management',
+        description: 'Visual tables and datagrid configuration system',
+        icon: Table,
+        href: '/admin/tables-management',
+        color: 'bg-teal-500',
+        stats: 'Configure data displays',
+        requiredPermissions: ['tables.view_config', 'admin.system_settings']
       }
     ];
 
