@@ -245,6 +245,17 @@ export const ticketLogger = {
       deleted_by: deletedBy, 
       reason 
     }, `Ticket deleted: ${ticketId}`),
+    
+  staffCreated: (ticketId: string, createdBy: string, onBehalfOf: string, team?: string, additionalContext?: any) =>
+    pinoEnabled && logger.info({ 
+      event: 'ticket_staff_created',
+      ticket_id: ticketId, 
+      created_by_staff: createdBy,
+      on_behalf_of: onBehalfOf,
+      assigned_team: team,
+      ticket_source: 'staff_created',
+      context: additionalContext
+    }, `Staff ticket created: ${ticketId} by ${createdBy} for ${onBehalfOf}`),
 };
 
 // Authentication logger
@@ -311,6 +322,15 @@ export const systemLogger = {
       setting, 
       updated_by: updatedBy 
     }, `System configuration updated: ${setting}`),
+    
+  info: (data: any, message: string) =>
+    pinoEnabled && logger.info(data, message),
+    
+  warn: (data: any, message: string) =>
+    pinoEnabled && logger.warn(data, message),
+    
+  error: (data: any, message: string) =>
+    pinoEnabled && logger.error(data, message),
 };
 
 // API request logger

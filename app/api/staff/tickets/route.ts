@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
+import { ticketLogger, systemLogger } from '@/lib/logger';
 import sqlite3 from 'sqlite3';
 import { promisify } from 'util';
 import path from 'path';
@@ -104,9 +105,10 @@ function hasStaffTicketPermissions(userPermissions: string[]): boolean {
 }
 
 export async function POST(request: NextRequest) {
+  let authResult: any = null;
   try {
     // Verify authentication
-    const authResult = await verifyAuth(request);
+    authResult = await verifyAuth(request);
     if (!authResult.success || !authResult.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -116,6 +118,13 @@ export async function POST(request: NextRequest) {
 
     // Check staff ticket creation permissions
     if (!hasStaffTicketPermissions(authResult.user.permissions || [])) {
+      systemLogger.warn({
+        event: 'staff_ticket_creation_denied',
+        denied_user: authResult.user.username,
+        user_permissions: authResult.user.permissions,
+        reason: 'insufficient_permissions'
+      }, `Staff ticket creation denied for ${authResult.user.username}`);
+      
       return NextResponse.json(
         { error: 'Insufficient permissions to create tickets for users' },
         { status: 403 }
@@ -296,6 +305,28 @@ export async function POST(request: NextRequest) {
       })
     ]);
 
+    // Log staff ticket creation for audit trail
+    ticketLogger.staffCreated(
+      ticketId,
+      createdByStaff,
+      ticketData.submittedBy,
+      finalAssignedTeam || undefined,
+      {
+        category: ticketData.category,
+        subcategory: ticketData.subcategory,
+        priority: ticketData.priority,
+        status: ticketData.status || 'open',
+        assigned_to: ticketData.assignedTo,
+        has_internal_notes: !!ticketData.internalNotes,
+        user_info: {
+          display_name: ticketData.userDisplayName,
+          email: ticketData.userEmail,
+          office: ticketData.userOffice,
+          location: ticketData.userLocation
+        }
+      }
+    );
+
     // Get the created ticket
     const createdTicket = await dbGet(`
       SELECT 
@@ -317,6 +348,15 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating staff ticket:', error);
+    
+    // Log the error for audit trail
+    systemLogger.error({
+      event: 'staff_ticket_creation_failed',
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      user: authResult?.user?.username || 'unknown',
+      stack_trace: error instanceof Error ? error.stack : undefined
+    }, `Staff ticket creation failed`);
+    
     return NextResponse.json(
       { error: 'Failed to create ticket' },
       { status: 500 }
@@ -326,9 +366,10 @@ export async function POST(request: NextRequest) {
 
 // GET endpoint to retrieve staff-created tickets (for management/reporting)
 export async function GET(request: NextRequest) {
+  let authResult: any = null;
   try {
     // Verify authentication
-    const authResult = await verifyAuth(request);
+    authResult = await verifyAuth(request);
     if (!authResult.success || !authResult.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -338,6 +379,13 @@ export async function GET(request: NextRequest) {
 
     // Check permissions
     if (!hasStaffTicketPermissions(authResult.user.permissions || [])) {
+      systemLogger.warn({
+        event: 'staff_tickets_access_denied',
+        denied_user: authResult.user.username,
+        user_permissions: authResult.user.permissions,
+        reason: 'insufficient_permissions'
+      }, `Staff tickets access denied for ${authResult.user.username}`);
+      
       return NextResponse.json(
         { error: 'Insufficient permissions to view staff tickets' },
         { status: 403 }
@@ -386,6 +434,16 @@ export async function GET(request: NextRequest) {
     
     const countResult = await dbGet(countQuery, countParams) as any;
 
+    // Log staff tickets access for audit trail
+    systemLogger.info({ 
+      event: 'staff_tickets_accessed',
+      accessed_by: authResult.user.username,
+      filter_created_by: createdBy || 'all',
+      result_count: countResult.total,
+      query_limit: limit,
+      query_offset: offset
+    }, `Staff tickets accessed by ${authResult.user.username}`);
+
     return NextResponse.json({
       success: true,
       tickets,
@@ -399,6 +457,15 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error fetching staff tickets:', error);
+    
+    // Log the error for audit trail
+    systemLogger.error({
+      event: 'staff_tickets_fetch_failed',
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      user: authResult?.user?.username || 'unknown',
+      stack_trace: error instanceof Error ? error.stack : undefined
+    }, `Staff tickets fetch failed`);
+    
     return NextResponse.json(
       { error: 'Failed to fetch staff tickets' },
       { status: 500 }
