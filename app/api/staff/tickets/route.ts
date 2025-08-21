@@ -215,16 +215,15 @@ export async function POST(request: NextRequest) {
     // Insert ticket into database
     await dbRun(`
       INSERT INTO user_tickets (
-        ticket_id,
-        title,
-        description,
+        submission_id,
+        issue_title,
+        issue_description,
         category,
         subcategory,
         priority,
         status,
-        submitted_by,
-        submitted_by_name,
-        submitted_by_email,
+        user_name,
+        request_creator_display_name,
         employee_number,
         phone_number,
         location,
@@ -238,10 +237,8 @@ export async function POST(request: NextRequest) {
         internal_notes,
         created_by_staff,
         ticket_source,
-        submitted_date,
-        created_at,
-        updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        submitted_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       ticketId,
       ticketData.title,
@@ -252,7 +249,6 @@ export async function POST(request: NextRequest) {
       ticketData.status || 'open',
       ticketData.submittedBy,
       ticketData.userDisplayName,
-      ticketData.userEmail,
       ticketData.userEmployeeNumber || null,
       ticketData.userPhone || null,
       ticketData.userLocation || null,
@@ -266,8 +262,6 @@ export async function POST(request: NextRequest) {
       ticketData.internalNotes || null,
       createdByStaff,
       'staff_created',
-      submittedDate,
-      now,
       now
     ]);
 
@@ -336,7 +330,7 @@ export async function POST(request: NextRequest) {
       FROM user_tickets ut
       LEFT JOIN teams t ON ut.assigned_team = t.id
       LEFT JOIN users u ON ut.assigned_to = u.username
-      WHERE ut.ticket_id = ?
+      WHERE ut.submission_id = ?
     `, [ticketId]);
 
     return NextResponse.json({

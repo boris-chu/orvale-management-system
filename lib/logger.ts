@@ -130,7 +130,7 @@ const createLoggerConfig = (level: LogLevel, enabled: boolean) => {
 // Initialize logger with default settings  
 // Temporarily disable Pino to avoid worker thread issues in development
 let currentLevel: LogLevel = 'info';
-let pinoEnabled = false; // Disabled to prevent worker thread crashes
+let pinoEnabled = false; // Disabled to prevent worker thread crashes and transport issues
 let logger = pino(createLoggerConfig(currentLevel, pinoEnabled));
 
 // Function to update logger settings dynamically
@@ -364,12 +364,15 @@ export const apiLogger = {
 };
 
 // Initialize logger on module load
+// Temporarily disabled to prevent pino-pretty transport errors
+/*
 getLogSettings().then(({ level, enabled }) => {
   currentLevel = level;
   pinoEnabled = enabled;
   logger = pino(createLoggerConfig(level, enabled));
   systemLogger.startup();
 });
+*/
 
 // Export default logger and utilities
 export default logger;
