@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Card,
   CardContent,
@@ -54,8 +54,13 @@ import {
   Save,
   RefreshCw,
   Users,
-  Share2
+  Share2,
+  LogOut,
+  User
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { UserAvatar } from '@/components/UserAvatar';
+import { ProfileEditModal } from '@/components/ProfileEditModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -117,6 +122,10 @@ export default function TablesManagementPage() {
   // Form states
   const [newConfigName, setNewConfigName] = useState('');
   const [newConfigDescription, setNewConfigDescription] = useState('');
+  
+  // User menu states
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   // Check permissions with debugging
   console.log('🔍 Tables Management Debug:', {
@@ -127,9 +136,10 @@ export default function TablesManagementPage() {
     firstFewPermissions: user?.permissions?.slice(0, 5)
   });
   
-  const hasViewPermission = user?.permissions?.includes('tables.view_config') || user?.role === 'admin';
-  const hasManagePermission = user?.permissions?.includes('tables.manage_columns') || user?.role === 'admin';
-  const hasCreatePermission = user?.permissions?.includes('tables.create_views') || user?.role === 'admin';
+  // SECURITY: Only rely on database permissions - no role-based fallbacks
+  const hasViewPermission = user?.permissions?.includes('tables.view_config');
+  const hasManagePermission = user?.permissions?.includes('tables.manage_columns');
+  const hasCreatePermission = user?.permissions?.includes('tables.create_views');
   
   console.log('🔍 Permission Check Results:', {
     hasViewPermission,
@@ -142,6 +152,18 @@ export default function TablesManagementPage() {
       loadData();
     }
   }, [hasViewPermission]);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowUserMenu(false);
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showUserMenu]);
 
   const loadData = async () => {
     try {
@@ -296,10 +318,8 @@ export default function TablesManagementPage() {
     }
   };
 
-  // Temporary admin override - REMOVE LATER
-  const isAdminOverride = user?.role === 'admin' || user?.username === 'admin';
-  
-  if (!hasViewPermission && !isAdminOverride) {
+  // SECURITY: Pure permission-based access control - no overrides
+  if (!hasViewPermission) {
     return (
       <div className="container mx-auto p-6">
         <Card>
@@ -339,7 +359,7 @@ export default function TablesManagementPage() {
           </p>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
           <Button
             variant="outline"
             onClick={loadData}
@@ -409,6 +429,98 @@ export default function TablesManagementPage() {
               </DialogContent>
             </Dialog>
           )}
+
+          {/* User Profile Dropdown */}
+          <div className="relative">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowUserMenu(!showUserMenu);
+                    }}
+                    className="flex items-center space-x-2 rounded-full p-1 hover:bg-gray-100 transition-colors duration-200"
+                  >
+                    <UserAvatar 
+                      user={user}
+                      size="md"
+                      showOnlineIndicator={true}
+                      className="border-2 border-gray-200 hover:border-blue-400 transition-colors duration-200"
+                    />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>User Menu</p>
+                </TooltipContent>
+              </Tooltip>
+
+              {/* User Dropdown Menu */}
+              <AnimatePresence>
+                {showUserMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* User Info Section */}
+                    <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                      <div className="flex items-center space-x-3">
+                        <UserAvatar 
+                          user={user}
+                          size="lg"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{user?.display_name}</p>
+                          <p className="text-xs text-gray-600 truncate">{user?.email}</p>
+                          <div className="mt-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {user?.role || 'User'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Menu Items */}
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          setShowProfileModal(true);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors duration-150"
+                      >
+                        <div className="w-5 h-5 flex items-center justify-center">
+                          <User className="h-4 w-4" />
+                        </div>
+                        <span className="font-medium">Edit Profile</span>
+                      </button>
+                      
+                      <hr className="my-1 border-gray-100" />
+                      
+                      <button
+                        onClick={() => {
+                          localStorage.removeItem('authToken');
+                          localStorage.removeItem('currentUser');
+                          window.location.href = '/';
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-3 transition-colors duration-150"
+                      >
+                        <div className="w-5 h-5 flex items-center justify-center">
+                          <LogOut className="h-4 w-4" />
+                        </div>
+                        <span className="font-medium">Sign Out</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </TooltipProvider>
+          </div>
         </div>
       </motion.div>
 
@@ -731,6 +843,21 @@ export default function TablesManagementPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Profile Edit Modal */}
+      <ProfileEditModal
+        open={showProfileModal}
+        onOpenChange={setShowProfileModal}
+        user={user}
+        onProfileUpdate={(updatedUser) => {
+          // Update the AuthContext user data
+          if (updatedUser) {
+            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+            // You might want to update the AuthContext state here too
+            window.location.reload(); // Simple refresh to update user data
+          }
+        }}
+      />
     </div>
   );
 }
