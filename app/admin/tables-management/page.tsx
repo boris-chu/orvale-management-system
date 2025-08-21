@@ -302,6 +302,9 @@ export default function TablesManagementPage() {
       case 'tickets_queue': return 'Tickets Queue';
       case 'users_list': return 'Users Management';
       case 'helpdesk_queue': return 'Helpdesk Queue';
+      case 'public_portal': return 'Public Portal';
+      case 'support_teams': return 'Support Teams';
+      case 'support_team_groups': return 'Support Team Groups';
       default: return identifier;
     }
   };
@@ -405,6 +408,9 @@ export default function TablesManagementPage() {
                         <SelectItem value="tickets_queue">Tickets Queue</SelectItem>
                         <SelectItem value="users_list">Users Management</SelectItem>
                         <SelectItem value="helpdesk_queue">Helpdesk Queue</SelectItem>
+                        <SelectItem value="public_portal">Public Portal</SelectItem>
+                        <SelectItem value="support_teams">Support Teams</SelectItem>
+                        <SelectItem value="support_team_groups">Support Team Groups</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -688,7 +694,7 @@ export default function TablesManagementPage() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {['tickets_queue', 'users_list', 'helpdesk_queue'].map((tableId) => {
+                  {['tickets_queue', 'users_list', 'helpdesk_queue', 'public_portal', 'support_teams', 'support_team_groups'].map((tableId) => {
                     const tableColumns = columnDefinitions.filter(
                       col => col.table_identifier === tableId
                     );
@@ -918,6 +924,9 @@ export default function TablesManagementPage() {
                 <SelectItem value="tickets_queue">Tickets Queue</SelectItem>
                 <SelectItem value="users_list">Users Management</SelectItem>
                 <SelectItem value="helpdesk_queue">Helpdesk Queue</SelectItem>
+                <SelectItem value="public_portal">Public Portal</SelectItem>
+                <SelectItem value="support_teams">Support Teams</SelectItem>
+                <SelectItem value="support_team_groups">Support Team Groups</SelectItem>
               </SelectContent>
             </Select>
           </div>
