@@ -79,15 +79,20 @@ export const verifyToken = (token: string): any => {
 
 export const getUserPermissions = async (user: User): Promise<string[]> => {
     try {
+        console.log('🔍 Fetching permissions for user role:', user.role);
         // Get permissions from the database
         const permissions = await queryAsync(
             `SELECT permission_id FROM role_permissions WHERE role_id = ?`,
             [user.role]
         );
         
-        return permissions.map((p: any) => p.permission_id);
+        console.log('✅ Database permissions found:', permissions.length);
+        const permissionList = permissions.map((p: any) => p.permission_id);
+        console.log('🔑 User permissions:', permissionList.slice(0, 5), '...'); // Show first 5
+        return permissionList;
     } catch (error) {
-        console.error('Error fetching user permissions:', error);
+        console.error('❌ Error fetching user permissions:', error);
+        console.log('🔄 Using fallback hardcoded permissions for role:', user.role);
         
         // Fallback to hardcoded permissions if database fails
         const permissions: string[] = [];
@@ -210,10 +215,24 @@ export const getUserPermissions = async (user: User): Promise<string[]> => {
                 'admin.view_roles',
                 // SLA management permissions
                 'admin.manage_sla',
-                'admin.view_sla'
+                'admin.view_sla',
+                // Tables Management permissions
+                'tables.view_config',
+                'tables.manage_columns',
+                'tables.manage_filters',
+                'tables.manage_sorting',
+                'tables.manage_grouping',
+                'tables.manage_styles',
+                'tables.manage_exports',
+                'tables.manage_actions',
+                'tables.create_views',
+                'tables.share_views',
+                'tables.manage_permissions',
+                'tables.reset_defaults'
             );
         }
         
+        console.log('🔑 Fallback permissions assigned:', permissions.length);
         return permissions;
     }
 };
