@@ -109,6 +109,7 @@ interface User {
   display_name: string;
   email: string;
   team_name?: string;
+  active?: boolean;
   employee_number?: string;
   phone?: string;
   location?: string;
@@ -274,7 +275,8 @@ export function StaffTicketModal({
   const loadUsers = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      // First, get the current user's team
+      
+      // First, try to get the current user's team
       if (currentUser?.team_id) {
         // Load only users from the same team
         const response = await fetch(`/api/developer/teams/${currentUser.team_id}/users`, {
@@ -282,30 +284,49 @@ export function StaffTicketModal({
             'Authorization': `Bearer ${token}`
           }
         });
+        
         if (response.ok) {
           const userData = await response.json();
-          setUsers(userData.filter((user: User) => user.username)); // Filter active users
+          const filteredUsers = userData.filter((user: User) => user.username && user.active !== false);
+          setUsers(filteredUsers);
+          return; // Success, exit early
+        } else {
+          console.error('Failed to load team users:', response.status, await response.text());
         }
+      }
+      
+      // Fallback: Load all active users if team loading fails or user has no team
+      console.log('StaffTicketModal - Fallback: loading all active users');
+      const allUsersResponse = await fetch('/api/developer/users', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (allUsersResponse.ok) {
+        const allUsers = await allUsersResponse.json();
+        const filteredUsers = allUsers.filter((user: User) => user.username && user.active !== false);
+        setUsers(filteredUsers);
       } else {
-        // If no team, just load the current user
+        // Final fallback: just current user
         setUsers(currentUser ? [{
           id: currentUser.id,
           username: currentUser.username,
           display_name: currentUser.display_name,
-          email: currentUser.email
+          email: currentUser.email,
+          team_name: 'Current User'
         }] : []);
       }
     } catch (error) {
       console.error('Failed to load users:', error);
-      // Fallback to loading current user only
-      if (currentUser) {
-        setUsers([{
-          id: currentUser.id,
-          username: currentUser.username,
-          display_name: currentUser.display_name,
-          email: currentUser.email
-        }]);
-      }
+      // Final fallback: just current user
+      setUsers(currentUser ? [{
+        id: currentUser.id,
+        username: currentUser.username,
+        display_name: currentUser.display_name,
+        email: currentUser.email,
+        team_name: 'Current User'
+      }] : []);
     }
   };
 
