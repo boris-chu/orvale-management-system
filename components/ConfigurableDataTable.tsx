@@ -119,7 +119,7 @@ interface ConfigurableDataTableProps {
   className?: string;
   height?: number | string;
   enableSelection?: boolean;
-  onSelectionChange?: (selectedIds: GridRowSelectionModel) => void;
+  onSelectionChange?: (selectedIds: Array<string | number>) => void;
 }
 
 // Column type renderers
@@ -227,7 +227,7 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
   });
   const [sortModel, setSortModel] = useState([]);
   const [filterModel, setFilterModel] = useState({ items: [] });
-  const [selectionModel, setSelectionModel] = useState<any[]>([]);
+  const [selectionModel, setSelectionModel] = useState<Array<string | number>>([]);
   
   // UI Control States
   const [columnMenuAnchor, setColumnMenuAnchor] = useState<null | HTMLElement>(null);
@@ -1018,13 +1018,17 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
             paginationMode="client"
             paginationModel={paginationModel}
             onPaginationModelChange={setPaginationModel}
-            rowsPerPageOptions={[10, 25, 50, 100]}
+            pageSizeOptions={[10, 25, 50, 100]}
             loading={loading}
             onRowClick={onRowClick}
             checkboxSelection={enableSelection}
             disableRowSelectionOnClick={!enableSelection}
-            rowSelectionModel={selectionModel}
-            onRowSelectionModelChange={setSelectionModel}
+            rowSelectionModel={selectionModel as unknown as GridRowSelectionModel}
+            onRowSelectionModelChange={(newModel: GridRowSelectionModel) => {
+              // Convert GridRowSelectionModel to our array format
+              const arrayModel = Array.isArray(newModel) ? newModel : newModel?.ids || [];
+              setSelectionModel(arrayModel as Array<string | number>);
+            }}
             density="comfortable"
             autoHeight={false}
             getRowId={(row) => row.id || row.ticket_id || row.username || row.title || Math.random()}

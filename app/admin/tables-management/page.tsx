@@ -64,6 +64,7 @@ import { ProfileEditModal } from '@/components/ProfileEditModal';
 import { ConfigurableDataTableDemo } from '@/components/ConfigurableDataTableDemo';
 import { DragDropColumnManager } from '@/components/DragDropColumnManager';
 import { ColumnEditorDialog } from '@/components/ColumnEditorDialog';
+import { RowEditorDialog } from '@/components/RowEditorDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -173,6 +174,8 @@ export default function TablesManagementPage() {
   // Table data for editor
   const [editorTableData, setEditorTableData] = useState<any[]>([]);
   const [editingCell, setEditingCell] = useState<{ rowId: any; field: string; value: any } | null>(null);
+  const [editingRow, setEditingRow] = useState<any | null>(null);
+  const [showRowEditor, setShowRowEditor] = useState(false);
 
   // Check permissions with debugging
   console.log('🔍 Tables Management Debug:', {
@@ -587,6 +590,49 @@ export default function TablesManagementPage() {
     }
   };
 
+  // Handle full row save
+  const handleRowSave = async (rowData: any) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const headers: any = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Update multiple fields at once
+      const promises = Object.entries(rowData)
+        .filter(([field, value]) => editingRow && editingRow[field] !== value)
+        .map(([field, value]) => 
+          fetch('/api/admin/table-data', {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify({
+              table: selectedEditorTable,
+              rowId: rowData.id || rowData.ID,
+              field,
+              value,
+              primaryKey: 'id'
+            }),
+          })
+        );
+
+      await Promise.all(promises);
+
+      // Update local data with all changes
+      const updatedData = editorTableData.map(row => 
+        row.id === rowData.id || row.ID === rowData.id ? { ...row, ...rowData } : row
+      );
+      setEditorTableData(updatedData);
+
+    } catch (error) {
+      console.error('Error saving row:', error);
+      throw error; // Re-throw for the dialog to handle
+    }
+  };
+
   // Load editor columns when selected table changes
   useEffect(() => {
     if (selectedEditorTable && hasManagePermission) {
@@ -932,7 +978,7 @@ export default function TablesManagementPage() {
                                   size="sm"
                                   onClick={() => {
                                     setSelectedConfig(config);
-                                    setEditConfigOpen(true);
+                                    setPreviewOpen(true);
                                   }}
                                 >
                                   <Edit className="h-4 w-4" />
@@ -1160,7 +1206,7 @@ export default function TablesManagementPage() {
                                 .map((column, index) => (
                                   <TableRow key={index} className="hover:bg-gray-50">
                                     <TableCell className="text-sm font-medium">
-                                      {column.column_label || column.display_name || column.column_key}
+                                      {column.column_label || column.column_key}
                                     </TableCell>
                                     <TableCell>
                                       <Badge variant="outline" className="text-xs">
@@ -1446,7 +1492,7 @@ export default function TablesManagementPage() {
                         </div>
                       ) : editorTableData.length > 0 ? (
                         <div className="border rounded-lg overflow-hidden">
-                          <div className="overflow-x-auto max-h-96">
+                          <div className="overflow-x-auto max-h-[600px]">
                             <Table>
                               <TableHeader>
                                 <TableRow className="bg-gray-50 dark:bg-gray-800">
@@ -1462,7 +1508,7 @@ export default function TablesManagementPage() {
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {editorTableData.slice(0, 25).map((row, index) => (
+                                {editorTableData.slice(0, 50).map((row, index) => (
                                   <TableRow key={row.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                                     {editorColumns.slice(0, 8).map((column) => (
                                       <TableCell key={column.column_key} className="max-w-48">
@@ -1517,7 +1563,14 @@ export default function TablesManagementPage() {
                                         <TooltipProvider>
                                           <Tooltip>
                                             <TooltipTrigger asChild>
-                                              <Button variant="outline" size="sm">
+                                              <Button 
+                                                variant="outline" 
+                                                size="sm"
+                                                onClick={() => {
+                                                  setEditingRow(row);
+                                                  setShowRowEditor(true);
+                                                }}
+                                              >
                                                 <Edit className="h-3 w-3" />
                                               </Button>
                                             </TooltipTrigger>
@@ -1531,9 +1584,9 @@ export default function TablesManagementPage() {
                               </TableBody>
                             </Table>
                           </div>
-                          {editorTableData.length > 25 && (
+                          {editorTableData.length > 50 && (
                             <div className="p-3 bg-gray-50 dark:bg-gray-800 border-t text-center text-sm text-gray-600 dark:text-gray-400">
-                              Showing first 25 of {editorTableData.length} records
+                              Showing first 50 of {editorTableData.length} records
                             </div>
                           )}
                         </div>
@@ -1757,6 +1810,21 @@ export default function TablesManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Row Editor Dialog */}
+      <RowEditorDialog
+        open={showRowEditor}
+        onOpenChange={(open) => {
+          setShowRowEditor(open);
+          if (!open) {
+            setEditingRow(null);
+          }
+        }}
+        row={editingRow}
+        columns={editorColumns}
+        tableName={selectedEditorTable}
+        onSave={handleRowSave}
+      />
     </div>
   );
 }
