@@ -2,14 +2,11 @@
 > orvale-management-system@0.1.0 dev
 > next dev -p 80 -p 3000
 
- ⨯ Failed to start server
-Error: listen EADDRINUSE: address already in use :::3000
-    at <unknown> (Error: listen EADDRINUSE: address already in use :::3000)
-    at new Promise (<anonymous>) {
-  code: 'EADDRINUSE',
-  errno: -48,
-  syscall: 'listen',
-  address: '::',
-  port: 3000
-}
-[?25h
+   ▲ Next.js 15.5.0
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.45:3000
+
+ ✓ Starting...
+ ✓ Ready in 994ms
+ ✓ Compiled /api/health in 254ms (296 modules)
+ GET /api/health 200 in 332ms

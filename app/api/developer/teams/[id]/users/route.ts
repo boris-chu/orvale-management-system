@@ -11,7 +11,7 @@ const dbAll = promisify(db.all.bind(db));
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify authentication
@@ -23,8 +23,10 @@ export async function GET(
       );
     }
 
+    // Await params for Next.js 15 compatibility
+    const { id: teamId } = await params;
+
     // Check permissions: users can view their own team, or with explicit permission
-    const teamId = params.id;
     const canViewTeam = authResult.user.team_id === teamId || 
                        authResult.user.permissions?.includes('team.view_members') ||
                        authResult.user.permissions?.includes('admin.view_users') ||
@@ -45,7 +47,7 @@ export async function GET(
         u.display_name,
         u.email,
         u.active,
-        u.role_id,
+        u.role,
         t.name as team_name
       FROM users u
       LEFT JOIN teams t ON u.team_id = t.id
