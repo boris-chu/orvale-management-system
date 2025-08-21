@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Save, X, Code, Eye, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -61,6 +61,24 @@ export function RowEditorDialog({
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
+  // Check if a field contains JSON data
+  const isJsonField = useCallback((fieldName: string, value: any) => {
+    // Settings tables typically have JSON fields
+    if (tableName === 'portal_settings' || tableName === 'system_settings') {
+      if (fieldName === 'setting_value' || fieldName === 'value' || fieldName === 'config') {
+        return true;
+      }
+    }
+    
+    // Check if value looks like JSON
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return (value.trim().startsWith('{') && value.trim().endsWith('}')) ||
+             (value.trim().startsWith('[') && value.trim().endsWith(']'));
+    }
+    
+    return false;
+  }, [tableName]);
+
   // Initialize form data when dialog opens or row changes
   useEffect(() => {
     if (row && open) {
@@ -80,25 +98,7 @@ export function RowEditorDialog({
       setJsonErrors({});
       setIsJsonView({});
     }
-  }, [row, open, columns]);
-
-  // Check if a field contains JSON data
-  const isJsonField = (fieldName: string, value: any) => {
-    // Settings tables typically have JSON fields
-    if (tableName === 'portal_settings' || tableName === 'system_settings') {
-      if (fieldName === 'setting_value' || fieldName === 'value' || fieldName === 'config') {
-        return true;
-      }
-    }
-    
-    // Check if value looks like JSON
-    if (typeof value === 'string' && value.trim().length > 0) {
-      return (value.trim().startsWith('{') && value.trim().endsWith('}')) ||
-             (value.trim().startsWith('[') && value.trim().endsWith(']'));
-    }
-    
-    return false;
-  };
+  }, [row, open, columns, isJsonField]);
 
   // Validate JSON for a field
   const validateJson = (fieldName: string, value: string) => {

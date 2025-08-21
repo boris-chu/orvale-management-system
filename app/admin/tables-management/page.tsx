@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Card,
@@ -58,7 +58,6 @@ import {
   Database
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { IconButton } from '@mui/material';
 import { UserAvatar } from '@/components/UserAvatar';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
 import { ConfigurableDataTableDemo } from '@/components/ConfigurableDataTableDemo';
@@ -198,25 +197,7 @@ export default function TablesManagementPage() {
     hasCreatePermission
   });
 
-  useEffect(() => {
-    if (hasViewPermission) {
-      loadData();
-    }
-  }, [hasViewPermission]);
-
-  // Close user menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setShowUserMenu(false);
-    };
-
-    if (showUserMenu) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [showUserMenu]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -260,7 +241,25 @@ export default function TablesManagementPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (hasViewPermission) {
+      loadData();
+    }
+  }, [hasViewPermission, loadData]);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowUserMenu(false);
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showUserMenu]);
 
   const handleCreateConfiguration = async () => {
     if (!newConfigName.trim()) {
@@ -373,7 +372,7 @@ export default function TablesManagementPage() {
   };
 
   // Table Editor Functions
-  const loadEditorColumns = async (tableIdentifier: string) => {
+  const loadEditorColumns = useCallback(async (tableIdentifier: string) => {
     try {
       setEditorLoading(true);
       console.log('🔍 Loading editor data for table:', tableIdentifier);
@@ -443,7 +442,7 @@ export default function TablesManagementPage() {
     } finally {
       setEditorLoading(false);
     }
-  };
+  }, [toast]);
 
   const handleSaveColumn = async (columnData: Partial<ColumnDefinition>) => {
     try {
@@ -720,7 +719,7 @@ export default function TablesManagementPage() {
     if (selectedEditorTable && hasManagePermission) {
       loadEditorColumns(selectedEditorTable);
     }
-  }, [selectedEditorTable, hasManagePermission]);
+  }, [selectedEditorTable, hasManagePermission, loadEditorColumns]);
 
   // SECURITY: Pure permission-based access control - no overrides
   if (!hasViewPermission) {
