@@ -172,7 +172,7 @@ export function StaffTicketModal({
     userBureau: '',
     userDivision: '',
     userSection: '',
-    status: 'open',
+    status: 'pending',
     assignedTeam: '',
     assignedTo: '',
     internalNotes: '',
@@ -793,7 +793,7 @@ export function StaffTicketModal({
       userBureau: '',
       userDivision: '',
       userSection: '',
-      status: 'open',
+      status: 'pending',
       assignedTeam: '',
       assignedTo: '',
       internalNotes: '',
@@ -1276,9 +1276,8 @@ export function StaffTicketModal({
                       onChange={(e) => handleFieldChange('status', e.target.value)}
                       label="Initial Status"
                     >
-                      <MenuItem value="open">Open</MenuItem>
-                      <MenuItem value="in_progress">In Progress</MenuItem>
                       <MenuItem value="pending">Pending</MenuItem>
+                      <MenuItem value="in_progress">In Progress</MenuItem>
                     </Select>
                   </FormControl>
                   

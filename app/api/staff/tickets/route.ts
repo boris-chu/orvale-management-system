@@ -80,10 +80,13 @@ async function generateTicketId(teamId?: string): Promise<string> {
       );
     }
     
-    // Format: PREFIX-YYYY-NNNNNN
-    const year = new Date().getFullYear();
-    const paddedNumber = nextNumber.toString().padStart(6, '0');
-    return `${prefix}-${year}-${paddedNumber}`;
+    // Format: PREFIX-MMDDYY-NNN (same as regular tickets)
+    const now = new Date();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const year = now.getFullYear().toString().slice(2); // Last 2 digits
+    const paddedNumber = nextNumber.toString().padStart(3, '0');
+    return `${prefix}-${month}${day}${year}-${paddedNumber}`;
     
   } catch (error) {
     console.error('Error generating ticket ID:', error);
@@ -208,13 +211,7 @@ export async function POST(request: NextRequest) {
     const submittedDate = ticketData.submittedDate || now;
     const createdByStaff = ticketData.createdByStaff || authResult.user.username;
 
-    // Map priority to numeric values for database
-    const priorityMap = {
-      'low': 1,
-      'medium': 2, 
-      'high': 3,
-      'urgent': 4
-    };
+    // Priority is stored as text in the database, not numeric
 
     // Insert ticket into database
     await dbRun(`
@@ -223,7 +220,9 @@ export async function POST(request: NextRequest) {
         issue_title,
         issue_description,
         category,
+        request_type,
         subcategory,
+        sub_subcategory,
         priority,
         status,
         user_name,
@@ -242,17 +241,19 @@ export async function POST(request: NextRequest) {
         created_by_staff,
         ticket_source,
         submitted_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       ticketId,
       ticketData.title,
       ticketData.description,
       ticketData.category,
+      ticketData.requestType || null,           // Map requestType → request_type
       ticketData.subcategory || null,
-      priorityMap[ticketData.priority] || 2,
-      ticketData.status || 'open',
+      ticketData.subSubcategory || null,        // Map subSubcategory → sub_subcategory  
+      ticketData.priority || 'medium',
+      ticketData.status || 'pending',
       ticketData.submittedBy,
-      ticketData.userDisplayName,
+      authResult.user.display_name || createdByStaff, // Request Creator = Staff who created it
       ticketData.userEmployeeNumber || null,
       ticketData.userPhone || null,
       ticketData.userLocation || null,
