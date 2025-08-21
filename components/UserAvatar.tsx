@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 interface UserAvatarProps {
   user: {
-    display_name: string;
+    display_name?: string;
     profile_picture?: string;
     email?: string;
   };
@@ -32,7 +32,8 @@ const onlineIndicatorSize = {
   '2xl': 'w-4 h-4'
 };
 
-const getInitials = (name: string): string => {
+const getInitials = (name?: string): string => {
+  if (!name) return 'N/A';
   return name
     .split(' ')
     .map(part => part.charAt(0))
@@ -41,7 +42,8 @@ const getInitials = (name: string): string => {
     .slice(0, 2);
 };
 
-const getGradientFromName = (name: string): string => {
+const getGradientFromName = (name?: string): string => {
+  if (!name) return 'from-gray-500 to-gray-600';
   // Generate a consistent gradient based on the user's name
   const hash = name.split('').reduce((acc, char) => {
     return char.charCodeAt(0) + ((acc << 5) - acc);
@@ -86,7 +88,7 @@ export function UserAvatar({
         {user.profile_picture && (
           <AvatarImage 
             src={user.profile_picture} 
-            alt={user.display_name}
+            alt={user.display_name || 'User Avatar'}
             className="object-cover"
           />
         )}
