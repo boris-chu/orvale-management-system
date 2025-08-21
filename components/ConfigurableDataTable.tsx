@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { DataGrid, GridColDef, GridRowParams } from '@mui/x-data-grid';
 import { 
   Box, 
@@ -35,8 +36,10 @@ import {
   Settings,
   MoreVert,
   Search,
-  Clear
+  Clear,
+  Tune
 } from '@mui/icons-material';
+import { FilterBuilder, FilterGroup } from './FilterBuilder';
 
 // Type definitions
 interface TableColumn {
@@ -208,10 +211,11 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
   
   // UI Control States
   const [columnMenuAnchor, setColumnMenuAnchor] = useState<null | HTMLElement>(null);
-  const [filterMenuAnchor, setFilterMenuAnchor] = useState<null | HTMLElement>(null);
   const [quickFilterValue, setQuickFilterValue] = useState('');
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set());
   const [activeFilters, setActiveFilters] = useState<Array<{ field: string; operator: string; value: any }>>([]);
+  const [advancedFilter, setAdvancedFilter] = useState<FilterGroup | null>(null);
+  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
 
   // Fetch table configuration and columns
   const fetchConfiguration = useCallback(async () => {
@@ -479,12 +483,114 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
     setQuickFilterValue('');
     setFilterModel({ items: [] });
     setActiveFilters([]);
+    setAdvancedFilter(null);
   };
 
   // Export functionality
   const handleExport = (format: 'csv' | 'excel') => {
     // Implementation would depend on your export requirements
     console.log(`Exporting as ${format}`);
+  };
+
+  // Advanced filter handlers
+  const handleAdvancedFilterChange = (filter: FilterGroup) => {
+    setAdvancedFilter(filter);
+  };
+
+  const handleApplyAdvancedFilter = (filter: FilterGroup) => {
+    const activeConditions = filter.conditions.filter(c => 
+      c.enabled && c.column && (c.value !== '' || ['is_empty', 'is_not_empty'].includes(c.operator))
+    );
+    
+    if (activeConditions.length > 0) {
+      setActiveFilters(activeConditions.map(c => ({
+        field: c.column,
+        operator: c.operator,
+        value: c.value
+      })));
+    } else {
+      setActiveFilters([]);
+    }
+    
+    setAdvancedFilter(filter);
+  };
+
+  // Process data with filters
+  const filteredData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    
+    let filtered = [...data];
+    
+    // Apply quick filter
+    if (quickFilterValue.trim()) {
+      const searchTerm = quickFilterValue.toLowerCase();
+      filtered = filtered.filter(row => 
+        Object.values(row).some(value => 
+          value && value.toString().toLowerCase().includes(searchTerm)
+        )
+      );
+    }
+    
+    // Apply advanced filters
+    if (activeFilters.length > 0) {
+      filtered = filtered.filter(row => {
+        const logic = advancedFilter?.logic || 'AND';
+        
+        if (logic === 'AND') {
+          return activeFilters.every(filter => evaluateFilter(row, filter));
+        } else {
+          return activeFilters.some(filter => evaluateFilter(row, filter));
+        }
+      });
+    }
+    
+    return filtered;
+  }, [data, quickFilterValue, activeFilters, advancedFilter]);
+
+  // Evaluate individual filter condition
+  const evaluateFilter = (row: any, filter: { field: string; operator: string; value: any }) => {
+    const cellValue = row[filter.field];
+    const filterValue = filter.value;
+    
+    switch (filter.operator) {
+      case 'equals':
+        return cellValue === filterValue;
+      case 'not_equals':
+        return cellValue !== filterValue;
+      case 'contains':
+        return cellValue && cellValue.toString().toLowerCase().includes(filterValue.toLowerCase());
+      case 'not_contains':
+        return !cellValue || !cellValue.toString().toLowerCase().includes(filterValue.toLowerCase());
+      case 'starts_with':
+        return cellValue && cellValue.toString().toLowerCase().startsWith(filterValue.toLowerCase());
+      case 'ends_with':
+        return cellValue && cellValue.toString().toLowerCase().endsWith(filterValue.toLowerCase());
+      case 'is_empty':
+        return !cellValue || cellValue === '';
+      case 'is_not_empty':
+        return cellValue && cellValue !== '';
+      case 'greater_than':
+        return parseFloat(cellValue) > parseFloat(filterValue);
+      case 'less_than':
+        return parseFloat(cellValue) < parseFloat(filterValue);
+      case 'greater_than_equal':
+        return parseFloat(cellValue) >= parseFloat(filterValue);
+      case 'less_than_equal':
+        return parseFloat(cellValue) <= parseFloat(filterValue);
+      case 'between':
+        const num = parseFloat(cellValue);
+        return num >= parseFloat(filterValue.min) && num <= parseFloat(filterValue.max);
+      case 'in':
+        return Array.isArray(filterValue) && filterValue.includes(cellValue);
+      case 'not_in':
+        return !Array.isArray(filterValue) || !filterValue.includes(cellValue);
+      case 'before':
+        return new Date(cellValue) < new Date(filterValue);
+      case 'after':
+        return new Date(cellValue) > new Date(filterValue);
+      default:
+        return true;
+    }
   };
 
   // Show loading state
@@ -550,14 +656,14 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
               sx={{ minWidth: 250 }}
             />
             
-            {/* Filter Button */}
+            {/* Advanced Filter Button */}
             <Button
-              variant="outlined"
-              startIcon={<FilterList />}
-              onClick={(e) => setFilterMenuAnchor(e.currentTarget)}
+              variant={showAdvancedFilter ? "contained" : "outlined"}
+              startIcon={<Tune />}
+              onClick={() => setShowAdvancedFilter(!showAdvancedFilter)}
               size="small"
             >
-              Filters {activeFilters.length > 0 && `(${activeFilters.length})`}
+              Advanced {activeFilters.length > 0 && `(${activeFilters.length})`}
             </Button>
             
             {/* Active Filter Chips */}
@@ -612,11 +718,38 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
         </Stack>
       </Paper>
       
+      {/* Advanced Filter Builder */}
+      <AnimatePresence>
+        {showAdvancedFilter && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            style={{ overflow: 'hidden' }}
+          >
+            <Box sx={{ mb: 2 }}>
+              <FilterBuilder
+                columns={columns.map(col => ({
+                  column_key: col.column_key,
+                  display_name: col.display_name,
+                  column_type: col.column_type,
+                  is_filterable: col.filterable
+                }))}
+                initialFilter={advancedFilter}
+                onFilterChange={handleAdvancedFilterChange}
+                onApplyFilter={handleApplyAdvancedFilter}
+              />
+            </Box>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
       {/* DataGrid */}
       <Box sx={{ height: typeof height === 'number' ? height : height }}>
         {gridColumns.length > 0 ? (
           <DataGrid
-            rows={data || []}
+            rows={filteredData || []}
             columns={gridColumns}
             pagination
             paginationMode="client"
@@ -700,33 +833,6 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
         </Box>
       </Menu>
       
-      {/* Filter Menu */}
-      <Menu
-        anchorEl={filterMenuAnchor}
-        open={Boolean(filterMenuAnchor)}
-        onClose={() => setFilterMenuAnchor(null)}
-        PaperProps={{
-          sx: { minWidth: 300, maxHeight: 400 }
-        }}
-      >
-        <Box sx={{ p: 2 }}>
-          <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
-            Advanced Filters
-          </Typography>
-          
-          {/* Filter fields would go here */}
-          <Typography variant="body2" color="text.secondary">
-            Advanced filtering coming soon...
-          </Typography>
-          
-          <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-            <Button size="small" variant="contained">Apply</Button>
-            <Button size="small" variant="outlined" onClick={handleClearFilters}>
-              Clear All
-            </Button>
-          </Stack>
-        </Box>
-      </Menu>
     </Box>
   );
 };
