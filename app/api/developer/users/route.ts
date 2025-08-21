@@ -80,8 +80,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user has permission to manage users
-    if (!authResult.user.permissions?.includes('admin.manage_users')) {
+    // Check if user has permission to manage users or create new users for tickets
+    if (!authResult.user.permissions?.includes('admin.manage_users') &&
+        !authResult.user.permissions?.includes('ticket.create_new_users')) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 

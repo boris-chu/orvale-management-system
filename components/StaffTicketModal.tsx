@@ -18,7 +18,8 @@ import {
   TextField,
   Button,
   Paper,
-  Chip
+  Chip,
+  Breadcrumbs
 } from '@mui/material';
 import { 
   Ticket, 
@@ -31,6 +32,7 @@ import {
   RefreshCw,
   Search,
   UserPlus,
+  FolderOpen
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,7 +42,9 @@ interface StaffTicketFormData {
   // Request Information
   title: string;
   category: string;
+  requestType: string;
   subcategory: string;
+  subSubcategory: string;
   description: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   
@@ -94,7 +98,16 @@ interface OrganizationData {
 interface Category {
   id: string;
   name: string;
-  subcategories: { id: string; name: string; }[];
+}
+
+interface RequestType {
+  value: string;
+  text: string;
+}
+
+interface Subcategory {
+  value: string;
+  text: string;
 }
 
 interface Team {
@@ -143,7 +156,9 @@ export function StaffTicketModal({
   const [formData, setFormData] = useState<StaffTicketFormData>({
     title: '',
     category: '',
+    requestType: '',
     subcategory: '',
+    subSubcategory: '',
     description: '',
     priority: 'medium',
     submittedBy: '',
@@ -168,7 +183,9 @@ export function StaffTicketModal({
   const [saving, setSaving] = useState(false);
   
   // Data states
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Record<string, string>>({});
+  const [requestTypes, setRequestTypes] = useState<Record<string, RequestType[]>>({});
+  const [subcategories, setSubcategories] = useState<Record<string, Record<string, Subcategory[]>>>({});
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
@@ -187,6 +204,10 @@ export function StaffTicketModal({
     division: '',
     section: ''
   });
+
+  // Category browser state
+  const [showCategoryBrowser, setShowCategoryBrowser] = useState(false);
+  const [categorySearchTerm, setCategorySearchTerm] = useState('');
   const [organizationData, setOrganizationData] = useState<OrganizationData>({
     offices: [],
     bureaus: [],
@@ -228,7 +249,7 @@ export function StaffTicketModal({
   const loadCategories = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/categories', {
+      const response = await fetch('/api/ticket-data/categories', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -237,6 +258,8 @@ export function StaffTicketModal({
       if (response.ok) {
         const data = await response.json();
         setCategories(data.categories);
+        setRequestTypes(data.requestTypes);
+        setSubcategories(data.subcategories);
       } else {
         console.error('Failed to load categories');
         toast({
@@ -359,86 +382,49 @@ export function StaffTicketModal({
         return;
       }
 
-      // Create the user in the database
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          username: newUserData.username,
-          display_name: newUserData.displayName,
-          email: newUserData.email,
-          employee_number: newUserData.employeeNumber,
-          phone: newUserData.phone,
-          location: newUserData.location,
-          cubicle_room: newUserData.cubicleRoom,
-          office: newUserData.office,
-          bureau: newUserData.bureau,
-          division: newUserData.division,
-          section: newUserData.section,
-          role_id: 4, // Default to 'user' role
-          active: true
-        })
+      // No need to create user in database - just populate the form with the entered information
+      // The user information will be saved when the ticket is created
+      setFormData(prev => ({
+        ...prev,
+        submittedBy: newUserData.username,
+        userDisplayName: newUserData.displayName,
+        userEmail: newUserData.email,
+        userEmployeeNumber: newUserData.employeeNumber,
+        userPhone: newUserData.phone,
+        userLocation: newUserData.location,
+        userCubicleRoom: newUserData.cubicleRoom,
+        userOffice: newUserData.office,
+        userBureau: newUserData.bureau,
+        userDivision: newUserData.division,
+        userSection: newUserData.section
+      }));
+      
+      // Reset form and close dialog
+      setNewUserData({
+        displayName: '',
+        username: '',
+        email: '',
+        employeeNumber: '',
+        phone: '',
+        location: '',
+        cubicleRoom: '',
+        office: '',
+        bureau: '',
+        division: '',
+        section: ''
+      });
+      setShowNewUserDialog(false);
+      
+      toast({
+        title: 'User Information Added',
+        description: `User information for ${newUserData.displayName} has been added to the ticket.`
       });
 
-      if (response.ok) {
-        const createdUser = await response.json();
-        
-        // Select the newly created user
-        setFormData(prev => ({
-          ...prev,
-          submittedBy: newUserData.username,
-          userDisplayName: newUserData.displayName,
-          userEmail: newUserData.email,
-          userEmployeeNumber: newUserData.employeeNumber,
-          userPhone: newUserData.phone,
-          userLocation: newUserData.location,
-          userCubicleRoom: newUserData.cubicleRoom,
-          userOffice: newUserData.office,
-          userBureau: newUserData.bureau,
-          userDivision: newUserData.division,
-          userSection: newUserData.section
-        }));
-        
-        // Reset form and close dialog
-        setNewUserData({
-          displayName: '',
-          username: '',
-          email: '',
-          employeeNumber: '',
-          phone: '',
-          location: '',
-          cubicleRoom: '',
-          office: '',
-          bureau: '',
-          division: '',
-          section: ''
-        });
-        setShowNewUserDialog(false);
-        
-        toast({
-          title: 'User Created',
-          description: `User ${newUserData.displayName} has been created and selected.`
-        });
-        
-        // Reload users list
-        loadUsers();
-      } else {
-        const error = await response.text();
-        toast({
-          title: 'Error Creating User',
-          description: error,
-          variant: 'destructive'
-        });
-      }
     } catch (error) {
-      console.error('Failed to create user:', error);
+      console.error('Failed to add user information:', error);
       toast({
-        title: 'Error Creating User',
-        description: 'Failed to create user. Please try again.',
+        title: 'Error Adding User Information',
+        description: 'Failed to add user information. Please try again.',
         variant: 'destructive'
       });
     }
@@ -451,9 +437,73 @@ export function StaffTicketModal({
     user.email.toLowerCase().includes(userSearchTerm.toLowerCase())
   );
 
-  // Get subcategories for selected category
-  const currentSubcategories = categories
-    .find(cat => cat.id === formData.category)?.subcategories || [];
+  // Get request types for selected category
+  const currentRequestTypes = formData.category ? (requestTypes[formData.category] || []) : [];
+  
+  // Get subcategories for selected request type
+  const currentSubcategories = formData.category && formData.requestType 
+    ? (subcategories[formData.category]?.[formData.requestType] || [])
+    : [];
+
+  // Helper functions to get display names for breadcrumb
+  const getCategoryName = (categoryId: string) => categories[categoryId] || '';
+  const getRequestTypeName = (categoryId: string, requestTypeId: string) => {
+    const requestTypesList = requestTypes[categoryId] || [];
+    const requestType = requestTypesList.find(rt => rt.value === requestTypeId);
+    return requestType?.text || '';
+  };
+  const getSubcategoryName = (categoryId: string, requestTypeId: string, subcategoryId: string) => {
+    const subcategoriesList = subcategories[categoryId]?.[requestTypeId] || [];
+    const subcategory = subcategoriesList.find(sc => sc.value === subcategoryId);
+    return subcategory?.text || '';
+  };
+
+  // Build breadcrumb path
+  const buildCategoryPath = () => {
+    const path = [];
+    if (formData.category) {
+      path.push({ label: getCategoryName(formData.category), level: 'category' });
+      if (formData.requestType) {
+        path.push({ label: getRequestTypeName(formData.category, formData.requestType), level: 'requestType' });
+        if (formData.subcategory) {
+          path.push({ label: getSubcategoryName(formData.category, formData.requestType, formData.subcategory), level: 'subcategory' });
+          if (formData.subSubcategory) {
+            path.push({ label: formData.subSubcategory, level: 'subSubcategory' });
+          }
+        }
+      }
+    }
+    return path;
+  };
+
+  const categoryPath = buildCategoryPath();
+
+  // Filter categories based on search term
+  const filterCategoriesBySearch = () => {
+    if (!categorySearchTerm.trim()) {
+      return Object.entries(categories);
+    }
+
+    const searchLower = categorySearchTerm.toLowerCase();
+    return Object.entries(categories).filter(([categoryId, categoryName]) => {
+      // Check if category name matches
+      const categoryMatches = categoryName.toLowerCase().includes(searchLower);
+      
+      // Check if any request type matches
+      const requestTypeMatches = requestTypes[categoryId]?.some(rt => 
+        rt.text.toLowerCase().includes(searchLower)
+      );
+      
+      // Check if any subcategory matches
+      const subcategoryMatches = Object.values(subcategories[categoryId] || {}).some(subList =>
+        subList.some(sub => sub.text.toLowerCase().includes(searchLower))
+      );
+      
+      return categoryMatches || requestTypeMatches || subcategoryMatches;
+    });
+  };
+
+  const filteredCategories = filterCategoriesBySearch();
 
   // Validate form
   const isFormValid = () => {
@@ -676,6 +726,57 @@ export function StaffTicketModal({
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                   Basic ticket details and issue description
                 </Typography>
+
+                {/* Category Path Section - Always visible */}
+                <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.50' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {categoryPath.length > 0 ? 'Category Path:' : 'Category Selection:'}
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<FolderOpen className="h-4 w-4" />}
+                      sx={{ 
+                        fontSize: '0.75rem',
+                        py: 0.5,
+                        px: 1,
+                        minWidth: 'auto',
+                        flexShrink: 0 // Prevents button from shrinking
+                      }}
+                      onClick={() => setShowCategoryBrowser(true)}
+                    >
+                      Browse Category Paths
+                    </Button>
+                  </Box>
+                  
+                  {categoryPath.length > 0 ? (
+                    <Box sx={{ flex: 1, minWidth: 0 }}> {/* Allow breadcrumbs to shrink if needed */}
+                      <Breadcrumbs separator="→" sx={{ fontSize: '0.875rem' }}>
+                        {categoryPath.map((item, index) => (
+                          <Chip
+                            key={index}
+                            label={item.label}
+                            size="small"
+                            variant="outlined"
+                            color={index === categoryPath.length - 1 ? 'primary' : 'default'}
+                            sx={{ 
+                              height: 'auto',
+                              '& .MuiChip-label': { 
+                                whiteSpace: 'normal',
+                                py: 0.5
+                              }
+                            }}
+                          />
+                        ))}
+                      </Breadcrumbs>
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                      No category selected. Use the dropdown menus below or browse all available paths.
+                    </Typography>
+                  )}
+                </Paper>
                 
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 3 }}>
                   <TextField
@@ -714,29 +815,66 @@ export function StaffTicketModal({
                     <InputLabel>Category *</InputLabel>
                     <Select 
                       value={formData.category} 
-                      onChange={(e) => handleFieldChange('category', e.target.value)}
+                      onChange={(e) => {
+                        handleFieldChange('category', e.target.value);
+                        // Reset dependent fields when category changes
+                        setFormData(prev => ({ ...prev, requestType: '', subcategory: '', subSubcategory: '' }));
+                      }}
                       label="Category *"
                     >
-                      {categories.map((category) => (
-                        <MenuItem key={category.id} value={category.id}>
-                          {category.name}
+                      {Object.entries(categories).map(([categoryId, categoryName]) => (
+                        <MenuItem key={categoryId} value={categoryId}>
+                          {categoryName}
                         </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
                   <FormControl fullWidth size="small">
+                    <InputLabel>Request Type</InputLabel>
+                    <Select 
+                      value={formData.requestType} 
+                      onChange={(e) => {
+                        handleFieldChange('requestType', e.target.value);
+                        // Reset subcategory when request type changes
+                        setFormData(prev => ({ ...prev, subcategory: '', subSubcategory: '' }));
+                      }}
+                      disabled={!formData.category}
+                      label="Request Type"
+                    >
+                      {currentRequestTypes.map((requestType) => (
+                        <MenuItem key={requestType.value} value={requestType.value}>
+                          {requestType.text}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 3 }}>
+                  <FormControl fullWidth size="small">
                     <InputLabel>Subcategory</InputLabel>
                     <Select 
                       value={formData.subcategory} 
                       onChange={(e) => handleFieldChange('subcategory', e.target.value)}
-                      disabled={!formData.category}
+                      disabled={!formData.requestType}
                       label="Subcategory"
                     >
                       {currentSubcategories.map((subcategory) => (
-                        <MenuItem key={subcategory.id} value={subcategory.id}>
-                          {subcategory.name}
+                        <MenuItem key={subcategory.value} value={subcategory.value}>
+                          {subcategory.text}
                         </MenuItem>
                       ))}
+                    </Select>
+                  </FormControl>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Sub-subcategory</InputLabel>
+                    <Select 
+                      value={formData.subSubcategory} 
+                      onChange={(e) => handleFieldChange('subSubcategory', e.target.value)}
+                      disabled={!formData.subcategory}
+                      label="Sub-subcategory"
+                    >
+                      {/* For now, this will be empty until we add implementations to the API */}
                     </Select>
                   </FormControl>
                 </Box>
@@ -841,41 +979,38 @@ export function StaffTicketModal({
                   </Box>
                   
                   {formData.submittedBy && (
-                    <Paper sx={{ p: 2, bgcolor: 'primary.50', mb: 3 }}>
-                      <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <User className="h-4 w-4" />
-                        Selected User
-                      </Typography>
-                      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1 }}>
-                        <Typography variant="body2"><strong>Name:</strong> {formData.userDisplayName}</Typography>
-                        <Typography variant="body2"><strong>Username:</strong> @{formData.submittedBy}</Typography>
-                        <Typography variant="body2"><strong>Email:</strong> {formData.userEmail}</Typography>
-                        {formData.userEmployeeNumber && (
-                          <Typography variant="body2"><strong>Employee #:</strong> {formData.userEmployeeNumber}</Typography>
-                        )}
-                        {formData.userPhone && (
-                          <Typography variant="body2"><strong>Phone:</strong> {formatPhoneNumber(formData.userPhone)}</Typography>
-                        )}
-                        {formData.userLocation && (
-                          <Typography variant="body2"><strong>Location:</strong> {formData.userLocation}</Typography>
-                        )}
-                        {formData.userCubicleRoom && (
-                          <Typography variant="body2"><strong>Cubicle/Room:</strong> {formData.userCubicleRoom}</Typography>
-                        )}
-                        {formData.userOffice && (
-                          <Typography variant="body2"><strong>Office:</strong> {formData.userOffice}</Typography>
-                        )}
-                        {formData.userBureau && (
-                          <Typography variant="body2"><strong>Bureau:</strong> {formData.userBureau}</Typography>
-                        )}
-                        {formData.userDivision && (
-                          <Typography variant="body2"><strong>Division:</strong> {formData.userDivision}</Typography>
-                        )}
-                        {formData.userSection && (
-                          <Typography variant="body2"><strong>Section:</strong> {formData.userSection}</Typography>
-                        )}
-                      </Box>
-                    </Paper>
+                    <Box sx={{ mb: 3 }}>
+                      <Chip 
+                        icon={<User className="h-4 w-4" />}
+                        label={`${formData.userDisplayName} (${formData.submittedBy})`}
+                        variant="outlined"
+                        color="primary"
+                        sx={{ 
+                          height: 'auto',
+                          '& .MuiChip-label': { 
+                            display: 'block',
+                            whiteSpace: 'normal',
+                            py: 1
+                          }
+                        }}
+                        onDelete={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            submittedBy: '',
+                            userDisplayName: '',
+                            userEmail: '',
+                            userEmployeeNumber: '',
+                            userPhone: '',
+                            userLocation: '',
+                            userCubicleRoom: '',
+                            userOffice: '',
+                            userBureau: '',
+                            userDivision: '',
+                            userSection: ''
+                          }));
+                        }}
+                      />
+                    </Box>
                   )}
                 </Box>
 
@@ -1319,6 +1454,174 @@ export function StaffTicketModal({
           disabled={!newUserData.displayName || !newUserData.username || !newUserData.email}
         >
           Create User
+        </Button>
+      </DialogActions>
+    </Dialog>
+
+    {/* Category Browser Dialog */}
+    <Dialog 
+      open={showCategoryBrowser} 
+      onClose={() => {
+        setShowCategoryBrowser(false);
+        setCategorySearchTerm(''); // Clear search when closing
+      }} 
+      maxWidth="lg" 
+      fullWidth
+    >
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <FolderOpen className="h-5 w-5" />
+        Browse Category Paths
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Browse and select from all available category paths. Click on any path to apply it to your ticket.
+        </Typography>
+        
+        {/* Search Input */}
+        <Box sx={{ mb: 3 }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search categories, request types, or subcategories..."
+            value={categorySearchTerm}
+            onChange={(e) => setCategorySearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <Box sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>
+                  <Search className="h-4 w-4 text-gray-400" />
+                </Box>
+              ),
+              endAdornment: categorySearchTerm && (
+                <Button
+                  size="small"
+                  onClick={() => setCategorySearchTerm('')}
+                  sx={{ minWidth: 'auto', p: 0.5 }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )
+            }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: 'grey.50'
+              }
+            }}
+          />
+          {categorySearchTerm && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              Showing results for "{categorySearchTerm}" ({filteredCategories.length} categories found)
+            </Typography>
+          )}
+        </Box>
+        
+        <Box sx={{ maxHeight: '500px', overflow: 'auto' }}>
+          {filteredCategories.length === 0 ? (
+            <Paper sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="body1" color="text.secondary">
+                No category paths found matching "{categorySearchTerm}"
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Try searching for different terms or clear the search to see all categories.
+              </Typography>
+            </Paper>
+          ) : (
+            filteredCategories.map(([categoryId, categoryName]) => (
+            <Paper key={categoryId} sx={{ mb: 2, p: 2 }}>
+              <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
+                {categoryName}
+              </Typography>
+              
+              {requestTypes[categoryId]?.map((requestType) => (
+                <Box key={requestType.value} sx={{ ml: 2, mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                    → {requestType.text}
+                  </Typography>
+                  
+                  {subcategories[categoryId]?.[requestType.value]?.map((subcategory) => (
+                    <Box key={subcategory.value} sx={{ ml: 4, mb: 1 }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        fullWidth
+                        sx={{ 
+                          justifyContent: 'flex-start',
+                          textTransform: 'none',
+                          fontSize: '0.875rem'
+                        }}
+                        onClick={() => {
+                          // Apply the selected path
+                          setFormData(prev => ({
+                            ...prev,
+                            category: categoryId,
+                            requestType: requestType.value,
+                            subcategory: subcategory.value,
+                            subSubcategory: ''
+                          }));
+                          setShowCategoryBrowser(false);
+                          toast({
+                            title: 'Category Path Applied',
+                            description: `${categoryName} → ${requestType.text} → ${subcategory.text}`,
+                          });
+                        }}
+                      >
+                        → → {subcategory.text}
+                      </Button>
+                    </Box>
+                  ))}
+                  
+                  {!subcategories[categoryId]?.[requestType.value] && (
+                    <Box sx={{ ml: 4, mb: 1 }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        fullWidth
+                        sx={{ 
+                          justifyContent: 'flex-start',
+                          textTransform: 'none',
+                          fontSize: '0.875rem'
+                        }}
+                        onClick={() => {
+                          // Apply the path without subcategory
+                          setFormData(prev => ({
+                            ...prev,
+                            category: categoryId,
+                            requestType: requestType.value,
+                            subcategory: '',
+                            subSubcategory: ''
+                          }));
+                          setShowCategoryBrowser(false);
+                          toast({
+                            title: 'Category Path Applied',
+                            description: `${categoryName} → ${requestType.text}`,
+                          });
+                        }}
+                      >
+                        → → (No subcategories available)
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
+              ))}
+              
+              {!requestTypes[categoryId] && (
+                <Typography variant="body2" color="text.secondary" sx={{ ml: 2, fontStyle: 'italic' }}>
+                  No request types available for this category
+                </Typography>
+              )}
+            </Paper>
+            ))
+          )}
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ p: 3 }}>
+        <Button 
+          onClick={() => {
+            setShowCategoryBrowser(false);
+            setCategorySearchTerm(''); // Clear search when closing
+          }} 
+          color="inherit"
+        >
+          Close
         </Button>
       </DialogActions>
     </Dialog>
