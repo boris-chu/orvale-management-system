@@ -13,7 +13,7 @@ const generateSampleTickets = (count: number = 10) => {
   const statuses = ['open', 'in_progress', 'closed', 'escalated'];
   const priorities = ['low', 'medium', 'high', 'urgent'];
   const teams = ['ITTS_Region7', 'HELPDESK', 'NET_North', 'DEV_Alpha'];
-  const users = ['Alice Johnson', 'Bob Smith', 'Carol Davis', 'David Wilson'];
+  const users = ['Alice Johnson', 'Bob Smith', 'Carol Davis', 'David Wilson', 'Emma Brown', 'Frank Miller'];
 
   return Array.from({ length: count }, (_, i) => ({
     id: `TKT-${String(i + 1).padStart(4, '0')}`,
@@ -39,17 +39,22 @@ const generateSampleUsers = (count: number = 8) => {
     'Emma Brown', 'Frank Miller', 'Grace Taylor', 'Henry Clark'
   ];
 
-  return Array.from({ length: count }, (_, i) => ({
-    id: i + 1,
-    username: names[i].toLowerCase().replace(' ', '.'),
-    display_name: names[i],
-    email: `${names[i].toLowerCase().replace(' ', '.')}@orvale.gov`,
-    role: roles[Math.floor(Math.random() * roles.length)],
-    team_id: teams[Math.floor(Math.random() * teams.length)],
-    active: Math.random() > 0.1, // 90% active
-    created_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-    last_login: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
-  }));
+  return Array.from({ length: count }, (_, i) => {
+    const nameIndex = i % names.length;
+    const name = names[nameIndex];
+    const suffix = i >= names.length ? Math.floor(i / names.length) : '';
+    return {
+      id: i + 1,
+      username: `${name.toLowerCase().replace(' ', '.')}${suffix}`,
+      display_name: `${name}${suffix ? ` ${suffix}` : ''}`,
+      email: `${name.toLowerCase().replace(' ', '.')}${suffix}@orvale.gov`,
+      role: roles[Math.floor(Math.random() * roles.length)],
+      team_id: teams[Math.floor(Math.random() * teams.length)],
+      active: Math.random() > 0.1, // 90% active
+      created_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+      last_login: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
+    };
+  });
 };
 
 interface DemoConfig {
