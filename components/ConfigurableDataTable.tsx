@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { DataGrid, GridColDef, GridRowParams, GridSortModel, GridFilterModel, GridPaginationModel, GridRowSelectionModel, GridCallbackDetails } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridRowParams } from '@mui/x-data-grid';
 import { 
   Box, 
   Typography, 
@@ -198,13 +198,13 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
   const [configuration, setConfiguration] = useState<TableConfiguration | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+  const [paginationModel, setPaginationModel] = useState({
     page: 0,
     pageSize: 25,
   });
-  const [sortModel, setSortModel] = useState<GridSortModel>([]);
-  const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [] });
-  const [selectionModel, setSelectionModel] = useState<GridRowSelectionModel>({ type: 'include', ids: new Set() });
+  const [sortModel, setSortModel] = useState([]);
+  const [filterModel, setFilterModel] = useState({ items: [] });
+  const [selectionModel, setSelectionModel] = useState([]);
   
   // UI Control States
   const [columnMenuAnchor, setColumnMenuAnchor] = useState<null | HTMLElement>(null);
@@ -432,36 +432,6 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
     onConfigurationChange?.(updatedConfig);
   }, [configuration, onConfigurationChange]);
 
-  // Handle pagination change
-  const handlePaginationChange = useCallback((model: GridPaginationModel) => {
-    setPaginationModel(model);
-    handleConfigurationUpdate({
-      pagination: { pageSize: model.pageSize }
-    });
-  }, [handleConfigurationUpdate]);
-
-  // Handle sort change
-  const handleSortChange = useCallback((model: GridSortModel) => {
-    setSortModel(model);
-    handleConfigurationUpdate({
-      sorting: [...model]
-    });
-  }, [handleConfigurationUpdate]);
-
-  // Handle filter change
-  const handleFilterChange = useCallback((model: GridFilterModel) => {
-    setFilterModel(model);
-    handleConfigurationUpdate({
-      filters: model
-    });
-  }, [handleConfigurationUpdate]);
-
-  // Handle selection change
-  const handleSelectionChange = useCallback((newSelection: GridRowSelectionModel, details: GridCallbackDetails) => {
-    setSelectionModel(newSelection);
-    onSelectionChange?.(newSelection);
-  }, [onSelectionChange]);
-
   // Handle column visibility toggle
   const handleColumnVisibilityChange = (columnKey: string, visible: boolean) => {
     const newVisibleColumns = new Set(visibleColumns);
@@ -644,67 +614,54 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
       
       {/* DataGrid */}
       <Box sx={{ height: typeof height === 'number' ? height : height }}>
-        <DataGrid
-          rows={data}
-          columns={gridColumns}
-          paginationModel={paginationModel}
-          onPaginationModelChange={handlePaginationChange}
-          sortModel={sortModel}
-          onSortModelChange={handleSortChange}
-          filterModel={filterModel}
-          onFilterModelChange={handleFilterChange}
-          loading={loading}
-          onRowClick={onRowClick}
-          checkboxSelection={enableSelection}
-          rowSelectionModel={selectionModel}
-          onRowSelectionModelChange={handleSelectionChange}
-          disableRowSelectionOnClick={!enableSelection}
-          pageSizeOptions={[10, 25, 50, 100]}
-          density="comfortable"
-          autoHeight={false}
-          getRowId={(row) => row.id || row.ticket_id || row.username || JSON.stringify(row)}
-          sx={{
-            border: 1,
-            borderColor: 'divider',
-            borderRadius: 1,
-            '& .MuiDataGrid-cell': {
+        {gridColumns.length > 0 ? (
+          <DataGrid
+            rows={data || []}
+            columns={gridColumns}
+            pagination
+            paginationMode="client"
+            pageSize={paginationModel.pageSize}
+            page={paginationModel.page}
+            onPageChange={(newPage) => setPaginationModel(prev => ({ ...prev, page: newPage }))}
+            onPageSizeChange={(newPageSize) => setPaginationModel(prev => ({ ...prev, pageSize: newPageSize }))}
+            rowsPerPageOptions={[10, 25, 50, 100]}
+            loading={loading}
+            onRowClick={onRowClick}
+            checkboxSelection={enableSelection}
+            disableRowSelectionOnClick={!enableSelection}
+            density="comfortable"
+            autoHeight={false}
+            getRowId={(row) => row.id || row.ticket_id || row.username || row.title || Math.random()}
+            sx={{
+              border: 1,
               borderColor: 'divider',
-              py: 1,
-            },
-            '& .MuiDataGrid-row:hover': {
-              backgroundColor: 'rgba(25, 118, 210, 0.04)',
-            },
-            '& .MuiDataGrid-row:nth-of-type(even)': {
-              backgroundColor: 'rgba(0, 0, 0, 0.01)',
-            },
-            '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: 'rgba(25, 118, 210, 0.08)',
-              borderColor: 'divider',
-              fontWeight: 600,
-            },
-            '& .MuiDataGrid-footerContainer': {
-              borderColor: 'divider',
-              backgroundColor: 'background.paper',
-            },
-          }}
-          componentsProps={{
-            pagination: {
-              showFirstButton: true,
-              showLastButton: true,
-            },
-          }}
-          initialState={{
-            pagination: {
-              paginationModel,
-            },
-            sorting: {
-              sortModel,
-            },
-            filter: {
-              filterModel,
-            },
-          }}
-        />
+              borderRadius: 1,
+              '& .MuiDataGrid-cell': {
+                borderColor: 'divider',
+                py: 1,
+              },
+              '& .MuiDataGrid-row:hover': {
+                backgroundColor: 'rgba(25, 118, 210, 0.04)',
+              },
+              '& .MuiDataGrid-row:nth-of-type(even)': {
+                backgroundColor: 'rgba(0, 0, 0, 0.01)',
+              },
+              '& .MuiDataGrid-columnHeaders': {
+                backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                borderColor: 'divider',
+                fontWeight: 600,
+              },
+              '& .MuiDataGrid-footerContainer': {
+                borderColor: 'divider',
+                backgroundColor: 'background.paper',
+              },
+            }}
+          />
+        ) : (
+          <Alert severity="info">
+            No columns configured for this table.
+          </Alert>
+        )}
       </Box>
       
       {/* Column Visibility Menu */}
