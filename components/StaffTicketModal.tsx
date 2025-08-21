@@ -478,28 +478,65 @@ export function StaffTicketModal({
 
   const categoryPath = buildCategoryPath();
 
-  // Filter categories based on search term
+  // Filter and score categories based on search term
   const filterCategoriesBySearch = () => {
     if (!categorySearchTerm.trim()) {
-      return Object.entries(categories);
+      return Object.entries(categories).map(([categoryId, categoryName]) => ({
+        categoryId,
+        categoryName,
+        matchScore: 0,
+        matches: []
+      }));
     }
 
     const searchLower = categorySearchTerm.toLowerCase();
-    return Object.entries(categories).filter(([categoryId, categoryName]) => {
-      // Check if category name matches
-      const categoryMatches = categoryName.toLowerCase().includes(searchLower);
+    const results = [];
+
+    for (const [categoryId, categoryName] of Object.entries(categories)) {
+      let matchScore = 0;
+      const matches = [];
       
-      // Check if any request type matches
-      const requestTypeMatches = requestTypes[categoryId]?.some(rt => 
-        rt.text.toLowerCase().includes(searchLower)
-      );
+      // Check if category name matches (highest priority)
+      if (categoryName.toLowerCase().includes(searchLower)) {
+        matchScore += 100;
+        matches.push({ type: 'category', text: categoryName });
+      }
       
-      // Check if any subcategory matches
-      const subcategoryMatches = Object.values(subcategories[categoryId] || {}).some(subList =>
-        subList.some(sub => sub.text.toLowerCase().includes(searchLower))
-      );
+      // Check request types
+      const categoryRequestTypes = requestTypes[categoryId] || [];
+      for (const requestType of categoryRequestTypes) {
+        if (requestType.text.toLowerCase().includes(searchLower)) {
+          matchScore += 50;
+          matches.push({ type: 'requestType', text: requestType.text });
+        }
+        
+        // Check subcategories for this request type
+        const requestTypeSubcategories = subcategories[categoryId]?.[requestType.value] || [];
+        for (const subcategory of requestTypeSubcategories) {
+          if (subcategory.text.toLowerCase().includes(searchLower)) {
+            matchScore += 25;
+            matches.push({ type: 'subcategory', text: subcategory.text, requestType: requestType.text });
+          }
+        }
+      }
       
-      return categoryMatches || requestTypeMatches || subcategoryMatches;
+      // Only include categories that have matches
+      if (matchScore > 0) {
+        results.push({
+          categoryId,
+          categoryName,
+          matchScore,
+          matches
+        });
+      }
+    }
+
+    // Sort by match score (highest first), then by category name
+    return results.sort((a, b) => {
+      if (b.matchScore !== a.matchScore) {
+        return b.matchScore - a.matchScore;
+      }
+      return a.categoryName.localeCompare(b.categoryName);
     });
   };
 
@@ -640,7 +677,9 @@ export function StaffTicketModal({
     setFormData({
       title: '',
       category: '',
+      requestType: '',
       subcategory: '',
+      subSubcategory: '',
       description: '',
       priority: 'medium',
       submittedBy: '',
@@ -1509,7 +1548,7 @@ export function StaffTicketModal({
           />
           {categorySearchTerm && (
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              Showing results for "{categorySearchTerm}" ({filteredCategories.length} categories found)
+              Showing results for &quot;{categorySearchTerm}&quot; ({filteredCategories.length} categories found)
             </Typography>
           )}
         </Box>
@@ -1518,26 +1557,212 @@ export function StaffTicketModal({
           {filteredCategories.length === 0 ? (
             <Paper sx={{ p: 3, textAlign: 'center' }}>
               <Typography variant="body1" color="text.secondary">
-                No category paths found matching "{categorySearchTerm}"
+                No category paths found matching &quot;{categorySearchTerm}&quot;
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 Try searching for different terms or clear the search to see all categories.
               </Typography>
             </Paper>
           ) : (
-            filteredCategories.map(([categoryId, categoryName]) => (
-            <Paper key={categoryId} sx={{ mb: 2, p: 2 }}>
-              <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
-                {categoryName}
-              </Typography>
+            <>
+              {/* Quick Actions Section - Show clickable paths for search matches */}
+              {categorySearchTerm && (
+                <Paper 
+                  sx={{ 
+                    mb: 3, 
+                    p: 2, 
+                    bgcolor: 'primary.50',
+                    border: '2px solid',
+                    borderColor: 'primary.main',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                >
+                  
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {filteredCategories.slice(0, 5).map((category) => 
+                      category.matches.map((match, matchIndex) => {
+                        if (match.type === 'subcategory') {
+                          // Find the request type for this subcategory
+                          const requestType = requestTypes[category.categoryId]?.find(rt => 
+                            subcategories[category.categoryId]?.[rt.value]?.some(sub => sub.text === match.text)
+                          );
+                          if (requestType) {
+                            const subcategory = subcategories[category.categoryId][requestType.value]?.find(sub => sub.text === match.text);
+                            return (
+                              <Button
+                                key={`${category.categoryId}-${matchIndex}`}
+                                variant="contained"
+                                size="small"
+                                fullWidth
+                                sx={{ 
+                                  justifyContent: 'flex-start',
+                                  textTransform: 'none',
+                                  fontSize: '0.875rem',
+                                  bgcolor: 'primary.main',
+                                  transition: 'all 0.2s ease-in-out',
+                                  transform: 'translateX(0)',
+                                  '&:hover': {
+                                    transform: 'translateX(4px)',
+                                    bgcolor: 'primary.dark'
+                                  }
+                                }}
+                                onClick={() => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    category: category.categoryId,
+                                    requestType: requestType.value,
+                                    subcategory: subcategory?.value || '',
+                                    subSubcategory: ''
+                                  }));
+                                  setShowCategoryBrowser(false);
+                                  setCategorySearchTerm('');
+                                  toast({
+                                    title: 'Category Path Applied',
+                                    description: `${category.categoryName} → ${requestType.text} → ${match.text}`,
+                                  });
+                                }}
+                              >
+                                🎯 {category.categoryName} → {requestType.text} → <strong>{match.text}</strong>
+                              </Button>
+                            );
+                          }
+                        } else if (match.type === 'requestType') {
+                          const requestType = requestTypes[category.categoryId]?.find(rt => rt.text === match.text);
+                          return (
+                            <Button
+                              key={`${category.categoryId}-${matchIndex}`}
+                              variant="contained"
+                              size="small"
+                              fullWidth
+                              sx={{ 
+                                justifyContent: 'flex-start',
+                                textTransform: 'none',
+                                fontSize: '0.875rem',
+                                bgcolor: 'primary.main',
+                                transition: 'all 0.2s ease-in-out',
+                                transform: 'translateX(0)',
+                                '&:hover': {
+                                  transform: 'translateX(4px)',
+                                  bgcolor: 'primary.dark'
+                                }
+                              }}
+                              onClick={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  category: category.categoryId,
+                                  requestType: requestType?.value || '',
+                                  subcategory: '',
+                                  subSubcategory: ''
+                                }));
+                                setShowCategoryBrowser(false);
+                                setCategorySearchTerm('');
+                                toast({
+                                  title: 'Category Path Applied',
+                                  description: `${category.categoryName} → ${match.text}`,
+                                });
+                              }}
+                            >
+                              🎯 {category.categoryName} → <strong>{match.text}</strong>
+                            </Button>
+                          );
+                        } else if (match.type === 'category') {
+                          return (
+                            <Button
+                              key={`${category.categoryId}-${matchIndex}`}
+                              variant="contained"
+                              size="small"
+                              fullWidth
+                              sx={{ 
+                                justifyContent: 'flex-start',
+                                textTransform: 'none',
+                                fontSize: '0.875rem',
+                                bgcolor: 'primary.main',
+                                transition: 'all 0.2s ease-in-out',
+                                transform: 'translateX(0)',
+                                '&:hover': {
+                                  transform: 'translateX(4px)',
+                                  bgcolor: 'primary.dark'
+                                }
+                              }}
+                              onClick={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  category: category.categoryId,
+                                  requestType: '',
+                                  subcategory: '',
+                                  subSubcategory: ''
+                                }));
+                                setShowCategoryBrowser(false);
+                                setCategorySearchTerm('');
+                                toast({
+                                  title: 'Category Path Applied',
+                                  description: `${match.text}`,
+                                });
+                              }}
+                            >
+                              🎯 <strong>{match.text}</strong>
+                            </Button>
+                          );
+                        }
+                        return null;
+                      })
+                    ).flat().filter(Boolean)}
+                  </Box>
+                  
+                  {filteredCategories.length > 5 && (
+                    <Typography variant="caption" color="primary.dark" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                      Showing top 5 matches. Scroll down to see all {filteredCategories.length} categories.
+                    </Typography>
+                  )}
+                </Paper>
+              )}
               
-              {requestTypes[categoryId]?.map((requestType) => (
+              {/* Full Category Browser Section */}
+              <Typography variant="h6" sx={{ mb: 2, color: categorySearchTerm ? 'text.secondary' : 'primary.main' }}>
+                {categorySearchTerm ? 'All Search Results' : 'All Categories'}
+              </Typography>
+            
+            {filteredCategories.map((category) => (
+            <Paper key={category.categoryId} sx={{ mb: 2, p: 2, ...(categorySearchTerm && { border: '1px solid', borderColor: 'primary.light' }) }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="h6" sx={{ color: 'primary.main' }}>
+                  {category.categoryName}
+                </Typography>
+                {categorySearchTerm && category.matches.length > 0 && (
+                  <Chip 
+                    size="small" 
+                    label={`${category.matches.length} match${category.matches.length > 1 ? 'es' : ''}`}
+                    color="primary"
+                    variant="outlined"
+                  />
+                )}
+              </Box>
+              
+              {/* Show matches when searching */}
+              {categorySearchTerm && category.matches.length > 0 && (
+                <Box sx={{ mb: 2, p: 1, bgcolor: 'primary.50', borderRadius: 1 }}>
+                  <Typography variant="caption" color="primary.main" sx={{ fontWeight: 'bold', mb: 1, display: 'block' }}>
+                    Matches found:
+                  </Typography>
+                  {category.matches.map((match, index) => (
+                    <Typography key={index} variant="body2" sx={{ fontSize: '0.75rem', color: 'primary.dark' }}>
+                      • {match.type === 'category' && 'Category: '}
+                      {match.type === 'requestType' && 'Request Type: '}
+                      {match.type === 'subcategory' && `Subcategory (${match.requestType}): `}
+                      <strong>{match.text}</strong>
+                    </Typography>
+                  ))}
+                </Box>
+              )}
+              
+              {requestTypes[category.categoryId]?.map((requestType) => (
                 <Box key={requestType.value} sx={{ ml: 2, mb: 2 }}>
                   <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
                     → {requestType.text}
                   </Typography>
                   
-                  {subcategories[categoryId]?.[requestType.value]?.map((subcategory) => (
+                  {subcategories[category.categoryId]?.[requestType.value]?.map((subcategory) => (
                     <Box key={subcategory.value} sx={{ ml: 4, mb: 1 }}>
                       <Button
                         variant="outlined"
@@ -1552,15 +1777,16 @@ export function StaffTicketModal({
                           // Apply the selected path
                           setFormData(prev => ({
                             ...prev,
-                            category: categoryId,
+                            category: category.categoryId,
                             requestType: requestType.value,
                             subcategory: subcategory.value,
                             subSubcategory: ''
                           }));
                           setShowCategoryBrowser(false);
+                          setCategorySearchTerm(''); // Clear search when path applied
                           toast({
                             title: 'Category Path Applied',
-                            description: `${categoryName} → ${requestType.text} → ${subcategory.text}`,
+                            description: `${category.categoryName} → ${requestType.text} → ${subcategory.text}`,
                           });
                         }}
                       >
@@ -1569,7 +1795,7 @@ export function StaffTicketModal({
                     </Box>
                   ))}
                   
-                  {!subcategories[categoryId]?.[requestType.value] && (
+                  {!subcategories[category.categoryId]?.[requestType.value] && (
                     <Box sx={{ ml: 4, mb: 1 }}>
                       <Button
                         variant="outlined"
@@ -1584,15 +1810,16 @@ export function StaffTicketModal({
                           // Apply the path without subcategory
                           setFormData(prev => ({
                             ...prev,
-                            category: categoryId,
+                            category: category.categoryId,
                             requestType: requestType.value,
                             subcategory: '',
                             subSubcategory: ''
                           }));
                           setShowCategoryBrowser(false);
+                          setCategorySearchTerm(''); // Clear search when path applied
                           toast({
                             title: 'Category Path Applied',
-                            description: `${categoryName} → ${requestType.text}`,
+                            description: `${category.categoryName} → ${requestType.text}`,
                           });
                         }}
                       >
@@ -1603,13 +1830,14 @@ export function StaffTicketModal({
                 </Box>
               ))}
               
-              {!requestTypes[categoryId] && (
+              {!requestTypes[category.categoryId] && (
                 <Typography variant="body2" color="text.secondary" sx={{ ml: 2, fontStyle: 'italic' }}>
                   No request types available for this category
                 </Typography>
               )}
             </Paper>
-            ))
+            ))}
+            </>
           )}
         </Box>
       </DialogContent>
