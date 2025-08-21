@@ -418,18 +418,42 @@ export function StaffTicketModal({
       
       // Create ticket user in database so they can be searched next time
       const token = localStorage.getItem('authToken');
+      
+      // Map form field names to API field names
+      const apiUserData = {
+        username: newUserData.username,
+        display_name: newUserData.displayName,
+        email: newUserData.email,
+        employee_number: newUserData.employeeNumber,
+        phone: newUserData.phone,
+        location: newUserData.location,
+        cubicle_room: newUserData.cubicleRoom,
+        office: newUserData.office,
+        bureau: newUserData.bureau,
+        division: newUserData.division,
+        section: newUserData.section
+      };
+      
+      console.log('📤 Sending API data:', apiUserData);
+      
       const response = await fetch('/api/staff/ticket-users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(newUserData)
+        body: JSON.stringify(apiUserData)
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create ticket user');
+        const errorText = await response.text();
+        console.error('❌ API Error creating ticket user:', response.status, errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.error || 'Failed to create ticket user');
+        } catch {
+          throw new Error(`Failed to create ticket user: ${response.status} ${errorText}`);
+        }
       }
 
       const result = await response.json();
@@ -1052,7 +1076,7 @@ export function StaffTicketModal({
                           {filteredUsers.length > 0 ? (
                             filteredUsers.slice(0, 10).map((user) => (
                               <Box
-                                key={user.id}
+                                key={user.username}
                                 sx={{
                                   p: 2,
                                   cursor: 'pointer',

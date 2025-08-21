@@ -57,25 +57,26 @@ async function generateTicketId(teamId?: string): Promise<string> {
     }
     
     // Get or create sequence for this team
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     const sequenceResult = await dbGet(
-      'SELECT next_number FROM ticket_sequences WHERE team_id = ?',
-      [teamId || 'STAFF']
+      'SELECT last_sequence FROM ticket_sequences WHERE team_id = ? AND date = ?',
+      [teamId || 'STAFF', today]
     ) as any;
     
     let nextNumber: number;
     
     if (sequenceResult) {
-      nextNumber = sequenceResult.next_number;
+      nextNumber = sequenceResult.last_sequence + 1;
       await dbRun(
-        'UPDATE ticket_sequences SET next_number = next_number + 1 WHERE team_id = ?',
-        [teamId || 'STAFF']
+        'UPDATE ticket_sequences SET last_sequence = ? WHERE team_id = ? AND date = ?',
+        [nextNumber, teamId || 'STAFF', today]
       );
     } else {
       // Create new sequence starting at 1
       nextNumber = 1;
       await dbRun(
-        'INSERT INTO ticket_sequences (team_id, next_number) VALUES (?, ?)',
-        [teamId || 'STAFF', 2]
+        'INSERT INTO ticket_sequences (team_id, date, last_sequence, prefix) VALUES (?, ?, ?, ?)',
+        [teamId || 'STAFF', today, nextNumber, prefix]
       );
     }
     
@@ -107,14 +108,19 @@ function hasStaffTicketPermissions(userPermissions: string[]): boolean {
 export async function POST(request: NextRequest) {
   let authResult: any = null;
   try {
+    console.log('🎫 Staff ticket creation API called');
+    
     // Verify authentication
     authResult = await verifyAuth(request);
     if (!authResult.success || !authResult.user) {
+      console.log('❌ Authentication failed');
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
+    
+    console.log('✅ Authentication successful for user:', authResult.user.username);
 
     // Check staff ticket creation permissions
     if (!hasStaffTicketPermissions(authResult.user.permissions || [])) {
@@ -133,9 +139,16 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const ticketData: StaffTicketData = await request.json();
+    console.log('📋 Received ticket data:', ticketData);
     
     // Validate required fields
     if (!ticketData.title || !ticketData.category || !ticketData.description || !ticketData.submittedBy) {
+      console.log('❌ Missing required fields:', {
+        title: !!ticketData.title,
+        category: !!ticketData.category,
+        description: !!ticketData.description,
+        submittedBy: !!ticketData.submittedBy
+      });
       return NextResponse.json(
         { error: 'Missing required fields: title, category, description, submittedBy' },
         { status: 400 }
@@ -256,23 +269,21 @@ export async function POST(request: NextRequest) {
       now
     ]);
 
-    // Log the ticket creation in history
+    // Log the ticket creation in history (use the regular ticket_history table)
     await dbRun(`
-      INSERT INTO ticket_history_detailed (
+      INSERT INTO ticket_history (
         ticket_id,
         action_type,
-        action_description,
-        old_value,
-        new_value,
-        changed_by,
-        changed_at,
-        change_details
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        performed_by,
+        performed_by_display,
+        to_value,
+        details
+      ) VALUES (?, ?, ?, ?, ?, ?)
     `, [
       ticketId,
       'created',
-      'Ticket created by staff',
-      null,
+      createdByStaff,
+      authResult.user.display_name || createdByStaff,
       JSON.stringify({
         status: ticketData.status || 'open',
         priority: ticketData.priority,
@@ -280,8 +291,6 @@ export async function POST(request: NextRequest) {
         assigned_team: ticketData.assignedTeam,
         assigned_to: ticketData.assignedTo
       }),
-      createdByStaff,
-      now,
       JSON.stringify({
         created_by_staff: createdByStaff,
         ticket_source: 'staff_created',
@@ -332,7 +341,12 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Error creating staff ticket:', error);
+    console.error('❌ Error creating staff ticket:', error);
+    console.error('📋 Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      user: authResult?.user?.username || 'unknown'
+    });
     
     // Log the error for audit trail
     systemLogger.error({

@@ -19,10 +19,10 @@ interface TicketUserData {
   phone?: string;
   location?: string;
   cubicle_room?: string;
-  office_id?: number;
-  bureau_id?: number;
-  division_id?: number;
-  section_id?: number;
+  office?: string;
+  bureau?: string;
+  division?: string;
+  section?: string;
 }
 
 // Create a new ticket user
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     await dbRun(`
       INSERT INTO ticket_users (
         username, display_name, email, employee_number, phone,
-        location, cubicle_room, office_id, bureau_id, division_id, section_id,
+        location, cubicle_room, office, bureau, division, section,
         created_by
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
@@ -89,10 +89,10 @@ export async function POST(request: NextRequest) {
       userData.phone || null,
       userData.location || null,
       userData.cubicle_room || null,
-      userData.office_id || null,
-      userData.bureau_id || null,
-      userData.division_id || null,
-      userData.section_id || null,
+      userData.office || null,
+      userData.bureau || null,
+      userData.division || null,
+      userData.section || null,
       authResult.user.username
     ]);
 
@@ -144,31 +144,25 @@ export async function GET(request: NextRequest) {
 
     let query = `
       SELECT 
-        tu.username, tu.display_name, tu.email, tu.employee_number, tu.phone,
-        tu.location, tu.cubicle_room,
-        o.name as office, b.name as bureau, d.name as division, s.name as section,
-        tu.office_id, tu.bureau_id, tu.division_id, tu.section_id
-      FROM ticket_users tu
-      LEFT JOIN dpss_offices o ON tu.office_id = o.id
-      LEFT JOIN dpss_bureaus b ON tu.bureau_id = b.id
-      LEFT JOIN dpss_divisions d ON tu.division_id = d.id
-      LEFT JOIN dpss_sections s ON tu.section_id = s.id
-      WHERE tu.active = 1
+        username, display_name, email, employee_number, phone,
+        location, cubicle_room, office, bureau, division, section
+      FROM ticket_users
+      WHERE active = 1
     `;
     
     const params: any[] = [];
     
     if (search) {
       query += ` AND (
-        LOWER(tu.display_name) LIKE ? OR 
-        LOWER(tu.username) LIKE ? OR 
-        LOWER(tu.email) LIKE ?
+        LOWER(display_name) LIKE ? OR 
+        LOWER(username) LIKE ? OR 
+        LOWER(email) LIKE ?
       )`;
       const searchParam = `%${search}%`;
       params.push(searchParam, searchParam, searchParam);
     }
     
-    query += ' ORDER BY tu.display_name';
+    query += ' ORDER BY display_name';
 
     const ticketUsers = await dbAll(query, params);
 
