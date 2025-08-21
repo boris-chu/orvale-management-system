@@ -63,6 +63,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { UserAvatar } from '@/components/UserAvatar';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
 import { ConfigurableDataTableDemo } from '@/components/ConfigurableDataTableDemo';
+import { DragDropColumnManager } from '@/components/DragDropColumnManager';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -119,7 +120,9 @@ export default function TablesManagementPage() {
   const [createConfigOpen, setCreateConfigOpen] = useState(false);
   const [editConfigOpen, setEditConfigOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [columnManagerOpen, setColumnManagerOpen] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState<TableConfiguration | null>(null);
+  const [selectedTableForColumns, setSelectedTableForColumns] = useState<string>('tickets_queue');
   
   // Form states
   const [newConfigName, setNewConfigName] = useState('');
@@ -370,6 +373,16 @@ export default function TablesManagementPage() {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+          
+          {hasManagePermission && (
+            <Button
+              variant="outline"
+              onClick={() => setColumnManagerOpen(true)}
+            >
+              <Columns className="h-4 w-4 mr-2" />
+              Manage Columns
+            </Button>
+          )}
           
           {hasCreatePermission && (
             <Dialog open={createConfigOpen} onOpenChange={setCreateConfigOpen}>
@@ -883,6 +896,87 @@ export default function TablesManagementPage() {
           }
         }}
       />
+
+      {/* Column Manager Modal */}
+      <Dialog open={columnManagerOpen} onOpenChange={setColumnManagerOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Columns className="h-5 w-5" />
+              Column Manager
+            </DialogTitle>
+            <DialogDescription>
+              Configure column layout for {getTableTypeLabel(selectedTableForColumns)}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* Table Selector */}
+          <div className="mb-4">
+            <Label htmlFor="table-selector" className="text-sm font-medium mb-2 block">
+              Select Table Type:
+            </Label>
+            <Select value={selectedTableForColumns} onValueChange={setSelectedTableForColumns}>
+              <SelectTrigger className="w-64">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tickets_queue">Tickets Queue</SelectItem>
+                <SelectItem value="users_list">Users Management</SelectItem>
+                <SelectItem value="helpdesk_queue">Helpdesk Queue</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Column Manager */}
+          <div className="flex-1 overflow-hidden">
+            <DragDropColumnManager
+              tableIdentifier={selectedTableForColumns}
+              onConfigurationChange={(columnConfig) => {
+                console.log('Column configuration changed:', columnConfig);
+              }}
+              onSave={async (configuration) => {
+                try {
+                  const token = localStorage.getItem('authToken');
+                  const response = await fetch('/api/admin/tables-configs', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                      table_identifier: selectedTableForColumns,
+                      configuration_name: `Custom ${getTableTypeLabel(selectedTableForColumns)} Layout`,
+                      description: `Custom column configuration for ${getTableTypeLabel(selectedTableForColumns)}`,
+                      column_config: configuration.columns,
+                      filter_config: configuration.filters,
+                      sort_config: configuration.sorting,
+                      display_config: {
+                        row_height: 'medium',
+                        show_borders: true,
+                        striped_rows: false
+                      }
+                    }),
+                  });
+
+                  if (response.ok) {
+                    toast({
+                      title: 'Success',
+                      description: 'Column configuration saved successfully',
+                    });
+                    loadData(); // Refresh the configurations list
+                  } else {
+                    throw new Error('Failed to save configuration');
+                  }
+                } catch (error) {
+                  console.error('Error saving configuration:', error);
+                  throw error; // Re-throw so the component can handle it
+                }
+              }}
+              className="h-[60vh] overflow-y-auto"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
