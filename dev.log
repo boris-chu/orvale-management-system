@@ -1,0 +1,99 @@
+
+> orvale-management-system@0.1.0 dev
+> next dev -p 80
+
+   ▲ Next.js 15.5.0
+   - Local:        http://localhost:80
+   - Network:      http://192.168.1.45:80
+
+ ✓ Starting...
+ ✓ Ready in 998ms
+ ○ Compiling /api/health ...
+ ✓ Compiled /api/health in 640ms (296 modules)
+ GET /api/health 200 in 715ms
+ ✓ Compiled /api/tickets in 252ms (429 modules)
+ ⨯ Error: Cannot find module '../../../webpack-runtime.js'
+Require stack:
+- /Users/borischu/orvale-management-system/.next/server/app/api/tickets/route.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/require.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/load-components.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/utils.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/swc/options.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/swc/index.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/analysis/parse-module.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/analysis/get-page-static-info.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/lib/router-server.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/lib/start-server.js
+    at <unknown> (.next/server/app/api/tickets/route.js:358:27)
+    at Object.<anonymous> (.next/server/app/api/tickets/route.js:364:3) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/api/tickets'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 506ms (775 modules)
+ ⨯ Error: Cannot find module '../webpack-runtime.js'
+Require stack:
+- /Users/borischu/orvale-management-system/.next/server/pages/_document.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/require.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/load-components.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/utils.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/swc/options.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/swc/index.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/analysis/parse-module.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/analysis/get-page-static-info.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/lib/router-server.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/lib/start-server.js
+    at <unknown> (.next/server/pages/_document.js:60:27)
+    at Object.<anonymous> (.next/server/pages/_document.js:66:3) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+Error: Cannot find module '../../../webpack-runtime.js'
+Require stack:
+- /Users/borischu/orvale-management-system/.next/server/app/api/tickets/route.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/require.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/load-components.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/utils.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/swc/options.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/swc/index.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/analysis/parse-module.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/analysis/get-page-static-info.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/lib/router-server.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/lib/start-server.js
+    at <unknown> (.next/server/app/api/tickets/route.js:358:27)
+    at Object.<anonymous> (.next/server/app/api/tickets/route.js:364:3) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/api/tickets'
+}
+ ⨯ Error: Cannot find module '../webpack-runtime.js'
+Require stack:
+- /Users/borischu/orvale-management-system/.next/server/pages/_document.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/require.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/load-components.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/utils.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/swc/options.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/swc/index.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/analysis/parse-module.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/build/analysis/get-page-static-info.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/lib/router-server.js
+- /Users/borischu/orvale-management-system/node_modules/next/dist/server/lib/start-server.js
+    at <unknown> (.next/server/pages/_document.js:60:27)
+    at Object.<anonymous> (.next/server/pages/_document.js:66:3) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[Error: ENOENT: no such file or directory, open '/Users/borischu/orvale-management-system/.next/routes-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/borischu/orvale-management-system/.next/routes-manifest.json'
+}
+ GET /api/tickets?status=&queue=all_tickets&priority=&sort=newest_first&limit=50 500 in 1518ms
+ GET /api/tickets?status=&queue=all_tickets&priority=&sort=newest_first&limit=50 500 in 17ms
+[?25h

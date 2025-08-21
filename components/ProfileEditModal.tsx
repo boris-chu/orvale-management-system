@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+// Use Material-UI for Dialog to avoid focus management conflicts
+import { Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -286,14 +287,17 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
                      })();
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <User className="h-5 w-5" />
-            <span>Edit Profile</span>
-          </DialogTitle>
-        </DialogHeader>
+    <Dialog 
+      open={open} 
+      onClose={() => onOpenChange(false)}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <User className="h-5 w-5" />
+        Edit Profile
+      </DialogTitle>
+      <DialogContent>
 
         {/* Notification */}
         <AnimatePresence>
@@ -474,34 +478,33 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
             )}
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end space-x-2 pt-4 border-t">
-            <Button 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSaveProfile}
-              disabled={saving || !hasChanges}
-            >
-              {saving ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Check className="h-4 w-4 mr-2" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          </div>
         </div>
       </DialogContent>
+      <DialogActions sx={{ p: 3 }}>
+        <Button 
+          variant="outline" 
+          onClick={() => onOpenChange(false)}
+          disabled={saving}
+        >
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleSaveProfile}
+          disabled={saving || !hasChanges}
+        >
+          {saving ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Check className="h-4 w-4 mr-2" />
+              Save Changes
+            </>
+          )}
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 }

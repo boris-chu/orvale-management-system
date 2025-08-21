@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 // Material-UI imports for working Select components
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings, LogOut, CheckCircle, Monitor } from 'lucide-react';
+import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings, LogOut, CheckCircle, Monitor, Plus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 // Removed static imports - will load dynamically from database APIs
@@ -16,6 +16,7 @@ import OrganizationalBrowserModal from '../../components/OrganizationalBrowserMo
 import { formatRegularTime } from '@/lib/time-utils';
 import { UserAvatar } from '@/components/UserAvatar';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
+import { StaffTicketModal } from '@/components/StaffTicketModal';
 import TicketHistoryComponent from '../../components/TicketHistoryComponent';
 
 interface Ticket {
@@ -108,6 +109,7 @@ export default function TicketsPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showStaffTicketModal, setShowStaffTicketModal] = useState(false);
   const [assignableUsers, setAssignableUsers] = useState<any[]>([]);
   const [loadingAssignableUsers, setLoadingAssignableUsers] = useState(false);
   const [availableTeams, setAvailableTeams] = useState<any[]>([]);
@@ -878,6 +880,28 @@ export default function TicketsPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold">📋 Support Ticket Queue</h1>
             <div className="flex items-center space-x-4">
+              {/* Create Ticket Button - only show if user has staff ticket creation permissions */}
+              {currentUser?.permissions?.includes('ticket.create_for_users') && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={() => setShowStaffTicketModal(true)}
+                        variant="outline"
+                        className="bg-white text-blue-600 border-white hover:bg-blue-50 hover:text-blue-700 transition-all duration-200"
+                        size="sm"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Ticket
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Create ticket for user or internal issue</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
               {/* Helpdesk Queue Button - only show if user has helpdesk permissions */}
               {currentUser?.permissions?.includes('helpdesk.multi_queue_access') && (
                 <TooltipProvider>
@@ -1730,6 +1754,19 @@ export default function TicketsPage() {
           onOpenChange={setShowProfileModal}
           user={currentUser}
           onProfileUpdate={handleProfileUpdate}
+        />
+      )}
+
+      {/* Staff Ticket Creation Modal */}
+      {currentUser && (
+        <StaffTicketModal
+          open={showStaffTicketModal}
+          onOpenChange={setShowStaffTicketModal}
+          onSubmit={async (ticketData) => {
+            // After successful ticket creation, refresh the tickets
+            await loadTickets();
+            showNotification('Ticket created successfully', 'success');
+          }}
         />
       )}
 

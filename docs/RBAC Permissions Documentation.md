@@ -2,7 +2,7 @@
 ## Orvale Management System - Complete Permission Reference
 
 **Last Updated:** August 21, 2025  
-**Total Permissions:** 75  
+**Total Permissions:** 79  
 **Permission Categories:** 12  
 
 ---
@@ -15,7 +15,7 @@ The Orvale Management System implements a comprehensive Role-Based Access Contro
 
 ## 📋 Permission Categories
 
-### 1. **Tickets** (13 permissions)
+### 1. **Tickets** (17 permissions)
 Core ticket management and workflow permissions
 
 ### 2. **Queues** (7 permissions)  
@@ -193,6 +193,47 @@ Visual tables and data grid configuration system
   - Administrative corrections
   - ⚠️ Bypasses ownership protection
 - **Granted To:** Helpdesk Supervisor, Admins
+
+#### `ticket.create_for_users`
+- **Name:** Create Tickets for Users
+- **Description:** Create tickets on behalf of users or for internal issues
+- **Use Cases:**
+  - Phone support ticket creation
+  - Walk-in support assistance
+  - Email-to-ticket conversion
+  - Internal issue documentation
+  - Staff-initiated maintenance tickets
+- **Granted To:** IT Users, Managers, Helpdesk Members, Admins
+
+#### `ticket.set_priority`
+- **Name:** Set Priority Override
+- **Description:** Override default priority settings when creating tickets
+- **Use Cases:**
+  - Staff assessment of urgent issues
+  - Override user-submitted priorities
+  - Emergency ticket handling
+  - Priority escalation during creation
+- **Granted To:** Managers, Helpdesk Supervisor, Admins
+
+#### `ticket.set_status`
+- **Name:** Set Initial Status
+- **Description:** Set initial ticket status (not just Open) during creation
+- **Use Cases:**
+  - Create tickets in In Progress state
+  - Direct assignment with status update
+  - Batch processing workflows
+  - Pre-resolved documentation tickets
+- **Granted To:** IT Users, Managers, Helpdesk Members, Admins
+
+#### `ticket.access_internal`
+- **Name:** Access Internal Fields
+- **Description:** Access and edit internal staff notes and metadata
+- **Use Cases:**
+  - Staff-only communication
+  - Internal documentation
+  - Administrative tracking
+  - Audit trail information
+- **Granted To:** IT Users, Managers, Helpdesk Members, Admins
 
 ---
 

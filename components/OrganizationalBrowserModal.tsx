@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// Use Material-UI for Dialog and Select to avoid focus management conflicts
+import { Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { Search, ArrowRight, Check, X, Building2 } from 'lucide-react';
 
 interface OrganizationalPath {
@@ -349,14 +350,20 @@ export default function OrganizationalBrowserModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[80vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Building2 className="h-5 w-5" />
-            <span>Browse Organizational Paths</span>
-          </DialogTitle>
-        </DialogHeader>
+    <Dialog 
+      open={isOpen} 
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      PaperProps={{
+        sx: { maxHeight: '80vh', overflow: 'hidden' }
+      }}
+    >
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Building2 className="h-5 w-5" />
+        Browse Organizational Paths
+      </DialogTitle>
+      <DialogContent>
         
         <div className="space-y-4">
           {/* Search and Sort Controls */}
@@ -369,17 +376,19 @@ export default function OrganizationalBrowserModal({
                 className="w-full"
               />
             </div>
-            <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="office">Group by Office</SelectItem>
-                <SelectItem value="alphabetical">Alphabetical</SelectItem>
-                <SelectItem value="complete">Complete First</SelectItem>
-                <SelectItem value="confidence">By Confidence</SelectItem>
-              </SelectContent>
-            </Select>
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>Sort By</InputLabel>
+              <Select 
+                value={sortBy} 
+                onChange={(e) => setSortBy(e.target.value)}
+                label="Sort By"
+              >
+                <MenuItem value="office">Group by Office</MenuItem>
+                <MenuItem value="alphabetical">Alphabetical</MenuItem>
+                <MenuItem value="complete">Complete First</MenuItem>
+                <MenuItem value="confidence">By Confidence</MenuItem>
+              </Select>
+            </FormControl>
           </div>
           
           {/* Path Count */}
@@ -408,13 +417,15 @@ export default function OrganizationalBrowserModal({
             <div className="text-sm text-gray-600">
               Select a path with at least Office, Bureau, and Division to populate the ticket form
             </div>
-            <Button variant="outline" onClick={onClose}>
-              <X className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
           </div>
         </div>
       </DialogContent>
+      <DialogActions sx={{ p: 3 }}>
+        <Button variant="outline" onClick={onClose}>
+          <X className="h-4 w-4 mr-2" />
+          Cancel
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 }

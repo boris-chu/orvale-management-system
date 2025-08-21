@@ -86,8 +86,10 @@ Comprehensive Material Design implementation with extensive component library.
 - Extensive icon library
 - Advanced theming capabilities
 
-### 3. **Shadcn:UI** (`ui library/shadcn:ui/`)
+### 3. **Shadcn:UI** (`ui library/shadcn:ui/`) ⚠️ **Limited Use**
 Modern component library built on Radix UI primitives with excellent accessibility.
+
+> **⚠️ IMPORTANT**: Dialog and Select components have been removed due to React 19 focus management conflicts with Material-UI. Use Material-UI for modals and dropdowns.
 
 #### Key Features:
 - Copy-paste components
@@ -97,12 +99,13 @@ Modern component library built on Radix UI primitives with excellent accessibili
 - Dark mode support
 
 #### Available Components:
-- **Forms**: All form controls with react-hook-form integration
-- **Data Display**: Tables with sorting, filtering, pagination
-- **Overlays**: Dialogs, sheets, popovers
-- **Navigation**: Command menus, navigation menus
-- **Feedback**: Toasts, alerts, progress indicators
-- **Layout**: Responsive layouts, collapsibles
+- **Forms**: Input, Label, Textarea, Button, Checkbox (✅ Safe to use)
+- **Data Display**: Tables, Badges, Cards (✅ Safe to use)  
+- **Navigation**: Command menus, navigation menus (✅ Safe to use)
+- **Feedback**: Toasts, alerts, progress indicators (✅ Safe to use)
+- **Layout**: Responsive layouts, collapsibles (✅ Safe to use)
+- **Overlays**: ❌ Dialog **REMOVED** - Use Material-UI Dialog instead
+- **Form Controls**: ❌ Select **REMOVED** - Use Material-UI Select instead
 
 #### Icon Support:
 - Radix Icons (`@radix-ui/react-icons`)
@@ -153,19 +156,52 @@ Full-stack framework for building business applications.
 3. **Material Icons**: 1000+ Material Design icons
 4. **Custom SVG Icons**: Project-specific icons in evilcharts
 
-## 📋 Recommended Component Usage
+## 📋 **Updated Component Selection Guide** 
 
-### For the Ticket System:
-1. **Forms**: Use shadcn:ui form components with react-hook-form
-2. **Tables**: Use shadcn:ui DataTable for ticket lists
-3. **Modals**: Use shadcn:ui Dialog/Sheet for ticket details
-4. **Navigation**: Use evilcharts Sidebar with Breadcrumb
-5. **Status Indicators**: Use evilcharts Badge components
-6. **Charts**: Use evilcharts chart components for analytics
+### **🎯 Primary Recommendations (React 19 Compatible):**
 
-### For Project Management:
-1. **Project Dashboard**: Combine evilcharts charts with Material-UI grid layouts
-2. **Kanban Boards**: Use dnd-kit (available in shadcn:ui)
+#### **For Forms & Inputs:**
+- **Text Inputs**: shadcn:ui Input, Label, Textarea ✅
+- **Dropdowns**: Material-UI Select + MenuItem ✅
+- **Buttons**: shadcn:ui Button ✅
+- **Validation**: react-hook-form + Zod ✅
+
+#### **For Modals & Overlays:**
+- **Modals**: Material-UI Dialog + DialogTitle + DialogContent ✅
+- **Sheets/Drawers**: Material-UI Drawer ✅
+- **Tooltips**: shadcn:ui Tooltip ✅
+
+#### **For Data Display:**
+- **Tables**: shadcn:ui DataTable or Material-UI DataGrid ✅
+- **Cards**: shadcn:ui Card ✅
+- **Badges**: shadcn:ui Badge ✅
+- **Tabs**: Material-UI Tabs + Tab (for modals) ✅
+
+#### **For Navigation:**
+- **Sidebar**: evilcharts Sidebar ✅
+- **Breadcrumbs**: evilcharts Breadcrumb ✅
+- **Command Menu**: shadcn:ui Command ✅
+
+#### **For Analytics & Charts:**
+- **All Charts**: evilcharts components ✅
+- **Dashboards**: evilcharts + Material-UI layouts ✅
+
+### **❌ Components to Avoid:**
+- shadcn:ui Dialog (focus conflicts with Material-UI Select)
+- shadcn:ui Select (focus conflicts in modals)
+- Mixing Radix-based dialogs with Material-UI dropdowns
+
+### **For the Ticket System:**
+1. **Forms**: shadcn:ui inputs + Material-UI Select
+2. **Tables**: shadcn:ui DataTable for ticket lists  
+3. **Modals**: Material-UI Dialog for ticket details
+4. **Navigation**: evilcharts Sidebar with Breadcrumb
+5. **Status Indicators**: shadcn:ui Badge components
+6. **Charts**: evilcharts chart components for analytics
+
+### **For Project Management:**
+1. **Project Dashboard**: evilcharts charts + Material-UI layouts
+2. **Kanban Boards**: dnd-kit + shadcn:ui Cards
 3. **Timeline Views**: Custom components with evilcharts charts
 4. **Resource Planning**: Material-UI DataGrid with custom renderers
 
@@ -177,10 +213,10 @@ Full-stack framework for building business applications.
 - Establish component structure
 
 ### Phase 2: Ticket System UI
-- Implement ticket submission form (shadcn:ui)
+- Implement ticket submission form (shadcn:ui inputs + Material-UI Select)
 - Create ticket queue interface (shadcn:ui DataTable)
-- Build modal system for ticket details
-- Add authentication UI
+- Build modal system for ticket details (Material-UI Dialog)
+- Add authentication UI (Material-UI Dialog)
 
 ### Phase 3: Project Management Layer
 - Add project dashboard (evilcharts)

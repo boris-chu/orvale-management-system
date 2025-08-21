@@ -248,22 +248,29 @@ import { Select, MenuItem } from '@mui/material'; // Material UI
 
 #### ✅ **What TO do:**
 ```javascript
-// USE CONSISTENTLY: All Material UI or All Radix UI
+// USE CONSISTENTLY: All Material UI for modals with dropdowns
 import { 
   Dialog, 
   DialogTitle, 
   DialogContent, 
   DialogActions,
   Select, 
-  MenuItem 
+  MenuItem,
+  TextField,
+  Button,
+  Paper,
+  Box,
+  Tabs,
+  Tab
 } from '@mui/material'; // All from same library
 
-<Dialog>
-  <DialogTitle>Title</DialogTitle>
+<Dialog open={open} onClose={handleClose}>
+  <DialogTitle>Create New Item</DialogTitle>
   <DialogContent>
     <Select> {/* No focus conflicts! */}
       <MenuItem>Option 1</MenuItem>
     </Select>
+    <TextField label="Input Field" />
   </DialogContent>
   <DialogActions>
     <Button>Action</Button>
@@ -288,6 +295,163 @@ import {
 focus-scope.tsx:295 Uncaught RangeError: Maximum call stack size exceeded
 ```
 **Solution**: Check for mixed UI libraries in modals/dropdowns
+
+#### ✅ **Complete Modal Conversion Pattern (StaffTicketModal Example):**
+When converting from mixed libraries to full Material-UI:
+
+1. **Replace Dialog Structure:**
+```javascript
+// From shadcn:ui Dialog
+<Dialog open={open} onOpenChange={onOpenChange}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Title</DialogTitle>
+      <DialogDescription>Description</DialogDescription>
+    </DialogHeader>
+
+// To Material-UI Dialog
+<Dialog open={open} onClose={() => onOpenChange(false)} maxWidth="lg" fullWidth>
+  <DialogTitle>Title</DialogTitle>
+  <DialogContent>
+    <Typography variant="body2" color="text.secondary">Description</Typography>
+```
+
+2. **Replace Tabs with Material-UI:**
+```javascript
+// From shadcn:ui Tabs
+<Tabs defaultValue="tab1">
+  <TabsList className="grid w-full grid-cols-4">
+    <TabsTrigger value="tab1">Tab 1</TabsTrigger>
+  </TabsList>
+  <TabsContent value="tab1">Content</TabsContent>
+</Tabs>
+
+// To Material-UI Tabs
+const [activeTab, setActiveTab] = useState('tab1');
+<Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+  <Tab label="Tab 1" value="tab1" />
+</Tabs>
+{activeTab === 'tab1' && <Box>Content</Box>}
+```
+
+3. **Replace Form Components:**
+```javascript
+// From shadcn:ui + Material-UI mix
+<Input /> + <Textarea /> + <Select><MenuItem /></Select>
+
+// To Material-UI only
+<TextField /> + <TextField multiline /> + <Select><MenuItem /></Select>
+```
+
+### 🚨 **IMPORTANT: Component Migration Status**
+
+**Components Deprecated in `/components/ui/`:**
+- `dialog.tsx` ⚠️ **DEPRECATED STUB** - Use Material-UI Dialog
+- `select.tsx` ⚠️ **DEPRECATED STUB** - Use Material-UI Select
+
+These components now throw runtime errors with helpful migration messages.
+
+**Migration Progress:**
+- ✅ `components/StaffTicketModal.tsx` - **CONVERTED** (Complete Material-UI)
+- ✅ `app/developer/roles/page.tsx` - **CONVERTED** (Material-UI Dialog)
+- ✅ `app/admin/tables-management/page.tsx` - **IMPORTS UPDATED** (Material-UI Dialog/Select)
+- ✅ `components/CategoryBrowserModal.tsx` - **CONVERTED** (Material-UI Dialog/Select)
+- ✅ `components/OrganizationalBrowserModal.tsx` - **CONVERTED** (Material-UI Dialog/Select)
+- ✅ `components/ProfileEditModal.tsx` - **CONVERTED** (Material-UI Dialog)
+- ⚠️ `components/RowEditorDialog.tsx` - Needs conversion
+- ⚠️ `components/ColumnEditorDialog.tsx` - Needs conversion
+- ⚠️ Other files - Need conversion as encountered
+
+**Migration Strategy:**
+- Files using ONLY Dialog: Convert to Material-UI Dialog
+- Files using ONLY Select: Convert to Material-UI Select  
+- Files using Dialog + Select: Convert entire modal to Material-UI
+- Files using Select outside modals: Can keep shadcn:ui if no focus conflicts
+
+**Priority Migration Order:**
+1. Admin interfaces (tables-management)
+2. Developer interfaces (roles, teams, users)
+3. Modal components (CategoryBrowserModal, etc.)
+4. Public portal forms
+
+### 🎨 Tabs Component Pattern - IMPORTANT
+
+**The `TabsList` component from shadcn:ui requires specific classes for horizontal layout:**
+
+#### ❌ **Common Issue - Vertical Stacking:**
+```javascript
+// This creates vertically stacked tabs (incorrect for most use cases)
+<TabsList className="grid grid-cols-4">
+```
+
+#### ✅ **Correct Pattern - Horizontal Tabs:**
+```javascript
+// For horizontal tabs, use the grid with explicit width
+<TabsList className="grid w-full grid-cols-4">
+```
+
+#### 🔧 **Best Practices for Tabs:**
+1. **Always include `w-full`** with grid layouts for proper horizontal display
+2. **Add spacing** with `mb-4` or similar for visual separation
+3. **Match grid columns** to the number of tabs (grid-cols-2, grid-cols-3, etc.)
+4. **For dynamic tabs**, use `flex` instead of `grid`:
+   ```javascript
+   <TabsList className="flex w-full justify-start">
+   ```
+
+**Note**: This pattern appears frequently in the codebase. When creating new tabbed interfaces, always ensure the TabsList has proper width classes to maintain horizontal layout.
+
+### 🎯 Select Components in Modals - CRITICAL PATTERN
+
+**When using Select components inside Modal dialogs, ALWAYS use Material-UI Select to avoid focus management issues with React 19:**
+
+#### ❌ **Common Issue - shadcn:ui Select in Modals:**
+```javascript
+// This causes focus-scope infinite recursion errors in modals!
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+<Dialog>
+  <DialogContent>
+    <Select onValueChange={handleChange}>
+      <SelectTrigger>
+        <SelectValue placeholder="Select option" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="option1">Option 1</SelectItem>
+      </SelectContent>
+    </Select>
+  </DialogContent>
+</Dialog>
+```
+
+#### ✅ **Correct Pattern - Material-UI Select in Modals:**
+```javascript
+// Use Material-UI for Select components inside modals
+import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+
+<Dialog>
+  <DialogContent>
+    <FormControl fullWidth size="small">
+      <InputLabel>Select Option</InputLabel>
+      <Select 
+        value={value} 
+        onChange={(e) => handleChange(e.target.value)}
+        label="Select Option"
+      >
+        <MenuItem value="option1">Option 1</MenuItem>
+        <MenuItem value="option2">Option 2</MenuItem>
+      </Select>
+    </FormControl>
+  </DialogContent>
+</Dialog>
+```
+
+#### 📋 **When to Use Each:**
+- **Material-UI Select**: Inside modals, dialogs, drawers (focus-managed components)
+- **shadcn:ui Select**: Regular page content, forms not in modals
+- **Never mix**: Don't use different Select libraries in the same modal
+
+**This is especially important for StaffTicketModal, user creation modals, and any other dialog-based forms.**
 
 ### API Response Handling
 ```javascript

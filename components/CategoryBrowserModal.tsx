@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// Use Material-UI for Dialog and Select to avoid focus management conflicts
+import { Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { Search, ArrowRight, Check, X } from 'lucide-react';
 
 interface CategoryPath {
@@ -329,14 +330,20 @@ export default function CategoryBrowserModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[80vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Search className="h-5 w-5" />
-            <span>Browse Category Paths</span>
-          </DialogTitle>
-        </DialogHeader>
+    <Dialog 
+      open={isOpen} 
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      PaperProps={{
+        sx: { maxHeight: '80vh', overflow: 'hidden' }
+      }}
+    >
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Search className="h-5 w-5" />
+        Browse Category Paths
+      </DialogTitle>
+      <DialogContent>
         
         <div className="space-y-4">
           {/* Search and Sort Controls */}
@@ -349,17 +356,19 @@ export default function CategoryBrowserModal({
                 className="w-full"
               />
             </div>
-            <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="category">Group by Category</SelectItem>
-                <SelectItem value="alphabetical">Alphabetical</SelectItem>
-                <SelectItem value="complete">Complete First</SelectItem>
-                <SelectItem value="incomplete">Incomplete First</SelectItem>
-              </SelectContent>
-            </Select>
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>Sort By</InputLabel>
+              <Select 
+                value={sortBy} 
+                onChange={(e) => setSortBy(e.target.value)}
+                label="Sort By"
+              >
+                <MenuItem value="category">Group by Category</MenuItem>
+                <MenuItem value="alphabetical">Alphabetical</MenuItem>
+                <MenuItem value="complete">Complete First</MenuItem>
+                <MenuItem value="incomplete">Incomplete First</MenuItem>
+              </Select>
+            </FormControl>
           </div>
           
           {/* Path Count */}
@@ -388,13 +397,15 @@ export default function CategoryBrowserModal({
             <div className="text-sm text-gray-600">
               Select any category path to populate available fields in the ticket form
             </div>
-            <Button variant="outline" onClick={onClose}>
-              <X className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
           </div>
         </div>
       </DialogContent>
+      <DialogActions sx={{ p: 3 }}>
+        <Button variant="outline" onClick={onClose}>
+          <X className="h-4 w-4 mr-2" />
+          Cancel
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 }

@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+// Use Material-UI for Dialog to avoid focus management conflicts
+import { Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -117,6 +118,30 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     name: 'View Ticket History', 
     category: 'Tickets', 
     description: 'View ticket audit trail\n• Track changes & assignments\n• See escalation history\n• Essential for accountability' 
+  },
+  { 
+    id: 'ticket.create_for_users', 
+    name: 'Create Tickets for Users', 
+    category: 'Tickets', 
+    description: 'Create tickets on behalf of users\n• Phone support ticket creation\n• Walk-in support assistance\n• Email-to-ticket conversion\n• Internal issue documentation' 
+  },
+  { 
+    id: 'ticket.set_priority', 
+    name: 'Set Priority Override', 
+    category: 'Tickets', 
+    description: 'Override priority when creating tickets\n• Staff assessment of urgent issues\n• Override user-submitted priorities\n• Emergency ticket handling\n• Priority escalation during creation' 
+  },
+  { 
+    id: 'ticket.set_status', 
+    name: 'Set Initial Status', 
+    category: 'Tickets', 
+    description: 'Set initial ticket status (not just Open)\n• Create tickets in In Progress state\n• Direct assignment with status update\n• Batch processing workflows\n• Pre-resolved documentation tickets' 
+  },
+  { 
+    id: 'ticket.access_internal', 
+    name: 'Access Internal Fields', 
+    category: 'Tickets', 
+    description: 'Access internal staff notes and metadata\n• Staff-only communication\n• Internal documentation\n• Administrative tracking\n• Audit trail information' 
   },
   
   // Queue Permissions
@@ -1114,14 +1139,20 @@ export default function RoleManagement() {
       </div>
 
       {/* Create Role Modal */}
-      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <ShieldPlus className="h-5 w-5" />
-              <span>Create New Role</span>
-            </DialogTitle>
-          </DialogHeader>
+      <Dialog 
+        open={showCreateModal} 
+        onClose={() => setShowCreateModal(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: { maxHeight: '90vh', overflow: 'auto' }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <ShieldPlus className="h-5 w-5" />
+          Create New Role
+        </DialogTitle>
+        <DialogContent>
           
           <div className="space-y-4">
             <div>
@@ -1223,41 +1254,47 @@ export default function RoleManagement() {
               </div>
             </div>
             
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowCreateModal(false)}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleCreateRole}
-                disabled={saving || !formData.name || formData.permissions.length === 0}
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  'Create Role'
-                )}
-              </Button>
-            </div>
           </div>
         </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowCreateModal(false)}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleCreateRole}
+            disabled={saving || !formData.name || formData.permissions.length === 0}
+          >
+            {saving ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              'Create Role'
+            )}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Edit Role Modal - Similar to Create but with pre-filled data */}
-      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <Edit className="h-5 w-5" />
-              <span>Edit Role</span>
-            </DialogTitle>
-          </DialogHeader>
+      <Dialog 
+        open={showEditModal} 
+        onClose={() => setShowEditModal(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: { maxHeight: '90vh', overflow: 'auto' }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Edit className="h-5 w-5" />
+          Edit Role
+        </DialogTitle>
+        <DialogContent>
           
           <div className="space-y-4">
             {selectedRole?.is_system && (
@@ -1357,41 +1394,44 @@ export default function RoleManagement() {
               </div>
             </div>
             
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowEditModal(false)}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleEditRole}
-                disabled={saving}
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  'Update Role'
-                )}
-              </Button>
-            </div>
           </div>
         </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowEditModal(false)}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleEditRole}
+            disabled={saving}
+          >
+            {saving ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              'Update Role'
+            )}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+      <Dialog 
+        open={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+          <AlertTriangle className="h-5 w-5" />
+          Delete Role
+        </DialogTitle>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2 text-red-600">
-              <AlertTriangle className="h-5 w-5" />
-              <span>Delete Role</span>
-            </DialogTitle>
-          </DialogHeader>
           
           <div className="space-y-4">
             <p>Are you sure you want to delete the role "{selectedRole?.name}"?</p>
@@ -1408,31 +1448,31 @@ export default function RoleManagement() {
             
             <p className="text-sm text-gray-500">This action cannot be undone.</p>
             
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowDeleteModal(false)}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button 
-                variant="destructive"
-                onClick={handleDeleteRole}
-                disabled={saving}
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete Role'
-                )}
-              </Button>
-            </div>
           </div>
         </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowDeleteModal(false)}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="destructive"
+            onClick={handleDeleteRole}
+            disabled={saving}
+          >
+            {saving ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              'Delete Role'
+            )}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Profile Edit Modal */}

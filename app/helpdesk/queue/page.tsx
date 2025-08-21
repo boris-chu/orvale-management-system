@@ -27,7 +27,8 @@ import {
   Building2,
   Monitor,
   CheckCircle,
-  FolderOpen
+  FolderOpen,
+  Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -35,6 +36,7 @@ import { UserAvatar } from '@/components/UserAvatar';
 import { formatRegularTime } from '@/lib/time-utils';
 import HelpdeskTeamSettings from '@/components/HelpdeskTeamSettings';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
+import { StaffTicketModal } from '@/components/StaffTicketModal';
 import CategoryBrowserModal from '@/components/CategoryBrowserModal';
 import OrganizationalBrowserModal from '@/components/OrganizationalBrowserModal';
 import TicketHistoryComponent from '@/components/TicketHistoryComponent';
@@ -120,6 +122,7 @@ export default function HelpdeskQueue() {
   const [showSettings, setShowSettings] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showStaffTicketModal, setShowStaffTicketModal] = useState(false);
   
   // Ticket modal state
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -670,6 +673,26 @@ export default function HelpdeskQueue() {
             </div>
             
             <div className="flex items-center space-x-3">
+              {/* Create Ticket Button - only show if user has staff ticket creation permissions */}
+              {currentUser?.permissions?.includes('ticket.create_for_users') && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={() => setShowStaffTicketModal(true)}
+                        className="flex items-center space-x-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Create Ticket</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Create ticket for user or internal issue</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
               <Button 
                 variant="outline"
                 onClick={() => window.location.href = '/tickets'}
@@ -976,6 +999,19 @@ export default function HelpdeskQueue() {
           localStorage.setItem('currentUser', JSON.stringify(updatedUser));
         }}
       />
+
+      {/* Staff Ticket Creation Modal */}
+      {currentUser && (
+        <StaffTicketModal
+          open={showStaffTicketModal}
+          onOpenChange={setShowStaffTicketModal}
+          onSubmit={async (ticketData) => {
+            // After successful ticket creation, refresh the tickets
+            await loadTickets();
+            showNotification('Ticket created successfully', 'success');
+          }}
+        />
+      )}
 
       {/* Ticket Detail Modal */}
       {selectedTicket && (
