@@ -300,28 +300,15 @@ export function StaffTicketModal({
         }
       }
       
-      // Fallback: Load all active users if team loading fails or user has no team
-      console.log('StaffTicketModal - Fallback: loading all active users');
-      const allUsersResponse = await fetch('/api/developer/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (allUsersResponse.ok) {
-        const allUsers = await allUsersResponse.json();
-        const filteredUsers = allUsers.filter((user: User) => user.username && user.active !== false);
-        setUsers(filteredUsers);
-      } else {
-        // Final fallback: just current user
-        setUsers(currentUser ? [{
-          id: currentUser.id,
-          username: currentUser.username,
-          display_name: currentUser.display_name,
-          email: currentUser.email,
-          team_name: 'Current User'
-        }] : []);
-      }
+      // Fallback: Use current user only (don't try to load all users - requires admin permissions)
+      console.log('StaffTicketModal - Fallback: using current user only');
+      setUsers(currentUser ? [{
+        id: currentUser.id,
+        username: currentUser.username,
+        display_name: currentUser.display_name,
+        email: currentUser.email,
+        team_name: currentUser.team_id || 'Current User'
+      }] : []);
     } catch (error) {
       console.error('Failed to load users:', error);
       // Final fallback: just current user

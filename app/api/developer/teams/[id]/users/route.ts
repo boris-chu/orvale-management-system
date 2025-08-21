@@ -23,7 +23,19 @@ export async function GET(
       );
     }
 
+    // Check permissions: users can view their own team, or with explicit permission
     const teamId = params.id;
+    const canViewTeam = authResult.user.team_id === teamId || 
+                       authResult.user.permissions?.includes('team.view_members') ||
+                       authResult.user.permissions?.includes('admin.view_users') ||
+                       authResult.user.permissions?.includes('admin.manage_users');
+    
+    if (!canViewTeam) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions to view this team' },
+        { status: 403 }
+      );
+    }
 
     // Get users from the specified team
     const users = await dbAll(`

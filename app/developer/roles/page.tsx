@@ -157,6 +157,14 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     category: 'Queues', 
     description: 'View team queue\n• See pending work\n• Prioritize tasks\n• Essential for team members' 
   },
+  
+  // Team Permissions
+  { 
+    id: 'team.view_members', 
+    name: 'View Team Members', 
+    category: 'Teams', 
+    description: 'View members of teams\n• Essential for ticket assignment\n• Enables user selection in forms\n• Supports collaboration features' 
+  },
   { 
     id: 'queue.view_team', 
     name: 'View Team Queues', 
