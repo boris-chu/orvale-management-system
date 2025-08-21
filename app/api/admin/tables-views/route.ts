@@ -70,6 +70,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      views: formattedViews,
       data: formattedViews
     });
 

@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
-import { queryAsync, runAsync } from '@/lib/database';
-import { createContextLogger } from '@/lib/logger';
-
-const logger = createContextLogger('tables-columns-api');
+import { queryAsync } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,34 +10,42 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user has permission to view table configurations
+    // Check for tables view permission
     if (!authResult.user.permissions?.includes('tables.view_config')) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const url = new URL(request.url);
-    const tableIdentifier = url.searchParams.get('table');
+    const { searchParams } = new URL(request.url);
+    const tableFilter = searchParams.get('table');
 
-    // Get column definitions
     let query = `
-      SELECT *
-      FROM table_column_definitions
+      SELECT 
+        id,
+        table_identifier,
+        column_key,
+        column_label,
+        column_type,
+        is_sortable,
+        is_filterable,
+        default_visible,
+        display_order
+      FROM table_column_definitions 
       WHERE 1=1
     `;
+    
     const params: any[] = [];
-
-    // Filter by table identifier if provided
-    if (tableIdentifier) {
+    
+    if (tableFilter) {
       query += ' AND table_identifier = ?';
-      params.push(tableIdentifier);
+      params.push(tableFilter);
     }
-
-    query += ' ORDER BY table_identifier, default_visible DESC, display_name ASC';
+    
+    query += ' ORDER BY table_identifier, display_order';
 
     const columns = await queryAsync(query, params);
 
-    // Group columns by table identifier
-    const groupedColumns: {[key: string]: any[]} = {};
+    // Group columns by table identifier for easier consumption
+    const groupedColumns: { [key: string]: any[] } = {};
     columns.forEach((column: any) => {
       if (!groupedColumns[column.table_identifier]) {
         groupedColumns[column.table_identifier] = [];
@@ -48,27 +53,20 @@ export async function GET(request: NextRequest) {
       groupedColumns[column.table_identifier].push(column);
     });
 
-    logger.info({
-      userId: authResult.user.id,
-      tableIdentifier,
-      columnCount: columns.length,
-      tablesCount: Object.keys(groupedColumns).length,
-      event: 'columns_retrieved'
-    }, 'Table columns retrieved successfully');
-
     return NextResponse.json({
       success: true,
+      columns: columns,
       data: {
         columns: columns,
         grouped: groupedColumns,
-        total: columns.length
+        count: columns.length
       }
     });
 
   } catch (error) {
-    logger.error({ error: error instanceof Error ? error.message : String(error) }, 'Error retrieving table columns');
+    console.error('Error fetching table columns:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch table columns' },
       { status: 500 }
     );
   }
@@ -82,87 +80,82 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user has permission to manage columns
+    // Check for tables management permission
     if (!authResult.user.permissions?.includes('tables.manage_columns')) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
     const body = await request.json();
     const {
-      id,
       table_identifier,
       column_key,
+      column_label,
       column_type,
-      display_name,
-      data_source,
-      is_system_column = false,
+      is_sortable = false,
+      is_filterable = false,
       default_visible = true,
-      default_width,
-      sortable = true,
-      filterable = true,
-      groupable = false,
-      exportable = true,
-      render_component
+      display_order = 999
     } = body;
 
     // Validate required fields
-    if (!id || !table_identifier || !column_key || !column_type || !display_name || !data_source) {
+    if (!table_identifier || !column_key || !column_label || !column_type) {
       return NextResponse.json(
-        { error: 'Missing required fields: id, table_identifier, column_key, column_type, display_name, data_source' },
+        { error: 'Missing required fields: table_identifier, column_key, column_label, column_type' },
         { status: 400 }
       );
     }
 
-    // Validate column_type
-    const validColumnTypes = ['text', 'number', 'date', 'badge', 'user', 'team', 'custom'];
-    if (!validColumnTypes.includes(column_type)) {
+    // Check if column already exists
+    const existingColumn = await queryAsync(
+      'SELECT id FROM table_column_definitions WHERE table_identifier = ? AND column_key = ?',
+      [table_identifier, column_key]
+    );
+
+    if (existingColumn.length > 0) {
       return NextResponse.json(
-        { error: `Invalid column_type. Must be one of: ${validColumnTypes.join(', ')}` },
-        { status: 400 }
+        { error: 'Column definition already exists for this table' },
+        { status: 409 }
       );
     }
 
     // Insert new column definition
-    await runAsync(`
+    const result = await queryAsync(`
       INSERT INTO table_column_definitions (
-        id, table_identifier, column_key, column_type, display_name, data_source,
-        is_system_column, default_visible, default_width, sortable, filterable,
-        groupable, exportable, render_component, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        table_identifier, column_key, column_label, column_type,
+        is_sortable, is_filterable, default_visible, display_order,
+        created_by, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     `, [
-      id, table_identifier, column_key, column_type, display_name, data_source,
-      is_system_column ? 1 : 0, default_visible ? 1 : 0, default_width,
-      sortable ? 1 : 0, filterable ? 1 : 0, groupable ? 1 : 0, exportable ? 1 : 0,
-      render_component
+      table_identifier,
+      column_key,
+      column_label,
+      column_type,
+      is_sortable ? 1 : 0,
+      is_filterable ? 1 : 0,
+      default_visible ? 1 : 0,
+      display_order,
+      authResult.user.username
     ]);
-
-    logger.info({
-      userId: authResult.user.id,
-      columnId: id,
-      tableIdentifier: table_identifier,
-      columnKey: column_key,
-      columnType: column_type,
-      event: 'column_created'
-    }, 'Table column definition created successfully');
 
     return NextResponse.json({
       success: true,
-      message: 'Column definition created successfully',
-      id
-    });
+      data: {
+        id: (result as any).lastID,
+        table_identifier,
+        column_key,
+        column_label,
+        column_type,
+        is_sortable,
+        is_filterable,
+        default_visible,
+        display_order
+      }
+    }, { status: 201 });
 
   } catch (error) {
-    logger.error({ error: error instanceof Error ? error.message : String(error) }, 'Error creating table column');
-    
-    if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
-      return NextResponse.json(
-        { error: 'Column ID already exists' },
-        { status: 409 }
-      );
-    }
-    
+    console.error('Error creating table column definition:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to create table column definition' },
       { status: 500 }
     );
   }
