@@ -275,12 +275,9 @@ export function StaffTicketModal({
   const loadUsers = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      console.log('Current user object:', currentUser);
-      console.log('Current user team_id:', currentUser?.team_id);
       
-      // First, try to get the current user's team
+      // Load users from the current user's team only
       if (currentUser?.team_id) {
-        // Load only users from the same team
         const response = await fetch(`/api/developer/teams/${currentUser.team_id}/users`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -289,36 +286,21 @@ export function StaffTicketModal({
         
         if (response.ok) {
           const userData = await response.json();
-          console.log('Raw team user data:', userData);
           const filteredUsers = userData.filter((user: User) => user.username && user.active !== false);
-          console.log('Filtered team users:', filteredUsers);
           setUsers(filteredUsers);
-          return; // Success, exit early
         } else {
-          const errorText = await response.text();
-          console.error('Failed to load team users:', response.status, errorText);
+          console.error('Failed to load team users:', response.status);
+          // No fallback - if the user doesn't have proper permissions, they shouldn't see any users
+          setUsers([]);
         }
+      } else {
+        // User has no team assignment - they can't create tickets for others
+        setUsers([]);
       }
-      
-      // Fallback: Use current user only (don't try to load all users - requires admin permissions)
-      console.log('StaffTicketModal - Fallback: using current user only');
-      setUsers(currentUser ? [{
-        id: currentUser.id,
-        username: currentUser.username,
-        display_name: currentUser.display_name,
-        email: currentUser.email,
-        team_name: currentUser.team_id || 'Current User'
-      }] : []);
     } catch (error) {
       console.error('Failed to load users:', error);
-      // Final fallback: just current user
-      setUsers(currentUser ? [{
-        id: currentUser.id,
-        username: currentUser.username,
-        display_name: currentUser.display_name,
-        email: currentUser.email,
-        team_name: 'Current User'
-      }] : []);
+      // No fallback for security - users without proper access get empty list
+      setUsers([]);
     }
   };
 
