@@ -528,22 +528,26 @@ export default function TablesManagementPage() {
 
       {/* Main Content */}
       <Tabs defaultValue="configurations" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="configurations" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto p-1">
+          <TabsTrigger value="configurations" className="flex items-center gap-2 px-3 py-2 text-sm">
             <TableIcon className="h-4 w-4" />
-            Configurations
+            <span className="hidden sm:inline">Configurations</span>
+            <span className="sm:hidden">Config</span>
           </TabsTrigger>
-          <TabsTrigger value="columns" className="flex items-center gap-2">
+          <TabsTrigger value="columns" className="flex items-center gap-2 px-3 py-2 text-sm">
             <Columns className="h-4 w-4" />
-            Column Definitions
+            <span className="hidden sm:inline">Column Definitions</span>
+            <span className="sm:hidden">Columns</span>
           </TabsTrigger>
-          <TabsTrigger value="views" className="flex items-center gap-2">
+          <TabsTrigger value="views" className="flex items-center gap-2 px-3 py-2 text-sm">
             <Save className="h-4 w-4" />
-            Saved Views
+            <span className="hidden sm:inline">Saved Views</span>
+            <span className="sm:hidden">Views</span>
           </TabsTrigger>
-          <TabsTrigger value="demo" className="flex items-center gap-2">
+          <TabsTrigger value="demo" className="flex items-center gap-2 px-3 py-2 text-sm">
             <Play className="h-4 w-4" />
-            Live Demo
+            <span className="hidden sm:inline">Live Demo</span>
+            <span className="sm:hidden">Demo</span>
           </TabsTrigger>
         </TabsList>
 
