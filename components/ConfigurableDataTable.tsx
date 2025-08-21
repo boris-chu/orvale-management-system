@@ -241,7 +241,9 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
       }
 
       const columnsData = await columnsResponse.json();
+      console.log('Columns response:', columnsData);
       const tableColumns = columnsData.data?.grouped?.[tableIdentifier] || [];
+      console.log('Table columns for', tableIdentifier, ':', tableColumns);
       setColumns(tableColumns);
 
       // Fetch configuration
@@ -283,7 +285,7 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load table configuration';
-      setError(errorMessage);
+      setError(`Error: ${errorMessage}`);
       console.error('Error fetching table configuration:', err);
     } finally {
       setConfigLoading(false);
@@ -333,10 +335,10 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
 
       const baseColumn: GridColDef = {
         field: column.column_key,
-        headerName: column.display_name,
+        headerName: column.column_label || column.display_name,
         width,
-        sortable: column.sortable,
-        filterable: column.filterable,
+        sortable: column.is_sortable || column.sortable,
+        filterable: column.is_filterable || column.filterable,
         hideable: !column.is_system_column,
         resizable: true,
       };
@@ -720,7 +722,7 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
       
       {/* Advanced Filter Builder */}
       <AnimatePresence>
-        {showAdvancedFilter && (
+        {showAdvancedFilter && columns.length > 0 && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -732,11 +734,11 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
               <FilterBuilder
                 columns={columns.map(col => ({
                   column_key: col.column_key,
-                  display_name: col.display_name,
+                  display_name: col.column_label || col.display_name,
                   column_type: col.column_type,
-                  is_filterable: col.filterable
+                  is_filterable: col.is_filterable || col.filterable || false
                 }))}
-                initialFilter={advancedFilter}
+                initialFilter={advancedFilter || undefined}
                 onFilterChange={handleAdvancedFilterChange}
                 onApplyFilter={handleApplyAdvancedFilter}
               />
@@ -823,7 +825,7 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
                 }
                 label={
                   <Typography variant="body2">
-                    {column.display_name}
+                    {column.column_label || column.display_name}
                   </Typography>
                 }
                 sx={{ m: 0, width: '100%' }}
