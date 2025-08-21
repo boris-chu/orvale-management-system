@@ -760,7 +760,7 @@ export default function TablesManagementPage() {
       >
         <Button
           variant="ghost"
-          onClick={() => router.push('/admin')}
+          onClick={() => router.push('/developer')}
           className="text-gray-600 hover:text-gray-900 -ml-2"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
