@@ -479,6 +479,35 @@ export function StaffTicketModal({
     return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`;
   };
 
+  // Format employee number (e/c/t + 6 digits)
+  const formatEmployeeNumber = (value: string) => {
+    let formatted = value.toLowerCase();
+    
+    // Limit to 7 characters max
+    if (formatted.length > 7) {
+      formatted = formatted.slice(0, 7);
+    }
+    
+    if (formatted.length > 0) {
+      // Ensure first character is e, c, or t
+      const firstChar = formatted.charAt(0);
+      if (firstChar !== 'e' && firstChar !== 'c' && firstChar !== 't') {
+        formatted = '';
+      } else if (formatted.length > 1) {
+        // Ensure characters 2-7 are digits only
+        const numberPart = formatted.slice(1).replace(/\D/g, '');
+        formatted = firstChar + numberPart;
+        
+        // Limit to 6 digits after the letter
+        if (numberPart.length > 6) {
+          formatted = firstChar + numberPart.slice(0, 6);
+        }
+      }
+    }
+    
+    return formatted;
+  };
+
   // Handle phone number change
   const handlePhoneChange = (field: 'userPhone' | 'phone', value: string) => {
     const cleaned = value.replace(/\D/g, '').slice(0, 10);
@@ -486,6 +515,21 @@ export function StaffTicketModal({
       handleFieldChange('userPhone', cleaned);
     } else {
       setNewUserData(prev => ({ ...prev, phone: cleaned }));
+    }
+  };
+
+  // Handle employee number change
+  const handleEmployeeNumberChange = (field: 'userEmployeeNumber' | 'employeeNumber', value: string) => {
+    const formatted = formatEmployeeNumber(value);
+    if (field === 'userEmployeeNumber') {
+      handleFieldChange('userEmployeeNumber', formatted);
+    } else {
+      setNewUserData(prev => ({ 
+        ...prev, 
+        employeeNumber: formatted,
+        // Auto-populate username from employee number if username is empty
+        username: prev.username === '' ? formatted : prev.username
+      }));
     }
   };
 
@@ -787,14 +831,18 @@ export function StaffTicketModal({
                         </Paper>
                       )}
                     </Box>
-                    <Button 
-                      variant="outlined" 
-                      sx={{ minWidth: 'auto' }}
-                      onClick={() => setShowNewUserDialog(true)}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      New User
-                    </Button>
+                    {/* Only show New User button if user has permission */}
+                    {(currentUser?.permissions?.includes('ticket.create_new_users') || 
+                      currentUser?.permissions?.includes('admin.manage_users')) && (
+                      <Button 
+                        variant="outlined" 
+                        sx={{ minWidth: 'auto' }}
+                        onClick={() => setShowNewUserDialog(true)}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        New User
+                      </Button>
+                    )}
                   </Box>
                   
                   {formData.submittedBy && (
@@ -840,10 +888,12 @@ export function StaffTicketModal({
                   <TextField
                     label="Employee Number"
                     value={formData.userEmployeeNumber}
-                    onChange={(e) => handleFieldChange('userEmployeeNumber', e.target.value)}
-                    placeholder="Employee ID or badge number"
+                    onChange={(e) => handleEmployeeNumberChange('userEmployeeNumber', e.target.value)}
+                    placeholder="e123456"
                     size="small"
                     fullWidth
+                    inputProps={{ maxLength: 7, pattern: '[ect][0-9]{6}' }}
+                    helperText="Format: e/c/t followed by 6 digits"
                   />
                   <TextField
                     label="Phone (10 digits)"
@@ -1160,10 +1210,12 @@ export function StaffTicketModal({
           <TextField
             label="Employee Number"
             value={newUserData.employeeNumber}
-            onChange={(e) => setNewUserData(prev => ({ ...prev, employeeNumber: e.target.value }))}
-            placeholder="EMP123456"
+            onChange={(e) => handleEmployeeNumberChange('employeeNumber', e.target.value)}
+            placeholder="e123456"
             size="small"
             fullWidth
+            inputProps={{ maxLength: 7, pattern: '[ect][0-9]{6}' }}
+            helperText="Format: e/c/t followed by 6 digits"
           />
         </Box>
         

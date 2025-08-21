@@ -143,6 +143,12 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     category: 'Tickets', 
     description: 'Access internal staff notes and metadata\n• Staff-only communication\n• Internal documentation\n• Administrative tracking\n• Audit trail information' 
   },
+  { 
+    id: 'ticket.create_new_users', 
+    name: 'Create New Users in Tickets', 
+    category: 'Tickets', 
+    description: 'Create new user accounts when creating tickets\n• Add users not in system\n• Handle walk-in requests\n• Support unregistered employees\n• ⚠️ Creates system access' 
+  },
   
   // Queue Permissions
   { 
