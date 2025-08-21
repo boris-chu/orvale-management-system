@@ -1,11 +1,42 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { DataGrid, GridColDef, GridRowParams, GridSortModel, GridFilterModel, GridPaginationModel, GridRowSelectionModel, GridCallbackDetails } from '@mui/x-data-grid';
-import { Box, Typography, Alert, Skeleton, Chip, Avatar } from '@mui/material';
+import { DataGrid, GridColDef, GridRowParams, GridSortModel, GridFilterModel, GridPaginationModel, GridRowSelectionModel, GridCallbackDetails, GridToolbar } from '@mui/x-data-grid';
+import { 
+  Box, 
+  Typography, 
+  Alert, 
+  Skeleton, 
+  Chip, 
+  Avatar, 
+  Button, 
+  Menu, 
+  MenuItem, 
+  FormControlLabel, 
+  Checkbox, 
+  TextField, 
+  Select, 
+  FormControl, 
+  InputLabel, 
+  Stack,
+  Paper,
+  Divider,
+  IconButton,
+  Tooltip
+} from '@mui/material';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { 
+  FilterList, 
+  ViewColumn, 
+  FileDownload, 
+  Refresh, 
+  Settings,
+  MoreVert,
+  Search,
+  Clear
+} from '@mui/icons-material';
 
 // Type definitions
 interface TableColumn {
@@ -174,6 +205,13 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
   const [sortModel, setSortModel] = useState<GridSortModel>([]);
   const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [] });
   const [selectionModel, setSelectionModel] = useState<GridRowSelectionModel>({ type: 'include', ids: new Set() });
+  
+  // UI Control States
+  const [columnMenuAnchor, setColumnMenuAnchor] = useState<null | HTMLElement>(null);
+  const [filterMenuAnchor, setFilterMenuAnchor] = useState<null | HTMLElement>(null);
+  const [quickFilterValue, setQuickFilterValue] = useState('');
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set());
+  const [activeFilters, setActiveFilters] = useState<Array<{ field: string; operator: string; value: any }>>([]);
 
   // Fetch table configuration and columns
   const fetchConfiguration = useCallback(async () => {
@@ -252,6 +290,22 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
   useEffect(() => {
     fetchConfiguration();
   }, [fetchConfiguration, refreshKey]);
+
+  // Initialize visible columns from configuration
+  useEffect(() => {
+    if (configuration && columns.length > 0) {
+      const configColumns = configuration.configuration?.columns || [];
+      const visible = new Set(
+        columns
+          .filter(column => {
+            const configColumn = configColumns.find(c => c.key === column.column_key);
+            return configColumn ? configColumn.visible : column.default_visible;
+          })
+          .map(column => column.column_key)
+      );
+      setVisibleColumns(visible);
+    }
+  }, [configuration, columns]);
 
   // Build DataGrid columns from configuration
   const gridColumns = useMemo((): GridColDef[] => {
@@ -408,6 +462,61 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
     onSelectionChange?.(newSelection);
   }, [onSelectionChange]);
 
+  // Handle column visibility toggle
+  const handleColumnVisibilityChange = (columnKey: string, visible: boolean) => {
+    const newVisibleColumns = new Set(visibleColumns);
+    if (visible) {
+      newVisibleColumns.add(columnKey);
+    } else {
+      newVisibleColumns.delete(columnKey);
+    }
+    setVisibleColumns(newVisibleColumns);
+    
+    // Update configuration
+    if (configuration) {
+      const updatedColumns = columns.map((column, index) => ({
+        key: column.column_key,
+        visible: newVisibleColumns.has(column.column_key),
+        width: 150,
+        order: index
+      }));
+      
+      handleConfigurationUpdate({
+        columns: updatedColumns
+      });
+    }
+  };
+
+  // Handle quick filter
+  const handleQuickFilterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setQuickFilterValue(value);
+    
+    if (value.trim()) {
+      const filterItems = [{
+        field: 'quickFilter',
+        operator: 'contains',
+        value: value.trim()
+      }];
+      setFilterModel({ items: filterItems, quickFilterValues: [value.trim()] });
+    } else {
+      setFilterModel({ items: [] });
+    }
+  };
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    setQuickFilterValue('');
+    setFilterModel({ items: [] });
+    setActiveFilters([]);
+  };
+
+  // Export functionality
+  const handleExport = (format: 'csv' | 'excel') => {
+    // Implementation would depend on your export requirements
+    console.log(`Exporting as ${format}`);
+  };
+
   // Show loading state
   if (configLoading) {
     return (
@@ -440,62 +549,234 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
   }
 
   return (
-    <Box className={cn("w-full", className)} sx={{ height }}>
-      <DataGrid
-        rows={data}
-        columns={gridColumns}
-        paginationModel={paginationModel}
-        onPaginationModelChange={handlePaginationChange}
-        sortModel={sortModel}
-        onSortModelChange={handleSortChange}
-        filterModel={filterModel}
-        onFilterModelChange={handleFilterChange}
-        loading={loading}
-        onRowClick={onRowClick}
-        checkboxSelection={enableSelection}
-        rowSelectionModel={selectionModel}
-        onRowSelectionModelChange={handleSelectionChange}
-        disableRowSelectionOnClick={!enableSelection}
-        pageSizeOptions={[10, 25, 50, 100]}
-        density="compact"
-        autoHeight={false}
-        getRowId={(row) => row.id || row.ticket_id || row.username || JSON.stringify(row)}
-        sx={{
-          border: 1,
-          borderColor: 'divider',
-          '& .MuiDataGrid-cell': {
+    <Box className={cn("w-full", className)}>
+      {/* Enhanced Toolbar */}
+      <Paper 
+        elevation={1} 
+        sx={{ 
+          p: 2, 
+          mb: 1, 
+          borderRadius: 1,
+          background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
+        }}
+      >
+        <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+          {/* Left side - Search and Filters */}
+          <Stack direction="row" spacing={2} alignItems="center" flex={1}>
+            {/* Quick Search */}
+            <TextField
+              size="small"
+              placeholder={`Search ${tableIdentifier.replace('_', ' ')}...`}
+              value={quickFilterValue}
+              onChange={handleQuickFilterChange}
+              InputProps={{
+                startAdornment: <Search sx={{ color: 'text.secondary', mr: 1 }} />,
+                endAdornment: quickFilterValue && (
+                  <IconButton size="small" onClick={handleClearFilters}>
+                    <Clear fontSize="small" />
+                  </IconButton>
+                )
+              }}
+              sx={{ minWidth: 250 }}
+            />
+            
+            {/* Filter Button */}
+            <Button
+              variant="outlined"
+              startIcon={<FilterList />}
+              onClick={(e) => setFilterMenuAnchor(e.currentTarget)}
+              size="small"
+            >
+              Filters {activeFilters.length > 0 && `(${activeFilters.length})`}
+            </Button>
+            
+            {/* Active Filter Chips */}
+            {activeFilters.map((filter, index) => (
+              <Chip
+                key={index}
+                label={`${filter.field}: ${filter.value}`}
+                size="small"
+                onDelete={() => {
+                  const newFilters = activeFilters.filter((_, i) => i !== index);
+                  setActiveFilters(newFilters);
+                }}
+                color="primary"
+                variant="outlined"
+              />
+            ))}
+          </Stack>
+          
+          {/* Right side - Actions */}
+          <Stack direction="row" spacing={1}>
+            {/* Column Visibility */}
+            <Tooltip title="Show/Hide Columns">
+              <IconButton
+                size="small"
+                onClick={(e) => setColumnMenuAnchor(e.currentTarget)}
+              >
+                <ViewColumn />
+              </IconButton>
+            </Tooltip>
+            
+            {/* Export */}
+            <Tooltip title="Export Data">
+              <IconButton size="small" onClick={() => handleExport('csv')}>
+                <FileDownload />
+              </IconButton>
+            </Tooltip>
+            
+            {/* Refresh */}
+            <Tooltip title="Refresh Data">
+              <IconButton size="small" onClick={() => window.location.reload()}>
+                <Refresh />
+              </IconButton>
+            </Tooltip>
+            
+            {/* Settings */}
+            <Tooltip title="Table Settings">
+              <IconButton size="small">
+                <Settings />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        </Stack>
+      </Paper>
+      
+      {/* DataGrid */}
+      <Box sx={{ height: typeof height === 'number' ? height : height }}>
+        <DataGrid
+          rows={data}
+          columns={gridColumns}
+          paginationModel={paginationModel}
+          onPaginationModelChange={handlePaginationChange}
+          sortModel={sortModel}
+          onSortModelChange={handleSortChange}
+          filterModel={filterModel}
+          onFilterModelChange={handleFilterChange}
+          loading={loading}
+          onRowClick={onRowClick}
+          checkboxSelection={enableSelection}
+          rowSelectionModel={selectionModel}
+          onRowSelectionModelChange={handleSelectionChange}
+          disableRowSelectionOnClick={!enableSelection}
+          pageSizeOptions={[10, 25, 50, 100]}
+          density="comfortable"
+          autoHeight={false}
+          getRowId={(row) => row.id || row.ticket_id || row.username || JSON.stringify(row)}
+          sx={{
+            border: 1,
             borderColor: 'divider',
-          },
-          '& .MuiDataGrid-row:hover': {
-            backgroundColor: 'action.hover',
-          },
-          '& .MuiDataGrid-columnHeaders': {
-            backgroundColor: 'background.paper',
-            borderColor: 'divider',
-          },
+            borderRadius: 1,
+            '& .MuiDataGrid-cell': {
+              borderColor: 'divider',
+              py: 1,
+            },
+            '& .MuiDataGrid-row:hover': {
+              backgroundColor: 'rgba(25, 118, 210, 0.04)',
+            },
+            '& .MuiDataGrid-row:nth-of-type(even)': {
+              backgroundColor: 'rgba(0, 0, 0, 0.01)',
+            },
+            '& .MuiDataGrid-columnHeaders': {
+              backgroundColor: 'rgba(25, 118, 210, 0.08)',
+              borderColor: 'divider',
+              fontWeight: 600,
+            },
+            '& .MuiDataGrid-footerContainer': {
+              borderColor: 'divider',
+              backgroundColor: 'background.paper',
+            },
+          }}
+          slots={{
+            toolbar: GridToolbar
+          }}
+          slotProps={{
+            pagination: {
+              showFirstButton: true,
+              showLastButton: true,
+            },
+            toolbar: {
+              showQuickFilter: false, // We have our own search
+              printOptions: { disableToolbarButton: true },
+            },
+          }}
+          initialState={{
+            pagination: {
+              paginationModel,
+            },
+            sorting: {
+              sortModel,
+            },
+            filter: {
+              filterModel,
+            },
+          }}
+        />
+      </Box>
+      
+      {/* Column Visibility Menu */}
+      <Menu
+        anchorEl={columnMenuAnchor}
+        open={Boolean(columnMenuAnchor)}
+        onClose={() => setColumnMenuAnchor(null)}
+        PaperProps={{
+          sx: { maxHeight: 400, width: 250 }
         }}
-        slotProps={{
-          pagination: {
-            showFirstButton: true,
-            showLastButton: true,
-          },
-          toolbar: {
-            showQuickFilter: true,
-            quickFilterProps: { debounceMs: 500 },
-          },
+      >
+        <Box sx={{ p: 1 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+            Show/Hide Columns
+          </Typography>
+          <Divider sx={{ mb: 1 }} />
+          {columns.map((column) => (
+            <MenuItem key={column.column_key} sx={{ py: 0.5 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={visibleColumns.has(column.column_key)}
+                    onChange={(e) => handleColumnVisibilityChange(column.column_key, e.target.checked)}
+                  />
+                }
+                label={
+                  <Typography variant="body2">
+                    {column.display_name}
+                  </Typography>
+                }
+                sx={{ m: 0, width: '100%' }}
+              />
+            </MenuItem>
+          ))}
+        </Box>
+      </Menu>
+      
+      {/* Filter Menu */}
+      <Menu
+        anchorEl={filterMenuAnchor}
+        open={Boolean(filterMenuAnchor)}
+        onClose={() => setFilterMenuAnchor(null)}
+        PaperProps={{
+          sx: { minWidth: 300, maxHeight: 400 }
         }}
-        initialState={{
-          pagination: {
-            paginationModel,
-          },
-          sorting: {
-            sortModel,
-          },
-          filter: {
-            filterModel,
-          },
-        }}
-      />
+      >
+        <Box sx={{ p: 2 }}>
+          <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+            Advanced Filters
+          </Typography>
+          
+          {/* Filter fields would go here */}
+          <Typography variant="body2" color="text.secondary">
+            Advanced filtering coming soon...
+          </Typography>
+          
+          <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+            <Button size="small" variant="contained">Apply</Button>
+            <Button size="small" variant="outlined" onClick={handleClearFilters}>
+              Clear All
+            </Button>
+          </Stack>
+        </Box>
+      </Menu>
     </Box>
   );
 };
