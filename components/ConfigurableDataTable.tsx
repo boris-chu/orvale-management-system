@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { DataGrid, GridColDef, GridRowParams, GridSortModel, GridFilterModel, GridPaginationModel, GridRowSelectionModel, GridCallbackDetails, GridToolbar } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridRowParams, GridSortModel, GridFilterModel, GridPaginationModel, GridRowSelectionModel, GridCallbackDetails } from '@mui/x-data-grid';
 import { 
   Box, 
   Typography, 
@@ -687,17 +687,10 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
               backgroundColor: 'background.paper',
             },
           }}
-          slots={{
-            toolbar: GridToolbar
-          }}
-          slotProps={{
+          componentsProps={{
             pagination: {
               showFirstButton: true,
               showLastButton: true,
-            },
-            toolbar: {
-              showQuickFilter: false, // We have our own search
-              printOptions: { disableToolbarButton: true },
             },
           }}
           initialState={{
