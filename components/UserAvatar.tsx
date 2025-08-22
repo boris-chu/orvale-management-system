@@ -9,10 +9,14 @@ interface UserAvatarProps {
     display_name?: string;
     profile_picture?: string;
     email?: string;
+    username?: string;
   };
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   className?: string;
   onClick?: () => void;
+  showPresenceStatus?: boolean;
+  presenceStatus?: 'online' | 'away' | 'busy' | 'offline';
+  // Legacy support
   showOnlineIndicator?: boolean;
 }
 
@@ -24,12 +28,26 @@ const sizeClasses = {
   '2xl': 'h-24 w-24 text-xl'
 };
 
-const onlineIndicatorSize = {
+const presenceIndicatorSize = {
   sm: 'w-2 h-2',
   md: 'w-2.5 h-2.5',
   lg: 'w-3 h-3',
   xl: 'w-3.5 h-3.5',
   '2xl': 'w-4 h-4'
+};
+
+const presenceColors = {
+  online: 'bg-green-500',
+  away: 'bg-yellow-500', 
+  busy: 'bg-red-500',
+  offline: 'bg-gray-400'
+};
+
+const presenceLabels = {
+  online: 'Online',
+  away: 'Away',
+  busy: 'Busy',
+  offline: 'Offline'
 };
 
 const getInitials = (name?: string): string => {
@@ -70,10 +88,18 @@ export function UserAvatar({
   size = 'lg', 
   className, 
   onClick,
+  showPresenceStatus = false,
+  presenceStatus = 'offline',
+  // Legacy support
   showOnlineIndicator = false 
 }: UserAvatarProps) {
   const initials = getInitials(user.display_name);
   const gradient = getGradientFromName(user.display_name);
+  
+  // Show presence if either new prop or legacy prop is true
+  const shouldShowPresence = showPresenceStatus || showOnlineIndicator;
+  // Use legacy behavior for showOnlineIndicator (green = online)
+  const effectiveStatus = showOnlineIndicator && !showPresenceStatus ? 'online' : presenceStatus;
   
   return (
     <div className="relative">
@@ -102,11 +128,32 @@ export function UserAvatar({
         </AvatarFallback>
       </Avatar>
       
-      {showOnlineIndicator && (
-        <div className={cn(
-          'absolute -bottom-0.5 -right-0.5 bg-green-500 border-2 border-white rounded-full',
-          onlineIndicatorSize[size]
-        )}></div>
+      {shouldShowPresence && effectiveStatus !== 'offline' && (
+        <div 
+          className={cn(
+            'absolute -bottom-0.5 -right-0.5 border-2 border-white rounded-full',
+            presenceIndicatorSize[size],
+            presenceColors[effectiveStatus]
+          )}
+          title={`${user.display_name || 'User'} - ${presenceLabels[effectiveStatus]}`}
+        >
+          {/* Add special styling for busy status */}
+          {effectiveStatus === 'busy' && (
+            <div className="absolute inset-0 rounded-full bg-white" style={{
+              clipPath: 'polygon(0 0, 100% 100%, 0 100%)'
+            }}></div>
+          )}
+        </div>
+      )}
+      
+      {shouldShowPresence && effectiveStatus === 'offline' && (
+        <div 
+          className={cn(
+            'absolute -bottom-0.5 -right-0.5 border-2 border-white rounded-full bg-gray-400',
+            presenceIndicatorSize[size]
+          )}
+          title={`${user.display_name || 'User'} - Offline`}
+        ></div>
       )}
     </div>
   );
