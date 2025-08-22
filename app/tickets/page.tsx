@@ -1427,6 +1427,7 @@ export default function TicketsPage() {
                   <div><strong>Name:</strong> {selectedTicket.user_name}</div>
                   <div><strong>Employee #:</strong> {selectedTicket.employee_number}</div>
                   <div><strong>Phone:</strong> {selectedTicket.phone_number}</div>
+                  <div><strong>Location:</strong> {selectedTicket.location}</div>
                   {selectedTicket.cubicle_room && (
                     <div><strong>Cubicle/Room:</strong> {selectedTicket.cubicle_room}</div>
                   )}

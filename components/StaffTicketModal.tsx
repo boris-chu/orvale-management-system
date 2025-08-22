@@ -76,7 +76,6 @@ interface StaffTicketFormData {
 
 interface NewUserFormData {
   displayName: string;
-  username: string;
   email: string;
   employeeNumber: string;
   phone: string;
@@ -194,7 +193,6 @@ export function StaffTicketModal({
   const [showNewUserDialog, setShowNewUserDialog] = useState(false);
   const [newUserData, setNewUserData] = useState<NewUserFormData>({
     displayName: '',
-    username: '',
     email: '',
     employeeNumber: '',
     phone: '',
@@ -443,10 +441,10 @@ export function StaffTicketModal({
   const handleNewUserSubmit = async () => {
     try {
       // Validate required fields
-      if (!newUserData.displayName || !newUserData.username || !newUserData.email) {
+      if (!newUserData.displayName || !newUserData.email) {
         toast({
           title: 'Validation Error',
-          description: 'Name, Username, and Email are required fields.',
+          description: 'Name and Email are required fields.',
           variant: 'destructive'
         });
         return;
@@ -458,8 +456,9 @@ export function StaffTicketModal({
       const token = localStorage.getItem('authToken');
       
       // Map form field names to API field names
+      // Use employee number as username since they're essentially the same
       const apiUserData = {
-        username: newUserData.username,
+        username: newUserData.employeeNumber || newUserData.displayName.toLowerCase().replace(/\s+/g, '.'),
         display_name: newUserData.displayName,
         email: newUserData.email,
         employee_number: newUserData.employeeNumber,
@@ -498,9 +497,10 @@ export function StaffTicketModal({
       console.log('✅ Ticket user created:', result);
 
       // Populate the form with the new user information
+      // Use employee number as the submittedBy identifier
       setFormData(prev => ({
         ...prev,
-        submittedBy: newUserData.username,
+        submittedBy: newUserData.employeeNumber || newUserData.displayName.toLowerCase().replace(/\s+/g, '.'),
         userDisplayName: newUserData.displayName,
         userEmail: newUserData.email,
         userEmployeeNumber: newUserData.employeeNumber,
@@ -516,7 +516,6 @@ export function StaffTicketModal({
       // Reset form and close dialog
       setNewUserData({
         displayName: '',
-        username: '',
         email: '',
         employeeNumber: '',
         phone: '',
@@ -725,9 +724,7 @@ export function StaffTicketModal({
     } else {
       setNewUserData(prev => ({ 
         ...prev, 
-        employeeNumber: formatted,
-        // Auto-populate username from employee number if username is empty
-        username: prev.username === '' ? formatted : prev.username
+        employeeNumber: formatted
       }));
     }
   };
@@ -1473,21 +1470,12 @@ export function StaffTicketModal({
           Create a new user account for the ticket system. Required fields are marked with *.
         </Typography>
         
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
+        <Box sx={{ mb: 2 }}>
           <TextField
             label="Full Name *"
             value={newUserData.displayName}
             onChange={(e) => setNewUserData(prev => ({ ...prev, displayName: e.target.value }))}
             placeholder="John Doe"
-            size="small"
-            fullWidth
-            required
-          />
-          <TextField
-            label="Username *"
-            value={newUserData.username}
-            onChange={(e) => setNewUserData(prev => ({ ...prev, username: e.target.value }))}
-            placeholder="john.doe"
             size="small"
             fullWidth
             required
@@ -1619,7 +1607,7 @@ export function StaffTicketModal({
           onClick={handleNewUserSubmit}
           variant="contained" 
           color="primary"
-          disabled={!newUserData.displayName || !newUserData.username || !newUserData.email}
+          disabled={!newUserData.displayName || !newUserData.email}
         >
           Create User
         </Button>
