@@ -71,8 +71,12 @@ export const generateToken = (user: User): string => {
 
 export const verifyToken = (token: string): any => {
     try {
-        return jwt.verify(token, JWT_SECRET);
+        console.log('🔐 Verifying token with secret length:', JWT_SECRET.length);
+        const decoded = jwt.verify(token, JWT_SECRET);
+        console.log('✅ Token verified successfully for user:', decoded.username);
+        return decoded;
     } catch (error) {
+        console.log('❌ Token verification failed:', error.message);
         return null;
     }
 };

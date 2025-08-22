@@ -64,10 +64,14 @@ export async function GET(request: NextRequest) {
         c.type = 'public' 
         OR ccm.user_id IS NOT NULL 
         OR c.created_by = ?
-        OR ? = ANY(SELECT permission FROM role_permissions rp JOIN roles r ON rp.role_id = r.id JOIN users u ON u.role_id = r.id WHERE u.username = ? AND permission = 'chat.manage_channels')
+        OR EXISTS (
+          SELECT 1 FROM role_permissions rp 
+          JOIN users u ON u.role = rp.role_id 
+          WHERE u.username = ? AND rp.permission_id = 'chat.manage_channels'
+        )
       )
     `
-    params.push(authResult.user.username, authResult.user.username, authResult.user.username)
+    params.push(authResult.user.username, authResult.user.username)
 
     query += ' ORDER BY c.updated_at DESC'
 
