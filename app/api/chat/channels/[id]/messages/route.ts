@@ -84,23 +84,23 @@ export async function GET(
       WHERE cm.channel_id = ?
     `
 
-    const params: any[] = [channelId]
+    const queryParams: any[] = [channelId]
 
     // Add cursor-based pagination
     if (before) {
       messagesQuery += ' AND cm.created_at < ?'
-      params.push(before)
+      queryParams.push(before)
     }
 
     if (after) {
       messagesQuery += ' AND cm.created_at > ?'
-      params.push(after)
+      queryParams.push(after)
     }
 
     messagesQuery += ' ORDER BY cm.created_at DESC LIMIT ?'
-    params.push(limit)
+    queryParams.push(limit)
 
-    const messages = await queryAsync(messagesQuery, params)
+    const messages = await queryAsync(messagesQuery, queryParams)
 
     // Parse reactions JSON
     const messagesWithReactions = messages.map(message => ({

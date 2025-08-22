@@ -322,103 +322,101 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
                 <X className="h-3 w-3" />
               </Button>
             </div>
-          </>
-        )}
-      </div>
+          </div>
 
-      {/* Content */}
-      {isOpen && !isCollapsed && (
-        <div className="flex flex-col h-full">
-          {/* Conversations List */}
-          <div className="flex-1 min-h-0">
-            <ScrollArea className="h-full">
-              {loading ? (
-                <div className="p-4 text-center">
-                  <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2 text-blue-600" />
-                  <p className="text-xs text-gray-600">Loading...</p>
-                </div>
-              ) : conversations.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">
-                  <MessageCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                  <p className="text-xs">No recent conversations</p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onOpenFullChat}
-                    className="mt-2 text-xs"
-                  >
-                    Start chatting
-                  </Button>
-                </div>
-              ) : (
-                <div className="p-2 space-y-1">
-                  {conversations.map((conversation) => (
-                    <button
-                      key={conversation.id}
-                      onClick={() => setSelectedConversation(conversation)}
-                      className={cn(
-                        "w-full text-left p-2 rounded hover:bg-gray-50 transition-colors",
-                        selectedConversation?.id === conversation.id && "bg-blue-50",
-                        conversation.unread_count > 0 && "bg-blue-25"
-                      )}
-                    >
-                      <div className="flex items-center space-x-2">
-                        {/* Icon or Avatar */}
-                        {conversation.type === 'direct' && conversation.participants?.[0] ? (
-                          <UserAvatar
-                            user={conversation.participants[0]}
-                            size="sm"
-                            showPresenceStatus={true}
-                            presenceStatus={conversation.participants[0].presence_status || 'offline'}
-                          />
-                        ) : (
-                          <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center">
-                            <Hash className="h-3 w-3 text-gray-500" />
-                          </div>
-                        )}
-
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className={cn(
-                              "text-xs font-medium truncate",
-                              conversation.unread_count > 0 && "font-semibold"
-                            )}>
-                              {conversation.type === 'direct' 
-                                ? conversation.participants?.[0]?.display_name || conversation.name
-                                : conversation.name
-                              }
-                            </span>
-                            {conversation.unread_count > 0 && (
-                              <Badge variant="destructive" className="text-xs px-1 py-0 h-3 min-w-3">
-                                {conversation.unread_count > 9 ? '9+' : conversation.unread_count}
-                              </Badge>
+          {/* Content */}
+          {!isCollapsed && (
+            <div className="flex flex-col h-full">
+              {/* Conversations List */}
+              <div className="flex-1 min-h-0">
+                <ScrollArea className="h-full">
+                  {loading ? (
+                    <div className="p-4 text-center">
+                      <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2 text-blue-600" />
+                      <p className="text-xs text-gray-600">Loading...</p>
+                    </div>
+                  ) : conversations.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500">
+                      <MessageCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                      <p className="text-xs">No recent conversations</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onOpenFullChat}
+                        className="mt-2 text-xs"
+                      >
+                        Start chatting
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="p-2 space-y-1">
+                      {conversations.map((conversation) => (
+                        <button
+                          key={conversation.id}
+                          onClick={() => setSelectedConversation(conversation)}
+                          className={cn(
+                            "w-full text-left p-2 rounded hover:bg-gray-50 transition-colors",
+                            selectedConversation?.id === conversation.id && "bg-blue-50",
+                            conversation.unread_count > 0 && "bg-blue-25"
+                          )}
+                        >
+                          <div className="flex items-center space-x-2">
+                            {/* Icon or Avatar */}
+                            {conversation.type === 'direct' && conversation.participants?.[0] ? (
+                              <UserAvatar
+                                user={conversation.participants[0]}
+                                size="sm"
+                                showPresenceStatus={true}
+                                presenceStatus={conversation.participants[0].presence_status || 'offline'}
+                              />
+                            ) : (
+                              <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center">
+                                <Hash className="h-3 w-3 text-gray-500" />
+                              </div>
                             )}
-                          </div>
-                          
-                          {conversation.last_message && (
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs text-gray-500 truncate">
-                                {conversation.last_message_by && conversation.last_message_by !== user.display_name && (
-                                  <span className="font-medium">{conversation.last_message_by}: </span>
-                                )}
-                                {conversation.last_message}
-                              </p>
-                              {conversation.last_message_at && (
-                                <span className="text-xs text-gray-400 ml-1 flex-shrink-0">
-                                  {formatDistanceToNow(new Date(conversation.last_message_at), { addSuffix: false })}
+
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className={cn(
+                                  "text-xs font-medium truncate",
+                                  conversation.unread_count > 0 && "font-semibold"
+                                )}>
+                                  {conversation.type === 'direct' 
+                                    ? conversation.participants?.[0]?.display_name || conversation.name
+                                    : conversation.name
+                                  }
                                 </span>
+                                {conversation.unread_count > 0 && (
+                                  <Badge variant="destructive" className="text-xs px-1 py-0 h-3 min-w-3">
+                                    {conversation.unread_count > 9 ? '9+' : conversation.unread_count}
+                                  </Badge>
+                                )}
+                              </div>
+                              
+                              {conversation.last_message && (
+                                <div className="flex items-center justify-between">
+                                  <p className="text-xs text-gray-500 truncate">
+                                    {conversation.last_message_by && conversation.last_message_by !== user.display_name && (
+                                      <span className="font-medium">{conversation.last_message_by}: </span>
+                                    )}
+                                    {conversation.last_message}
+                                  </p>
+                                  {conversation.last_message_at && (
+                                    <span className="text-xs text-gray-400 ml-1 flex-shrink-0">
+                                      {formatDistanceToNow(new Date(conversation.last_message_at), { addSuffix: false })}
+                                    </span>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
 
           {/* Quick Message Input */}
           {isExpanded && selectedConversation && (
@@ -469,6 +467,8 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
               </span>
             </Button>
           </div>
+            </div>
+          )}
         </motion.div>
       )}
     </div>
