@@ -256,6 +256,15 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString();
     const submittedDate = ticketData.submittedDate || now;
     const createdByStaff = ticketData.createdByStaff || authResult.user.username;
+    
+    // Log the user data being used for debugging
+    console.log('🧪 Staff ticket user data:', {
+      submittedBy: ticketData.submittedBy,
+      userDisplayName: ticketData.userDisplayName,
+      userEmployeeNumber: ticketData.userEmployeeNumber,
+      finalUserName: ticketData.userDisplayName || ticketData.submittedBy,
+      finalEmployeeNumber: ticketData.userEmployeeNumber || ticketData.submittedBy
+    });
 
     // Priority is stored as text in the database, not numeric
 
@@ -298,9 +307,9 @@ export async function POST(request: NextRequest) {
       ticketData.subSubcategory || null,        // Map subSubcategory → sub_subcategory  
       ticketData.priority || 'medium',
       ticketData.status || 'pending',
-      ticketData.submittedBy,
+      ticketData.userDisplayName || ticketData.submittedBy, // Use display name if available, fallback to submittedBy
       authResult.user.display_name || createdByStaff, // Request Creator = Staff who created it
-      ticketData.userEmployeeNumber || null,
+      ticketData.userEmployeeNumber || ticketData.submittedBy, // Use employee number if available, fallback to submittedBy
       ticketData.userPhone || null,
       ticketData.userLocation || null,
       ticketData.userCubicleRoom || null,
