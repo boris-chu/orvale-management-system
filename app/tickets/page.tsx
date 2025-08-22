@@ -132,6 +132,7 @@ export default function TicketsPage() {
   const [loadingAttachments, setLoadingAttachments] = useState(false);
   const [ticketComments, setTicketComments] = useState<any[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [unreadCommentsCount, setUnreadCommentsCount] = useState(0);
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
   const [attachmentsToDelete, setAttachmentsToDelete] = useState<number[]>([]);
   const [uploadingAttachments, setUploadingAttachments] = useState(false);
@@ -823,6 +824,7 @@ export default function TicketsPage() {
       if (response.ok) {
         const data = await response.json();
         setTicketComments(data.comments || []);
+        setUnreadCommentsCount(data.unread_count || 0);
       }
     } catch (error) {
       console.error('Error loading comments:', error);
@@ -881,6 +883,24 @@ export default function TicketsPage() {
       console.error('Error deleting comment:', error);
       showNotification('Failed to delete comment', 'error');
       throw error;
+    }
+  };
+
+  const markCommentsAsRead = async () => {
+    if (!selectedTicket) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/tickets/${selectedTicket.id}/comments/read`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        setUnreadCommentsCount(0);
+      }
+    } catch (error) {
+      console.error('Error marking comments as read:', error);
     }
   };
 
@@ -1713,8 +1733,10 @@ export default function TicketsPage() {
         }}
         ticketComments={ticketComments}
         loadingComments={loadingComments}
+        unreadCommentsCount={unreadCommentsCount}
         onAddComment={addTicketComment}
         onDeleteComment={deleteTicketComment}
+        onMarkCommentsRead={markCommentsAsRead}
       />
 
 

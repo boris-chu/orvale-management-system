@@ -155,8 +155,10 @@ interface SharedTicketDetailsModalProps {
   // Comment functions
   ticketComments: TicketComment[];
   loadingComments: boolean;
+  unreadCommentsCount?: number;
   onAddComment?: (commentText: string) => Promise<void>;
   onDeleteComment?: (commentId: number) => Promise<void>;
+  onMarkCommentsRead?: () => Promise<void>;
 }
 
 export function SharedTicketDetailsModal({
@@ -198,8 +200,10 @@ export function SharedTicketDetailsModal({
   onFileDelete,
   ticketComments,
   loadingComments,
+  unreadCommentsCount = 0,
   onAddComment,
   onDeleteComment,
+  onMarkCommentsRead,
 }: SharedTicketDetailsModalProps) {
   const [newComment, setNewComment] = useState('');
   const [addingComment, setAddingComment] = useState(false);
@@ -323,10 +327,24 @@ export function SharedTicketDetailsModal({
             <TabsTrigger 
               value="notes" 
               className="flex items-center gap-2"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                // Mark comments as read when user clicks on comments tab
+                if (unreadCommentsCount > 0 && onMarkCommentsRead) {
+                  onMarkCommentsRead();
+                }
+              }}
             >
               <MessageSquare className="h-4 w-4" />
               Comments
+              {unreadCommentsCount > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs font-semibold"
+                >
+                  {unreadCommentsCount}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger 
               value="history" 

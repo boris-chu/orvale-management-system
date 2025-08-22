@@ -45,7 +45,7 @@ export async function GET(
       );
     }
 
-    // Get ticket comments
+    // Get ticket comments with read status for current user
     const comments = await queryAsync(`
       SELECT 
         tc.id,
@@ -55,15 +55,31 @@ export async function GET(
         tc.commented_by_name,
         tc.created_at,
         tc.updated_at,
-        tc.is_internal
+        tc.is_internal,
+        CASE WHEN crs.id IS NOT NULL THEN 1 ELSE 0 END as is_read
       FROM ticket_comments tc
+      LEFT JOIN comment_read_status crs ON tc.id = crs.comment_id 
+        AND crs.user_id = ?
       WHERE tc.ticket_id = ?
       ORDER BY tc.created_at ASC
-    `, [ticketId]) as TicketComment[];
+    `, [authResult.user.username, ticketId]) as TicketComment[];
+
+    // Get unread comment count for this ticket
+    const unreadCountResult = await queryAsync(`
+      SELECT COUNT(*) as unread_count
+      FROM ticket_comments tc
+      LEFT JOIN comment_read_status crs ON tc.id = crs.comment_id 
+        AND crs.user_id = ?
+      WHERE tc.ticket_id = ? 
+        AND crs.id IS NULL
+    `, [authResult.user.username, ticketId]);
+
+    const unreadCount = (unreadCountResult as any[])[0]?.unread_count || 0;
 
     return NextResponse.json({
       success: true,
-      comments
+      comments,
+      unread_count: unreadCount
     });
 
   } catch (error) {

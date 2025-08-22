@@ -172,6 +172,7 @@ export default function HelpdeskQueue() {
   // Comments state
   const [ticketComments, setTicketComments] = useState<any[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [unreadCommentsCount, setUnreadCommentsCount] = useState(0);
 
   useEffect(() => {
     checkPermissions();
@@ -821,6 +822,7 @@ export default function HelpdeskQueue() {
       if (response.ok) {
         const data = await response.json();
         setTicketComments(data.comments || []);
+        setUnreadCommentsCount(data.unread_count || 0);
       }
     } catch (error) {
       console.error('Error loading comments:', error);
@@ -879,6 +881,24 @@ export default function HelpdeskQueue() {
       console.error('Error deleting comment:', error);
       showNotification('Failed to delete comment', 'error');
       throw error;
+    }
+  };
+
+  const markCommentsAsRead = async () => {
+    if (!selectedTicket) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/tickets/${selectedTicket.id}/comments/read`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        setUnreadCommentsCount(0);
+      }
+    } catch (error) {
+      console.error('Error marking comments as read:', error);
     }
   };
   
@@ -1601,8 +1621,10 @@ export default function HelpdeskQueue() {
         }}
         ticketComments={ticketComments}
         loadingComments={loadingComments}
+        unreadCommentsCount={unreadCommentsCount}
         onAddComment={addTicketComment}
         onDeleteComment={deleteTicketComment}
+        onMarkCommentsRead={markCommentsAsRead}
       />
       {/* Browse Modals */}
       <CategoryBrowserModal
