@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { useAuth } from '@/lib/auth-context'
+import { useAuth } from '@/contexts/AuthContext'
 import { ChannelSidebar } from '@/components/chat/ChannelSidebar'
 import { MessageArea } from '@/components/chat/MessageArea'
 import { ChatLayout } from '@/components/chat/ChatLayout'
@@ -36,29 +36,48 @@ export default function ChatPage() {
 
   const loadChannels = async () => {
     try {
+      // Try both token locations used by the existing system
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+      
+      if (!token) {
+        setError('No authentication token found')
+        return
+      }
+
       const response = await fetch('/api/chat/channels', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       })
 
       if (response.ok) {
         const data = await response.json()
         setChannels(data.channels || [])
+      } else if (response.status === 401) {
+        setError('Authentication required. Please refresh the page.')
+      } else if (response.status === 403) {
+        setError('You do not have permission to access chat channels.')
       } else {
-        setError('Failed to load channels')
+        setError('Failed to load channels. Chat system may not be available yet.')
       }
     } catch (error) {
       console.error('Error loading channels:', error)
-      setError('Failed to load channels')
+      setError('Failed to load channels. The chat API may not be fully configured.')
     }
   }
 
   const loadDirectMessages = async () => {
     try {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+      
+      if (!token) {
+        console.log('No token available for direct messages')
+        return
+      }
+
       const response = await fetch('/api/chat/direct', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       })
 
@@ -67,7 +86,7 @@ export default function ChatPage() {
         setDirectMessages(data.conversations || [])
       } else {
         // It's ok if DMs fail - user might not have permission
-        console.log('Direct messages not available')
+        console.log('Direct messages not available:', response.status)
       }
     } catch (error) {
       console.error('Error loading direct messages:', error)

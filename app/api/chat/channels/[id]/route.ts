@@ -5,7 +5,7 @@ import { queryAsync, runAsync } from '@/lib/database'
 // GET /api/chat/channels/[id] - Get specific channel details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request)
@@ -17,7 +17,7 @@ export async function GET(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    const channelId = params.id
+    const { id: channelId } = await params
 
     // Get channel with user's membership info
     const channel = await queryAsync(`
@@ -87,7 +87,7 @@ export async function GET(
 // PUT /api/chat/channels/[id] - Update channel details
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request)
@@ -95,7 +95,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const channelId = params.id
+    const { id: channelId } = await params
     const body = await request.json()
     const { name, description, type } = body
 
@@ -204,7 +204,7 @@ export async function PUT(
 // DELETE /api/chat/channels/[id] - Delete/deactivate channel
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request)
@@ -212,7 +212,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const channelId = params.id
+    const { id: channelId } = await params
 
     // Get current channel info
     const channel = await queryAsync(`
