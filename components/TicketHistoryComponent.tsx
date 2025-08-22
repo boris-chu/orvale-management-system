@@ -30,6 +30,80 @@ interface TicketHistoryProps {
   isVisible: boolean;
 }
 
+// Format JSON details into human-readable text
+const formatDetailsForDisplay = (details: string): string[] => {
+  try {
+    const parsed = JSON.parse(details);
+    const formatted: string[] = [];
+    
+    // Handle common fields with user-friendly labels
+    const fieldLabels: { [key: string]: string } = {
+      'initial_status': 'Initial Status',
+      'submission_id': 'Submission ID',
+      'previous_status': 'Previous Status',
+      'new_status': 'New Status',
+      'status': 'Status',
+      'assigned_team': 'Assigned Team',
+      'priority': 'Priority',
+      'category': 'Category',
+      'subcategory': 'Subcategory',
+      'location': 'Location',
+      'office': 'Office',
+      'bureau': 'Bureau',
+      'division': 'Division',
+      'section': 'Section',
+      'user_name': 'User Name',
+      'employee_number': 'Employee Number',
+      'phone_number': 'Phone Number',
+      // Staff-created ticket fields
+      'created_by_staff': 'Created by Staff Member',
+      'ticket_source': 'Ticket Source',
+      'original_user': 'Original User',
+      'internal_notes': 'Internal Notes',
+      'assigned_to': 'Assigned To',
+      'from_team': 'From Team',
+      'to_team': 'To Team',
+      'escalated_to': 'Escalated To',
+      'resolved_by': 'Resolved By'
+    };
+    
+    // Convert each field to a readable format
+    Object.entries(parsed).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        const label = fieldLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        
+        // Format specific field values for better readability
+        let displayValue: string;
+        if (key === 'ticket_source' && value === 'staff_created') {
+          displayValue = 'Staff Created';
+        } else if (key === 'priority') {
+          displayValue = String(value).charAt(0).toUpperCase() + String(value).slice(1);
+        } else if (key === 'status' || key === 'initial_status' || key === 'previous_status' || key === 'new_status') {
+          displayValue = String(value).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        } else if (key === 'category') {
+          // Handle camelCase category names
+          displayValue = String(value).replace(/([A-Z])/g, ' $1').replace(/^./, l => l.toUpperCase()).trim();
+        } else if (key === 'internal_notes' && value === '') {
+          displayValue = '(None)';
+        } else if (typeof value === 'boolean') {
+          displayValue = value ? 'Yes' : 'No';
+        } else if (typeof value === 'string') {
+          displayValue = value;
+        } else {
+          displayValue = JSON.stringify(value);
+        }
+        
+        formatted.push(`${label}: ${displayValue}`);
+      }
+    });
+    
+    return formatted;
+  } catch (error) {
+    // If parsing fails, return the raw details as a single item
+    return [details];
+  }
+};
+
 export default function TicketHistoryComponent({ ticketId, isVisible }: TicketHistoryProps) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -137,17 +211,97 @@ export default function TicketHistoryComponent({ ticketId, isVisible }: TicketHi
 
   const formatActionDetails = (entry: HistoryEntry) => {
     const details = [];
+    
+    // Check for JSON in to_value or from_value fields and format them
+    const formatValue = (value: string | undefined): string => {
+      if (!value) return '';
+      
+      // Check if value looks like JSON
+      if (value.startsWith('{') && value.includes('"status":')) {
+        try {
+          const parsed = JSON.parse(value);
+          const formatted = [];
+          
+          if (parsed.status) {
+            formatted.push(`Status: ${parsed.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`);
+          }
+          if (parsed.priority) {
+            formatted.push(`Priority: ${parsed.priority.charAt(0).toUpperCase() + parsed.priority.slice(1)}`);
+          }
+          if (parsed.category) {
+            const category = parsed.category.replace(/([A-Z])/g, ' $1').replace(/^./, l => l.toUpperCase()).trim();
+            formatted.push(`Category: ${category}`);
+          }
+          if (parsed.assigned_to_display || parsed.assigned_to) {
+            formatted.push(`Assigned: ${parsed.assigned_to_display || parsed.assigned_to}`);
+          }
+          
+          return formatted.length > 0 ? formatted.join(' • ') : value;
+        } catch (error) {
+          // If parsing fails, return the raw value
+          return value;
+        }
+      }
+      
+      return value;
+    };
 
     if (entry.from_value && entry.to_value && entry.from_value !== entry.to_value) {
-      details.push(`${entry.from_value} → ${entry.to_value}`);
+      const fromFormatted = formatValue(entry.from_value);
+      const toFormatted = formatValue(entry.to_value);
+      details.push(`${fromFormatted} → ${toFormatted}`);
     } else if (entry.to_value && !entry.from_value) {
-      details.push(entry.to_value);
+      details.push(formatValue(entry.to_value));
     }
 
     if (entry.from_team && entry.to_team && entry.from_team !== entry.to_team) {
       details.push(`Team: ${entry.from_team} → ${entry.to_team}`);
     } else if (entry.to_team && !entry.from_team) {
       details.push(`Team: ${entry.to_team}`);
+    }
+
+    // If no basic details were found, try to extract key information from JSON details
+    if (details.length === 0 && entry.details && entry.details !== 'null') {
+      try {
+        const parsed = JSON.parse(entry.details);
+        
+        // Extract most relevant fields for main description
+        const relevantFields = [];
+        
+        if (parsed.status || parsed.new_status) {
+          const status = parsed.new_status || parsed.status;
+          relevantFields.push(`Status: ${status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`);
+        }
+        
+        if (parsed.priority) {
+          relevantFields.push(`Priority: ${parsed.priority.charAt(0).toUpperCase() + parsed.priority.slice(1)}`);
+        }
+        
+        if (parsed.assigned_to) {
+          relevantFields.push(`Assigned: ${parsed.assigned_to}`);
+        }
+        
+        if (parsed.assigned_team || parsed.to_team) {
+          const team = parsed.to_team || parsed.assigned_team;
+          relevantFields.push(`Team: ${team}`);
+        }
+        
+        if (parsed.category) {
+          const category = parsed.category.replace(/([A-Z])/g, ' $1').replace(/^./, l => l.toUpperCase()).trim();
+          relevantFields.push(`Category: ${category}`);
+        }
+        
+        if (parsed.ticket_source === 'staff_created') {
+          relevantFields.push('Created by Staff');
+        }
+        
+        if (relevantFields.length > 0) {
+          details.push(relevantFields.join(' • '));
+        }
+      } catch (error) {
+        // If parsing fails, don't add anything to main details
+        console.warn('Failed to parse details JSON for main description:', error);
+      }
     }
 
     return details.join(' • ');
@@ -157,16 +311,30 @@ export default function TicketHistoryComponent({ ticketId, isVisible }: TicketHi
     const date = new Date(timestamp);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
+    const absDiffMs = Math.abs(diffMs);
+    const diffHours = absDiffMs / (1000 * 60 * 60);
     const diffDays = diffHours / 24;
 
+    // Handle negative times (future dates) - this shouldn't happen but fix it gracefully
+    const timePrefix = diffMs < 0 ? 'in ' : '';
+    const timeSuffix = diffMs < 0 ? '' : ' ago';
+
     if (diffHours < 1) {
-      const diffMins = Math.floor(diffMs / (1000 * 60));
-      return `${diffMins} minutes ago`;
+      const diffMins = Math.floor(absDiffMs / (1000 * 60));
+      return `${timePrefix}${diffMins} minutes${timeSuffix}`;
     } else if (diffHours < 24) {
-      return `${Math.floor(diffHours)} hours ago`;
+      const hours = Math.floor(diffHours);
+      const mins = Math.floor((absDiffMs % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (mins > 0 && hours < 6) {
+        // Show minutes for recent times under 6 hours
+        return `${timePrefix}${hours}h ${mins}m${timeSuffix}`;
+      } else {
+        return `${timePrefix}${hours} hour${hours !== 1 ? 's' : ''}${timeSuffix}`;
+      }
     } else if (diffDays < 7) {
-      return `${Math.floor(diffDays)} days ago`;
+      const days = Math.floor(diffDays);
+      return `${timePrefix}${days} day${days !== 1 ? 's' : ''}${timeSuffix}`;
     } else {
       return formatRegularTime(date, {
         dateFormat: 'short',
@@ -270,7 +438,7 @@ export default function TicketHistoryComponent({ ticketId, isVisible }: TicketHi
                         
                         <div className="mt-1 space-y-1">
                           {formatActionDetails(entry) && (
-                            <p className="text-sm text-gray-600 font-mono">
+                            <p className="text-xs text-gray-700">
                               {formatActionDetails(entry)}
                             </p>
                           )}
@@ -294,9 +462,14 @@ export default function TicketHistoryComponent({ ticketId, isVisible }: TicketHi
                               <summary className="cursor-pointer text-gray-600 hover:text-gray-800">
                                 Additional Details
                               </summary>
-                              <pre className="mt-1 text-gray-700 whitespace-pre-wrap">
-                                {JSON.stringify(JSON.parse(entry.details), null, 2)}
-                              </pre>
+                              <div className="mt-1 text-gray-700 space-y-1">
+                                {formatDetailsForDisplay(entry.details).map((detail, index) => (
+                                  <div key={index} className="flex">
+                                    <span className="font-medium mr-1">•</span>
+                                    <span>{detail}</span>
+                                  </div>
+                                ))}
+                              </div>
                             </details>
                           </div>
                         )}

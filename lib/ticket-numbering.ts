@@ -30,6 +30,9 @@ const teamPrefixes: { [key: string]: string } = {
   'SEC_Perimeter': 'SP',
   'SEC_Internal': 'SI',
   
+  // Helpdesk team
+  'HELPDESK': 'HD',
+  
   // Default fallback
   'DEFAULT': 'GX'
 };

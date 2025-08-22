@@ -789,4 +789,60 @@ LEFT JOIN users u2 ON ut.submitted_by = u2.username;
 7. **Test incrementally** - Verify each phase before moving forward
 8. **⚠️ CRITICAL: Use correct team tables** - `teams` for helpdesk/queue functionality, `support_teams` for public portal only
 
+## 🏢 DPSS Organizational Hierarchy - CRITICAL UNDERSTANDING
+
+**Location Hierarchy for Tickets:**
+```
+Location → Office → Bureau → Division → Section
+```
+
+### **Location vs Office Distinction:**
+- **Location**: "Bureau of Human Resources" (building/facility level)
+- **Office**: "IT Security Office" or "Fiscal Management Division" (specific office within that building)
+
+**CRITICAL**: Location is ABOVE Office in the hierarchy, not below. Location represents the physical building or facility, while Office represents the specific department within that building.
+
+### **Real-World Example:**
+```
+Location: "Bureau of Human Resources" (the physical building)
+├── Office: "IT Security Office" (department within BHR building)
+├── Office: "Fiscal Management Division" (another department in same building)
+└── Office: "Human Resources Operations" (another department in same building)
+```
+
+### **Critical Field Usage:**
+- **Location**: Required - represents building/facility where user works (ABOVE Office level)
+- **Office**: Required - specific department within the location building
+- **Employee Number**: Required - serves as username identifier for DPSS
+- **Username**: Removed - redundant since Employee Number IS the username
+- **Display Name**: Required - human-readable name for tickets
+
+### **Database Field Mapping:**
+```sql
+-- User information in tickets
+user_name          -- Display name (human-readable)
+employee_number    -- Username identifier (unique)
+location          -- Building/facility (TOP level - e.g., "Bureau of Human Resources")
+office            -- Specific office within the location (e.g., "IT Security Office")
+bureau            -- Bureau within office
+division          -- Division within bureau  
+section           -- Section within division
+```
+
+### **Hierarchy Examples:**
+```
+Location: "Bureau of Human Resources" (Physical building)
+  └── Office: "IT Security Office" (Department in BHR building)
+      └── Bureau: "Network Security Bureau" (Unit within IT Security)
+          └── Division: "Cybersecurity Division" (Team within bureau)
+              └── Section: "Threat Analysis Section" (Group within division)
+```
+
+**Remember**: Location → Office → Bureau → Division → Section (largest to smallest organizational unit)
+
+### **Staff Ticket ID Format:**
+- **Format**: SF-YYMMDD-XXX (e.g., SF-250822-001)
+- **Shares sequence** with regular tickets to prevent conflicts
+- **SF prefix** distinguishes staff-created tickets
+
 Remember: Orvale Management System should be minimal, maintainable, and focused on delivering core functionality efficiently while providing an engaging user experience through dashboards, achievements, and seamless communication.
