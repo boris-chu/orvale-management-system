@@ -18,6 +18,7 @@ import { UserAvatar } from '@/components/UserAvatar';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
 import { StaffTicketModal } from '@/components/StaffTicketModal';
 import TicketHistoryComponent from '../../components/TicketHistoryComponent';
+import { WorkingTicketDetailsModal } from '@/components/WorkingTicketDetailsModal';
 
 interface TicketAttachment {
   id: number;
@@ -60,6 +61,7 @@ interface Ticket {
   completed_at?: string;
   escalation_reason?: string;
   completion_notes?: string;
+  activity_count: number;
 }
 
 interface QueueStats {
@@ -852,7 +854,7 @@ export default function TicketsPage() {
     let updatedTicket = { ...selectedTicket };
     
     // Apply the field change
-    updatedTicket[field as keyof Ticket] = value as any;
+    (updatedTicket as any)[field] = value;
     console.log(`🔄 Applied field change: ${field} = "${value}"`);
     
     // Auto-assign ticket to current user if unassigned (except when changing assignment directly)
@@ -862,19 +864,28 @@ export default function TicketsPage() {
       showNotification(`Ticket automatically assigned to you`, 'success');
     }
     
-    // Special handling for dependent field clearing
+    // Clear dependent fields when parent category changes
     if (field === 'category') {
-      // Clear dependent fields when category changes
-      updatedTicket.request_type = '';
-      updatedTicket.subcategory = '';
-      updatedTicket.sub_subcategory = '';
+      updatedTicket = {
+        ...updatedTicket,
+        category: value,
+        request_type: '',
+        subcategory: '',
+        sub_subcategory: ''
+      };
       console.log('🧹 Cleared dependent fields for category change');
     } else if (field === 'request_type') {
-      // Clear dependent fields when request type changes
-      updatedTicket.subcategory = '';
-      updatedTicket.sub_subcategory = '';
+      updatedTicket = {
+        ...updatedTicket,
+        request_type: value,
+        subcategory: '',
+        sub_subcategory: ''
+      };
       console.log('🧹 Cleared dependent fields for request_type change');
-    } else if (field === 'assigned_team' && value !== selectedTicket.assigned_team) {
+    }
+    
+    // Special handling for team changes
+    if (field === 'assigned_team' && value !== selectedTicket.assigned_team) {
       // Clear assigned user when team changes
       updatedTicket.assigned_to = '';
       console.log('🧹 Cleared assigned_to for team change');
@@ -1506,705 +1517,44 @@ export default function TicketsPage() {
         )}
       </div>
 
-      {/* Simple ticket detail view (could be expanded into a full modal later) */}
-      {selectedTicket && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          onClick={() => setSelectedTicket(null)}
-        >
-          <div 
-            className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] min-h-[60vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex-1">
-                <h2 className="text-xl font-bold">{selectedTicket.issue_title}</h2>
-                {selectedTicket.status === 'completed' && (
-                  <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <span className="text-sm text-green-800 font-medium">
-                      This ticket has been completed and is now read-only
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-2">
-                {(() => {
-                  const changes = hasChanges();
-                  const editable = isTicketEditable(selectedTicket);
-                  console.log('🎯 Save button condition check:', {
-                    hasChanges: changes,
-                    isTicketEditable: editable,
-                    shouldShow: changes && editable,
-                    selectedTicketId: selectedTicket?.id
-                  });
-                  return null;
-                })()}
-                <AnimatePresence mode="wait">
-                  {hasChanges() && isTicketEditable(selectedTicket) && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <Button 
-                        onClick={saveTicketChanges} 
-                        disabled={saveStatus === 'saving'}
-                        className={`transition-all duration-300 ${
-                          saveStatus === 'saved' 
-                            ? 'bg-green-600 hover:bg-green-700' 
-                            : saveStatus === 'saving'
-                            ? 'bg-blue-500 cursor-not-allowed'
-                            : 'bg-blue-600 hover:bg-blue-700'
-                        } text-white`}
-                      >
-                        <motion.div 
-                          className="flex items-center gap-2"
-                          initial={false}
-                          animate={{ 
-                            scale: saveStatus === 'saving' ? [1, 1.05, 1] : 1,
-                          }}
-                          transition={{ 
-                            repeat: saveStatus === 'saving' ? Infinity : 0,
-                            duration: 0.6 
-                          }}
-                        >
-                          {saveStatus === 'saved' ? (
-                            <>
-                              <Check className="h-4 w-4" />
-                              Saved!
-                            </>
-                          ) : saveStatus === 'saving' ? (
-                            <>
-                              <motion.div
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                              </motion.div>
-                              Saving...
-                            </>
-                          ) : (
-                            <>
-                              <Save className="h-4 w-4" />
-                              Save Changes
-                            </>
-                          )}
-                        </motion.div>
-                      </Button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <Button variant="outline" onClick={() => setSelectedTicket(null)}>
-                  ✕ Close
-                </Button>
-              </div>
-            </div>
-            
-            {/* Tab Navigation */}
-            <Tabs value={modalActiveTab} onValueChange={handleTabChange} className="w-full">
-              <TabsList className="grid w-full grid-cols-2" onClick={(e) => e.stopPropagation()}>
-                <TabsTrigger 
-                  value="details" 
-                  className="flex items-center gap-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Eye className="h-4 w-4" />
-                  Ticket Details
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="history" 
-                  className="flex items-center gap-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Clock className="h-4 w-4" />
-                  History & Audit Trail
-                </TabsTrigger>
-              </TabsList>
+      {/* Ticket Detail Modal - Using Shared Working Component */}
+      <WorkingTicketDetailsModal
+        ticket={selectedTicket}
+        originalTicket={originalTicket || selectedTicket}
+        onClose={() => setSelectedTicket(null)}
+        onSave={saveTicketChanges}
+        currentUser={currentUser}
+        isHelpdesk={false}
+        modalActiveTab={modalActiveTab}
+        onTabChange={setModalActiveTab}
+        saveStatus={saveStatus}
+        hasChanges={hasChanges}
+        isTicketEditable={isTicketEditable}
+        updateTicketField={updateTicketField}
+        cycleStatus={cycleStatus}
+        cyclePriority={cyclePriority}
+        formatDate={formatDate}
+        formatStatus={formatStatus}
+        formatPriority={formatPriority}
+        getStatusColor={getStatusColor}
+        getPriorityColor={getPriorityColor}
+        canAssignCrossTeam={() => false}
+        assignableUsers={assignableUsers}
+        loadingAssignableUsers={loadingAssignableUsers}
+        availableTeams={[]}
+        loadingTeams={false}
+        ticketAttachments={ticketAttachments}
+        loadingAttachments={loadingAttachments}
+        organizationalData={organizationalData}
+        categories={categories}
+        requestTypes={requestTypes}
+        subcategories={subcategories}
+        openOrgBrowser={() => setShowOrgBrowser(true)}
+        openCategoryBrowser={() => setShowCategoryBrowser(true)}
+        formatFileSize={formatFileSize}
+        downloadAttachment={downloadAttachment}
+      />
 
-              <TabsContent value="details" className="mt-4" onClick={(e) => e.stopPropagation()}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="font-semibold text-blue-600 mb-2">Request Information</h3>
-                <div className="space-y-2 text-sm">
-                  <div><strong>Status:</strong> 
-                    <Badge 
-                      className={`${getStatusColor(selectedTicket.status)} ${!isTicketEditable(selectedTicket) ? 'cursor-default opacity-60' : 'cursor-pointer hover:opacity-80'} ml-2`}
-                      onClick={() => isTicketEditable(selectedTicket) && cycleStatus()}
-                      title={!isTicketEditable(selectedTicket) ? 'Completed tickets cannot be modified' : 'Click to cycle status'}
-                    >
-                      {formatStatus(selectedTicket.status)}
-                    </Badge>
-                  </div>
-                  <div><strong>Priority:</strong> 
-                    <Badge 
-                      className={`${getPriorityColor(selectedTicket.priority)} ${!isTicketEditable(selectedTicket) ? 'cursor-default opacity-60' : 'cursor-pointer hover:opacity-80'} ml-2`}
-                      onClick={() => isTicketEditable(selectedTicket) && cyclePriority()}
-                      title={!isTicketEditable(selectedTicket) ? 'Completed tickets cannot be modified' : 'Click to cycle priority'}
-                    >
-                      {formatPriority(selectedTicket.priority)}
-                    </Badge>
-                  </div>
-                  <div><strong>Submitted:</strong> {formatDate(selectedTicket.submitted_at)}</div>
-                  {selectedTicket.request_creator_display_name && (
-                    <div><strong>Request Creator:</strong> {selectedTicket.request_creator_display_name}</div>
-                  )}
-                  <div><strong>Ticket ID:</strong> {selectedTicket.submission_id}</div>
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To:</label>
-                    <FormControl size="small" className="w-full">
-                      <InputLabel id="assigned-to-label">Select Assignee</InputLabel>
-                      <Select
-                        labelId="assigned-to-label"
-                        id="assigned-to-select"
-                        value={selectedTicket.assigned_to || ''}
-                        label="Select Assignee"
-                        onChange={(e) => updateTicketField('assigned_to', e.target.value)}
-                        disabled={loadingAssignableUsers || !isTicketEditable(selectedTicket)}
-                      >
-                        <MenuItem value="">
-                          <em>Unassigned</em>
-                        </MenuItem>
-                        {assignableUsers.map((user) => (
-                          <MenuItem key={user.username} value={user.username}>
-                            {user.display_label || `${user.display_name} (${user.username})`}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </div>
-                  
-                  {/* Team Assignment - Only for helpdesk users */}
-                  {canAssignCrossTeam() && (
-                    <div className="mt-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Assigned Team:
-                        <Badge variant="outline" className="ml-2 text-xs">
-                          Helpdesk
-                        </Badge>
-                      </label>
-                      <FormControl size="small" className="w-full">
-                        <InputLabel id="assigned-team-label">Select Team</InputLabel>
-                        <Select
-                          labelId="assigned-team-label"
-                          id="assigned-team-select"
-                          value={selectedTicket.assigned_team || ''}
-                          label="Select Team"
-                          onChange={(e) => updateTicketField('assigned_team', e.target.value)}
-                          disabled={loadingTeams || !isTicketEditable(selectedTicket)}
-                        >
-                          <MenuItem value="">
-                            <em>Unassigned</em>
-                          </MenuItem>
-                          {availableTeams.map((team) => (
-                            <MenuItem key={team.id} value={team.id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{team.name}</span>
-                                <span className="text-xs text-gray-500">
-                                  {team.section_name} • {team.active_tickets} active tickets
-                                  {team.team_lead_name && ` • Lead: ${team.team_lead_name}`}
-                                </span>
-                              </div>
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="font-semibold text-blue-600 mb-2">User Information</h3>
-                <div className="space-y-2 text-sm">
-                  <div><strong>Name:</strong> {selectedTicket.user_name}</div>
-                  <div><strong>Employee #:</strong> {selectedTicket.employee_number}</div>
-                  <div><strong>Phone:</strong> {selectedTicket.phone_number}</div>
-                  <div><strong>Location:</strong> {selectedTicket.location}</div>
-                  {selectedTicket.cubicle_room && (
-                    <div><strong>Cubicle/Room:</strong> {selectedTicket.cubicle_room}</div>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            {/* File Attachments Section */}
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-blue-600 flex items-center gap-2">
-                  <Paperclip className="h-5 w-5" />
-                  File Attachments
-                </h3>
-                {hasAttachmentChanges() && (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setNewAttachments([]);
-                        setAttachmentsToDelete([]);
-                      }}
-                      disabled={uploadingAttachments}
-                    >
-                      Cancel Changes
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={saveAttachmentChanges}
-                      disabled={uploadingAttachments}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      {uploadingAttachments ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="h-4 w-4 mr-2" />
-                          Save Changes
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </div>
-              
-              {loadingAttachments ? (
-                <div className="flex items-center justify-center py-8">
-                  <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
-                  <span className="ml-2 text-gray-500">Loading attachments...</span>
-                </div>
-              ) : (
-                <>
-                  {/* Existing Attachments */}
-                  {ticketAttachments.length > 0 && (
-                    <div className="mb-6">
-                      <h4 className="text-sm font-medium text-gray-700 mb-3">Current Attachments</h4>
-                      <div className="grid gap-3">
-                        {ticketAttachments.map((attachment) => {
-                          const isMarkedForDeletion = attachmentsToDelete.includes(attachment.id);
-                          return (
-                            <div
-                              key={attachment.id}
-                              className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                                isMarkedForDeletion 
-                                  ? 'bg-red-50 border-red-200 opacity-75' 
-                                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <FileText className={`h-5 w-5 flex-shrink-0 ${isMarkedForDeletion ? 'text-red-400' : 'text-gray-500'}`} />
-                                <div className="min-w-0 flex-1">
-                                  <div className={`font-medium text-sm truncate ${isMarkedForDeletion ? 'line-through text-red-600' : 'text-gray-900'}`}>
-                                    {attachment.original_filename}
-                                  </div>
-                                  <div className={`text-xs mt-1 ${isMarkedForDeletion ? 'text-red-500' : 'text-gray-500'}`}>
-                                    {formatFileSize(attachment.file_size)} • {attachment.mime_type.split('/')[1].toUpperCase()} • 
-                                    Uploaded by {attachment.uploaded_by} on {new Date(attachment.uploaded_at).toLocaleDateString()}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 ml-3">
-                                {!isMarkedForDeletion ? (
-                                  <>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => downloadAttachment(attachment.id, attachment.original_filename)}
-                                      className="flex items-center gap-2"
-                                    >
-                                      <Download className="h-4 w-4" />
-                                      Download
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => markAttachmentForDeletion(attachment.id)}
-                                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </>
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => unmarkAttachmentForDeletion(attachment.id)}
-                                    className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
-                                  >
-                                    Restore
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* New Attachments */}
-                  {newAttachments.length > 0 && (
-                    <div className="mb-6">
-                      <h4 className="text-sm font-medium text-gray-700 mb-3">New Attachments</h4>
-                      <div className="grid gap-3">
-                        {newAttachments.map((file, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200"
-                          >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <FileText className="h-5 w-5 text-green-500 flex-shrink-0" />
-                              <div className="min-w-0 flex-1">
-                                <div className="font-medium text-sm text-green-900 truncate">
-                                  {file.name}
-                                </div>
-                                <div className="text-xs text-green-600 mt-1">
-                                  {formatFileSize(file.size)} • {file.type.split('/')[1].toUpperCase()} • New file
-                                </div>
-                              </div>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => removeNewAttachment(index)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 ml-3"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Add Attachments Section */}
-                  {isTicketEditable(selectedTicket) && (
-                    <div 
-                      className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer"
-                      onDragOver={handleDragOver}
-                      onDrop={handleDrop}
-                      onClick={() => {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.multiple = true;
-                        input.accept = '.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.gif,.bmp,.zip';
-                        input.onchange = (e) => handleFileSelect((e.target as HTMLInputElement).files);
-                        input.click();
-                      }}
-                    >
-                      <Upload className="h-8 w-8 mx-auto mb-4 text-gray-400" />
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Add More Attachments</h4>
-                      <p className="text-xs text-gray-500 mb-4">
-                        Drag and drop files here, or click to select files
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        Supported: PDF, Word, Excel, Images, ZIP (Max 10MB each)
-                      </p>
-                    </div>
-                  )}
-
-                  {/* No attachments message */}
-                  {ticketAttachments.length === 0 && newAttachments.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <Paperclip className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No attachments found for this ticket.</p>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-            
-            {/* Organizational Information Section */}
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-blue-600 flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Organizational Information
-                </h3>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={openOrgBrowser} 
-                  className="flex items-center gap-2"
-                  disabled={selectedTicket.status === 'completed'}
-                >
-                  <Search className="h-4 w-4" />
-                  Browse Organizational Paths
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Office:</label>
-                      <FormControl size="small" className="w-full">
-                        <InputLabel id="office-select-label">Select Office</InputLabel>
-                        <Select
-                          labelId="office-select-label"
-                          id="office-select"
-                          value={selectedTicket.office || ''}
-                          label="Select Office"
-                          onChange={(e) => {
-                            console.log('🔥 Office dropdown changed:', e.target.value);
-                            updateTicketField('office', e.target.value);
-                          }}
-                          disabled={!isTicketEditable(selectedTicket)}
-                        >
-                          {organizationalData.offices.map((office, index) => (
-                            <MenuItem key={`office-${index}`} value={office}>
-                              {office}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Bureau:</label>
-                      <FormControl size="small" className="w-full">
-                        <InputLabel id="bureau-select-label">Select Bureau</InputLabel>
-                        <Select
-                          labelId="bureau-select-label"
-                          id="bureau-select"
-                          value={selectedTicket.bureau || ''}
-                          label="Select Bureau"
-                          onChange={(e) => updateTicketField('bureau', e.target.value)}
-                          disabled={!isTicketEditable(selectedTicket)}
-                        >
-                          {organizationalData.bureaus.map((bureau, index) => (
-                            <MenuItem key={`bureau-${index}`} value={bureau}>
-                              {bureau}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Division:</label>
-                      <FormControl size="small" className="w-full">
-                        <InputLabel id="division-select-label">Select Division</InputLabel>
-                        <Select
-                          labelId="division-select-label"
-                          id="division-select"
-                          value={selectedTicket.division || ''}
-                          label="Select Division"
-                          onChange={(e) => updateTicketField('division', e.target.value)}
-                          disabled={!isTicketEditable(selectedTicket)}
-                        >
-                          {organizationalData.divisions.map((division, index) => (
-                            <MenuItem key={`division-${index}`} value={division}>
-                              {division}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Section:</label>
-                      <FormControl size="small" className="w-full">
-                        <InputLabel id="section-select-label">Select Section</InputLabel>
-                        <Select
-                          labelId="section-select-label"
-                          id="section-select"
-                          value={selectedTicket.section || ''}
-                          label="Select Section"
-                          onChange={(e) => updateTicketField('section', e.target.value)}
-                          disabled={!isTicketEditable(selectedTicket)}
-                        >
-                          {organizationalData?.sections?.map((section, index) => (
-                            <MenuItem key={`section-${index}`} value={section}>
-                              {section}
-                            </MenuItem>
-                          )) || []}
-                        </Select>
-                      </FormControl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Category Information Section */}
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-blue-600 flex items-center gap-2">
-                  <Tag className="h-5 w-5" />
-                  Category Information
-                </h3>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={openCategoryBrowser} 
-                  className="flex items-center gap-2"
-                  disabled={selectedTicket.status === 'completed'}
-                >
-                  <FolderOpen className="h-4 w-4" />
-                  Browse Category Paths
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Category:</label>
-                      <FormControl size="small" className="w-full">
-                        <InputLabel id="category-select-label">Select Category</InputLabel>
-                        <Select
-                          labelId="category-select-label"
-                          id="category-select"
-                          value={selectedTicket.category || ''}
-                          label="Select Category"
-                          onChange={(e) => {
-                            console.log('🔥 Category dropdown changed:', e.target.value);
-                            updateTicketField('category', e.target.value);
-                          }}
-                          disabled={!isTicketEditable(selectedTicket)}
-                        >
-                          {(() => {
-                            const categoryEntries = Object.entries(categories || {});
-                            console.log('🎯 Category dropdown rendering:', {
-                              selectedValue: selectedTicket.category,
-                              availableEntries: categoryEntries,
-                              hasSelectedTicket: !!selectedTicket
-                            });
-                            return categoryEntries.map(([key, value]) => (
-                              <MenuItem key={key} value={key}>
-                                {String(value)}
-                              </MenuItem>
-                            ));
-                          })()}
-                        </Select>
-                      </FormControl>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Request Type:</label>
-                      <FormControl size="small" className="w-full" disabled={!selectedTicket.category}>
-                        <InputLabel id="request-type-select-label">Select Request Type</InputLabel>
-                        <Select
-                          labelId="request-type-select-label"
-                          id="request-type-select"
-                          value={selectedTicket.request_type || ''}
-                          label="Select Request Type"
-                          onChange={(e) => updateTicketField('request_type', e.target.value)}
-                          disabled={!selectedTicket.category || !isTicketEditable(selectedTicket)}
-                        >
-                          {selectedTicket.category && requestTypes[selectedTicket.category]?.map((type: any) => (
-                            <MenuItem key={type.value} value={type.value}>
-                              {type.text}
-                            </MenuItem>
-                          )) || []}
-                        </Select>
-                      </FormControl>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory:</label>
-                      <FormControl size="small" className="w-full" disabled={!selectedTicket.request_type}>
-                        <InputLabel id="subcategory-select-label">Select Subcategory</InputLabel>
-                        <Select
-                          labelId="subcategory-select-label"
-                          id="subcategory-select"
-                          value={selectedTicket.subcategory || ''}
-                          label="Select Subcategory"
-                          onChange={(e) => updateTicketField('subcategory', e.target.value)}
-                          disabled={!selectedTicket.request_type || !isTicketEditable(selectedTicket)}
-                        >
-                          {selectedTicket.category && selectedTicket.request_type && 
-                           subcategories[selectedTicket.category]?.[selectedTicket.request_type]?.map((subcat: any) => (
-                            <MenuItem key={subcat.value} value={subcat.value}>
-                              {subcat.text}
-                            </MenuItem>
-                          )) || []}
-                        </Select>
-                      </FormControl>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Implementation:</label>
-                      <FormControl size="small" className="w-full">
-                        <InputLabel id="implementation-select-label">Select Implementation</InputLabel>
-                        <Select
-                          labelId="implementation-select-label"
-                          id="implementation-select"
-                          value={selectedTicket.implementation || ''}
-                          label="Select Implementation"
-                          onChange={(e) => updateTicketField('implementation', e.target.value)}
-                          disabled={!isTicketEditable(selectedTicket)}
-                        >
-                          <MenuItem value="immediate">Immediate</MenuItem>
-                          <MenuItem value="scheduled">Scheduled</MenuItem>
-                          <MenuItem value="planned">Planned</MenuItem>
-                          <MenuItem value="future">Future</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-                </div>
-                
-                <div className="mt-6">
-                  <h3 className="font-semibold text-blue-600 mb-2">Issue Details</h3>
-                  <div className="bg-gray-50 p-4 rounded border-l-4 border-blue-500">
-                    {selectedTicket.issue_description}
-                  </div>
-                </div>
-                
-                {/* System Information Section */}
-                {selectedTicket.computer_info && (
-                  <div className="mt-6">
-                    <h3 className="font-semibold text-blue-600 mb-2 flex items-center gap-2">
-                      <Monitor className="h-5 w-5" />
-                      System Information
-                    </h3>
-                    <div className="bg-gray-50 p-4 rounded border-l-4 border-green-500">
-                      <div className="space-y-2 text-sm">
-                        {(() => {
-                          try {
-                            const computerInfo = JSON.parse(selectedTicket.computer_info);
-                            return (
-                              <>
-                                {computerInfo.ip && <div><strong>IP Address:</strong> {computerInfo.ip}</div>}
-                                {computerInfo.domain && <div><strong>Domain:</strong> {computerInfo.domain}</div>}
-                                {computerInfo.browser && <div><strong>Browser:</strong> {computerInfo.browser}</div>}
-                                {computerInfo.platform && <div><strong>Platform:</strong> {computerInfo.platform}</div>}
-                                {computerInfo.timestamp && <div><strong>Captured:</strong> {new Date(computerInfo.timestamp).toLocaleString()}</div>}
-                              </>
-                            );
-                          } catch (error) {
-                            return <div>System information unavailable</div>;
-                          }
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="history" className="mt-4" onClick={(e) => e.stopPropagation()}>
-                <TicketHistoryComponent 
-                  ticketId={selectedTicket.id} 
-                  isVisible={modalActiveTab === 'history'}
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
-      )}
 
       {/* Notification */}
       {notification && (

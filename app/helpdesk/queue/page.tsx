@@ -47,7 +47,7 @@ import { StaffTicketModal } from '@/components/StaffTicketModal';
 import CategoryBrowserModal from '@/components/CategoryBrowserModal';
 import OrganizationalBrowserModal from '@/components/OrganizationalBrowserModal';
 import TicketHistoryComponent from '@/components/TicketHistoryComponent';
-import { TicketDetailsModal } from '@/components/TicketDetailsModal';
+import { WorkingTicketDetailsModal } from '@/components/WorkingTicketDetailsModal';
 
 interface TicketAttachment {
   id: number;
@@ -1346,37 +1346,43 @@ export default function HelpdeskQueue() {
         />
       )}
 
-      {/* Ticket Detail Modal */}
-      <TicketDetailsModal
+      {/* Ticket Detail Modal - Using Shared Working Component */}
+      <WorkingTicketDetailsModal
         ticket={selectedTicket}
-        onClose={() => {
-          setSelectedTicket(null);
-          setOriginalTicket(null);
-        }}
-        onSave={async (updatedTicket) => {
-          const token = localStorage.getItem('authToken');
-          const response = await fetch(`/api/tickets/${updatedTicket.id}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(updatedTicket)
-          });
-          
-          if (response.ok) {
-            showNotification('Ticket updated successfully', 'success');
-            // Refresh tickets list
-            handleRefresh();
-          } else {
-            throw new Error('Failed to save ticket');
-          }
-        }}
+        originalTicket={originalTicket}
+        onClose={() => setSelectedTicket(null)}
+        onSave={saveTicketChanges}
         currentUser={currentUser}
         isHelpdesk={true}
+        modalActiveTab={modalActiveTab}
+        onTabChange={handleTabChange}
+        saveStatus={saveStatus}
+        hasChanges={hasChanges}
+        isTicketEditable={isTicketEditable}
+        updateTicketField={updateTicketField}
+        cycleStatus={cycleStatus}
+        cyclePriority={cyclePriority}
+        formatDate={formatDate}
+        formatStatus={formatStatus}
+        formatPriority={formatPriority}
+        getStatusColor={getStatusColor}
+        getPriorityColor={getPriorityColor}
+        canAssignCrossTeam={canAssignCrossTeam}
+        assignableUsers={assignableUsers}
+        loadingAssignableUsers={loadingAssignableUsers}
+        availableTeams={availableTeams}
+        loadingTeams={loadingTeams}
+        ticketAttachments={ticketAttachments}
+        loadingAttachments={loadingAttachments}
+        organizationalData={organizationalData}
+        categories={categories}
+        requestTypes={requestTypes}
+        subcategories={subcategories}
+        openOrgBrowser={openOrgBrowser}
+        openCategoryBrowser={openCategoryBrowser}
+        formatFileSize={formatFileSize}
+        downloadAttachment={downloadAttachment}
       />
-
-      {/* Legacy modal removed - using shared TicketDetailsModal */}
       {/* Browse Modals */}
       <CategoryBrowserModal
         isOpen={showCategoryBrowser}
@@ -1390,9 +1396,11 @@ export default function HelpdeskQueue() {
         }}
         onSelect={(selection) => {
           if (selectedTicket && isTicketEditable(selectedTicket)) {
-            updateTicketField('category', selection.category || '');
-            if (selection.requestType) updateTicketField('request_type', selection.requestType);
-            if (selection.subcategory) updateTicketField('subcategory', selection.subcategory);
+            if (selection.categoryKey) updateTicketField('category', selection.categoryKey);
+            if (selection.requestTypeKey) updateTicketField('request_type', selection.requestTypeKey);
+            if (selection.subcategoryKey) updateTicketField('subcategory', selection.subcategoryKey);
+            if (selection.subSubcategoryKey) updateTicketField('sub_subcategory', selection.subSubcategoryKey);
+            if (selection.implementationKey) updateTicketField('implementation', selection.implementationKey);
           }
         }}
       />
