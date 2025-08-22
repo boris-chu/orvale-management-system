@@ -5,7 +5,7 @@ import { queryAsync, runAsync } from '@/lib/database'
 // GET /api/chat/channels/[id]/members - Get channel members
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request)
@@ -17,6 +17,7 @@ export async function GET(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
+    const params = await context.params
     const channelId = params.id
 
     // Check if user has access to this channel

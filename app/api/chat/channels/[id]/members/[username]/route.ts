@@ -5,7 +5,7 @@ import { queryAsync, runAsync } from '@/lib/database'
 // PUT /api/chat/channels/[id]/members/[username] - Update member role
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; username: string } }
+  context: { params: Promise<{ id: string; username: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request)
@@ -13,6 +13,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const params = await context.params
     const { id: channelId, username: targetUsername } = params
     const body = await request.json()
     const { role } = body
@@ -91,7 +92,7 @@ export async function PUT(
 // DELETE /api/chat/channels/[id]/members/[username] - Remove member from channel
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; username: string } }
+  context: { params: Promise<{ id: string; username: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request)
@@ -99,6 +100,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const params = await context.params
     const { id: channelId, username: targetUsername } = params
 
     // Get channel info and both users' roles

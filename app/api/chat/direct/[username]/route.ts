@@ -5,7 +5,7 @@ import { queryAsync, runAsync } from '@/lib/database'
 // GET /api/chat/direct/[username] - Get or create direct conversation with specific user
 export async function GET(
   request: NextRequest,
-  { params }: { params: { username: string } }
+  context: { params: Promise<{ username: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request)
@@ -17,6 +17,7 @@ export async function GET(
       return NextResponse.json({ error: 'Insufficient permissions for direct messages' }, { status: 403 })
     }
 
+    const params = await context.params
     const targetUsername = params.username
 
     // Can't DM yourself
