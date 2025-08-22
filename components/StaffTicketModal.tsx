@@ -755,6 +755,9 @@ export function StaffTicketModal({
     try {
       if (onSubmit) {
         await onSubmit(formData);
+        // Close modal and reset form after successful custom submission
+        onOpenChange(false);
+        resetForm();
       } else {
         // Default submission logic
         const token = localStorage.getItem('authToken');
@@ -1190,14 +1193,14 @@ export function StaffTicketModal({
 
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
                   <TextField
-                    label="Employee Number"
-                    value={formData.userEmployeeNumber}
-                    onChange={(e) => handleEmployeeNumberChange('userEmployeeNumber', e.target.value)}
-                    placeholder="e123456"
+                    label="Email"
+                    value={formData.userEmail}
+                    onChange={(e) => handleFieldChange('userEmail', e.target.value)}
+                    placeholder="user@dpss.lacounty.gov"
                     size="small"
                     fullWidth
-                    inputProps={{ maxLength: 7, pattern: '[ect][0-9]{6}' }}
-                    helperText="Format: e/c/t followed by 6 digits"
+                    type="email"
+                    helperText="User's email address"
                   />
                   <TextField
                     label="Phone (10 digits)"

@@ -215,8 +215,8 @@ export async function POST(request: NextRequest) {
     );
     
     if (!canAssignCrossTeam) {
-      // User doesn't have cross-team permissions, use their own team
-      finalAssignedTeam = authResult.user.team_id || null;
+      // User doesn't have cross-team permissions, use their own team or default
+      finalAssignedTeam = authResult.user.team_id || 'HELPDESK';
     } else if (ticketData.assignedTeam) {
       // User has permissions and provided a team, validate it exists
       const teamExists = await dbGet(
@@ -306,7 +306,7 @@ export async function POST(request: NextRequest) {
       ticketData.userBureau || null,
       ticketData.userDivision || null,
       ticketData.userSection || null,
-      finalAssignedTeam || null,
+      finalAssignedTeam || 'HELPDESK',
       ticketData.assignedTo || null,
       ticketData.internalNotes || null,
       createdByStaff,
