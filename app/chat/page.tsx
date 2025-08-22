@@ -5,9 +5,12 @@ import { useAuth } from '@/contexts/AuthContext'
 import { ChannelSidebar } from '@/components/chat/ChannelSidebar'
 import { MessageArea } from '@/components/chat/MessageArea'
 import { ChatLayout } from '@/components/chat/ChatLayout'
+import { MessageSearch } from '@/components/chat/MessageSearch'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { MessageSquare, Users, Hash, Plus } from 'lucide-react'
+import { MessageSquare, Users, Hash, Plus, Search, Settings, LogOut, User } from 'lucide-react'
+import { UserAvatar } from '@/components/UserAvatar'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface Channel {
   id: string
@@ -26,6 +29,8 @@ export default function ChatPage() {
   const [directMessages, setDirectMessages] = useState<Channel[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showSearch, setShowSearch] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
 
   useEffect(() => {
     if (!loading && user) {
@@ -34,10 +39,42 @@ export default function ChatPage() {
     }
   }, [user, loading])
 
+  // Add keyboard shortcut for search (Ctrl/Cmd + K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setShowSearch(true)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowUserMenu(false)
+    }
+
+    if (showUserMenu) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [showUserMenu])
+
   const loadChannels = async () => {
     try {
       // Try both token locations used by the existing system
       const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+      
+      console.log('🔍 Chat loadChannels debug:', {
+        hasToken: !!token,
+        tokenPrefix: token?.substring(0, 10) + '...',
+        user: user?.username,
+        permissions: user?.permissions?.length
+      })
       
       if (!token) {
         setError('No authentication token found')
@@ -48,6 +85,12 @@ export default function ChatPage() {
         headers: {
           'Authorization': `Bearer ${token}`
         }
+      })
+
+      console.log('🔍 Chat channels API response:', {
+        status: response.status,
+        ok: response.ok,
+        statusText: response.statusText
       })
 
       if (response.ok) {
@@ -102,6 +145,18 @@ export default function ChatPage() {
   const handleChannelUpdate = () => {
     loadChannels()
     loadDirectMessages()
+  }
+
+  const handleSearchResultSelect = async (result: any) => {
+    // Find the channel for this search result
+    const channel = channels.find(c => c.id === result.channel_id) || 
+                   directMessages.find(dm => dm.id === result.channel_id)
+    
+    if (channel) {
+      setSelectedChannel(channel)
+      // TODO: Scroll to the specific message in the MessageArea
+      // This would require enhancing MessageArea to accept a target message ID
+    }
   }
 
   if (loading || isLoading) {
@@ -166,13 +221,45 @@ export default function ChatPage() {
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <MessageSquare className="h-6 w-6 text-blue-600" />
+            <div className="relative">
+              <MessageSquare className="h-6 w-6 text-blue-600" />
+              {/* Global unread indicator */}
+              {(channels.some(c => c.unread_count > 0) || directMessages.some(dm => dm.unread_count > 0)) && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                </div>
+              )}
+            </div>
             <h1 className="text-xl font-semibold text-gray-900">Orvale Chat</h1>
+            {/* Total unread count */}
+            {(channels.length > 0 || directMessages.length > 0) && (
+              <div className="text-sm text-gray-500">
+                {channels.length + directMessages.length} conversations
+                {(channels.some(c => c.unread_count > 0) || directMessages.some(dm => dm.unread_count > 0)) && (
+                  <span className="ml-2 text-red-600 font-medium">
+                    • {channels.reduce((total, c) => total + (c.unread_count || 0), 0) + 
+                        directMessages.reduce((total, dm) => total + (dm.unread_count || 0), 0)} unread
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-600">
-              Welcome, {user.display_name}
-            </div>
+            {/* Search Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSearch(true)}
+              className="text-gray-600 hover:text-gray-900"
+              title="Search messages (Ctrl+K)"
+            >
+              <Search className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Search</span>
+              <kbd className="hidden sm:inline ml-2 px-1.5 py-0.5 text-xs font-mono bg-gray-100 rounded">
+                ⌘K
+              </kbd>
+            </Button>
+            
             <Button
               variant="outline"
               size="sm"
@@ -180,6 +267,100 @@ export default function ChatPage() {
             >
               Back to Tickets
             </Button>
+
+            {/* User Profile Menu */}
+            <TooltipProvider>
+              <div className="relative">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowUserMenu(!showUserMenu);
+                      }}
+                      className="flex items-center rounded-full p-1 hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <UserAvatar 
+                        user={user}
+                        size="md"
+                        showPresenceStatus={true}
+                        presenceStatus="online"
+                        className="border-2 border-gray-200 hover:border-gray-300 transition-colors duration-200"
+                      />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>User Menu</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* User Dropdown Menu */}
+                {showUserMenu && (
+                  <div 
+                    className="absolute right-0 top-full mt-2 w-72 bg-white rounded-lg shadow-xl border border-gray-200 z-50"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* User Info Section */}
+                    <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                      <div className="flex items-center space-x-3">
+                        <UserAvatar 
+                          user={user}
+                          size="lg"
+                          showPresenceStatus={true}
+                          presenceStatus="online"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{user?.display_name}</p>
+                          <p className="text-xs text-gray-600 truncate">{user?.email}</p>
+                          <div className="mt-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {user?.role}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Menu Options */}
+                    <div className="py-2">
+                      <button 
+                        className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          // Add profile modal here if needed
+                        }}
+                      >
+                        <User className="h-4 w-4 mr-3 text-gray-400" />
+                        View Profile
+                      </button>
+                      
+                      <button 
+                        className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          // Add settings here if needed
+                        }}
+                      >
+                        <Settings className="h-4 w-4 mr-3 text-gray-400" />
+                        Chat Settings
+                      </button>
+                      
+                      <button 
+                        className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150"
+                        onClick={() => {
+                          localStorage.removeItem('authToken');
+                          localStorage.removeItem('currentUser');
+                          window.location.href = '/';
+                        }}
+                      >
+                        <LogOut className="h-4 w-4 mr-3 text-red-400" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </TooltipProvider>
           </div>
         </div>
       </div>
@@ -231,6 +412,14 @@ export default function ChatPage() {
           }
         />
       </div>
+
+      {/* Search Modal */}
+      <MessageSearch
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
+        onSelectMessage={handleSearchResultSelect}
+        currentUser={user}
+      />
     </div>
   )
 }

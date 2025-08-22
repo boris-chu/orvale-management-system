@@ -67,12 +67,20 @@ export function ChannelSidebar({
   const [showChannels, setShowChannels] = useState(true)
   const [showDirectMessages, setShowDirectMessages] = useState(true)
   const [showOnlineUsers, setShowOnlineUsers] = useState(true)
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0)
 
   useEffect(() => {
     loadOnlineUsers()
     const interval = setInterval(loadOnlineUsers, 30000) // Refresh every 30 seconds
     return () => clearInterval(interval)
   }, [])
+
+  // Calculate total unread count when channels or DMs change
+  useEffect(() => {
+    const channelUnread = channels.reduce((total, channel) => total + (channel.unread_count || 0), 0)
+    const dmUnread = directMessages.reduce((total, dm) => total + (dm.unread_count || 0), 0)
+    setTotalUnreadCount(channelUnread + dmUnread)
+  }, [channels, directMessages])
 
   const loadOnlineUsers = async () => {
     try {
@@ -185,10 +193,17 @@ export function ChannelSidebar({
               ) : (
                 <ChevronRight className="h-3 w-3 mr-1" />
               )}
-              CHANNELS ({filteredChannels.length})
-              {currentUser.permissions?.includes('chat.create_channels') && (
-                <Plus className="h-3 w-3 ml-auto" />
-              )}
+              <span className="flex-1 text-left">CHANNELS ({filteredChannels.length})</span>
+              <div className="flex items-center space-x-1">
+                {filteredChannels.some(c => c.unread_count > 0) && (
+                  <Badge variant="destructive" className="text-xs px-1 py-0 h-4 min-w-4">
+                    {filteredChannels.reduce((total, c) => total + (c.unread_count || 0), 0)}
+                  </Badge>
+                )}
+                {currentUser.permissions?.includes('chat.create_channels') && (
+                  <Plus className="h-3 w-3" />
+                )}
+              </div>
             </Button>
 
             {showChannels && (
@@ -200,17 +215,35 @@ export function ChannelSidebar({
                     size="sm"
                     onClick={() => onChannelSelect(channel)}
                     className={cn(
-                      "w-full justify-start px-2 py-1.5 h-auto text-sm font-normal",
+                      "w-full justify-start px-2 py-1.5 h-auto text-sm font-normal relative",
                       selectedChannel?.id === channel.id
                         ? "bg-blue-100 text-blue-900 hover:bg-blue-100"
+                        : channel.unread_count > 0
+                        ? "text-gray-900 font-medium hover:bg-gray-100"
                         : "text-gray-700 hover:bg-gray-100"
                     )}
                   >
+                    {/* Unread indicator dot */}
+                    {channel.unread_count > 0 && selectedChannel?.id !== channel.id && (
+                      <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-1 bg-blue-600 rounded-full" />
+                    )}
+                    
                     <div className="flex items-center space-x-2 min-w-0 flex-1">
                       {getChannelIcon(channel)}
-                      <span className="truncate">{channel.name}</span>
+                      <span className={cn(
+                        "truncate",
+                        channel.unread_count > 0 && "font-semibold"
+                      )}>
+                        {channel.name}
+                      </span>
                       {channel.unread_count > 0 && (
-                        <Badge variant="destructive" className="text-xs px-1 py-0 h-4 min-w-4">
+                        <Badge 
+                          variant="destructive" 
+                          className={cn(
+                            "text-xs px-1 py-0 h-4 min-w-4",
+                            channel.unread_count > 10 && "animate-pulse"
+                          )}
+                        >
                           {channel.unread_count > 99 ? '99+' : channel.unread_count}
                         </Badge>
                       )}
@@ -236,10 +269,17 @@ export function ChannelSidebar({
               ) : (
                 <ChevronRight className="h-3 w-3 mr-1" />
               )}
-              DIRECT MESSAGES ({filteredDirectMessages.length})
-              {currentUser.permissions?.includes('chat.create_direct') && (
-                <Plus className="h-3 w-3 ml-auto" />
-              )}
+              <span className="flex-1 text-left">DIRECT MESSAGES ({filteredDirectMessages.length})</span>
+              <div className="flex items-center space-x-1">
+                {filteredDirectMessages.some(dm => dm.unread_count > 0) && (
+                  <Badge variant="destructive" className="text-xs px-1 py-0 h-4 min-w-4">
+                    {filteredDirectMessages.reduce((total, dm) => total + (dm.unread_count || 0), 0)}
+                  </Badge>
+                )}
+                {currentUser.permissions?.includes('chat.create_direct') && (
+                  <Plus className="h-3 w-3" />
+                )}
+              </div>
             </Button>
 
             {showDirectMessages && (
@@ -253,12 +293,19 @@ export function ChannelSidebar({
                       size="sm"
                       onClick={() => onChannelSelect(dm)}
                       className={cn(
-                        "w-full justify-start px-2 py-1.5 h-auto text-sm font-normal",
+                        "w-full justify-start px-2 py-1.5 h-auto text-sm font-normal relative",
                         selectedChannel?.id === dm.id
                           ? "bg-blue-100 text-blue-900 hover:bg-blue-100"
+                          : dm.unread_count > 0
+                          ? "text-gray-900 font-medium hover:bg-gray-100"
                           : "text-gray-700 hover:bg-gray-100"
                       )}
                     >
+                      {/* Unread indicator dot */}
+                      {dm.unread_count > 0 && selectedChannel?.id !== dm.id && (
+                        <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-1 bg-blue-600 rounded-full" />
+                      )}
+                      
                       <div className="flex items-center space-x-2 min-w-0 flex-1">
                         {otherParticipant ? (
                           <UserAvatar
@@ -270,11 +317,20 @@ export function ChannelSidebar({
                         ) : (
                           <MessageCircle className="h-4 w-4" />
                         )}
-                        <span className="truncate">
+                        <span className={cn(
+                          "truncate",
+                          dm.unread_count > 0 && "font-semibold"
+                        )}>
                           {otherParticipant?.display_name || dm.name}
                         </span>
                         {dm.unread_count > 0 && (
-                          <Badge variant="destructive" className="text-xs px-1 py-0 h-4 min-w-4">
+                          <Badge 
+                            variant="destructive" 
+                            className={cn(
+                              "text-xs px-1 py-0 h-4 min-w-4",
+                              dm.unread_count > 10 && "animate-pulse"
+                            )}
+                          >
                             {dm.unread_count > 99 ? '99+' : dm.unread_count}
                           </Badge>
                         )}
