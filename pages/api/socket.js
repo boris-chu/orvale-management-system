@@ -6,6 +6,9 @@ export default async function handler(req, res) {
   if (!res.socket.server.io) {
     console.log('🔌 Setting up Socket.io server...')
     
+    // Increase max listeners to prevent memory leak warnings
+    process.setMaxListeners(20)
+    
     const io = new Server(res.socket.server, {
       path: '/api/socket',
       addTrailingSlash: false,

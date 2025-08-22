@@ -67,11 +67,26 @@ export default function ChatPage() {
   const loadChannels = async () => {
     try {
       // Try both token locations used by the existing system
-      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+      let token = localStorage.getItem('authToken') || localStorage.getItem('token')
+      
+      // Clean up token - remove any brackets, quotes, or spaces
+      if (token) {
+        token = token.trim()
+        token = token.replace(/[\[\]"']/g, '')
+        
+        // Ensure it's a proper JWT format (3 parts separated by dots)
+        const parts = token.split('.')
+        if (parts.length !== 3) {
+          console.log('❌ Invalid JWT format - not 3 parts:', parts.length)
+          setError('Invalid authentication token format')
+          return
+        }
+      }
       
       console.log('🔍 Chat loadChannels debug:', {
         hasToken: !!token,
         tokenPrefix: token?.substring(0, 10) + '...',
+        tokenParts: token?.split('.').length,
         user: user?.username,
         permissions: user?.permissions?.length
       })
@@ -111,7 +126,13 @@ export default function ChatPage() {
 
   const loadDirectMessages = async () => {
     try {
-      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+      let token = localStorage.getItem('authToken') || localStorage.getItem('token')
+      
+      // Clean up token - remove any brackets, quotes, or spaces
+      if (token) {
+        token = token.trim()
+        token = token.replace(/[\[\]"']/g, '')
+      }
       
       if (!token) {
         console.log('No token available for direct messages')
