@@ -72,11 +72,23 @@ export const generateToken = (user: User): string => {
 export const verifyToken = (token: string): any => {
     try {
         console.log('🔐 Verifying token with secret length:', JWT_SECRET.length);
+        console.log('🔐 Token format check:', {
+            length: token.length,
+            parts: token.split('.').length,
+            firstPart: token.substring(0, 20) + '...'
+        });
+        
         const decoded = jwt.verify(token, JWT_SECRET);
         console.log('✅ Token verified successfully for user:', decoded.username);
         return decoded;
     } catch (error) {
         console.log('❌ Token verification failed:', error.message);
+        console.log('❌ Token details:', {
+            length: token.length,
+            hasSpaces: token.includes(' '),
+            hasBrackets: token.includes('[') || token.includes(']'),
+            firstChars: token.substring(0, 10)
+        });
         return null;
     }
 };
