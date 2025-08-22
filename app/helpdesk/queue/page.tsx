@@ -546,7 +546,39 @@ export default function HelpdeskQueue() {
     );
   };
 
-  const TicketCard = ({ ticket }: { ticket: Ticket }) => (
+  // Search across all teams and all statuses
+  const searchAllTickets = () => {
+    if (!searchTerm.trim()) return [];
+    
+    const allTickets: Ticket[] = [];
+    
+    // Add escalated tickets
+    allTickets.push(...escalatedTickets);
+    
+    // Add all team tickets from all statuses
+    Object.values(teamTickets).forEach(teamData => {
+      Object.values(teamData).forEach(statusTickets => {
+        allTickets.push(...statusTickets);
+      });
+    });
+    
+    return filterTickets(allTickets);
+  };
+
+  // Get total count of all tickets across all teams
+  const getTotalTicketCount = () => {
+    let total = escalatedTickets.length;
+    
+    Object.values(teamTickets).forEach(teamData => {
+      Object.values(teamData).forEach(statusTickets => {
+        total += statusTickets.length;
+      });
+    });
+    
+    return total;
+  };
+
+  const TicketCard = ({ ticket, showTeamInfo = false }: { ticket: Ticket; showTeamInfo?: boolean }) => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -563,6 +595,12 @@ export default function HelpdeskQueue() {
             {ticket.activity_count > 0 && (
               <Badge variant="outline" className="text-xs">
                 {ticket.activity_count} updates
+              </Badge>
+            )}
+            {showTeamInfo && ticket.assigned_team_name && (
+              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                <Building2 className="h-3 w-3 mr-1" />
+                {ticket.assigned_team_name}
               </Badge>
             )}
           </div>
@@ -639,11 +677,19 @@ export default function HelpdeskQueue() {
     );
   }
 
+  // Determine which tickets to show
   const currentTickets = activeMainTab === 'escalated' 
     ? escalatedTickets 
     : teamTickets[activeMainTab]?.[activeTeamTabs[activeMainTab] || 'pending'] || [];
 
-  const filteredTickets = filterTickets(currentTickets);
+  // If searching, show results from all teams, otherwise show current tab
+  const displayTickets = searchTerm.trim() 
+    ? searchAllTickets() 
+    : currentTickets;
+    
+  const filteredTickets = searchTerm.trim() 
+    ? displayTickets 
+    : filterTickets(currentTickets);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -887,21 +933,29 @@ export default function HelpdeskQueue() {
               <TabsContent value="escalated" className="mt-0">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium">Escalated Tickets</h3>
+                    <h3 className="text-lg font-medium">
+                      {searchTerm.trim() ? 'Search Results' : 'Escalated Tickets'}
+                    </h3>
                     <span className="text-sm text-gray-500">
-                      {filteredTickets.length} of {escalatedTickets.length} tickets
+                      {searchTerm.trim() 
+                        ? `${filteredTickets.length} of ${getTotalTicketCount()} tickets (all teams)`
+                        : `${filteredTickets.length} of ${escalatedTickets.length} tickets`
+                      }
                     </span>
                   </div>
                   
                   {filteredTickets.length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
                       <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No escalated tickets found.</p>
+                      <p>{searchTerm.trim() ? `No tickets found matching "${searchTerm}"` : 'No escalated tickets found.'}</p>
+                      {searchTerm.trim() && (
+                        <p className="text-xs mt-2">Search includes all teams and statuses</p>
+                      )}
                     </div>
                   ) : (
                     <div className="grid gap-4">
                       {filteredTickets.map((ticket) => (
-                        <TicketCard key={ticket.id} ticket={ticket} />
+                        <TicketCard key={ticket.id} ticket={ticket} showTeamInfo={!!searchTerm.trim()} />
                       ))}
                     </div>
                   )}
@@ -967,7 +1021,7 @@ export default function HelpdeskQueue() {
                           ) : (
                             <div className="grid gap-4">
                               {filteredTickets.map((ticket) => (
-                                <TicketCard key={ticket.id} ticket={ticket} />
+                                <TicketCard key={ticket.id} ticket={ticket} showTeamInfo={!!searchTerm.trim()} />
                               ))}
                             </div>
                           )}
