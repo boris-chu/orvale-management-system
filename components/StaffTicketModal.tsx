@@ -123,6 +123,7 @@ interface User {
   email: string;
   team_name?: string;
   active?: boolean;
+  role_id?: number;
   employee_number?: string;
   phone?: string;
   location?: string;
@@ -187,7 +188,8 @@ export function StaffTicketModal({
   const [requestTypes, setRequestTypes] = useState<Record<string, RequestType[]>>({});
   const [subcategories, setSubcategories] = useState<Record<string, Record<string, Subcategory[]>>>({});
   const [teams, setTeams] = useState<Team[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>([]); // All users (system + ticket users) for search
+  const [systemUsers, setSystemUsers] = useState<User[]>([]); // Only system users for assignment
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [showNewUserDialog, setShowNewUserDialog] = useState(false);
@@ -299,9 +301,35 @@ export function StaffTicketModal({
     try {
       const token = localStorage.getItem('authToken');
       const allUsers: User[] = [];
+      const systemUsersOnly: User[] = [];
       
-      // Load system users from the current user's team
-      if (currentUser?.team_id) {
+      // Check if user has cross-team assignment permissions
+      const canAssignCrossTeam = currentUser?.permissions?.some((perm: string) => 
+        ['ticket.assign_cross_team', 'helpdesk.assign_cross_team', 'ticket.assign_any', 'admin.system_settings'].includes(perm)
+      );
+
+      if (canAssignCrossTeam) {
+        // Load all active users from all teams
+        try {
+          const allUsersResponse = await fetch('/api/developer/users', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (allUsersResponse.ok) {
+            const allUsersData = await allUsersResponse.json();
+            const filteredAllUsers = allUsersData.filter((user: User) => 
+              user.username && user.active !== false && user.role_id // Only include users with roles (system users)
+            );
+            systemUsersOnly.push(...filteredAllUsers);
+            allUsers.push(...filteredAllUsers);
+          }
+        } catch (error) {
+          console.warn('Failed to load all system users:', error);
+        }
+      } else if (currentUser?.team_id) {
+        // Load only users from current user's team
         try {
           const systemUsersResponse = await fetch(`/api/developer/teams/${currentUser.team_id}/users`, {
             headers: {
@@ -312,14 +340,15 @@ export function StaffTicketModal({
           if (systemUsersResponse.ok) {
             const systemUserData = await systemUsersResponse.json();
             const filteredSystemUsers = systemUserData.filter((user: User) => user.username && user.active !== false);
-            allUsers.push(...filteredSystemUsers);
+            systemUsersOnly.push(...filteredSystemUsers); // Add to system users only
+            allUsers.push(...filteredSystemUsers); // Also add to all users for search
           }
         } catch (error) {
           console.warn('Failed to load system users:', error);
         }
       }
       
-      // Load ticket users (available to all staff who can create tickets)
+      // Load ticket users (for search only, NOT for assignment)
       try {
         const ticketUsersResponse = await fetch('/api/staff/ticket-users', {
           headers: {
@@ -352,10 +381,12 @@ export function StaffTicketModal({
         return acc;
       }, []);
       
-      setUsers(uniqueUsers);
+      setUsers(uniqueUsers); // Set all users for search functionality
+      setSystemUsers(systemUsersOnly); // Set only system users for assignment
     } catch (error) {
       console.error('Error loading users:', error);
       setUsers([]);
+      setSystemUsers([]);
     }
   };
 
@@ -1326,8 +1357,8 @@ export function StaffTicketModal({
                       <MenuItem value="">
                         <em>No assignment</em>
                       </MenuItem>
-                      {users.length > 0 ? (
-                        users.map((user) => (
+                      {systemUsers.length > 0 ? (
+                        systemUsers.map((user) => (
                           <MenuItem key={user.id} value={user.username}>
                             {user.display_name} (@{user.username})
                           </MenuItem>
