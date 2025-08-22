@@ -40,61 +40,103 @@ interface StaffTicketData {
   submittedDate?: string;
 }
 
-// Generate ticket ID with team prefix
-async function generateTicketId(teamId?: string): Promise<string> {
+// Helper functions for staff ticket numbering (same logic as regular tickets)
+const getNextSequenceForTeam = async (teamId: string, dateStr: string): Promise<number> => {
   try {
-    let prefix = 'STAFF';
-    
-    if (teamId) {
-      // Get team info for prefix
-      const team = await dbGet(
-        'SELECT name FROM teams WHERE id = ?',
-        [teamId]
-      ) as any;
-      
-      if (team) {
-        // Use first part of team name for prefix (e.g., "ITTS_Region7" -> "ITTS")
-        prefix = team.name.split('_')[0].toUpperCase();
-      }
-    }
-    
-    // Get or create sequence for this team
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-    const sequenceResult = await dbGet(
+    // Get current sequence for this team and date
+    const existingRecord = await dbGet(
       'SELECT last_sequence FROM ticket_sequences WHERE team_id = ? AND date = ?',
-      [teamId || 'STAFF', today]
+      [teamId, dateStr]
     ) as any;
     
-    let nextNumber: number;
+    let nextSequence: number;
     
-    if (sequenceResult) {
-      nextNumber = sequenceResult.last_sequence + 1;
+    if (existingRecord) {
+      // Increment existing sequence
+      nextSequence = existingRecord.last_sequence + 1;
       await dbRun(
         'UPDATE ticket_sequences SET last_sequence = ? WHERE team_id = ? AND date = ?',
-        [nextNumber, teamId || 'STAFF', today]
+        [nextSequence, teamId, dateStr]
       );
     } else {
-      // Create new sequence starting at 1
-      nextNumber = 1;
+      // First ticket for this team on this date
+      nextSequence = 1;
       await dbRun(
         'INSERT INTO ticket_sequences (team_id, date, last_sequence, prefix) VALUES (?, ?, ?, ?)',
-        [teamId || 'STAFF', today, nextNumber, prefix]
+        [teamId, dateStr, nextSequence, 'SF']
       );
     }
     
-    // Format: PREFIX-MMDDYY-NNN (same as regular tickets)
-    const now = new Date();
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const day = now.getDate().toString().padStart(2, '0');
-    const year = now.getFullYear().toString().slice(2); // Last 2 digits
-    const paddedNumber = nextNumber.toString().padStart(3, '0');
-    return `${prefix}-${month}${day}${year}-${paddedNumber}`;
+    return nextSequence;
     
   } catch (error) {
-    console.error('Error generating ticket ID:', error);
+    console.error('❌ Error getting next sequence:', error);
+    // Fallback to timestamp-based sequence if database fails
+    return Math.floor(Date.now() / 1000) % 999 + 1;
+  }
+};
+
+// Convert sequence number to formatted string (same logic as regular tickets)
+const formatSequenceNumber = (sequence: number): string => {
+  // 1-999: Standard 3-digit format (001-999)
+  if (sequence <= 999) {
+    return sequence.toString().padStart(3, '0');
+  }
+  
+  // 1000-3599: One letter + two digits (A00-Z99)
+  if (sequence <= 999 + 2600) {
+    const offset = sequence - 1000;
+    const letterIndex = Math.floor(offset / 100);
+    const number = offset % 100;
+    const letter = String.fromCharCode(65 + letterIndex);
+    return `${letter}${number.toString().padStart(2, '0')}`;
+  }
+  
+  // 3600-10359: Two letters + one digit (AA0-ZZ9)
+  if (sequence <= 999 + 2600 + 6760) {
+    const offset = sequence - (1000 + 2600);
+    const firstLetterIndex = Math.floor(offset / 260);
+    const remaining = offset % 260;
+    const secondLetterIndex = Math.floor(remaining / 10);
+    const number = remaining % 10;
+    const firstLetter = String.fromCharCode(65 + firstLetterIndex);
+    const secondLetter = String.fromCharCode(65 + secondLetterIndex);
+    return `${firstLetter}${secondLetter}${number}`;
+  }
+  
+  // 10360+: Three letters (AAA-ZZZ)
+  const offset = sequence - (1000 + 2600 + 6760);
+  const firstLetterIndex = Math.floor(offset / 676);
+  const remaining = offset % 676;
+  const secondLetterIndex = Math.floor(remaining / 26);
+  const thirdLetterIndex = remaining % 26;
+  const firstLetter = String.fromCharCode(65 + firstLetterIndex);
+  const secondLetter = String.fromCharCode(65 + secondLetterIndex);
+  const thirdLetter = String.fromCharCode(65 + thirdLetterIndex);
+  return `${firstLetter}${secondLetter}${thirdLetter}`;
+};
+
+// Generate staff ticket ID using the same sequence as regular tickets
+async function generateStaffTicketId(teamId?: string): Promise<string> {
+  try {
+    const now = new Date();
+    const dateStr = now.toISOString().slice(2, 10).replace(/-/g, ''); // YYMMDD format
+    
+    // Use the assigned team for the sequence, or default to the current user's team
+    const targetTeamId = teamId || 'ITTS_Region7'; // Default fallback
+    
+    // Get next sequence number using the same system as regular tickets
+    const sequence = await getNextSequenceForTeam(targetTeamId, dateStr);
+    const formattedSequence = formatSequenceNumber(sequence);
+    
+    // Use 'SF' prefix for staff tickets instead of team prefix
+    return `SF-${dateStr}-${formattedSequence}`;
+    
+  } catch (error) {
+    console.error('Error generating staff ticket ID:', error);
     // Fallback to timestamp-based ID
     const timestamp = Date.now();
-    return `STAFF-${timestamp}`;
+    return `SF-${timestamp}`;
   }
 }
 
@@ -206,7 +248,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate ticket ID
-    const ticketId = await generateTicketId(ticketData.assignedTeam);
+    const ticketId = await generateStaffTicketId(ticketData.assignedTeam);
     
     // Prepare ticket data
     const now = new Date().toISOString();
