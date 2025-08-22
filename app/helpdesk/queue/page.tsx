@@ -1276,11 +1276,9 @@ export default function HelpdeskQueue() {
                   <div><strong>Name:</strong> {selectedTicket.user_name}</div>
                   <div><strong>Employee #:</strong> {selectedTicket.employee_number}</div>
                   <div><strong>Phone:</strong> {selectedTicket.phone_number}</div>
-                  <div><strong>Location:</strong> {selectedTicket.location}</div>
                   {selectedTicket.cubicle_room && (
                     <div><strong>Cubicle/Room:</strong> {selectedTicket.cubicle_room}</div>
                   )}
-                  <div><strong>Section:</strong> {selectedTicket.section}</div>
                   {selectedTicket.request_creator_display_name && (
                     <div><strong>Request Creator:</strong> {selectedTicket.request_creator_display_name}</div>
                   )}
