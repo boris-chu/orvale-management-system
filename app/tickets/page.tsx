@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 // Material-UI imports for working Select components
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings, LogOut, CheckCircle, Monitor, Plus, Paperclip, FileText, Download, ExternalLink } from 'lucide-react';
+import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings, LogOut, CheckCircle, Monitor, Plus, Paperclip, FileText, Download, ExternalLink, X, Upload } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 // Removed static imports - will load dynamically from database APIs
@@ -128,6 +128,9 @@ export default function TicketsPage() {
   // Attachments state
   const [ticketAttachments, setTicketAttachments] = useState<TicketAttachment[]>([]);
   const [loadingAttachments, setLoadingAttachments] = useState(false);
+  const [newAttachments, setNewAttachments] = useState<File[]>([]);
+  const [attachmentsToDelete, setAttachmentsToDelete] = useState<number[]>([]);
+  const [uploadingAttachments, setUploadingAttachments] = useState(false);
 
   // Show notification helper
   const showNotification = (message: string, type: 'success' | 'error') => {
@@ -204,10 +207,16 @@ export default function TicketsPage() {
       if (categoriesResponse.ok) {
         const categoriesData = await categoriesResponse.json();
         
+        console.log('🏷️ Categories API response:', categoriesData);
+        
         // Transform the data to match the expected format
         setCategories(categoriesData.categories || {});
         setRequestTypes(categoriesData.requestTypes || {});
         setSubcategories(categoriesData.subcategories || {});
+        
+        console.log('🏷️ Categories set to:', categoriesData.categories);
+        console.log('🏷️ RequestTypes set to:', categoriesData.requestTypes);
+        console.log('🏷️ Subcategories set to:', categoriesData.subcategories);
       } else {
         console.error('Failed to load ticket categories');
         setCategories({});
@@ -228,18 +237,57 @@ export default function TicketsPage() {
 
   // Check if ticket has changes
   const hasChanges = () => {
-    if (!originalTicket || !selectedTicket) return false;
+    console.log('🔍 hasChanges() called');
     
-    // Compare key fields that can be modified
-    const fieldsToCompare = [
-      'office', 'bureau', 'division', 'section',
-      'category', 'request_type', 'subcategory', 'sub_subcategory', 'implementation',
-      'priority', 'status', 'assigned_to', 'assigned_team'
-    ];
+    if (!originalTicket || !selectedTicket) {
+      console.log('❌ Missing originalTicket or selectedTicket:', {
+        hasOriginalTicket: !!originalTicket,
+        hasSelectedTicket: !!selectedTicket
+      });
+      return false;
+    }
     
-    return fieldsToCompare.some(field => {
-      return originalTicket[field as keyof Ticket] !== selectedTicket[field as keyof Ticket];
+    // Compare tickets using JSON serialization (same as helpdesk queue)
+    const originalJSON = JSON.stringify(originalTicket);
+    const selectedJSON = JSON.stringify(selectedTicket);
+    const hasTicketChanges = originalJSON !== selectedJSON;
+    const hasAttachmentChanges = newAttachments.length > 0 || attachmentsToDelete.length > 0;
+    
+    console.log('🔍 hasChanges comparison:', {
+      hasTicketChanges,
+      hasAttachmentChanges,
+      newAttachments: newAttachments.length,
+      attachmentsToDelete: attachmentsToDelete.length,
+      originalTicketId: originalTicket?.id,
+      selectedTicketId: selectedTicket?.id,
+      JSONsMatch: originalJSON === selectedJSON
     });
+    
+    // Show detailed diff if there are ticket changes
+    if (hasTicketChanges) {
+      console.log('📊 Ticket changes detected:');
+      console.log('📋 Original JSON length:', originalJSON.length);
+      console.log('📋 Selected JSON length:', selectedJSON.length);
+      
+      // Find the first difference in JSON strings for debugging
+      let diffIndex = -1;
+      const minLength = Math.min(originalJSON.length, selectedJSON.length);
+      for (let i = 0; i < minLength; i++) {
+        if (originalJSON[i] !== selectedJSON[i]) {
+          diffIndex = i;
+          break;
+        }
+      }
+      if (diffIndex >= 0) {
+        console.log(`📋 First difference at index ${diffIndex}:`);
+        console.log(`📋 Original: "${originalJSON.slice(Math.max(0, diffIndex - 10), diffIndex + 10)}"`);
+        console.log(`📋 Selected: "${selectedJSON.slice(Math.max(0, diffIndex - 10), diffIndex + 10)}"`);
+      }
+    }
+    
+    const result = hasTicketChanges || hasAttachmentChanges;
+    console.log(`🔍 hasChanges() returning: ${result}`);
+    return result;
   };
 
   // Store original ticket when modal opens
@@ -250,6 +298,10 @@ export default function TicketsPage() {
     setModalActiveTab('details'); // Reset to details tab
     loadAssignableUsers(); // Load users that can be assigned to
     loadAvailableTeams(); // Load teams for helpdesk users
+    // Reset attachment editing state
+    setNewAttachments([]);
+    setAttachmentsToDelete([]);
+    setUploadingAttachments(false);
   };
 
   // Handle tab change with proper event handling
@@ -377,6 +429,116 @@ export default function TicketsPage() {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // Attachment editing functions
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
+    const fileArray = Array.from(files);
+    
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024;
+    const validFiles = fileArray.filter(file => {
+      if (file.size > maxSize) {
+        showNotification(`${file.name} exceeds 10MB limit`, 'error');
+        return false;
+      }
+      return true;
+    });
+    
+    setNewAttachments(prev => [...prev, ...validFiles]);
+  };
+
+  const removeNewAttachment = (index: number) => {
+    setNewAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const markAttachmentForDeletion = (attachmentId: number) => {
+    setAttachmentsToDelete(prev => [...prev, attachmentId]);
+  };
+
+  const unmarkAttachmentForDeletion = (attachmentId: number) => {
+    setAttachmentsToDelete(prev => prev.filter(id => id !== attachmentId));
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const files = e.dataTransfer.files;
+    handleFileSelect(files);
+  };
+
+  const saveAttachmentChanges = async (showSuccessNotification = true) => {
+    if (!selectedTicket) return;
+    
+    setUploadingAttachments(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      // Delete marked attachments
+      for (const attachmentId of attachmentsToDelete) {
+        const response = await fetch(`/api/staff/tickets/attachments/${attachmentId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to delete attachment ${attachmentId}`);
+        }
+      }
+      
+      // Upload new attachments
+      if (newAttachments.length > 0) {
+        const formData = new FormData();
+        newAttachments.forEach(file => {
+          formData.append('files', file);
+        });
+        formData.append('ticketId', selectedTicket.id);
+        
+        const response = await fetch('/api/staff/tickets/attachments', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to upload new attachments');
+        }
+      }
+      
+      // Clear editing state
+      setNewAttachments([]);
+      setAttachmentsToDelete([]);
+      
+      // Reload attachments
+      await loadTicketAttachments(selectedTicket.id);
+      
+      if (showSuccessNotification) {
+        showNotification('Attachment changes saved successfully', 'success');
+      }
+      
+    } catch (error) {
+      console.error('Error saving attachment changes:', error);
+      if (showSuccessNotification) {
+        showNotification('Failed to save attachment changes', 'error');
+      }
+      throw error; // Re-throw so calling function can handle it
+    } finally {
+      setUploadingAttachments(false);
+    }
+  };
+
+  const hasAttachmentChanges = () => {
+    return newAttachments.length > 0 || attachmentsToDelete.length > 0;
   };
 
   // Check authentication on load
@@ -670,54 +832,68 @@ export default function TicketsPage() {
 
   // Update ticket field helper
   const updateTicketField = (field: string, value: string) => {
-    if (selectedTicket) {
-      // Don't allow field updates if ticket is not editable
-      if (!isTicketEditable(selectedTicket)) return;
-      
-      // Auto-assign ticket to current user if unassigned (except when changing assignment directly)
-      let updatedTicket = { ...selectedTicket, [field]: value };
-      
-      if (!selectedTicket.assigned_to && field !== 'assigned_to' && currentUser?.username) {
-        updatedTicket.assigned_to = currentUser.username;
-        showNotification(`Ticket automatically assigned to you`, 'success');
-      }
-      
-      setSelectedTicket(updatedTicket);
-      
-      // Special handling for team changes - clear assigned user and reload assignable users
-      if (field === 'assigned_team' && value !== selectedTicket.assigned_team) {
-        setSelectedTicket(prev => prev ? {
-          ...prev,
-          assigned_team: value,
-          assigned_to: '' // Clear assigned user when team changes
-        } : null);
-        // Reload assignable users for the new team
-        setTimeout(() => loadAssignableUsers(), 100);
-        showNotification('Team changed - assigned user cleared', 'success');
-        return; // Exit early since we've handled the update
-      }
-      
-      // Clear dependent fields when parent category changes
-      if (field === 'category') {
-        setSelectedTicket(prev => prev ? {
-          ...prev,
-          category: value,
-          request_type: '',
-          subcategory: '',
-          sub_subcategory: ''
-        } : null);
-      } else if (field === 'request_type') {
-        setSelectedTicket(prev => prev ? {
-          ...prev,
-          request_type: value,
-          subcategory: '',
-          sub_subcategory: ''
-        } : null);
-      }
-      
-      // TODO: Call API to update ticket in database
-      console.log(`Updating ticket ${selectedTicket.id}: ${field} = ${value}`);
+    console.log(`🔧 updateTicketField called: ${field} = "${value}"`);
+    
+    if (!selectedTicket) {
+      console.log('❌ No selectedTicket, returning early');
+      return;
     }
+    
+    // Don't allow field updates if ticket is not editable
+    if (!isTicketEditable(selectedTicket)) {
+      console.log('❌ Ticket not editable, returning early');
+      return;
+    }
+    
+    console.log(`📋 Current ticket before update:`, selectedTicket);
+    console.log(`📋 Original ticket:`, originalTicket);
+    
+    // Start with the current ticket data
+    let updatedTicket = { ...selectedTicket };
+    
+    // Apply the field change
+    updatedTicket[field as keyof Ticket] = value as any;
+    console.log(`🔄 Applied field change: ${field} = "${value}"`);
+    
+    // Auto-assign ticket to current user if unassigned (except when changing assignment directly)
+    if (!selectedTicket.assigned_to && field !== 'assigned_to' && currentUser?.username) {
+      updatedTicket.assigned_to = currentUser.username;
+      console.log(`👤 Auto-assigned ticket to ${currentUser.username}`);
+      showNotification(`Ticket automatically assigned to you`, 'success');
+    }
+    
+    // Special handling for dependent field clearing
+    if (field === 'category') {
+      // Clear dependent fields when category changes
+      updatedTicket.request_type = '';
+      updatedTicket.subcategory = '';
+      updatedTicket.sub_subcategory = '';
+      console.log('🧹 Cleared dependent fields for category change');
+    } else if (field === 'request_type') {
+      // Clear dependent fields when request type changes
+      updatedTicket.subcategory = '';
+      updatedTicket.sub_subcategory = '';
+      console.log('🧹 Cleared dependent fields for request_type change');
+    } else if (field === 'assigned_team' && value !== selectedTicket.assigned_team) {
+      // Clear assigned user when team changes
+      updatedTicket.assigned_to = '';
+      console.log('🧹 Cleared assigned_to for team change');
+      // Reload assignable users for the new team
+      setTimeout(() => loadAssignableUsers(), 100);
+      showNotification('Team changed - assigned user cleared', 'success');
+    }
+    
+    console.log(`📋 Updated ticket object:`, updatedTicket);
+    
+    // Update the selected ticket with all changes at once
+    setSelectedTicket(updatedTicket);
+    
+    console.log(`✅ setSelectedTicket called for field ${field}`);
+    
+    // Force a re-check of changes after state update
+    setTimeout(() => {
+      console.log(`🔍 Checking changes after ${field} update:`, hasChanges());
+    }, 100);
   };
 
   // Open organizational data browser
@@ -812,6 +988,18 @@ export default function TicketsPage() {
       });
       
       if (response.ok) {
+        // Also save attachment changes if there are any
+        if (hasAttachmentChanges()) {
+          try {
+            await saveAttachmentChanges(false); // Don't show notification, we'll show one combined message
+          } catch (attachmentError) {
+            console.warn('Ticket saved but attachment changes failed:', attachmentError);
+            showNotification('Ticket updated, but some attachment changes failed', 'error');
+            setSaveStatus('idle');
+            return;
+          }
+        }
+        
         // Update the ticket in the main list
         setTickets(prev => prev.map(ticket => 
           ticket.id === ticketToSave.id ? ticketToSave : ticket
@@ -1341,6 +1529,17 @@ export default function TicketsPage() {
                 )}
               </div>
               <div className="flex gap-2">
+                {(() => {
+                  const changes = hasChanges();
+                  const editable = isTicketEditable(selectedTicket);
+                  console.log('🎯 Save button condition check:', {
+                    hasChanges: changes,
+                    isTicketEditable: editable,
+                    shouldShow: changes && editable,
+                    selectedTicketId: selectedTicket?.id
+                  });
+                  return null;
+                })()}
                 <AnimatePresence mode="wait">
                   {hasChanges() && isTicketEditable(selectedTicket) && (
                     <motion.div
@@ -1532,52 +1731,189 @@ export default function TicketsPage() {
             
             {/* File Attachments Section */}
             <div className="mt-6">
-              <h3 className="font-semibold text-blue-600 mb-2 flex items-center gap-2">
-                <Paperclip className="h-5 w-5" />
-                File Attachments
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-blue-600 flex items-center gap-2">
+                  <Paperclip className="h-5 w-5" />
+                  File Attachments
+                </h3>
+                {hasAttachmentChanges() && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setNewAttachments([]);
+                        setAttachmentsToDelete([]);
+                      }}
+                      disabled={uploadingAttachments}
+                    >
+                      Cancel Changes
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={saveAttachmentChanges}
+                      disabled={uploadingAttachments}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {uploadingAttachments ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
               
               {loadingAttachments ? (
                 <div className="flex items-center justify-center py-8">
                   <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
                   <span className="ml-2 text-gray-500">Loading attachments...</span>
                 </div>
-              ) : ticketAttachments.length > 0 ? (
-                <div className="grid gap-3">
-                  {ticketAttachments.map((attachment) => (
-                    <div
-                      key={attachment.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <FileText className="h-5 w-5 text-gray-500 flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium text-sm text-gray-900 truncate">
-                            {attachment.original_filename}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {formatFileSize(attachment.file_size)} • {attachment.mime_type.split('/')[1].toUpperCase()} • 
-                            Uploaded by {attachment.uploaded_by} on {new Date(attachment.uploaded_at).toLocaleDateString()}
-                          </div>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => downloadAttachment(attachment.id, attachment.original_filename)}
-                        className="flex items-center gap-2 ml-3"
-                      >
-                        <Download className="h-4 w-4" />
-                        Download
-                      </Button>
-                    </div>
-                  ))}
-                </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Paperclip className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No attachments found for this ticket.</p>
-                </div>
+                <>
+                  {/* Existing Attachments */}
+                  {ticketAttachments.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">Current Attachments</h4>
+                      <div className="grid gap-3">
+                        {ticketAttachments.map((attachment) => {
+                          const isMarkedForDeletion = attachmentsToDelete.includes(attachment.id);
+                          return (
+                            <div
+                              key={attachment.id}
+                              className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                                isMarkedForDeletion 
+                                  ? 'bg-red-50 border-red-200 opacity-75' 
+                                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <FileText className={`h-5 w-5 flex-shrink-0 ${isMarkedForDeletion ? 'text-red-400' : 'text-gray-500'}`} />
+                                <div className="min-w-0 flex-1">
+                                  <div className={`font-medium text-sm truncate ${isMarkedForDeletion ? 'line-through text-red-600' : 'text-gray-900'}`}>
+                                    {attachment.original_filename}
+                                  </div>
+                                  <div className={`text-xs mt-1 ${isMarkedForDeletion ? 'text-red-500' : 'text-gray-500'}`}>
+                                    {formatFileSize(attachment.file_size)} • {attachment.mime_type.split('/')[1].toUpperCase()} • 
+                                    Uploaded by {attachment.uploaded_by} on {new Date(attachment.uploaded_at).toLocaleDateString()}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 ml-3">
+                                {!isMarkedForDeletion ? (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => downloadAttachment(attachment.id, attachment.original_filename)}
+                                      className="flex items-center gap-2"
+                                    >
+                                      <Download className="h-4 w-4" />
+                                      Download
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => markAttachmentForDeletion(attachment.id)}
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => unmarkAttachmentForDeletion(attachment.id)}
+                                    className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                                  >
+                                    Restore
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New Attachments */}
+                  {newAttachments.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">New Attachments</h4>
+                      <div className="grid gap-3">
+                        {newAttachments.map((file, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200"
+                          >
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <FileText className="h-5 w-5 text-green-500 flex-shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-sm text-green-900 truncate">
+                                  {file.name}
+                                </div>
+                                <div className="text-xs text-green-600 mt-1">
+                                  {formatFileSize(file.size)} • {file.type.split('/')[1].toUpperCase()} • New file
+                                </div>
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => removeNewAttachment(index)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 ml-3"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Add Attachments Section */}
+                  {isTicketEditable(selectedTicket) && (
+                    <div 
+                      className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer"
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.multiple = true;
+                        input.accept = '.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.gif,.bmp,.zip';
+                        input.onchange = (e) => handleFileSelect((e.target as HTMLInputElement).files);
+                        input.click();
+                      }}
+                    >
+                      <Upload className="h-8 w-8 mx-auto mb-4 text-gray-400" />
+                      <h4 className="text-sm font-medium text-gray-900 mb-2">Add More Attachments</h4>
+                      <p className="text-xs text-gray-500 mb-4">
+                        Drag and drop files here, or click to select files
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        Supported: PDF, Word, Excel, Images, ZIP (Max 10MB each)
+                      </p>
+                    </div>
+                  )}
+
+                  {/* No attachments message */}
+                  {ticketAttachments.length === 0 && newAttachments.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <Paperclip className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No attachments found for this ticket.</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
             
@@ -1611,7 +1947,10 @@ export default function TicketsPage() {
                           id="office-select"
                           value={selectedTicket.office || ''}
                           label="Select Office"
-                          onChange={(e) => updateTicketField('office', e.target.value)}
+                          onChange={(e) => {
+                            console.log('🔥 Office dropdown changed:', e.target.value);
+                            updateTicketField('office', e.target.value);
+                          }}
                           disabled={!isTicketEditable(selectedTicket)}
                         >
                           {organizationalData.offices.map((office, index) => (
@@ -1724,14 +2063,25 @@ export default function TicketsPage() {
                           id="category-select"
                           value={selectedTicket.category || ''}
                           label="Select Category"
-                          onChange={(e) => updateTicketField('category', e.target.value)}
+                          onChange={(e) => {
+                            console.log('🔥 Category dropdown changed:', e.target.value);
+                            updateTicketField('category', e.target.value);
+                          }}
                           disabled={!isTicketEditable(selectedTicket)}
                         >
-                          {Object.entries(categories || {}).map(([key, value]) => (
-                            <MenuItem key={key} value={key}>
-                              {String(value)}
-                            </MenuItem>
-                          ))}
+                          {(() => {
+                            const categoryEntries = Object.entries(categories || {});
+                            console.log('🎯 Category dropdown rendering:', {
+                              selectedValue: selectedTicket.category,
+                              availableEntries: categoryEntries,
+                              hasSelectedTicket: !!selectedTicket
+                            });
+                            return categoryEntries.map(([key, value]) => (
+                              <MenuItem key={key} value={key}>
+                                {String(value)}
+                              </MenuItem>
+                            ));
+                          })()}
                         </Select>
                       </FormControl>
                     </div>

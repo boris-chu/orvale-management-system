@@ -68,9 +68,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (response.ok) {
             const freshUserData = await response.json();
             console.log('🔄 Server response:', freshUserData);
-            if (freshUserData.user && freshUserData.user.id) {
-              console.log('✅ Updated with fresh user data:', freshUserData.user);
-              setUser(freshUserData.user);
+            // Handle both direct user object and wrapped user object
+            const userObj = freshUserData.user || freshUserData;
+            if (userObj && userObj.id) {
+              console.log('✅ Updated with fresh user data:', userObj);
+              setUser(userObj);
             } else {
               console.log('⚠️ Server returned invalid user data, keeping stored data');
             }

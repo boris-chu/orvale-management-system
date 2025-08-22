@@ -32,7 +32,10 @@ import {
   Paperclip,
   FileText,
   Download,
-  ExternalLink
+  ExternalLink,
+  Upload,
+  X,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -44,6 +47,7 @@ import { StaffTicketModal } from '@/components/StaffTicketModal';
 import CategoryBrowserModal from '@/components/CategoryBrowserModal';
 import OrganizationalBrowserModal from '@/components/OrganizationalBrowserModal';
 import TicketHistoryComponent from '@/components/TicketHistoryComponent';
+import { TicketDetailsModal } from '@/components/TicketDetailsModal';
 
 interface TicketAttachment {
   id: number;
@@ -161,6 +165,9 @@ export default function HelpdeskQueue() {
   // Attachments state
   const [ticketAttachments, setTicketAttachments] = useState<TicketAttachment[]>([]);
   const [loadingAttachments, setLoadingAttachments] = useState(false);
+  const [newAttachments, setNewAttachments] = useState<File[]>([]);
+  const [attachmentsToDelete, setAttachmentsToDelete] = useState<number[]>([]);
+  const [uploadingAttachments, setUploadingAttachments] = useState(false);
 
   useEffect(() => {
     checkPermissions();
@@ -182,6 +189,9 @@ export default function HelpdeskQueue() {
     } else {
       setTicketAttachments([]);
     }
+    // Reset attachment editing states
+    setNewAttachments([]);
+    setAttachmentsToDelete([]);
   }, [selectedTicket]);
 
   // Close user menu when clicking outside
@@ -377,6 +387,147 @@ export default function HelpdeskQueue() {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+  
+  // Handle new file selection
+  const handleAttachmentFileSelect = (files: FileList) => {
+    const validFiles: File[] = [];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'text/csv',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/bmp',
+      'application/zip',
+      'application/x-zip-compressed'
+    ];
+    
+    Array.from(files).forEach((file) => {
+      if (file.size > maxSize) {
+        showNotification(`${file.name} exceeds 10MB limit`, 'error');
+        return;
+      }
+      
+      if (!allowedTypes.includes(file.type)) {
+        showNotification(`${file.name} - Only documents, images, and archives are allowed`, 'error');
+        return;
+      }
+      
+      validFiles.push(file);
+    });
+    
+    if (validFiles.length > 0) {
+      setNewAttachments(prev => [...prev, ...validFiles]);
+      showNotification(`${validFiles.length} file(s) added`, 'success');
+    }
+  };
+  
+  // Remove new attachment before upload
+  const removeNewAttachment = (index: number) => {
+    setNewAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  // Mark existing attachment for deletion
+  const markAttachmentForDeletion = (attachmentId: number) => {
+    setAttachmentsToDelete(prev => [...prev, attachmentId]);
+  };
+  
+  // Unmark attachment for deletion
+  const unmarkAttachmentForDeletion = (attachmentId: number) => {
+    setAttachmentsToDelete(prev => prev.filter(id => id !== attachmentId));
+  };
+  
+  // Save attachment changes
+  const saveAttachmentChanges = async () => {
+    if (!selectedTicket || (newAttachments.length === 0 && attachmentsToDelete.length === 0)) {
+      return;
+    }
+    
+    setUploadingAttachments(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      // Delete marked attachments
+      for (const attachmentId of attachmentsToDelete) {
+        const deleteResponse = await fetch(`/api/staff/tickets/attachments/${attachmentId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!deleteResponse.ok) {
+          throw new Error(`Failed to delete attachment ${attachmentId}`);
+        }
+      }
+      
+      // Upload new attachments
+      if (newAttachments.length > 0) {
+        const formData = new FormData();
+        newAttachments.forEach((file) => {
+          formData.append('files', file);
+        });
+        formData.append('ticketId', selectedTicket.id);
+        
+        const uploadResponse = await fetch('/api/staff/tickets/attachments', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+        
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload new attachments');
+        }
+      }
+      
+      // Reset states
+      setNewAttachments([]);
+      setAttachmentsToDelete([]);
+      
+      // Reload attachments
+      await loadTicketAttachments(selectedTicket.id);
+      
+      showNotification('Attachments updated successfully', 'success');
+      
+    } catch (error) {
+      console.error('Error updating attachments:', error);
+      showNotification('Failed to update attachments', 'error');
+    } finally {
+      setUploadingAttachments(false);
+    }
+  };
+  
+  // Handle drag and drop for new attachments
+  const handleAttachmentDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  
+  const handleAttachmentDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleAttachmentFileSelect(files);
+    }
+  };
+  
+  // Check if user can edit attachments
+  const canEditAttachments = () => {
+    return isTicketEditable(selectedTicket) && (
+      currentUser?.permissions?.includes('ticket.create_for_users') ||
+      currentUser?.permissions?.includes('admin.system_settings')
+    );
   };
 
   const showNotification = (message: string, type: 'success' | 'error') => {
@@ -1196,556 +1347,47 @@ export default function HelpdeskQueue() {
       )}
 
       {/* Ticket Detail Modal */}
-      {selectedTicket && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          onClick={() => setSelectedTicket(null)}
-        >
-          <div 
-            className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] min-h-[60vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex-1">
-                <h2 className="text-xl font-bold">{selectedTicket.issue_title}</h2>
-                {selectedTicket.status === 'completed' && (
-                  <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <span className="text-sm text-green-800 font-medium">
-                      This ticket has been completed and is now read-only
-                    </span>
-                  </div>
-                )}
-                {canAssignCrossTeam() && (
-                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5 text-blue-600" />
-                    <span className="text-sm text-blue-800 font-medium">
-                      Helpdesk Mode - Cross-team assignment available
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <AnimatePresence mode="wait">
-                  {hasChanges() && isTicketEditable(selectedTicket) && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <Button 
-                        onClick={saveTicketChanges} 
-                        disabled={saveStatus === 'saving'}
-                        className={`transition-all duration-300 ${
-                          saveStatus === 'saved' 
-                            ? 'bg-green-600 hover:bg-green-700' 
-                            : saveStatus === 'saving'
-                            ? 'bg-blue-500 cursor-not-allowed'
-                            : 'bg-blue-600 hover:bg-blue-700'
-                        } text-white`}
-                      >
-                        <motion.div 
-                          className="flex items-center gap-2"
-                          initial={false}
-                          animate={{ 
-                            scale: saveStatus === 'saving' ? [1, 1.05, 1] : 1,
-                          }}
-                          transition={{ 
-                            repeat: saveStatus === 'saving' ? Infinity : 0,
-                            duration: 0.6 
-                          }}
-                        >
-                          {saveStatus === 'saved' ? (
-                            <>
-                              <Check className="h-4 w-4" />
-                              Saved!
-                            </>
-                          ) : saveStatus === 'saving' ? (
-                            <>
-                              <motion.div
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                              </motion.div>
-                              Saving...
-                            </>
-                          ) : (
-                            <>
-                              <Save className="h-4 w-4" />
-                              Save Changes
-                            </>
-                          )}
-                        </motion.div>
-                      </Button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <Button variant="outline" onClick={() => setSelectedTicket(null)}>
-                  ✕ Close
-                </Button>
-              </div>
-            </div>
-            
-            {/* Tab Navigation */}
-            <Tabs value={modalActiveTab} onValueChange={handleTabChange} className="w-full">
-              <TabsList className="grid w-full grid-cols-2" onClick={(e) => e.stopPropagation()}>
-                <TabsTrigger 
-                  value="details" 
-                  className="flex items-center gap-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Eye className="h-4 w-4" />
-                  Ticket Details
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="history" 
-                  className="flex items-center gap-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Clock className="h-4 w-4" />
-                  History & Audit Trail
-                </TabsTrigger>
-              </TabsList>
+      <TicketDetailsModal
+        ticket={selectedTicket}
+        onClose={() => {
+          setSelectedTicket(null);
+          setOriginalTicket(null);
+        }}
+        onSave={async (updatedTicket) => {
+          const token = localStorage.getItem('authToken');
+          const response = await fetch(`/api/tickets/${updatedTicket.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(updatedTicket)
+          });
+          
+          if (response.ok) {
+            showNotification('Ticket updated successfully', 'success');
+            // Refresh tickets list
+            handleRefresh();
+          } else {
+            throw new Error('Failed to save ticket');
+          }
+        }}
+        currentUser={currentUser}
+        isHelpdesk={true}
+      />
 
-              <TabsContent value="details" className="mt-4" onClick={(e) => e.stopPropagation()}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="font-semibold text-blue-600 mb-2">Request Information</h3>
-                <div className="space-y-2 text-sm">
-                  <div><strong>Status:</strong> 
-                    <Badge 
-                      className={`${getStatusColor(selectedTicket.status)} ${!isTicketEditable(selectedTicket) ? 'cursor-default opacity-60' : 'cursor-pointer hover:opacity-80'} ml-2`}
-                      onClick={() => isTicketEditable(selectedTicket) && cycleStatus()}
-                      title={!isTicketEditable(selectedTicket) ? 'Completed tickets cannot be modified' : 'Click to cycle status'}
-                    >
-                      {formatStatus(selectedTicket.status)}
-                    </Badge>
-                  </div>
-                  <div><strong>Priority:</strong> 
-                    <Badge 
-                      className={`${getPriorityColor(selectedTicket.priority)} ${!isTicketEditable(selectedTicket) ? 'cursor-default opacity-60' : 'cursor-pointer hover:opacity-80'} ml-2`}
-                      onClick={() => isTicketEditable(selectedTicket) && cyclePriority()}
-                      title={!isTicketEditable(selectedTicket) ? 'Completed tickets cannot be modified' : 'Click to cycle priority'}
-                    >
-                      {formatPriority(selectedTicket.priority)}
-                    </Badge>
-                  </div>
-                  <div><strong>Submitted:</strong> {formatDate(selectedTicket.submitted_at)}</div>
-                  {selectedTicket.request_creator_display_name && (
-                    <div><strong>Request Creator:</strong> {selectedTicket.request_creator_display_name}</div>
-                  )}
-                  <div><strong>Ticket ID:</strong> {selectedTicket.submission_id}</div>
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To:</label>
-                    <FormControl size="small" className="w-full">
-                      <InputLabel id="assigned-to-label">Select Assignee</InputLabel>
-                      <Select
-                        labelId="assigned-to-label"
-                        id="assigned-to-select"
-                        value={selectedTicket.assigned_to || ''}
-                        label="Select Assignee"
-                        onChange={(e) => updateTicketField('assigned_to', e.target.value)}
-                        disabled={loadingAssignableUsers || !isTicketEditable(selectedTicket)}
-                      >
-                        <MenuItem value="">
-                          <em>Unassigned</em>
-                        </MenuItem>
-                        {assignableUsers.map((user) => (
-                          <MenuItem key={user.username} value={user.username}>
-                            {user.display_label || `${user.display_name} (${user.username})`}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </div>
-                  
-                  {/* Team Assignment - Only for helpdesk users */}
-                  {canAssignCrossTeam() && (
-                    <div className="mt-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Assigned Team:
-                        <Badge variant="outline" className="ml-2 text-xs">
-                          Helpdesk
-                        </Badge>
-                      </label>
-                      <FormControl size="small" className="w-full">
-                        <InputLabel id="assigned-team-label">Select Team</InputLabel>
-                        <Select
-                          labelId="assigned-team-label"
-                          id="assigned-team-select"
-                          value={selectedTicket.assigned_team || ''}
-                          label="Select Team"
-                          onChange={(e) => updateTicketField('assigned_team', e.target.value)}
-                          disabled={loadingTeams || !isTicketEditable(selectedTicket)}
-                        >
-                          <MenuItem value="">
-                            <em>Unassigned</em>
-                          </MenuItem>
-                          {availableTeams.map((team) => (
-                            <MenuItem key={team.id} value={team.id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{team.name}</span>
-                                <span className="text-xs text-gray-500">
-                                  {team.section_name} • {team.active_tickets} active tickets
-                                  {team.team_lead_name && ` • Lead: ${team.team_lead_name}`}
-                                </span>
-                              </div>
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="font-semibold text-blue-600 mb-2">User Information</h3>
-                <div className="space-y-2 text-sm">
-                  <div><strong>Name:</strong> {selectedTicket.user_name}</div>
-                  <div><strong>Employee #:</strong> {selectedTicket.employee_number}</div>
-                  <div><strong>Phone:</strong> {selectedTicket.phone_number}</div>
-                  <div><strong>Location:</strong> {selectedTicket.location}</div>
-                  {selectedTicket.cubicle_room && (
-                    <div><strong>Cubicle/Room:</strong> {selectedTicket.cubicle_room}</div>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            {/* File Attachments Section */}
-            <div className="mt-6">
-              <h3 className="font-semibold text-blue-600 mb-2 flex items-center gap-2">
-                <Paperclip className="h-5 w-5" />
-                File Attachments
-              </h3>
-              
-              {loadingAttachments ? (
-                <div className="flex items-center justify-center py-8">
-                  <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
-                  <span className="ml-2 text-gray-500">Loading attachments...</span>
-                </div>
-              ) : ticketAttachments.length > 0 ? (
-                <div className="grid gap-3">
-                  {ticketAttachments.map((attachment) => (
-                    <div
-                      key={attachment.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <FileText className="h-5 w-5 text-gray-500 flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium text-sm text-gray-900 truncate">
-                            {attachment.original_filename}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {formatFileSize(attachment.file_size)} • {attachment.mime_type.split('/')[1].toUpperCase()} • 
-                            Uploaded by {attachment.uploaded_by} on {new Date(attachment.uploaded_at).toLocaleDateString()}
-                          </div>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => downloadAttachment(attachment.id, attachment.original_filename)}
-                        className="flex items-center gap-2 ml-3"
-                      >
-                        <Download className="h-4 w-4" />
-                        Download
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Paperclip className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No attachments found for this ticket.</p>
-                </div>
-              )}
-            </div>
-            
-            {/* Organizational Information Section */}
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-blue-600 flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Organizational Information
-                </h3>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={openOrgBrowser} 
-                  className="flex items-center gap-2"
-                  disabled={selectedTicket.status === 'completed'}
-                >
-                  <Search className="h-4 w-4" />
-                  Browse Organizational Paths
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Office:</label>
-                      <FormControl size="small" className="w-full">
-                        <InputLabel id="office-select-label">Select Office</InputLabel>
-                        <Select
-                          labelId="office-select-label"
-                          id="office-select"
-                          value={selectedTicket.office || ''}
-                          label="Select Office"
-                          onChange={(e) => updateTicketField('office', e.target.value)}
-                          disabled={!isTicketEditable(selectedTicket)}
-                        >
-                          {organizationalData.offices?.map((office: string, index: number) => (
-                            <MenuItem key={`office-${index}`} value={office}>
-                              {office}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Bureau:</label>
-                      <FormControl size="small" className="w-full">
-                        <InputLabel id="bureau-select-label">Select Bureau</InputLabel>
-                        <Select
-                          labelId="bureau-select-label"
-                          id="bureau-select"
-                          value={selectedTicket.bureau || ''}
-                          label="Select Bureau"
-                          onChange={(e) => updateTicketField('bureau', e.target.value)}
-                          disabled={!isTicketEditable(selectedTicket)}
-                        >
-                          {organizationalData.bureaus?.map((bureau: string, index: number) => (
-                            <MenuItem key={`bureau-${index}`} value={bureau}>
-                              {bureau}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Division:</label>
-                      <FormControl size="small" className="w-full">
-                        <InputLabel id="division-select-label">Select Division</InputLabel>
-                        <Select
-                          labelId="division-select-label"
-                          id="division-select"
-                          value={selectedTicket.division || ''}
-                          label="Select Division"
-                          onChange={(e) => updateTicketField('division', e.target.value)}
-                          disabled={!isTicketEditable(selectedTicket)}
-                        >
-                          {organizationalData.divisions?.map((division: string, index: number) => (
-                            <MenuItem key={`division-${index}`} value={division}>
-                              {division}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Section:</label>
-                      <FormControl size="small" className="w-full">
-                        <InputLabel id="section-select-label">Select Section</InputLabel>
-                        <Select
-                          labelId="section-select-label"
-                          id="section-select"
-                          value={selectedTicket.section || ''}
-                          label="Select Section"
-                          onChange={(e) => updateTicketField('section', e.target.value)}
-                          disabled={!isTicketEditable(selectedTicket)}
-                        >
-                          {organizationalData?.sections?.map((section: string, index: number) => (
-                            <MenuItem key={`section-${index}`} value={section}>
-                              {section}
-                            </MenuItem>
-                          )) || []}
-                        </Select>
-                      </FormControl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Category Information Section */}
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-blue-600 flex items-center gap-2">
-                  <Tag className="h-5 w-5" />
-                  Category Information
-                </h3>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={openCategoryBrowser} 
-                  className="flex items-center gap-2"
-                  disabled={selectedTicket.status === 'completed'}
-                >
-                  <FolderOpen className="h-4 w-4" />
-                  Browse Category Paths
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Category:</label>
-                      <FormControl size="small" className="w-full">
-                        <InputLabel id="category-select-label">Select Category</InputLabel>
-                        <Select
-                          labelId="category-select-label"
-                          id="category-select"
-                          value={selectedTicket.category || ''}
-                          label="Select Category"
-                          onChange={(e) => updateTicketField('category', e.target.value)}
-                          disabled={!isTicketEditable(selectedTicket)}
-                        >
-                          {Object.entries(categories || {}).map(([key, value]) => (
-                            <MenuItem key={key} value={key}>
-                              {String(value)}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Request Type:</label>
-                      <FormControl size="small" className="w-full" disabled={!selectedTicket.category}>
-                        <InputLabel id="request-type-select-label">Select Request Type</InputLabel>
-                        <Select
-                          labelId="request-type-select-label"
-                          id="request-type-select"
-                          value={selectedTicket.request_type || ''}
-                          label="Select Request Type"
-                          onChange={(e) => updateTicketField('request_type', e.target.value)}
-                          disabled={!selectedTicket.category || !isTicketEditable(selectedTicket)}
-                        >
-                          {selectedTicket.category && requestTypes[selectedTicket.category]?.map((type: any) => (
-                            <MenuItem key={type.value} value={type.value}>
-                              {type.text}
-                            </MenuItem>
-                          )) || []}
-                        </Select>
-                      </FormControl>
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory:</label>
-                      <FormControl size="small" className="w-full" disabled={!selectedTicket.request_type}>
-                        <InputLabel id="subcategory-select-label">Select Subcategory</InputLabel>
-                        <Select
-                          labelId="subcategory-select-label"
-                          id="subcategory-select"
-                          value={selectedTicket.subcategory || ''}
-                          label="Select Subcategory"
-                          onChange={(e) => updateTicketField('subcategory', e.target.value)}
-                          disabled={!selectedTicket.request_type || !isTicketEditable(selectedTicket)}
-                        >
-                          {selectedTicket.category && selectedTicket.request_type && 
-                           subcategories[selectedTicket.category]?.[selectedTicket.request_type]?.map((subcat: any) => (
-                            <MenuItem key={subcat.value} value={subcat.value}>
-                              {subcat.text}
-                            </MenuItem>
-                          )) || []}
-                        </Select>
-                      </FormControl>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Implementation:</label>
-                      <FormControl size="small" className="w-full">
-                        <InputLabel id="implementation-select-label">Select Implementation</InputLabel>
-                        <Select
-                          labelId="implementation-select-label"
-                          id="implementation-select"
-                          value={selectedTicket.implementation || ''}
-                          label="Select Implementation"
-                          onChange={(e) => updateTicketField('implementation', e.target.value)}
-                          disabled={!isTicketEditable(selectedTicket)}
-                        >
-                          <MenuItem value="immediate">Immediate</MenuItem>
-                          <MenuItem value="scheduled">Scheduled</MenuItem>
-                          <MenuItem value="planned">Planned</MenuItem>
-                          <MenuItem value="future">Future</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </div>
-                  </div>
-                </div>
-              </div>
-                </div>
-                
-                <div className="mt-6">
-                  <h3 className="font-semibold text-blue-600 mb-2">Issue Details</h3>
-                  <div className="bg-gray-50 p-4 rounded border-l-4 border-blue-500">
-                    {selectedTicket.issue_description}
-                  </div>
-                </div>
-                
-                {/* System Information Section */}
-                {selectedTicket.computer_info && (
-                  <div className="mt-6">
-                    <h3 className="font-semibold text-blue-600 mb-2 flex items-center gap-2">
-                      <Monitor className="h-5 w-5" />
-                      System Information
-                    </h3>
-                    <div className="bg-gray-50 p-4 rounded border-l-4 border-green-500">
-                      <div className="space-y-2 text-sm">
-                        {(() => {
-                          try {
-                            const computerInfo = JSON.parse(selectedTicket.computer_info);
-                            return (
-                              <>
-                                {computerInfo.ip && <div><strong>IP Address:</strong> {computerInfo.ip}</div>}
-                                {computerInfo.domain && <div><strong>Domain:</strong> {computerInfo.domain}</div>}
-                                {computerInfo.browser && <div><strong>Browser:</strong> {computerInfo.browser}</div>}
-                                {computerInfo.platform && <div><strong>Platform:</strong> {computerInfo.platform}</div>}
-                                {computerInfo.timestamp && <div><strong>Captured:</strong> {new Date(computerInfo.timestamp).toLocaleString()}</div>}
-                              </>
-                            );
-                          } catch (error) {
-                            return <div>System information unavailable</div>;
-                          }
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="history" className="mt-4" onClick={(e) => e.stopPropagation()}>
-                <TicketHistoryComponent 
-                  ticketId={selectedTicket.id} 
-                  isVisible={modalActiveTab === 'history'}
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
-      )}
-
+      {/* Legacy modal removed - using shared TicketDetailsModal */}
       {/* Browse Modals */}
       <CategoryBrowserModal
         isOpen={showCategoryBrowser}
         onClose={() => setShowCategoryBrowser(false)}
-        categoriesData={{ categories, requestTypes, subcategories }}
+        categoriesData={{
+          categories,
+          requestTypes,
+          subcategories,
+          subSubcategories: {}, // Add if available
+          implementationTypes: {} // Add if available
+        }}
         onSelect={(selection) => {
           if (selectedTicket && isTicketEditable(selectedTicket)) {
             updateTicketField('category', selection.category || '');

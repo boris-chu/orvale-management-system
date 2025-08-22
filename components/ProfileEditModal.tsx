@@ -40,42 +40,30 @@ interface ProfileEditModalProps {
 }
 
 export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: ProfileEditModalProps) {
-  console.log('🔧 ProfileEditModal - received user object:', user);
-  
-  const [formData, setFormData] = useState({
+  // Helper function to parse login preferences
+  const getLoginDestinationFromPrefs = React.useCallback((loginPrefs?: string) => {
+    try {
+      const prefs = JSON.parse(loginPrefs || '{}');
+      return prefs.default_destination || 'tickets';
+    } catch {
+      return 'tickets';
+    }
+  }, []);
+
+  const [formData, setFormData] = useState(() => ({
     display_name: user.display_name,
     email: user.email,
-    login_destination: (() => {
-      try {
-        console.log('🔧 ProfileEditModal - user.login_preferences:', user.login_preferences);
-        const prefs = JSON.parse(user.login_preferences || '{}');
-        console.log('🔧 ProfileEditModal - parsed prefs:', prefs);
-        const destination = prefs.default_destination || 'tickets';
-        console.log('🔧 ProfileEditModal - initial destination:', destination);
-        return destination;
-      } catch (error) {
-        console.log('🔧 ProfileEditModal - error parsing preferences:', error);
-        return 'tickets';
-      }
-    })()
-  });
+    login_destination: getLoginDestinationFromPrefs(user.login_preferences)
+  }));
 
-  // Update formData when user prop changes
+  // Update formData when user prop changes (only essential fields)
   React.useEffect(() => {
-    console.log('🔧 ProfileEditModal - useEffect user changed:', user);
     setFormData({
       display_name: user.display_name,
       email: user.email,
-      login_destination: (() => {
-        try {
-          const prefs = JSON.parse(user.login_preferences || '{}');
-          return prefs.default_destination || 'tickets';
-        } catch (error) {
-          return 'tickets';
-        }
-      })()
+      login_destination: getLoginDestinationFromPrefs(user.login_preferences)
     });
-  }, [user]);
+  }, [user.display_name, user.email, user.login_preferences, getLoginDestinationFromPrefs]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState<{message: string; type: 'success' | 'error'} | null>(null);
@@ -237,8 +225,6 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
         })
       };
       
-      console.log('🔧 ProfileEditModal - sending save request:', requestData);
-      
       const response = await fetch(`/api/users/${user.id}`, {
         method: 'PUT',
         headers: {
@@ -247,8 +233,6 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
         },
         body: JSON.stringify(requestData)
       });
-      
-      console.log('🔧 ProfileEditModal - save response status:', response.status);
 
       if (response.ok) {
         const updatedUser = { 
@@ -259,7 +243,6 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
             default_destination: formData.login_destination
           })
         };
-        console.log('🔧 ProfileEditModal - sending updated user to parent:', updatedUser);
         onProfileUpdate(updatedUser);
         showNotification('Profile updated successfully', 'success');
         setTimeout(() => onOpenChange(false), 1500);
@@ -275,16 +258,11 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
     }
   };
 
-  const hasChanges = formData.display_name !== user.display_name || 
-                     formData.email !== user.email ||
-                     formData.login_destination !== (() => {
-                       try {
-                         const prefs = JSON.parse(user.login_preferences || '{}');
-                         return prefs.default_destination || 'tickets';
-                       } catch {
-                         return 'tickets';
-                       }
-                     })();
+  const hasChanges = React.useMemo(() => 
+    formData.display_name !== user.display_name || 
+    formData.email !== user.email ||
+    formData.login_destination !== getLoginDestinationFromPrefs(user.login_preferences)
+  , [formData.display_name, formData.email, formData.login_destination, user.display_name, user.email, user.login_preferences, getLoginDestinationFromPrefs]);
 
   return (
     <Dialog 
