@@ -1448,6 +1448,9 @@ export default function TicketsPage() {
                     </Badge>
                   </div>
                   <div><strong>Submitted:</strong> {formatDate(selectedTicket.submitted_at)}</div>
+                  {selectedTicket.request_creator_display_name && (
+                    <div><strong>Request Creator:</strong> {selectedTicket.request_creator_display_name}</div>
+                  )}
                   <div><strong>Ticket ID:</strong> {selectedTicket.submission_id}</div>
                   <div className="mt-3">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To:</label>
@@ -1522,9 +1525,6 @@ export default function TicketsPage() {
                   <div><strong>Location:</strong> {selectedTicket.location}</div>
                   {selectedTicket.cubicle_room && (
                     <div><strong>Cubicle/Room:</strong> {selectedTicket.cubicle_room}</div>
-                  )}
-                  {selectedTicket.request_creator_display_name && (
-                    <div><strong>Request Creator:</strong> {selectedTicket.request_creator_display_name}</div>
                   )}
                 </div>
               </div>
