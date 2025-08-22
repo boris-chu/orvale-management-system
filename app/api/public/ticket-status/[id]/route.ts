@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryAsync } from '@/lib/database';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const ticketId = params.id;
+        const { id: ticketId } = await params;
         console.log('🔍 Public ticket lookup:', ticketId);
         
         // Query ticket by submission_id (confirmation number)

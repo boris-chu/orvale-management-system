@@ -4,7 +4,7 @@ import { queryAsync } from '@/lib/database';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify authentication and permissions
@@ -18,7 +18,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const columnId = params.id;
+    const { id: columnId } = await params;
     const body = await request.json();
     const {
       column_label,
@@ -97,7 +97,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify authentication and permissions
@@ -111,7 +111,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const columnId = params.id;
+    const { id: columnId } = await params;
 
     // Check if column exists
     const existingColumn = await queryAsync(

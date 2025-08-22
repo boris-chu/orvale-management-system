@@ -15,7 +15,9 @@ const dbAll = promisify(db.all.bind(db));
 interface StaffTicketData {
   title: string;
   category: string;
+  requestType?: string;
   subcategory: string;
+  subSubcategory?: string;
   description: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   submittedBy: string;
