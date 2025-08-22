@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 // Material-UI imports for working Select components
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings, LogOut, CheckCircle, Monitor, Plus } from 'lucide-react';
+import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings, LogOut, CheckCircle, Monitor, Plus, Paperclip, FileText, Download, ExternalLink } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 // Removed static imports - will load dynamically from database APIs
@@ -18,6 +18,16 @@ import { UserAvatar } from '@/components/UserAvatar';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
 import { StaffTicketModal } from '@/components/StaffTicketModal';
 import TicketHistoryComponent from '../../components/TicketHistoryComponent';
+
+interface TicketAttachment {
+  id: number;
+  filename: string;
+  original_filename: string;
+  file_size: number;
+  mime_type: string;
+  uploaded_by: string;
+  uploaded_at: string;
+}
 
 interface Ticket {
   id: string;
@@ -114,6 +124,10 @@ export default function TicketsPage() {
   const [loadingAssignableUsers, setLoadingAssignableUsers] = useState(false);
   const [availableTeams, setAvailableTeams] = useState<any[]>([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
+  
+  // Attachments state
+  const [ticketAttachments, setTicketAttachments] = useState<TicketAttachment[]>([]);
+  const [loadingAttachments, setLoadingAttachments] = useState(false);
 
   // Show notification helper
   const showNotification = (message: string, type: 'success' | 'error') => {
@@ -295,6 +309,74 @@ export default function TicketsPage() {
     } finally {
       setLoadingTeams(false);
     }
+  };
+
+  // Load ticket attachments
+  const loadTicketAttachments = async (ticketId: string) => {
+    if (!ticketId) return;
+    
+    try {
+      setLoadingAttachments(true);
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/staff/tickets/attachments?ticketId=${ticketId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setTicketAttachments(data.attachments || []);
+      } else {
+        console.error('Failed to load attachments');
+        setTicketAttachments([]);
+      }
+    } catch (error) {
+      console.error('Error loading attachments:', error);
+      setTicketAttachments([]);
+    } finally {
+      setLoadingAttachments(false);
+    }
+  };
+  
+  // Download attachment
+  const downloadAttachment = async (attachmentId: number, filename: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/staff/tickets/attachments/${attachmentId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        showNotification(`Downloaded ${filename}`, 'success');
+      } else {
+        throw new Error('Download failed');
+      }
+    } catch (error) {
+      console.error('Error downloading attachment:', error);
+      showNotification('Failed to download file', 'error');
+    }
+  };
+  
+  // Format file size for display
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   // Check authentication on load
@@ -498,6 +580,16 @@ export default function TicketsPage() {
     // Cleanup interval on unmount
     return () => clearInterval(pollInterval);
   }, [currentUser, activeTab, filters.queue]);
+
+  // Load attachments when ticket is selected
+  useEffect(() => {
+    if (selectedTicket) {
+      loadTicketAttachments(selectedTicket.id);
+      setOriginalTicket({ ...selectedTicket });
+    } else {
+      setTicketAttachments([]);
+    }
+  }, [selectedTicket]);
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -1436,6 +1528,57 @@ export default function TicketsPage() {
                   )}
                 </div>
               </div>
+            </div>
+            
+            {/* File Attachments Section */}
+            <div className="mt-6">
+              <h3 className="font-semibold text-blue-600 mb-2 flex items-center gap-2">
+                <Paperclip className="h-5 w-5" />
+                File Attachments
+              </h3>
+              
+              {loadingAttachments ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+                  <span className="ml-2 text-gray-500">Loading attachments...</span>
+                </div>
+              ) : ticketAttachments.length > 0 ? (
+                <div className="grid gap-3">
+                  {ticketAttachments.map((attachment) => (
+                    <div
+                      key={attachment.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <FileText className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-sm text-gray-900 truncate">
+                            {attachment.original_filename}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {formatFileSize(attachment.file_size)} • {attachment.mime_type.split('/')[1].toUpperCase()} • 
+                            Uploaded by {attachment.uploaded_by} on {new Date(attachment.uploaded_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => downloadAttachment(attachment.id, attachment.original_filename)}
+                        className="flex items-center gap-2 ml-3"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Paperclip className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No attachments found for this ticket.</p>
+                </div>
+              )}
             </div>
             
             {/* Organizational Information Section */}

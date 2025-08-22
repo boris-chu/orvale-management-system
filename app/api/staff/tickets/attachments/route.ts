@@ -12,6 +12,7 @@ const dbPath = path.join(process.cwd(), 'orvale_tickets.db');
 const db = new sqlite3.Database(dbPath);
 const dbRun = promisify(db.run.bind(db));
 const dbGet = promisify(db.get.bind(db));
+const dbAll = promisify(db.all.bind(db));
 
 // Upload configuration
 const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'tickets');
@@ -272,7 +273,27 @@ export async function GET(request: NextRequest) {
     }
 
     // Get attachments for the ticket
-    const attachments = await db.all(`
+    // First, determine if ticketId is a submission_id or database id
+    let dbTicketId = ticketId;
+    
+    // If ticketId contains letters/hyphens, it's a submission_id, so look up the database ID
+    if (isNaN(Number(ticketId)) || ticketId.includes('-')) {
+      const ticketRow = await dbGet(
+        'SELECT id FROM user_tickets WHERE submission_id = ?',
+        [ticketId]
+      ) as any;
+      
+      if (!ticketRow) {
+        return NextResponse.json(
+          { error: 'Ticket not found' },
+          { status: 404 }
+        );
+      }
+      
+      dbTicketId = ticketRow.id;
+    }
+    
+    const attachments = await dbAll(`
       SELECT 
         id,
         filename,
@@ -284,7 +305,7 @@ export async function GET(request: NextRequest) {
       FROM ticket_attachments
       WHERE ticket_id = ?
       ORDER BY uploaded_at DESC
-    `, [ticketId]);
+    `, [dbTicketId]);
 
     return NextResponse.json({
       success: true,
