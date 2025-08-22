@@ -5,7 +5,7 @@ import { queryAsync, runAsync } from '@/lib/database'
 // GET /api/chat/channels/[id]/messages - Get paginated messages for channel
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const authResult = await verifyAuth(request)
@@ -17,7 +17,7 @@ export async function GET(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    const { id: channelId } = await params
+    const { id: channelId } = params
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)

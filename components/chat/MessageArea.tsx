@@ -91,9 +91,18 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const lastScrollTop = useRef(0)
 
+  // Utility function to get clean auth token
+  const getCleanToken = () => {
+    let token = localStorage.getItem('authToken') || localStorage.getItem('token')
+    if (token) {
+      token = token.trim().replace(/[\[\]"']/g, '')
+    }
+    return token
+  }
+
   // Socket connection
   useEffect(() => {
-    const token = localStorage.getItem('token')
+    const token = getCleanToken()
     if (!token) return
 
     const newSocket = io('/api/socket', {
@@ -172,9 +181,11 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
         params.append('before', before)
       }
 
+      const token = getCleanToken()
+
       const response = await fetch(`/api/chat/channels/${channel.id}/messages?${params}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       })
 
@@ -191,7 +202,13 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
         
         setHasMore(data.pagination?.has_more || false)
       } else {
-        console.error('Failed to load messages')
+        console.error('Failed to load messages:', {
+          status: response.status,
+          statusText: response.statusText,
+          channelId: channel.id
+        })
+        const errorText = await response.text()
+        console.error('Error response body:', errorText)
       }
     } catch (error) {
       console.error('Error loading messages:', error)
@@ -256,7 +273,7 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       const response = await fetch(`/api/chat/channels/${channel.id}/messages`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${getCleanToken()}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(messageData)
@@ -287,7 +304,7 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       const response = await fetch(`/api/chat/messages/${messageId}/reactions`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${getCleanToken()}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ emoji })
@@ -333,7 +350,7 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       const response = await fetch(`/api/chat/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${getCleanToken()}`
         }
       })
 

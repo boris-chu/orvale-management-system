@@ -86,7 +86,7 @@ export function ChannelSidebar({
     try {
       const response = await fetch('/api/chat/presence', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${(localStorage.getItem('authToken') || localStorage.getItem('token'))?.trim().replace(/[\[\]"']/g, '')}`
         }
       })
 
@@ -136,7 +136,7 @@ export function ChannelSidebar({
       const response = await fetch(`/api/chat/direct/${username}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${(localStorage.getItem('authToken') || localStorage.getItem('token'))?.trim().replace(/[\[\]"']/g, '')}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({})
