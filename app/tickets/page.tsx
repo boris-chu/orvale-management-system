@@ -1573,13 +1573,8 @@ export default function TicketsPage() {
                         {ticket.issue_description}
                       </p>
                       
-                      <div className="flex items-center justify-between text-xs text-gray-500">
+                      <div className="text-xs text-gray-500">
                         <span>Submitted: {formatDate(ticket.submitted_at)} | TKT:{ticket.submission_id}</span>
-                        {ticket.assigned_to && (
-                          <span className="text-purple-600 font-medium">
-                            Assigned to: {ticket.assigned_to}
-                          </span>
-                        )}
                       </div>
                     </div>
 
