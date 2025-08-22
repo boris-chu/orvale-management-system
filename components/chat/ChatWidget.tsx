@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface Conversation {
   id: string
@@ -187,38 +188,93 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
     <div 
       ref={widgetRef}
       className={cn(
-        "fixed bottom-4 right-4 z-50 bg-white border border-gray-200 rounded-lg shadow-xl transition-all duration-300",
+        "fixed bottom-4 right-4 z-50 transition-all duration-300",
         isOpen ? "w-80" : "w-16",
         isOpen && isExpanded ? "h-96" : isOpen && !isCollapsed ? "h-64" : isOpen && isCollapsed ? "h-12" : "h-16",
         className
       )}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-blue-50 rounded-t-lg">
-        {!isOpen ? (
-          // Collapsed state - just the icon with unread badge
-          <Button
+      {!isOpen ? (
+        // 🌟 COOL FLOATING BUTTON - Glassmorphism with pulse animation
+        <div className="relative">
+          {/* Pulse ring animation for notifications */}
+          {totalUnread > 0 && (
+            <motion.div
+              className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 to-purple-500"
+              animate={{
+                scale: [1, 1.4, 1],
+                opacity: [0.6, 0, 0.6],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            />
+          )}
+          
+          {/* Main glassmorphism button */}
+          <motion.button
             onClick={onToggle}
-            className="relative w-10 h-10 p-0 rounded-full bg-blue-600 hover:bg-blue-700 text-white"
+            className="relative w-16 h-16 rounded-full bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 shadow-2xl backdrop-blur-sm border border-white/20 text-white transition-all duration-300 group"
+            whileHover={{ 
+              scale: 1.1,
+              boxShadow: "0 20px 40px -12px rgba(59, 130, 246, 0.5)"
+            }}
+            whileTap={{ scale: 0.95 }}
+            style={{
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(147, 51, 234, 0.9) 50%, rgba(59, 130, 246, 0.9) 100%)',
+              backdropFilter: 'blur(16px)',
+              boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.37), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
+            }}
           >
-            <MessageCircle className="h-5 w-5" />
+            <MessageCircle className="h-6 w-6 mx-auto group-hover:scale-110 transition-transform duration-200" />
+            
+            {/* Notification badge with glow */}
             {totalUnread > 0 && (
-              <Badge 
-                variant="destructive" 
-                className="absolute -top-2 -right-2 text-xs px-1 py-0 h-5 min-w-5 animate-pulse"
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-2 -right-2"
               >
-                {totalUnread > 99 ? '99+' : totalUnread}
-              </Badge>
+                <div className="relative">
+                  {/* Glow effect behind badge */}
+                  <div className="absolute inset-0 rounded-full bg-red-500 blur-sm animate-pulse" />
+                  <Badge 
+                    variant="destructive" 
+                    className="relative text-xs px-2 py-0.5 h-6 min-w-6 bg-red-500 border-2 border-white shadow-lg font-bold"
+                  >
+                    {totalUnread > 99 ? '99+' : totalUnread}
+                  </Badge>
+                </div>
+              </motion.div>
             )}
-          </Button>
-        ) : (
-          // Expanded state - full header
-          <>
+          </motion.button>
+        </div>
+      ) : (
+        // Expanded widget with glassmorphism background
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white/90 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl"
+          style={{
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
+          }}
+        >
+          {/* Header with gradient */}
+          <div className="flex items-center justify-between p-3 border-b border-white/20 bg-gradient-to-r from-blue-50/80 to-purple-50/80 rounded-t-2xl backdrop-blur-sm">
             <div className="flex items-center space-x-2">
-              <MessageCircle className="h-4 w-4 text-blue-600" />
-              <span className="font-medium text-sm">Chat</span>
+              <div className="relative">
+                <MessageCircle className="h-4 w-4 text-blue-600" />
+                {totalUnread > 0 && (
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                )}
+              </div>
+              <span className="font-medium text-sm bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Chat</span>
               {totalUnread > 0 && (
-                <Badge variant="destructive" className="text-xs px-1 py-0 h-4">
+                <Badge variant="destructive" className="text-xs px-2 py-0 h-4 bg-red-500">
                   {totalUnread}
                 </Badge>
               )}
@@ -400,18 +456,20 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
             </>
           )}
 
-          {/* Footer */}
-          <div className="p-2 border-t bg-gray-50 rounded-b-lg">
+          {/* Footer with glassmorphism */}
+          <div className="p-2 border-t border-white/20 bg-gradient-to-r from-blue-50/50 to-purple-50/50 rounded-b-2xl backdrop-blur-sm">
             <Button
               variant="ghost"
               size="sm"
               onClick={onOpenFullChat}
-              className="w-full text-xs h-6"
+              className="w-full text-xs h-6 bg-gradient-to-r from-blue-600/10 to-purple-600/10 hover:from-blue-600/20 hover:to-purple-600/20 border border-white/30 rounded-xl backdrop-blur-sm transition-all duration-200"
             >
-              Open full chat
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-medium">
+                Open full chat
+              </span>
             </Button>
           </div>
-        </div>
+        </motion.div>
       )}
     </div>
   )
