@@ -4,6 +4,7 @@ import { ticketLogger, systemLogger } from '@/lib/logger';
 import sqlite3 from 'sqlite3';
 import { promisify } from 'util';
 import path from 'path';
+import fs from 'fs';
 
 // Database setup
 const dbPath = path.join(process.cwd(), 'orvale_tickets.db');
@@ -35,6 +36,7 @@ interface StaffTicketData {
   assignedTeam: string;
   assignedTo: string;
   internalNotes: string;
+  attachments?: any[];
   ticketSource: 'staff_created';
   createdByStaff?: string;
   submittedDate?: string;
@@ -375,6 +377,68 @@ export async function POST(request: NextRequest) {
         }
       }
     );
+
+    // Handle file attachments if provided
+    if (ticketData.attachments && ticketData.attachments.length > 0) {
+      console.log(`📎 Processing ${ticketData.attachments.length} attachments`);
+      
+      for (const attachment of ticketData.attachments) {
+        try {
+          // Move file from temporary location to permanent location
+          const tempPath = attachment.filePath;
+          const uploadDir = path.join(process.cwd(), 'uploads', 'tickets');
+          
+          // Ensure upload directory exists
+          if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+          }
+          
+          // Generate final filename with ticket ID
+          const timestamp = Date.now();
+          const randomString = Math.random().toString(36).substring(2, 15);
+          const extension = path.extname(attachment.originalFilename);
+          const baseName = path.basename(attachment.originalFilename, extension)
+            .replace(/[^a-zA-Z0-9]/g, '_')
+            .substring(0, 50);
+          
+          const finalFilename = `${ticketId}_${timestamp}_${randomString}_${baseName}${extension}`;
+          const finalPath = path.join(uploadDir, finalFilename);
+          
+          // Copy file to final location
+          if (fs.existsSync(tempPath)) {
+            fs.copyFileSync(tempPath, finalPath);
+            fs.unlinkSync(tempPath); // Remove temp file
+          }
+          
+          // Save attachment record to database
+          await dbRun(`
+            INSERT INTO ticket_attachments (
+              ticket_id,
+              filename,
+              original_filename,
+              file_size,
+              mime_type,
+              file_path,
+              uploaded_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          `, [
+            createdTicketRow.id,
+            finalFilename,
+            attachment.originalFilename || attachment.name,
+            attachment.size,
+            attachment.type,
+            finalPath,
+            createdByStaff
+          ]);
+          
+          console.log(`✅ Attachment saved: ${attachment.originalFilename}`);
+          
+        } catch (error) {
+          console.error(`❌ Error processing attachment ${attachment.name}:`, error);
+          // Continue processing other attachments even if one fails
+        }
+      }
+    }
 
     // Get the created ticket
     const createdTicket = await dbGet(`

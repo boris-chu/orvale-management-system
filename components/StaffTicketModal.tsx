@@ -32,12 +32,26 @@ import {
   RefreshCw,
   Search,
   UserPlus,
-  FolderOpen
+  FolderOpen,
+  Upload,
+  Trash2,
+  Paperclip
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Types
+interface TicketAttachment {
+  id?: string;
+  name: string;
+  size: number;
+  type: string;
+  file?: File;
+  uploadUrl?: string;
+  uploadStatus: 'pending' | 'uploading' | 'completed' | 'error';
+  error?: string;
+}
+
 interface StaffTicketFormData {
   // Request Information
   title: string;
@@ -66,6 +80,7 @@ interface StaffTicketFormData {
   assignedTeam: string;
   assignedTo: string;
   internalNotes: string;
+  attachments: TicketAttachment[];
   
   // System Information (auto-populated)
   ticketId?: string;
@@ -175,6 +190,7 @@ export function StaffTicketModal({
     assignedTeam: '',
     assignedTo: '',
     internalNotes: '',
+    attachments: [],
     ticketSource: 'staff_created'
   });
 
@@ -729,6 +745,110 @@ export function StaffTicketModal({
     }
   };
 
+  // File attachment handlers
+  const handleFileSelect = (files: FileList) => {
+    const newAttachments: TicketAttachment[] = [];
+    
+    Array.from(files).forEach((file) => {
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: 'File Too Large',
+          description: `${file.name} exceeds 10MB limit`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Check file type (allow common office files, images, text)
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain',
+        'text/csv',
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/bmp',
+        'application/zip',
+        'application/x-zip-compressed'
+      ];
+      
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: 'File Type Not Allowed',
+          description: `${file.name} - Only documents, images, and archives are allowed`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      newAttachments.push({
+        id: Math.random().toString(36).substr(2, 9),
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        file: file,
+        uploadStatus: 'pending'
+      });
+    });
+    
+    if (newAttachments.length > 0) {
+      setFormData(prev => ({
+        ...prev,
+        attachments: [...prev.attachments, ...newAttachments]
+      }));
+      
+      toast({
+        title: 'Files Added',
+        description: `${newAttachments.length} file(s) added to ticket`,
+      });
+    }
+  };
+  
+  const handleFileRemove = (attachmentId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      attachments: prev.attachments.filter(att => att.id !== attachmentId)
+    }));
+  };
+  
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+  
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleFileSelect(files);
+    }
+  };
+
   // Handle form submission
   const handleSubmit = async () => {
     console.log('🚀 handleSubmit called - Form Data:', formData);
@@ -753,8 +873,56 @@ export function StaffTicketModal({
     console.log('🔄 Starting ticket creation...');
     setSaving(true);
     try {
+      // Upload files first if there are any
+      let uploadedAttachments: any[] = [];
+      if (formData.attachments.length > 0) {
+        console.log(`📎 Uploading ${formData.attachments.length} files...`);
+        
+        const token = localStorage.getItem('authToken');
+        const uploadFormData = new FormData();
+        
+        // Add all files to form data
+        formData.attachments.forEach((attachment) => {
+          if (attachment.file) {
+            uploadFormData.append('files', attachment.file);
+          }
+        });
+        
+        // Upload files
+        const uploadResponse = await fetch('/api/staff/tickets/attachments', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: uploadFormData
+        });
+        
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          console.error('❌ File upload failed:', errorText);
+          throw new Error(`File upload failed: ${uploadResponse.status} ${errorText}`);
+        }
+        
+        const uploadResult = await uploadResponse.json();
+        uploadedAttachments = uploadResult.files || [];
+        console.log('✅ Files uploaded successfully:', uploadedAttachments);
+        
+        if (uploadResult.errors && uploadResult.errors.length > 0) {
+          toast({
+            title: 'Some files failed to upload',
+            description: uploadResult.errors.join(', '),
+            variant: 'destructive',
+          });
+        }
+      }
+      
       if (onSubmit) {
-        await onSubmit(formData);
+        // Pass the uploaded attachments to the custom submit handler
+        const formDataWithAttachments = {
+          ...formData,
+          attachments: uploadedAttachments
+        };
+        await onSubmit(formDataWithAttachments);
         // Close modal and reset form after successful custom submission
         onOpenChange(false);
         resetForm();
@@ -763,6 +931,7 @@ export function StaffTicketModal({
         const token = localStorage.getItem('authToken');
         const payload = {
           ...formData,
+          attachments: uploadedAttachments,
           createdByStaff: currentUser?.username,
           submittedDate: new Date().toISOString()
         };
@@ -789,9 +958,13 @@ export function StaffTicketModal({
         const result = await response.json();
         console.log('✅ API Success response:', result);
         
+        const successMessage = uploadedAttachments.length > 0 
+          ? `Ticket ${result.ticketId} created successfully with ${uploadedAttachments.length} attachment(s)`
+          : `Ticket ${result.ticketId} created successfully`;
+        
         toast({
           title: 'Success',
-          description: `Ticket ${result.ticketId} created successfully`,
+          description: successMessage,
         });
         
         onOpenChange(false);
@@ -835,6 +1008,7 @@ export function StaffTicketModal({
       assignedTeam: '',
       assignedTo: '',
       internalNotes: '',
+      attachments: [],
       ticketSource: 'staff_created'
     });
     setUserSearchTerm('');
@@ -1372,7 +1546,107 @@ export function StaffTicketModal({
                   rows={3}
                   fullWidth
                   size="small"
+                  sx={{ mb: 3 }}
                 />
+                
+                {/* File Attachments Section */}
+                <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Paperclip className="h-4 w-4" />
+                  File Attachments
+                </Typography>
+                
+                {/* Drag and Drop Area */}
+                <Paper
+                  sx={{
+                    border: '2px dashed',
+                    borderColor: 'grey.300',
+                    borderRadius: 2,
+                    p: 3,
+                    textAlign: 'center',
+                    backgroundColor: 'grey.50',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                      backgroundColor: 'primary.50'
+                    },
+                    mb: 2
+                  }}
+                  onDragOver={handleDragOver}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => document.getElementById('file-input')?.click()}
+                >
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                  <Typography variant="body1" sx={{ mb: 1 }}>
+                    Drag and drop files here, or click to select
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Supports: PDF, Word, Excel, Images, Text files (Max 10MB each)
+                  </Typography>
+                  <input
+                    id="file-input"
+                    type="file"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        handleFileSelect(e.target.files);
+                      }
+                    }}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.gif,.bmp,.zip"
+                  />
+                </Paper>
+                
+                {/* Attached Files List */}
+                {formData.attachments.length > 0 && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      Attached Files ({formData.attachments.length})
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      {formData.attachments.map((attachment) => (
+                        <Paper
+                          key={attachment.id}
+                          sx={{
+                            p: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            backgroundColor: 'background.default',
+                            border: '1px solid',
+                            borderColor: 'grey.200'
+                          }}
+                        >
+                          <FileText className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                            <Typography variant="body2" sx={{ 
+                              fontWeight: 500,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {attachment.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {formatFileSize(attachment.size)} • {attachment.type.split('/')[1].toUpperCase()}
+                            </Typography>
+                          </Box>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            onClick={() => handleFileRemove(attachment.id!)}
+                            sx={{ minWidth: 'auto', p: 0.5 }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </Paper>
+                      ))}
+                    </Box>
+                  </Box>
+                )}
               </Paper>
             </Box>
           )}
