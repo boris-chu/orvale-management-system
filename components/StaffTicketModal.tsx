@@ -1214,15 +1214,7 @@ export function StaffTicketModal({
                   />
                 </Box>
                 
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
-                  <TextField
-                    label="Location"
-                    value={formData.userLocation}
-                    onChange={(e) => handleFieldChange('userLocation', e.target.value)}
-                    placeholder="Building name or address"
-                    size="small"
-                    fullWidth
-                  />
+                <Box sx={{ mb: 2 }}>
                   <TextField
                     label="Cubicle/Room #"
                     value={formData.userCubicleRoom}
