@@ -35,7 +35,6 @@ interface StaffTicketData {
   status: 'open' | 'in_progress' | 'pending' | 'resolved' | 'closed';
   assignedTeam: string;
   assignedTo: string;
-  internalNotes: string;
   attachments?: any[];
   ticketSource: 'staff_created';
   createdByStaff?: string;
@@ -292,11 +291,10 @@ export async function POST(request: NextRequest) {
         section,
         assigned_team,
         assigned_to,
-        internal_notes,
         created_by_staff,
         ticket_source,
         submitted_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       ticketId,
       ticketData.title,
@@ -319,7 +317,6 @@ export async function POST(request: NextRequest) {
       ticketData.userSection || null,
       finalAssignedTeam || 'HELPDESK',
       ticketData.assignedTo || null,
-      ticketData.internalNotes || null,
       createdByStaff,
       'staff_created',
       now
@@ -361,7 +358,6 @@ export async function POST(request: NextRequest) {
         created_by_staff: createdByStaff,
         ticket_source: 'staff_created',
         original_user: ticketData.submittedBy,
-        internal_notes: ticketData.internalNotes
       })
     ]);
 
@@ -377,7 +373,6 @@ export async function POST(request: NextRequest) {
         priority: ticketData.priority,
         status: ticketData.status || 'open',
         assigned_to: ticketData.assignedTo,
-        has_internal_notes: !!ticketData.internalNotes,
         user_info: {
           display_name: ticketData.userDisplayName,
           email: ticketData.userEmail,

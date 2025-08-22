@@ -79,7 +79,6 @@ interface StaffTicketFormData {
   status: 'open' | 'in_progress' | 'pending' | 'resolved' | 'closed';
   assignedTeam: string;
   assignedTo: string;
-  internalNotes: string;
   attachments: TicketAttachment[];
   
   // System Information (auto-populated)
@@ -189,7 +188,6 @@ export function StaffTicketModal({
     status: 'pending',
     assignedTeam: '',
     assignedTo: '',
-    internalNotes: '',
     attachments: [],
     ticketSource: 'staff_created'
   });
@@ -1007,8 +1005,7 @@ export function StaffTicketModal({
       status: 'pending',
       assignedTeam: '',
       assignedTo: '',
-      internalNotes: '',
-      attachments: [],
+        attachments: [],
       ticketSource: 'staff_created'
     });
     setUserSearchTerm('');
@@ -1537,17 +1534,6 @@ export function StaffTicketModal({
                   </FormControl>
                 </Box>
 
-                <TextField
-                  label="Internal Notes"
-                  value={formData.internalNotes}
-                  onChange={(e) => handleFieldChange('internalNotes', e.target.value)}
-                  placeholder="Staff-only notes about this ticket (not visible to user)"
-                  multiline
-                  rows={3}
-                  fullWidth
-                  size="small"
-                  sx={{ mb: 3 }}
-                />
                 
                 {/* File Attachments Section */}
                 <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
