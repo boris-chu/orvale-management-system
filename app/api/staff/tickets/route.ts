@@ -270,6 +270,16 @@ export async function POST(request: NextRequest) {
       now
     ]);
 
+    // Get the database ID of the created ticket for history logging
+    const createdTicketRow = await dbGet(
+      'SELECT id FROM user_tickets WHERE submission_id = ?',
+      [ticketId]
+    ) as any;
+
+    if (!createdTicketRow) {
+      throw new Error('Failed to retrieve created ticket ID for history logging');
+    }
+
     // Log the ticket creation in history (use the regular ticket_history table)
     await dbRun(`
       INSERT INTO ticket_history (
@@ -281,12 +291,12 @@ export async function POST(request: NextRequest) {
         details
       ) VALUES (?, ?, ?, ?, ?, ?)
     `, [
-      ticketId,
+      createdTicketRow.id,  // Use numeric database ID, not submission_id
       'created',
       createdByStaff,
       authResult.user.display_name || createdByStaff,
       JSON.stringify({
-        status: ticketData.status || 'open',
+        status: ticketData.status || 'pending',
         priority: ticketData.priority,
         category: ticketData.category,
         assigned_team: ticketData.assignedTeam,

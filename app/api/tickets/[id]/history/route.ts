@@ -18,7 +18,29 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             }, { status: 403 });
         }
 
-        const { id: ticketId } = await params;
+        const { id: ticketIdentifier } = await params;
+        
+        // First, determine if the identifier is a submission_id (string) or database id (number)
+        let ticketDatabaseId: number;
+        
+        if (isNaN(Number(ticketIdentifier))) {
+            // It's a submission_id string (like "R7-082125-003")
+            const ticketRow = await queryAsync(`
+                SELECT id FROM user_tickets WHERE submission_id = ?
+            `, [ticketIdentifier]);
+            
+            if (!ticketRow || ticketRow.length === 0) {
+                return NextResponse.json({ 
+                    error: 'Ticket not found',
+                    message: `No ticket found with identifier: ${ticketIdentifier}`
+                }, { status: 404 });
+            }
+            
+            ticketDatabaseId = ticketRow[0].id;
+        } else {
+            // It's a numeric database ID
+            ticketDatabaseId = Number(ticketIdentifier);
+        }
         
         // Get ticket history with detailed information
         const history = await queryAsync(`
@@ -30,7 +52,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             JOIN user_tickets ut ON th.ticket_id = ut.id
             WHERE th.ticket_id = ?
             ORDER BY th.performed_at DESC
-        `, [ticketId]);
+        `, [ticketDatabaseId]);
 
         return NextResponse.json({
             success: true,
@@ -63,7 +85,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             }, { status: 403 });
         }
 
-        const { id: ticketId } = await params;
+        const { id: ticketIdentifier } = await params;
         const {
             action_type,
             from_value,
@@ -74,6 +96,28 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             details
         } = await request.json();
 
+        // First, determine if the identifier is a submission_id (string) or database id (number)
+        let ticketDatabaseId: number;
+        
+        if (isNaN(Number(ticketIdentifier))) {
+            // It's a submission_id string (like "R7-082125-003")
+            const ticketRow = await queryAsync(`
+                SELECT id FROM user_tickets WHERE submission_id = ?
+            `, [ticketIdentifier]);
+            
+            if (!ticketRow || ticketRow.length === 0) {
+                return NextResponse.json({ 
+                    error: 'Ticket not found',
+                    message: `No ticket found with identifier: ${ticketIdentifier}`
+                }, { status: 404 });
+            }
+            
+            ticketDatabaseId = ticketRow[0].id;
+        } else {
+            // It's a numeric database ID
+            ticketDatabaseId = Number(ticketIdentifier);
+        }
+
         // Insert history entry
         await queryAsync(`
             INSERT INTO ticket_history (
@@ -81,7 +125,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 from_value, to_value, from_team, to_team, reason, details
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
-            ticketId,
+            ticketDatabaseId,
             action_type,
             authResult.user.username,
             authResult.user.display_name,
