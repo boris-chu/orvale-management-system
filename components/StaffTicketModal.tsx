@@ -123,7 +123,6 @@ interface User {
   email: string;
   team_name?: string;
   active?: boolean;
-  role_id?: number;
   employee_number?: string;
   phone?: string;
   location?: string;
@@ -307,6 +306,9 @@ export function StaffTicketModal({
       const canAssignCrossTeam = currentUser?.permissions?.some((perm: string) => 
         ['ticket.assign_cross_team', 'helpdesk.assign_cross_team', 'ticket.assign_any', 'admin.system_settings'].includes(perm)
       );
+      
+      console.log('🔍 Current user permissions:', currentUser?.permissions);
+      console.log('🔍 Can assign cross team:', canAssignCrossTeam);
 
       if (canAssignCrossTeam) {
         // Load all active users from all teams
@@ -319,9 +321,11 @@ export function StaffTicketModal({
           
           if (allUsersResponse.ok) {
             const allUsersData = await allUsersResponse.json();
+            console.log('🔍 All users response:', allUsersData);
             const filteredAllUsers = allUsersData.filter((user: User) => 
-              user.username && user.active !== false && user.role_id // Only include users with roles (system users)
+              user.username && user.active !== false // All active users with usernames
             );
+            console.log('🔍 Filtered system users:', filteredAllUsers);
             systemUsersOnly.push(...filteredAllUsers);
             allUsers.push(...filteredAllUsers);
           }
@@ -380,6 +384,9 @@ export function StaffTicketModal({
         }
         return acc;
       }, []);
+      
+      console.log('🔍 Final systemUsersOnly array:', systemUsersOnly);
+      console.log('🔍 Final uniqueUsers array:', uniqueUsers);
       
       setUsers(uniqueUsers); // Set all users for search functionality
       setSystemUsers(systemUsersOnly); // Set only system users for assignment

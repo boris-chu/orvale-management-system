@@ -12,8 +12,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user has permission to view users
-    if (!authResult.user.permissions?.includes('admin.view_users') && 
-        !authResult.user.permissions?.includes('admin.manage_users')) {
+    const canViewUsers = authResult.user.permissions?.some((perm: string) => 
+      ['admin.view_users', 'admin.manage_users', 'helpdesk.assign_cross_team', 'ticket.assign_cross_team', 'ticket.assign_any'].includes(perm)
+    );
+    
+    if (!canViewUsers) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
