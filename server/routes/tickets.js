@@ -303,7 +303,9 @@ router.put('/:id', authenticateToken, requireITAccess, async (req, res) => {
         // Build update query dynamically
         const allowedFields = [
             'priority', 'status', 'assigned_to', 'assigned_team',
-            'escalation_reason', 'completion_notes'
+            'escalation_reason', 'completion_notes', 'internal_notes',
+            'office', 'bureau', 'division', 'section',
+            'category', 'request_type', 'subcategory', 'implementation'
         ];
         
         const updateFields = [];

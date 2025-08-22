@@ -130,6 +130,8 @@ export default function TicketsPage() {
   // Attachments state
   const [ticketAttachments, setTicketAttachments] = useState<TicketAttachment[]>([]);
   const [loadingAttachments, setLoadingAttachments] = useState(false);
+  const [ticketComments, setTicketComments] = useState<any[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
   const [newAttachments, setNewAttachments] = useState<File[]>([]);
   const [attachmentsToDelete, setAttachmentsToDelete] = useState<number[]>([]);
   const [uploadingAttachments, setUploadingAttachments] = useState(false);
@@ -300,6 +302,8 @@ export default function TicketsPage() {
     setModalActiveTab('details'); // Reset to details tab
     loadAssignableUsers(); // Load users that can be assigned to
     loadAvailableTeams(); // Load teams for helpdesk users
+    loadTicketAttachments(ticket.id); // Load attachments
+    loadTicketComments(ticket.id); // Load comments
     // Reset attachment editing state
     setNewAttachments([]);
     setAttachmentsToDelete([]);
@@ -806,6 +810,78 @@ export default function TicketsPage() {
 
   const formatDate = (dateString: string) => {
     return formatRegularTime(dateString);
+  };
+
+  // Comment management functions
+  const loadTicketComments = async (ticketId: string) => {
+    setLoadingComments(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/tickets/${ticketId}/comments`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTicketComments(data.comments || []);
+      }
+    } catch (error) {
+      console.error('Error loading comments:', error);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const addTicketComment = async (commentText: string) => {
+    if (!selectedTicket) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/tickets/${selectedTicket.id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ comment_text: commentText })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setTicketComments(prev => [...prev, data.comment]);
+        showNotification('Comment added successfully', 'success');
+      } else {
+        const errorData = await response.text();
+        console.error('Comment API error:', response.status, errorData);
+        throw new Error(`Failed to add comment: ${response.status} - ${errorData}`);
+      }
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      showNotification('Failed to add comment', 'error');
+      throw error;
+    }
+  };
+
+  const deleteTicketComment = async (commentId: number) => {
+    if (!selectedTicket) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/tickets/${selectedTicket.id}/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        setTicketComments(prev => prev.filter(comment => comment.id !== commentId));
+        showNotification('Comment deleted successfully', 'success');
+      } else {
+        throw new Error('Failed to delete comment');
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      showNotification('Failed to delete comment', 'error');
+      throw error;
+    }
   };
 
   const getPriorityColor = (priority: string) => {
@@ -1553,6 +1629,92 @@ export default function TicketsPage() {
         openCategoryBrowser={() => setShowCategoryBrowser(true)}
         formatFileSize={formatFileSize}
         downloadAttachment={downloadAttachment}
+        onFileUpload={async (files: FileList) => {
+          if (!selectedTicket) return;
+          
+          try {
+            console.log(`📎 Uploading ${files.length} files for ticket ${selectedTicket.id}...`);
+            
+            const token = localStorage.getItem('authToken');
+            const uploadFormData = new FormData();
+            
+            // Add all files to form data
+            Array.from(files).forEach((file) => {
+              // Validate file size (max 10MB)
+              if (file.size > 10 * 1024 * 1024) {
+                throw new Error(`${file.name} exceeds 10MB limit`);
+              }
+              
+              uploadFormData.append('files', file);
+            });
+            
+            uploadFormData.append('ticketId', selectedTicket.id);
+            
+            // Upload files
+            const uploadResponse = await fetch('/api/staff/tickets/attachments', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`
+              },
+              body: uploadFormData
+            });
+            
+            if (!uploadResponse.ok) {
+              const errorText = await uploadResponse.text();
+              throw new Error(`Upload failed: ${uploadResponse.status} ${errorText}`);
+            }
+            
+            const uploadResult = await uploadResponse.json();
+            console.log('✅ Files uploaded successfully:', uploadResult);
+            
+            showNotification(`${uploadResult.files?.length || 0} file(s) uploaded successfully`, 'success');
+            
+            // Refresh attachments list
+            loadTicketAttachments(selectedTicket.id);
+            
+            if (uploadResult.errors && uploadResult.errors.length > 0) {
+              showNotification(`Some files failed: ${uploadResult.errors.join(', ')}`, 'error');
+            }
+          } catch (error) {
+            console.error('❌ File upload error:', error);
+            showNotification(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+          }
+        }}
+        onFileDelete={async (attachmentId: number) => {
+          if (!selectedTicket) return;
+          
+          try {
+            console.log(`🗑️ Deleting attachment ${attachmentId}...`);
+            
+            const token = localStorage.getItem('authToken');
+            const response = await fetch(`/api/staff/tickets/attachments/${attachmentId}`, {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`Delete failed: ${response.status} ${errorText}`);
+            }
+            
+            const result = await response.json();
+            console.log('✅ Attachment deleted successfully:', result);
+            
+            showNotification('File deleted successfully', 'success');
+            
+            // Refresh attachments list
+            loadTicketAttachments(selectedTicket.id);
+          } catch (error) {
+            console.error('❌ File delete error:', error);
+            showNotification(`Delete failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+          }
+        }}
+        ticketComments={ticketComments}
+        loadingComments={loadingComments}
+        onAddComment={addTicketComment}
+        onDeleteComment={deleteTicketComment}
       />
 
 

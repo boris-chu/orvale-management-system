@@ -53,6 +53,17 @@ interface TicketAttachment {
   uploaded_at: string;
 }
 
+interface TicketComment {
+  id: number;
+  ticket_id: number;
+  comment_text: string;
+  commented_by: string;
+  commented_by_name: string;
+  created_at: string;
+  updated_at: string;
+  is_internal: boolean;
+}
+
 interface Ticket {
   id: string;
   submission_id: string;
@@ -140,6 +151,12 @@ interface SharedTicketDetailsModalProps {
   // File upload functions
   onFileUpload?: (files: FileList) => Promise<void>;
   onFileDelete?: (attachmentId: number) => Promise<void>;
+  
+  // Comment functions
+  ticketComments: TicketComment[];
+  loadingComments: boolean;
+  onAddComment?: (commentText: string) => Promise<void>;
+  onDeleteComment?: (commentId: number) => Promise<void>;
 }
 
 export function SharedTicketDetailsModal({
@@ -179,7 +196,14 @@ export function SharedTicketDetailsModal({
   downloadAttachment,
   onFileUpload,
   onFileDelete,
+  ticketComments,
+  loadingComments,
+  onAddComment,
+  onDeleteComment,
 }: SharedTicketDetailsModalProps) {
+  const [newComment, setNewComment] = useState('');
+  const [addingComment, setAddingComment] = useState(false);
+  const [deletingComment, setDeletingComment] = useState<number | null>(null);
   if (!ticket) return null;
 
   return (
@@ -287,7 +311,7 @@ export function SharedTicketDetailsModal({
         
         {/* Tab Navigation */}
         <Tabs value={modalActiveTab} onValueChange={onTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-2" onClick={(e) => e.stopPropagation()}>
+          <TabsList className="grid w-full grid-cols-3" onClick={(e) => e.stopPropagation()}>
             <TabsTrigger 
               value="details" 
               className="flex items-center gap-2"
@@ -295,6 +319,14 @@ export function SharedTicketDetailsModal({
             >
               <Eye className="h-4 w-4" />
               Ticket Details
+            </TabsTrigger>
+            <TabsTrigger 
+              value="notes" 
+              className="flex items-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MessageSquare className="h-4 w-4" />
+              Comments
             </TabsTrigger>
             <TabsTrigger 
               value="history" 
@@ -734,36 +766,151 @@ export function SharedTicketDetailsModal({
 
           <TabsContent value="notes" className="mt-4" onClick={(e) => e.stopPropagation()}>
             <div className="space-y-6">
-              {/* Internal Notes Section */}
+              {/* Comments Section */}
               <div>
                 <h3 className="font-semibold text-blue-600 mb-4 flex items-center gap-2">
                   <MessageSquare className="h-5 w-5" />
-                  Internal Notes
-                  <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
-                    Staff Only
+                  Comments
+                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                    Internal
                   </Badge>
                 </h3>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                  <div className="flex items-center gap-2 text-amber-800">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm font-medium">Private Staff Notes</span>
+                
+                {/* Add Comment Form */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <User className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-700">Add Comment</span>
                   </div>
-                  <p className="text-xs text-amber-700 mt-1">
-                    These notes are only visible to IT staff and will not be shown to the ticket requester.
-                  </p>
+                  <Textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Add a comment about this ticket..."
+                    disabled={!isTicketEditable(ticket) || addingComment}
+                    className="min-h-[80px] w-full resize-none mb-3"
+                  />
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-gray-500">
+                      Comments are visible to all IT staff working on this ticket
+                    </p>
+                    <Button
+                      onClick={async () => {
+                        if (!newComment.trim() || !onAddComment) return;
+                        setAddingComment(true);
+                        try {
+                          await onAddComment(newComment.trim());
+                          setNewComment('');
+                        } catch (error) {
+                          console.error('Error adding comment:', error);
+                        } finally {
+                          setAddingComment(false);
+                        }
+                      }}
+                      disabled={!newComment.trim() || addingComment || !isTicketEditable(ticket)}
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {addingComment ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Adding...
+                        </>
+                      ) : (
+                        <>
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Add Comment
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
-                <Textarea
-                  value={ticket.internal_notes || ''}
-                  onChange={(e) => updateTicketField('internal_notes', e.target.value)}
-                  placeholder="Add internal notes about this ticket (staff only - not visible to user)..."
-                  disabled={!isTicketEditable(ticket)}
-                  className="min-h-[120px] w-full resize-none"
-                />
-                {!isTicketEditable(ticket) && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    Completed tickets cannot be modified
-                  </p>
-                )}
+
+                {/* Comments List */}
+                <div className="space-y-3">
+                  {loadingComments ? (
+                    <div className="flex items-center justify-center py-8">
+                      <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+                      <span className="ml-2 text-gray-500">Loading comments...</span>
+                    </div>
+                  ) : ticketComments.length > 0 ? (
+                    <>
+                      <div className="flex items-center gap-2 mb-3">
+                        <MessageSquare className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-700">
+                          {ticketComments.length} Comment{ticketComments.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      {ticketComments.map((comment) => {
+                        const isOwner = comment.commented_by === currentUser?.username;
+                        const canDeleteOwn = currentUser?.permissions?.includes('ticket.comment_delete_own');
+                        const canDeleteAny = currentUser?.permissions?.includes('ticket.comment_delete_any');
+                        const canDelete = (canDeleteOwn && isOwner) || canDeleteAny;
+                        
+                        return (
+                          <div
+                            key={comment.id}
+                            className="bg-white border border-gray-200 rounded-lg p-4"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-gray-500" />
+                                <span className="font-medium text-gray-900">
+                                  {comment.commented_by_name || comment.commented_by}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {comment.commented_by}
+                                </Badge>
+                                {isOwner && (
+                                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                    You
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500">
+                                  {formatDate(comment.created_at)}
+                                </span>
+                                {canDelete && onDeleteComment && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={async () => {
+                                      if (!confirm('Are you sure you want to delete this comment?')) return;
+                                      setDeletingComment(comment.id);
+                                      try {
+                                        await onDeleteComment(comment.id);
+                                      } catch (error) {
+                                        console.error('Error deleting comment:', error);
+                                      } finally {
+                                        setDeletingComment(null);
+                                      }
+                                    }}
+                                    disabled={deletingComment === comment.id}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                  >
+                                    {deletingComment === comment.id ? (
+                                      <RefreshCw className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-3 w-3" />
+                                    )}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-sm text-gray-800 whitespace-pre-wrap">
+                              {comment.comment_text}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No comments yet. Be the first to add a comment!</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* File Upload Section */}
