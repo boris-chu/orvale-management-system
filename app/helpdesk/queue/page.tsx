@@ -47,7 +47,7 @@ import { StaffTicketModal } from '@/components/StaffTicketModal';
 import CategoryBrowserModal from '@/components/CategoryBrowserModal';
 import OrganizationalBrowserModal from '@/components/OrganizationalBrowserModal';
 import TicketHistoryComponent from '@/components/TicketHistoryComponent';
-import { WorkingTicketDetailsModal } from '@/components/WorkingTicketDetailsModal';
+import { SharedTicketDetailsModal } from '@/components/SharedTicketDetailsModal';
 
 interface TicketAttachment {
   id: number;
@@ -185,7 +185,7 @@ export default function HelpdeskQueue() {
     if (selectedTicket) {
       loadTicketAttachments(selectedTicket.id);
       loadAssignableUsers();
-      setOriginalTicket({ ...selectedTicket });
+      // Don't set originalTicket here - it should only be set when opening the modal
     } else {
       setTicketAttachments([]);
     }
@@ -717,7 +717,20 @@ export default function HelpdeskQueue() {
   
   const hasChanges = () => {
     if (!selectedTicket || !originalTicket) return false;
-    return JSON.stringify(selectedTicket) !== JSON.stringify(originalTicket);
+    const hasChanges = JSON.stringify(selectedTicket) !== JSON.stringify(originalTicket);
+    
+    // Debug logging
+    if (hasChanges) {
+      console.log('🔍 Changes detected in helpdesk queue:', {
+        selectedTicket: selectedTicket,
+        originalTicket: originalTicket,
+        differences: Object.keys(selectedTicket).filter(key => 
+          JSON.stringify(selectedTicket[key as keyof Ticket]) !== JSON.stringify(originalTicket[key as keyof Ticket])
+        )
+      });
+    }
+    
+    return hasChanges;
   };
   
   const saveTicketChanges = async () => {
@@ -1347,7 +1360,7 @@ export default function HelpdeskQueue() {
       )}
 
       {/* Ticket Detail Modal - Using Shared Working Component */}
-      <WorkingTicketDetailsModal
+      <SharedTicketDetailsModal
         ticket={selectedTicket}
         originalTicket={originalTicket}
         onClose={() => setSelectedTicket(null)}
@@ -1382,6 +1395,16 @@ export default function HelpdeskQueue() {
         openCategoryBrowser={openCategoryBrowser}
         formatFileSize={formatFileSize}
         downloadAttachment={downloadAttachment}
+        onFileUpload={async (files: FileList) => {
+          // TODO: Implement file upload functionality
+          console.log('File upload not yet implemented for helpdesk queue', files);
+          showNotification('File upload functionality coming soon', 'success');
+        }}
+        onFileDelete={async (attachmentId: number) => {
+          // TODO: Implement file delete functionality
+          console.log('File delete not yet implemented for helpdesk queue', attachmentId);
+          showNotification('File delete functionality coming soon', 'success');
+        }}
       />
       {/* Browse Modals */}
       <CategoryBrowserModal

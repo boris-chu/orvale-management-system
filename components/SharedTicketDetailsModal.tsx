@@ -87,10 +87,11 @@ interface Ticket {
   completed_at?: string;
   escalation_reason?: string;
   completion_notes?: string;
+  internal_notes?: string;
   activity_count: number;
 }
 
-interface WorkingTicketDetailsModalProps {
+interface SharedTicketDetailsModalProps {
   ticket: Ticket | null;
   originalTicket: Ticket | null;
   onClose: () => void;
@@ -135,9 +136,13 @@ interface WorkingTicketDetailsModalProps {
   // Attachment functions
   formatFileSize: (bytes: number) => string;
   downloadAttachment: (id: number, filename: string) => Promise<void>;
+  
+  // File upload functions
+  onFileUpload?: (files: FileList) => Promise<void>;
+  onFileDelete?: (attachmentId: number) => Promise<void>;
 }
 
-export function WorkingTicketDetailsModal({
+export function SharedTicketDetailsModal({
   ticket,
   originalTicket,
   onClose,
@@ -172,7 +177,9 @@ export function WorkingTicketDetailsModal({
   openCategoryBrowser,
   formatFileSize,
   downloadAttachment,
-}: WorkingTicketDetailsModalProps) {
+  onFileUpload,
+  onFileDelete,
+}: SharedTicketDetailsModalProps) {
   if (!ticket) return null;
 
   return (
@@ -723,6 +730,136 @@ export function WorkingTicketDetailsModal({
                 </div>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="notes" className="mt-4" onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-6">
+              {/* Internal Notes Section */}
+              <div>
+                <h3 className="font-semibold text-blue-600 mb-4 flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Internal Notes
+                  <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                    Staff Only
+                  </Badge>
+                </h3>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                  <div className="flex items-center gap-2 text-amber-800">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm font-medium">Private Staff Notes</span>
+                  </div>
+                  <p className="text-xs text-amber-700 mt-1">
+                    These notes are only visible to IT staff and will not be shown to the ticket requester.
+                  </p>
+                </div>
+                <Textarea
+                  value={ticket.internal_notes || ''}
+                  onChange={(e) => updateTicketField('internal_notes', e.target.value)}
+                  placeholder="Add internal notes about this ticket (staff only - not visible to user)..."
+                  disabled={!isTicketEditable(ticket)}
+                  className="min-h-[120px] w-full resize-none"
+                />
+                {!isTicketEditable(ticket) && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Completed tickets cannot be modified
+                  </p>
+                )}
+              </div>
+
+              {/* File Upload Section */}
+              <div>
+                <h3 className="font-semibold text-blue-600 mb-4 flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  Upload Additional Files
+                </h3>
+                {isTicketEditable(ticket) ? (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      id="file-upload"
+                      onChange={(e) => {
+                        if (e.target.files && typeof onFileUpload === 'function') {
+                          onFileUpload(e.target.files);
+                        }
+                      }}
+                    />
+                    <label htmlFor="file-upload" className="cursor-pointer">
+                      <div className="flex flex-col items-center gap-3">
+                        <Paperclip className="h-8 w-8 text-gray-400" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">
+                            Click to upload files or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Supports multiple files (max 10MB each)
+                          </p>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Upload className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">File uploads disabled for completed tickets</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Current Attachments with Delete Options */}
+              {ticketAttachments.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-blue-600 mb-4 flex items-center gap-2">
+                    <Paperclip className="h-5 w-5" />
+                    Current Attachments
+                  </h3>
+                  <div className="space-y-3">
+                    {ticketAttachments.map((attachment) => (
+                      <div
+                        key={attachment.id}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <FileText className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-sm text-gray-900 truncate">
+                              {attachment.original_filename}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {formatFileSize(attachment.file_size)} • {attachment.mime_type.split('/')[1].toUpperCase()} • 
+                              Uploaded by {attachment.uploaded_by} on {new Date(attachment.uploaded_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 ml-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => downloadAttachment(attachment.id, attachment.original_filename)}
+                            className="flex items-center gap-2"
+                          >
+                            <Download className="h-4 w-4" />
+                            Download
+                          </Button>
+                          {isTicketEditable(ticket) && typeof onFileDelete === 'function' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onFileDelete(attachment.id)}
+                              className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="history" className="mt-4" onClick={(e) => e.stopPropagation()}>

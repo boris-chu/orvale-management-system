@@ -18,7 +18,7 @@ import { UserAvatar } from '@/components/UserAvatar';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
 import { StaffTicketModal } from '@/components/StaffTicketModal';
 import TicketHistoryComponent from '../../components/TicketHistoryComponent';
-import { WorkingTicketDetailsModal } from '@/components/WorkingTicketDetailsModal';
+import { SharedTicketDetailsModal } from '@/components/SharedTicketDetailsModal';
 
 interface TicketAttachment {
   id: number;
@@ -749,7 +749,7 @@ export default function TicketsPage() {
   useEffect(() => {
     if (selectedTicket) {
       loadTicketAttachments(selectedTicket.id);
-      setOriginalTicket({ ...selectedTicket });
+      // Don't set originalTicket here - it should only be set when opening the modal
     } else {
       setTicketAttachments([]);
     }
@@ -1518,7 +1518,7 @@ export default function TicketsPage() {
       </div>
 
       {/* Ticket Detail Modal - Using Shared Working Component */}
-      <WorkingTicketDetailsModal
+      <SharedTicketDetailsModal
         ticket={selectedTicket}
         originalTicket={originalTicket || selectedTicket}
         onClose={() => setSelectedTicket(null)}
