@@ -896,14 +896,6 @@ export function StaffTicketModal({
           {activeTab === 'request' && (
             <Box sx={{ flexGrow: 1, overflow: 'auto', p: 3 }}>
               <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <FileText className="h-5 w-5" />
-                  Request Information
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Basic ticket details and issue description
-                </Typography>
-
                 {/* Category Path Section - Always visible */}
                 <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.50' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
@@ -955,38 +947,6 @@ export function StaffTicketModal({
                   )}
                 </Paper>
                 
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 3 }}>
-                  <TextField
-                    label="Issue Title *"
-                    value={formData.title}
-                    onChange={(e) => handleFieldChange('title', e.target.value)}
-                    placeholder="Brief description of the issue"
-                    size="small"
-                    fullWidth
-                  />
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Priority</InputLabel>
-                    <Select 
-                      value={formData.priority} 
-                      onChange={(e) => handleFieldChange('priority', e.target.value)}
-                      label="Priority"
-                    >
-                      <MenuItem value="low">
-                        <Chip label="Low" size="small" color="success" variant="outlined" />
-                      </MenuItem>
-                      <MenuItem value="medium">
-                        <Chip label="Medium" size="small" color="primary" variant="outlined" />
-                      </MenuItem>
-                      <MenuItem value="high">
-                        <Chip label="High" size="small" color="warning" variant="outlined" />
-                      </MenuItem>
-                      <MenuItem value="urgent">
-                        <Chip label="Urgent" size="small" color="error" variant="outlined" />
-                      </MenuItem>
-                    </Select>
-                  </FormControl>
-                </Box>
-
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 3 }}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Category *</InputLabel>
@@ -1052,6 +1012,38 @@ export function StaffTicketModal({
                       label="Sub-subcategory"
                     >
                       {/* For now, this will be empty until we add implementations to the API */}
+                    </Select>
+                  </FormControl>
+                </Box>
+
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 3 }}>
+                  <TextField
+                    label="Issue Title *"
+                    value={formData.title}
+                    onChange={(e) => handleFieldChange('title', e.target.value)}
+                    placeholder="Brief description of the issue"
+                    size="small"
+                    fullWidth
+                  />
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Priority</InputLabel>
+                    <Select 
+                      value={formData.priority} 
+                      onChange={(e) => handleFieldChange('priority', e.target.value)}
+                      label="Priority"
+                    >
+                      <MenuItem value="low">
+                        <Chip label="Low" size="small" color="success" variant="outlined" />
+                      </MenuItem>
+                      <MenuItem value="medium">
+                        <Chip label="Medium" size="small" color="primary" variant="outlined" />
+                      </MenuItem>
+                      <MenuItem value="high">
+                        <Chip label="High" size="small" color="warning" variant="outlined" />
+                      </MenuItem>
+                      <MenuItem value="urgent">
+                        <Chip label="Urgent" size="small" color="error" variant="outlined" />
+                      </MenuItem>
                     </Select>
                   </FormControl>
                 </Box>
