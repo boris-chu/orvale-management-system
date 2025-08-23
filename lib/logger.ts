@@ -181,8 +181,9 @@ const updateLogLevel = async (): Promise<void> => {
 };
 
 // Enhanced logger with context and structured logging
-export // Define types for logging data
-type LogData = Record<string, unknown>;
+
+// Define types for logging data
+export type LogData = Record<string, unknown>;
 type LogFunction = (obj: LogData, msg?: string) => void;
 
 const createContextLogger = (context: string) => {

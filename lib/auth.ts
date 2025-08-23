@@ -69,7 +69,15 @@ export const generateToken = (user: User): string => {
     );
 };
 
-export const verifyToken = (token: string): any => {
+interface JWTPayload {
+  username: string;
+  role: string;
+  displayName: string;
+  iat: number;
+  exp: number;
+}
+
+export const verifyToken = (token: string): JWTPayload | null => {
     try {
         console.log('🔐 Verifying token with secret length:', JWT_SECRET.length);
         console.log('🔐 Token format check:', {
@@ -78,7 +86,7 @@ export const verifyToken = (token: string): any => {
             firstPart: token.substring(0, 20) + '...'
         });
         
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
         console.log('✅ Token verified successfully for user:', decoded.username);
         return decoded;
     } catch (error) {
@@ -103,7 +111,10 @@ export const getUserPermissions = async (user: User): Promise<string[]> => {
         );
         
         console.log('✅ Database permissions found:', permissions.length);
-        const permissionList = permissions.map((p: any) => p.permission_id);
+        interface PermissionRow {
+          permission_id: string;
+        }
+        const permissionList = (permissions as PermissionRow[]).map((p: PermissionRow) => p.permission_id);
         console.log('🔑 User permissions:', permissionList.slice(0, 5), '...'); // Show first 5
         return permissionList;
     } catch (error) {
@@ -116,7 +127,13 @@ export const getUserPermissions = async (user: User): Promise<string[]> => {
     }
 };
 
-export const verifyAuth = async (request: any): Promise<{success: boolean; user?: any; error?: string}> => {
+interface AuthResult {
+  success: boolean;
+  user?: User & { permissions: string[] };
+  error?: string;
+}
+
+export const verifyAuth = async (request: Request): Promise<AuthResult> => {
     try {
         const authHeader = request.headers.get('authorization');
         let token = null;
@@ -190,10 +207,16 @@ export const verifyAuth = async (request: any): Promise<{success: boolean; user?
     }
 };
 
-export const getAccessibleQueues = async (user: User): Promise<any[]> => {
+interface QueueItem {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export const getAccessibleQueues = async (user: User): Promise<QueueItem[]> => {
     try {
         const permissions = await getUserPermissions(user);
-        let queues: any[] = [];
+        let queues: QueueItem[] = [];
         
         if (permissions.includes('queue.view_all')) {
             // Admin can see all queues

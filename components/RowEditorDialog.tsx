@@ -3,26 +3,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Typography,
+  Box,
+  Chip,
+  Paper,
+  Tabs,
+  Tab,
+  Alert
+} from '@mui/material';
 import { Save, X, Code, Eye, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -192,7 +189,7 @@ export function RowEditorDialog({
 
     if (isJson) {
       return (
-        <div className="space-y-2">
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           <div className="flex items-center justify-between">
             <Label htmlFor={column.column_key} className="flex items-center gap-2">
               {column.column_label}
@@ -236,34 +233,49 @@ export function RowEditorDialog({
               placeholder="Enter valid JSON..."
             />
           ) : (
-            <Card className="p-3">
-              <div className="text-xs text-gray-600 mb-2">JSON Content Preview:</div>
-              <pre className="text-xs bg-gray-50 dark:bg-gray-800 p-2 rounded border overflow-auto max-h-32">
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>JSON Content Preview:</Typography>
+              <Box
+                component="pre" 
+                sx={{ 
+                  fontSize: '0.75rem', 
+                  bgcolor: 'action.hover', 
+                  p: 1, 
+                  borderRadius: 1, 
+                  border: 1, 
+                  borderColor: 'divider',
+                  overflow: 'auto', 
+                  maxHeight: '8rem',
+                  fontFamily: 'monospace'
+                }}
+              >
                 {typeof value === 'string' ? formatJson(value) : JSON.stringify(value, null, 2)}
-              </pre>
+              </Box>
               <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2 w-full"
+                variant="outlined"
+                size="small"
+                fullWidth
                 onClick={() => setIsJsonView(prev => ({ 
                   ...prev, 
                   [column.column_key]: true 
                 }))}
+                startIcon={<Code className="h-3 w-3" />}
+                sx={{ mt: 1 }}
               >
-                <Code className="h-3 w-3 mr-1" />
                 Edit JSON
               </Button>
-            </Card>
+            </Paper>
           )}
           
           {hasJsonError && (
-            <div className="flex items-center gap-2 text-red-600 text-sm">
-              <AlertCircle className="h-4 w-4" />
-              <span>{hasJsonError}</span>
-            </div>
+            <Alert severity="error" sx={{ fontSize: '0.875rem' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <AlertCircle className="h-4 w-4" />
+                <span>{hasJsonError}</span>
+              </Box>
+            </Alert>
           )}
-        </div>
+        </Box>
       );
     }
 
@@ -271,50 +283,46 @@ export function RowEditorDialog({
     switch (column.column_type) {
       case 'date':
         return (
-          <div className="space-y-2">
-            <Label htmlFor={column.column_key}>{column.column_label}</Label>
-            <Input
-              id={column.column_key}
-              type="datetime-local"
-              value={value ? new Date(value).toISOString().slice(0, 16) : ''}
-              onChange={(e) => handleFieldChange(column.column_key, e.target.value)}
-            />
-          </div>
+          <TextField
+            label={column.column_label}
+            type="datetime-local"
+            value={value ? new Date(value).toISOString().slice(0, 16) : ''}
+            onChange={(e) => handleFieldChange(column.column_key, e.target.value)}
+            fullWidth
+            size="small"
+            InputLabelProps={{ shrink: true }}
+          />
         );
       
       case 'number':
         return (
-          <div className="space-y-2">
-            <Label htmlFor={column.column_key}>{column.column_label}</Label>
-            <Input
-              id={column.column_key}
-              type="number"
-              value={value}
-              onChange={(e) => handleFieldChange(column.column_key, e.target.value)}
-            />
-          </div>
+          <TextField
+            label={column.column_label}
+            type="number"
+            value={value || ''}
+            onChange={(e) => handleFieldChange(column.column_key, e.target.value)}
+            fullWidth
+            size="small"
+          />
         );
       
       case 'badge':
         const badgeOptions = ['pending', 'in_progress', 'completed', 'cancelled', 'open', 'closed', 'active', 'inactive'];
         return (
-          <div className="space-y-2">
-            <Label htmlFor={column.column_key}>{column.column_label}</Label>
-            <Select value={value} onValueChange={(v) => handleFieldChange(column.column_key, v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select status..." />
-              </SelectTrigger>
-              <SelectContent>
-                {badgeOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    <Badge variant="outline" className="text-xs">
-                      {option}
-                    </Badge>
-                  </SelectItem>
-                ))}
-              </SelectContent>
+          <FormControl fullWidth size="small">
+            <InputLabel>{column.column_label}</InputLabel>
+            <Select 
+              value={value || ''} 
+              onChange={(e) => handleFieldChange(column.column_key, e.target.value)}
+              label={column.column_label}
+            >
+              {badgeOptions.map((option) => (
+                <MenuItem key={option} value={option}>
+                  <Chip label={option} variant="outlined" size="small" />
+                </MenuItem>
+              ))}
             </Select>
-          </div>
+          </FormControl>
         );
       
       default:
@@ -323,28 +331,27 @@ export function RowEditorDialog({
             column.column_key.includes('notes') || 
             column.column_key.includes('comment')) {
           return (
-            <div className="space-y-2">
-              <Label htmlFor={column.column_key}>{column.column_label}</Label>
-              <Textarea
-                id={column.column_key}
-                value={value}
-                onChange={(e) => handleFieldChange(column.column_key, e.target.value)}
-                rows={3}
-              />
-            </div>
+            <TextField
+              label={column.column_label}
+              value={value || ''}
+              onChange={(e) => handleFieldChange(column.column_key, e.target.value)}
+              multiline
+              rows={3}
+              fullWidth
+              size="small"
+            />
           );
         }
         
         return (
-          <div className="space-y-2">
-            <Label htmlFor={column.column_key}>{column.column_label}</Label>
-            <Input
-              id={column.column_key}
-              value={value}
-              onChange={(e) => handleFieldChange(column.column_key, e.target.value)}
-              placeholder={`Enter ${column.column_label.toLowerCase()}...`}
-            />
-          </div>
+          <TextField
+            label={column.column_label}
+            value={value || ''}
+            onChange={(e) => handleFieldChange(column.column_key, e.target.value)}
+            placeholder={`Enter ${column.column_label.toLowerCase()}...`}
+            fullWidth
+            size="small"
+          />
         );
     }
   };
@@ -359,76 +366,72 @@ export function RowEditorDialog({
     .filter(col => !col.default_visible)
     .sort((a, b) => a.display_order - b.display_order);
 
+  const [activeTab, setActiveTab] = useState(0);
+  
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Code className="h-5 w-5" />
-            Edit Row Data
-          </DialogTitle>
-          <DialogDescription>
-            Editing record from {tableName.replace('_', ' ')} table
-            {row.id && ` (ID: ${row.id})`}
-          </DialogDescription>
-        </DialogHeader>
+    <Dialog open={open} onClose={() => onOpenChange(false)} maxWidth="lg" fullWidth>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Code className="h-5 w-5" />
+        Edit Row Data
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Editing record from {tableName.replace('_', ' ')} table
+          {row.id && ` (ID: ${row.id})`}
+        </Typography>
 
-        <div className="flex-1 overflow-hidden">
-          <Tabs defaultValue="main" className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="main">Main Fields ({visibleColumns.length})</TabsTrigger>
-              <TabsTrigger value="advanced">Advanced Fields ({hiddenColumns.length})</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="main" className="flex-1 overflow-auto">
-              <div className="space-y-4 pr-2">
-                {visibleColumns.map((column) => (
-                  <div key={column.column_key}>
-                    {renderFieldInput(column)}
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="advanced" className="flex-1 overflow-auto">
-              <div className="space-y-4 pr-2">
-                {hiddenColumns.length > 0 ? (
-                  hiddenColumns.map((column) => (
-                    <div key={column.column_key}>
-                      {renderFieldInput(column)}
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <Code className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No advanced fields configured for this table</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+          <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+            <Tab label={`Main Fields (${visibleColumns.length})`} />
+            <Tab label={`Advanced Fields (${hiddenColumns.length})`} />
           </Tabs>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={handleCancel} disabled={saving}>
-            <X className="h-4 w-4 mr-2" />
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={saving || Object.keys(jsonErrors).some(key => jsonErrors[key])}>
-            {saving ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
+        </Box>
+        
+        {activeTab === 0 && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: '60vh', overflowY: 'auto' }}>
+            {visibleColumns.map((column) => (
+              <Box key={column.column_key}>
+                {renderFieldInput(column)}
+              </Box>
+            ))}
+          </Box>
+        )}
+        
+        {activeTab === 1 && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: '60vh', overflowY: 'auto' }}>
+            {hiddenColumns.length > 0 ? (
+              hiddenColumns.map((column) => (
+                <Box key={column.column_key}>
+                  {renderFieldInput(column)}
+                </Box>
+              ))
             ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </>
+              <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                <Code className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <Typography>No advanced fields configured for this table</Typography>
+              </Box>
             )}
-          </Button>
-        </DialogFooter>
+          </Box>
+        )}
+
       </DialogContent>
+      <DialogActions>
+        <Button 
+          onClick={handleCancel} 
+          disabled={saving}
+          startIcon={<X className="h-4 w-4" />}
+        >
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleSave} 
+          disabled={saving || Object.keys(jsonErrors).some(key => jsonErrors[key])}
+          variant="contained"
+          startIcon={saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+        >
+          {saving ? 'Saving...' : 'Save Changes'}
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 }

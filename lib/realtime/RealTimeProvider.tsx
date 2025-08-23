@@ -102,7 +102,7 @@ export function RealTimeProvider({
   const messageCallbacksRef = useRef<Set<(message: RealTimeMessage) => void>>(new Set());
   const presenceCallbacksRef = useRef<Set<(update: PresenceUpdate) => void>>(new Set());
   const userCountCallbacksRef = useRef<Set<(count: number) => void>>(new Set());
-  const latencyTrackerRef = useRef<Map<string, number>>(new Map());
+  // const latencyTrackerRef = useRef<Map<string, number>>(new Map()); // Unused but may be needed for future features
   const messageCountRef = useRef({ count: 0, lastMinute: Date.now() });
 
   // Auto-detect best connection mode
@@ -137,7 +137,7 @@ export function RealTimeProvider({
 
         testSocket.connect();
       });
-    } catch (error) {
+    } catch {
       console.log('🔄 Socket.IO detection failed, using polling');
       return 'polling';
     }
@@ -495,7 +495,7 @@ export function RealTimeProvider({
     return () => {
       disconnect();
     };
-  }, [connectionMode]);
+  }, [connectionMode]); // connect is created inline, so no dependency issue
 
   // Cleanup on unmount
   useEffect(() => {

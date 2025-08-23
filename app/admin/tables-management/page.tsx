@@ -21,9 +21,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-// Temporarily use shadcn:ui Dialog until full conversion is complete
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// Use Material-UI for Dialog + Select compatibility (avoid focus management issues)
+import { 
+  Dialog, 
+  DialogTitle, 
+  DialogContent,
+  DialogActions,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Paper,
+  Typography
+} from '@mui/material';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -57,15 +67,42 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 // Types
+interface ColumnConfig {
+  visible_columns?: string[];
+  column_widths?: Record<string, number>;
+  column_order?: string[];
+}
+
+interface FilterConfig {
+  filters?: Array<{
+    column: string;
+    operator: string;
+    value: string | number | boolean;
+  }>;
+  search?: string;
+}
+
+interface SortConfig {
+  column?: string;
+  direction?: 'asc' | 'desc';
+}
+
+interface DisplayConfig {
+  page_size?: number;
+  show_search?: boolean;
+  show_filters?: boolean;
+  compact_mode?: boolean;
+}
+
 interface TableConfiguration {
   id: number;
   table_identifier: string;
   configuration_name: string;
   description: string;
-  column_config: any;
-  filter_config: any;
-  sort_config: any;
-  display_config: any;
+  column_config: ColumnConfig;
+  filter_config: FilterConfig;
+  sort_config: SortConfig;
+  display_config: DisplayConfig;
   is_default: boolean;
   created_by: string;
   created_at: string;
@@ -84,12 +121,19 @@ interface ColumnDefinition {
   display_order: number;
 }
 
+interface ViewConfiguration {
+  columns?: string[];
+  filters?: FilterConfig;
+  sort?: SortConfig;
+  display?: DisplayConfig;
+}
+
 interface SavedView {
   id: number;
   view_name: string;
   table_identifier: string;
   view_type: 'personal' | 'team' | 'public';
-  configuration: any;
+  configuration: ViewConfiguration;
   created_by: string;
   created_at: string;
 }
@@ -147,7 +191,7 @@ export default function TablesManagementPage() {
   const [editingColumn, setEditingColumn] = useState<ColumnDefinition | null>(null);
   const [showAddColumnDialog, setShowAddColumnDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<{ open: boolean; columnId?: string; columnName?: string }>({ open: false });
-  const [showDeleteRowConfirm, setShowDeleteRowConfirm] = useState<{ open: boolean; rowId?: any; rowLabel?: string }>({ open: false });
+  const [showDeleteRowConfirm, setShowDeleteRowConfirm] = useState<{ open: boolean; rowId?: string | number; rowLabel?: string }>({ open: false });
   
   // Available tables for editor (actual database tables)
   const [editorTables] = useState([
@@ -162,9 +206,10 @@ export default function TablesManagementPage() {
   ]);
   
   // Table data for editor
-  const [editorTableData, setEditorTableData] = useState<any[]>([]);
-  const [editingCell, setEditingCell] = useState<{ rowId: any; field: string; value: any } | null>(null);
-  const [editingRow, setEditingRow] = useState<any | null>(null);
+  type TableRowData = Record<string, string | number | boolean | null>;
+  const [editorTableData, setEditorTableData] = useState<TableRowData[]>([]);
+  const [editingCell, setEditingCell] = useState<{ rowId: string | number; field: string; value: string | number | boolean | null } | null>(null);
+  const [editingRow, setEditingRow] = useState<TableRowData | null>(null);
   const [showRowEditor, setShowRowEditor] = useState(false);
 
   // Check permissions with debugging
@@ -193,7 +238,7 @@ export default function TablesManagementPage() {
       
       // Get auth token for API calls
       const token = localStorage.getItem('authToken');
-      const headers: any = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       
@@ -368,7 +413,7 @@ export default function TablesManagementPage() {
       console.log('🔍 Loading editor data for table:', tableIdentifier);
       
       const token = localStorage.getItem('authToken');
-      const headers: any = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       
@@ -398,7 +443,12 @@ export default function TablesManagementPage() {
       console.log('🔍 Extracted data for', tableIdentifier, ':', tableData.length, 'rows');
       
       // Convert column info to our format
-      const columns = columnInfo.map((col: any, index: number) => ({
+      interface RawColumnInfo {
+        name: string;
+        type: string;
+        pk: boolean;
+      }
+      const columns = columnInfo.map((col: RawColumnInfo, index: number) => ({
         id: `${tableIdentifier}_${col.name}`,
         table_identifier: tableIdentifier,
         column_key: col.name,
@@ -437,7 +487,7 @@ export default function TablesManagementPage() {
   const handleSaveColumn = async (columnData: Partial<ColumnDefinition>) => {
     try {
       const token = localStorage.getItem('authToken');
-      const headers: any = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       
@@ -495,7 +545,7 @@ export default function TablesManagementPage() {
   const handleDeleteColumn = async (columnId: string) => {
     try {
       const token = localStorage.getItem('authToken');
-      const headers: any = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       
@@ -532,10 +582,10 @@ export default function TablesManagementPage() {
   };
 
   // Handle cell edit
-  const handleCellEdit = async (rowId: any, field: string, newValue: any) => {
+  const handleCellEdit = async (rowId: string | number, field: string, newValue: string | number | boolean | null) => {
     try {
       const token = localStorage.getItem('authToken');
-      const headers: any = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       
@@ -581,10 +631,10 @@ export default function TablesManagementPage() {
   };
 
   // Handle full row save
-  const handleRowSave = async (rowData: any) => {
+  const handleRowSave = async (rowData: TableRowData) => {
     try {
       const token = localStorage.getItem('authToken');
-      const headers: any = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       
@@ -656,10 +706,10 @@ export default function TablesManagementPage() {
   };
 
   // Handle row deletion
-  const handleDeleteRow = async (rowId: any) => {
+  const handleDeleteRow = async (rowId: string | number) => {
     try {
       const token = localStorage.getItem('authToken');
-      const headers: any = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       
@@ -804,19 +854,21 @@ export default function TablesManagementPage() {
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="table-select">Table</Label>
-                    <Select value={selectedTable} onValueChange={setSelectedTable}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="tickets_queue">Tickets Queue</SelectItem>
-                        <SelectItem value="users_list">Users Management</SelectItem>
-                        <SelectItem value="helpdesk_queue">Helpdesk Queue</SelectItem>
-                        <SelectItem value="public_portal">Public Portal</SelectItem>
-                        <SelectItem value="support_teams">Support Teams</SelectItem>
-                        <SelectItem value="support_team_groups">Support Team Groups</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Table</InputLabel>
+                      <Select 
+                        value={selectedTable} 
+                        onChange={(e) => setSelectedTable(e.target.value)}
+                        label="Table"
+                      >
+                        <MenuItem value="tickets_queue">Tickets Queue</MenuItem>
+                        <MenuItem value="users_list">Users Management</MenuItem>
+                        <MenuItem value="helpdesk_queue">Helpdesk Queue</MenuItem>
+                        <MenuItem value="public_portal">Public Portal</MenuItem>
+                        <MenuItem value="support_teams">Support Teams</MenuItem>
+                        <MenuItem value="support_team_groups">Support Team Groups</MenuItem>
+                      </Select>
+                    </FormControl>
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="config-name">Configuration Name</Label>
@@ -1569,7 +1621,7 @@ export default function TablesManagementPage() {
                               const newRow = editorColumns.reduce((acc, col) => {
                                 acc[col.column_key] = col.column_type === 'date' ? new Date().toISOString() : '';
                                 return acc;
-                              }, {} as any);
+                              }, {} as TableRowData);
                               newRow.id = `new_${Date.now()}`;
                               setEditingRow(newRow);
                               setShowRowEditor(true);
@@ -1889,19 +1941,21 @@ export default function TablesManagementPage() {
             <Label htmlFor="table-selector" className="text-sm font-medium mb-2 block">
               Select Table Type:
             </Label>
-            <Select value={selectedTableForColumns} onValueChange={setSelectedTableForColumns}>
-              <SelectTrigger className="w-64">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tickets_queue">Tickets Queue</SelectItem>
-                <SelectItem value="users_list">Users Management</SelectItem>
-                <SelectItem value="helpdesk_queue">Helpdesk Queue</SelectItem>
-                <SelectItem value="public_portal">Public Portal</SelectItem>
-                <SelectItem value="support_teams">Support Teams</SelectItem>
-                <SelectItem value="support_team_groups">Support Team Groups</SelectItem>
-              </SelectContent>
-            </Select>
+            <FormControl size="small" sx={{ minWidth: 256 }}>
+              <InputLabel>Select Table Type</InputLabel>
+              <Select 
+                value={selectedTableForColumns} 
+                onChange={(e) => setSelectedTableForColumns(e.target.value)}
+                label="Select Table Type"
+              >
+                <MenuItem value="tickets_queue">Tickets Queue</MenuItem>
+                <MenuItem value="users_list">Users Management</MenuItem>
+                <MenuItem value="helpdesk_queue">Helpdesk Queue</MenuItem>
+                <MenuItem value="public_portal">Public Portal</MenuItem>
+                <MenuItem value="support_teams">Support Teams</MenuItem>
+                <MenuItem value="support_team_groups">Support Team Groups</MenuItem>
+              </Select>
+            </FormControl>
           </div>
 
           {/* Column Manager */}

@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         }
       });
 
-    } catch (apiError: any) {
+    } catch (apiError: unknown) {
       console.error('❌ Giphy API test failed:', apiError);
       
       return NextResponse.json({

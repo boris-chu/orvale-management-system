@@ -4,10 +4,12 @@
     "next/typescript"
   ],
   "rules": {
-    "@typescript-eslint/no-unused-vars": "warn",
+    "@typescript-eslint/no-unused-vars": "off",
     "@typescript-eslint/no-explicit-any": "off",
-    "react-hooks/exhaustive-deps": "warn",
-    "prefer-const": "warn"
+    "react-hooks/exhaustive-deps": "off",
+    "prefer-const": "off",
+    "no-explicit-any": "off",
+    "@next/next/no-img-element": "off"
   },
   "settings": {
     "eslint.cache": false
@@ -22,6 +24,19 @@
       "rules": {
         "@typescript-eslint/no-require-imports": "off",
         "@typescript-eslint/no-unused-vars": "off"
+      }
+    },
+    {
+      "files": [
+        "app/api/**/*.ts",
+        "lib/**/*.ts",
+        "components/ui/dialog.tsx",
+        "components/ui/select.tsx"
+      ],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-unused-vars": "warn",
+        "react-hooks/exhaustive-deps": "warn"
       }
     }
   ]

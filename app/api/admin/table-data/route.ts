@@ -58,7 +58,14 @@ export async function GET(request: NextRequest) {
     }
 
     const total = countResult[0]?.total || 0;
-    const columns = schemaInfo.map((col: any) => ({
+    interface SchemaColumn {
+      name: string;
+      type: string;
+      notnull: number;
+      pk: number;
+      dflt_value: string | null;
+    }
+    const columns = (schemaInfo as SchemaColumn[]).map((col: SchemaColumn) => ({
       name: col.name,
       type: col.type,
       notnull: col.notnull,

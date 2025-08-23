@@ -3,25 +3,22 @@
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
+  MenuItem,
+  FormControl,
+  InputLabel,
+  FormControlLabel,
+  Switch,
+  Typography,
+  Box,
+  Chip,
+  Paper
+} from '@mui/material';
 import { Save, X } from 'lucide-react';
 
 interface ColumnDefinition {
@@ -134,165 +131,169 @@ export function ColumnEditorDialog({
   const selectedColumnType = columnTypes.find(type => type.value === formData.column_type);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {column ? 'Edit Column' : 'Add New Column'}
-            {selectedColumnType && <span className="text-lg">{selectedColumnType.icon}</span>}
-          </DialogTitle>
-          <DialogDescription>
-            {column ? 'Update the column definition' : 'Create a new column definition'} for the {tableIdentifier.replace('_', ' ')} table.
-          </DialogDescription>
-        </DialogHeader>
+    <Dialog open={open} onClose={() => onOpenChange(false)} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {column ? 'Edit Column' : 'Add New Column'}
+        {selectedColumnType && <span style={{ fontSize: '1.2rem' }}>{selectedColumnType.icon}</span>}
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          {column ? 'Update the column definition' : 'Create a new column definition'} for the {tableIdentifier.replace('_', ' ')} table.
+        </Typography>
 
-        <div className="space-y-4">
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
           {/* Column Key */}
-          <div className="space-y-2">
-            <Label htmlFor="column_key">Column Key *</Label>
-            <Input
-              id="column_key"
-              value={formData.column_key}
-              onChange={(e) => setFormData({ ...formData, column_key: e.target.value })}
-              placeholder="e.g., user_id, created_at, status"
-              className={errors.column_key ? 'border-red-500' : ''}
-              disabled={!!column} // Don't allow changing key for existing columns
-            />
-            {errors.column_key && <p className="text-sm text-red-500">{errors.column_key}</p>}
-            {!!column && (
-              <p className="text-xs text-gray-500">Column key cannot be changed for existing columns</p>
-            )}
-          </div>
+          <TextField
+            label="Column Key *"
+            value={formData.column_key}
+            onChange={(e) => setFormData({ ...formData, column_key: e.target.value })}
+            placeholder="e.g., user_id, created_at, status"
+            error={!!errors.column_key}
+            helperText={errors.column_key || (column ? 'Column key cannot be changed for existing columns' : '')}
+            disabled={!!column}
+            fullWidth
+            size="small"
+          />
 
           {/* Column Label */}
-          <div className="space-y-2">
-            <Label htmlFor="column_label">Display Label *</Label>
-            <Input
-              id="column_label"
-              value={formData.column_label}
-              onChange={(e) => setFormData({ ...formData, column_label: e.target.value })}
-              placeholder="e.g., User ID, Created Date, Status"
-              className={errors.column_label ? 'border-red-500' : ''}
-            />
-            {errors.column_label && <p className="text-sm text-red-500">{errors.column_label}</p>}
-          </div>
+          <TextField
+            label="Display Label *"
+            value={formData.column_label}
+            onChange={(e) => setFormData({ ...formData, column_label: e.target.value })}
+            placeholder="e.g., User ID, Created Date, Status"
+            error={!!errors.column_label}
+            helperText={errors.column_label}
+            fullWidth
+            size="small"
+          />
 
           {/* Column Type */}
-          <div className="space-y-2">
-            <Label htmlFor="column_type">Column Type</Label>
-            <Select value={formData.column_type} onValueChange={(value) => setFormData({ ...formData, column_type: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select column type" />
-              </SelectTrigger>
-              <SelectContent>
-                {columnTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    <div className="flex items-center gap-2">
-                      <span>{type.icon}</span>
-                      <div>
-                        <div className="font-medium">{type.label}</div>
-                        <div className="text-xs text-gray-500">{type.description}</div>
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
+          <FormControl fullWidth size="small">
+            <InputLabel>Column Type</InputLabel>
+            <Select 
+              value={formData.column_type} 
+              onChange={(e) => setFormData({ ...formData, column_type: e.target.value })}
+              label="Column Type"
+            >
+              {columnTypes.map((type) => (
+                <MenuItem key={type.value} value={type.value}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span>{type.icon}</span>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 'medium' }}>{type.label}</Typography>
+                      <Typography variant="caption" color="text.secondary">{type.description}</Typography>
+                    </Box>
+                  </Box>
+                </MenuItem>
+              ))}
             </Select>
-          </div>
+          </FormControl>
 
           {/* Display Order */}
-          <div className="space-y-2">
-            <Label htmlFor="display_order">Display Order</Label>
-            <Input
-              id="display_order"
-              type="number"
-              value={formData.display_order}
-              onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
-              placeholder="0"
-              min="0"
-              max="1000"
-            />
-            <p className="text-xs text-gray-500">Lower numbers appear first in the table</p>
-          </div>
+          <TextField
+            label="Display Order"
+            type="number"
+            value={formData.display_order}
+            onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
+            placeholder="0"
+            inputProps={{ min: 0, max: 1000 }}
+            helperText="Lower numbers appear first in the table"
+            fullWidth
+            size="small"
+          />
 
           {/* Feature Toggles */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="default_visible">Default Visible</Label>
-                <p className="text-xs text-gray-500">Show this column by default in table views</p>
-              </div>
-              <Switch
-                id="default_visible"
-                checked={formData.default_visible}
-                onCheckedChange={(checked) => setFormData({ ...formData, default_visible: checked })}
-              />
-            </div>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={formData.default_visible}
+                  onChange={(e) => setFormData({ ...formData, default_visible: e.target.checked })}
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body2">Default Visible</Typography>
+                  <Typography variant="caption" color="text.secondary">Show this column by default in table views</Typography>
+                </Box>
+              }
+            />
 
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="is_sortable">Sortable</Label>
-                <p className="text-xs text-gray-500">Allow users to sort by this column</p>
-              </div>
-              <Switch
-                id="is_sortable"
-                checked={formData.is_sortable}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_sortable: checked })}
-              />
-            </div>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={formData.is_sortable}
+                  onChange={(e) => setFormData({ ...formData, is_sortable: e.target.checked })}
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body2">Sortable</Typography>
+                  <Typography variant="caption" color="text.secondary">Allow users to sort by this column</Typography>
+                </Box>
+              }
+            />
 
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="is_filterable">Filterable</Label>
-                <p className="text-xs text-gray-500">Allow users to filter by this column</p>
-              </div>
-              <Switch
-                id="is_filterable"
-                checked={formData.is_filterable}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_filterable: checked })}
-              />
-            </div>
-          </div>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={formData.is_filterable}
+                  onChange={(e) => setFormData({ ...formData, is_filterable: e.target.checked })}
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body2">Filterable</Typography>
+                  <Typography variant="caption" color="text.secondary">Allow users to filter by this column</Typography>
+                </Box>
+              }
+            />
+          </Box>
 
           {/* Preview */}
           {formData.column_label && (
-            <div className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
-              <Label className="text-sm font-medium">Preview</Label>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-lg">{selectedColumnType?.icon}</span>
-                <div>
-                  <div className="font-medium">{formData.column_label}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
+            <Paper sx={{ p: 2, bgcolor: 'action.hover' }}>
+              <Typography variant="body2" sx={{ fontWeight: 'medium', mb: 1 }}>Preview</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <span style={{ fontSize: '1.2rem' }}>{selectedColumnType?.icon}</span>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'medium' }}>{formData.column_label}</Typography>
+                  <Typography variant="caption" color="text.secondary">
                     {formData.column_key} • {selectedColumnType?.label}
-                  </div>
-                </div>
-                <div className="flex gap-1 ml-auto">
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
                   {formData.default_visible && (
-                    <Badge variant="outline" className="text-xs">Visible</Badge>
+                    <Chip label="Visible" variant="outlined" size="small" />
                   )}
                   {formData.is_sortable && (
-                    <Badge variant="outline" className="text-xs">Sortable</Badge>
+                    <Chip label="Sortable" variant="outlined" size="small" />
                   )}
                   {formData.is_filterable && (
-                    <Badge variant="outline" className="text-xs">Filterable</Badge>
+                    <Chip label="Filterable" variant="outlined" size="small" />
                   )}
-                </div>
-              </div>
-            </div>
+                </Box>
+              </Box>
+            </Paper>
           )}
-        </div>
+        </Box>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleCancel}>
-            <X className="h-4 w-4 mr-2" />
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>
-            <Save className="h-4 w-4 mr-2" />
-            {column ? 'Update Column' : 'Create Column'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
+      <DialogActions>
+        <Button 
+          onClick={handleCancel}
+          startIcon={<X className="h-4 w-4" />}
+        >
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleSave}
+          variant="contained"
+          startIcon={<Save className="h-4 w-4" />}
+        >
+          {column ? 'Update Column' : 'Create Column'}
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 }

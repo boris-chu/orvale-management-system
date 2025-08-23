@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     // Override with database values if they exist
     (settings as SettingRow[]).forEach((setting: SettingRow) => {
       let key = setting.setting_key.replace('chat_', '');
-      let value = setting.setting_value;
+      const value = setting.setting_value;
       
       // Handle special key mappings for connection settings
       if (key === 'connection_mode') key = 'connectionMode';
@@ -95,13 +95,13 @@ export async function GET(request: NextRequest) {
       
       // Type-safe assignment based on key
       if (key === 'fileShareEnabled' || key === 'giphyEnabled' || key === 'deletedMessageVisible' || key === 'notificationsEnabled') {
-        (settingsObj as any)[key] = Boolean(parsedValue);
+        (settingsObj as Record<string, boolean | number | string>)[key] = Boolean(parsedValue);
       } else if (key === 'maxFileSize' || key === 'retentionDays' || key === 'pollingInterval') {
-        (settingsObj as any)[key] = Number(parsedValue);
+        (settingsObj as Record<string, boolean | number | string>)[key] = Number(parsedValue);
       } else if (key === 'connectionMode' && (parsedValue === 'auto' || parsedValue === 'socket' || parsedValue === 'polling')) {
         settingsObj.connectionMode = parsedValue;
       } else {
-        (settingsObj as any)[key] = String(parsedValue);
+        (settingsObj as Record<string, boolean | number | string>)[key] = String(parsedValue);
       }
     });
 

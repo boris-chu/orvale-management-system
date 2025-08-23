@@ -47,7 +47,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Apply presence settings
-    const _updates = [];
     const auditActions = [];
 
     // Ensure user_presence record exists
