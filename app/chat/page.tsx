@@ -34,6 +34,14 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!loading && user) {
+      console.log('👤 Chat page: User loaded:', {
+        username: user.username,
+        display_name: user.display_name,
+        role: user.role,
+        permissions: user.permissions?.length || 0,
+        hasAuthToken: !!(localStorage.getItem('authToken') || localStorage.getItem('token')),
+        hasChatAccess: user.permissions?.includes('chat.access_channels')
+      })
       loadChannels()
       loadDirectMessages()
     }
@@ -304,7 +312,7 @@ export default function ChatPage() {
 
             {/* User Profile Menu */}
             <UserProfileMenu 
-              showPresence={true}
+              showPresence={user?.permissions?.includes('chat.access_channels') || false}
               onProfileClick={() => {
                 // Add profile modal here if needed
                 console.log('Profile clicked')

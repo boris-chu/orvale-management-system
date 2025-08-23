@@ -40,21 +40,36 @@ export function UserProfileMenu({
 
   // Fetch user's current presence status
   useEffect(() => {
-    if (!user || !showPresence) return
+    if (!user || !showPresence) {
+      setIsLoading(false)
+      return
+    }
 
     const fetchPresence = async () => {
       try {
         const token = localStorage.getItem('authToken') || localStorage.getItem('token')
-        if (!token) return
+        if (!token) {
+          console.log('🚨 UserProfileMenu: No auth token found, disabling presence')
+          setPresenceStatus('offline')
+          setIsLoading(false)
+          return
+        }
 
+        const cleanToken = token.trim().replace(/[\[\]"']/g, '')
+        console.log('🔍 UserProfileMenu: Fetching presence with token:', cleanToken.substring(0, 20) + '...')
+        
         const response = await fetch('/api/chat/presence', {
           headers: {
-            'Authorization': `Bearer ${token.trim().replace(/[\[\]"']/g, '')}`
+            'Authorization': `Bearer ${cleanToken}`
           }
         })
 
+        console.log('📡 UserProfileMenu: Presence API response:', response.status, response.ok)
+        
         if (response.ok) {
           const data = await response.json()
+          console.log('📊 UserProfileMenu: Presence data received:', data.summary)
+          
           // Find current user's presence in the response
           const allUsers = [
             ...(data.presence?.online || []),
@@ -65,11 +80,22 @@ export function UserProfileMenu({
           
           const currentUserPresence = allUsers.find(u => u.user_id === user.username)
           if (currentUserPresence) {
+            console.log('👤 UserProfileMenu: Found user presence:', user.username, currentUserPresence.status)
             setPresenceStatus(currentUserPresence.status)
+          } else {
+            console.log('❓ UserProfileMenu: User not found in presence data, defaulting to online')
+            setPresenceStatus('online') // Default to online if not found
           }
+        } else if (response.status === 401) {
+          console.log('🔒 UserProfileMenu: Authentication failed, disabling presence')
+          setPresenceStatus('offline')
+        } else {
+          console.log('❌ UserProfileMenu: API error:', response.status, 'disabling presence')
+          setPresenceStatus('offline') // Default to offline on API errors
         }
       } catch (error) {
-        console.error('Error fetching user presence:', error)
+        console.error('❌ UserProfileMenu: Error fetching presence:', error)
+        setPresenceStatus('offline') // Default to offline on fetch errors
       } finally {
         setIsLoading(false)
       }

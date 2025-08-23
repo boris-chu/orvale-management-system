@@ -84,15 +84,27 @@ export function ChannelSidebar({
 
   const loadOnlineUsers = async () => {
     try {
+      const token = (localStorage.getItem('authToken') || localStorage.getItem('token'))?.trim().replace(/[\[\]"']/g, '')
+      
+      if (!token) {
+        console.log('🚨 ChannelSidebar: No auth token found')
+        setOnlineUsers([])
+        return
+      }
+      
+      console.log('🔍 ChannelSidebar: Loading online users with token:', token.substring(0, 20) + '...')
+      
       // First clean up stale presence data
       await fetch('/api/chat/presence/cleanup', { method: 'GET' })
       
       const response = await fetch('/api/chat/presence', {
         headers: {
-          'Authorization': `Bearer ${(localStorage.getItem('authToken') || localStorage.getItem('token'))?.trim().replace(/[\[\]"']/g, '')}`
+          'Authorization': `Bearer ${token}`
         }
       })
 
+      console.log('📡 ChannelSidebar: Presence API response:', response.status, response.ok)
+      
       if (response.ok) {
         const data = await response.json()
         console.log('🔍 Sidebar presence data:', data.presence)
@@ -103,11 +115,16 @@ export function ChannelSidebar({
         const allActiveUsers = [...online, ...away, ...busy]
         console.log('👥 Sidebar active users:', allActiveUsers.length, allActiveUsers.map(u => `${u.display_name}(${u.status})`).join(', '))
         setOnlineUsers(allActiveUsers)
+      } else if (response.status === 401) {
+        console.log('🔒 ChannelSidebar: Authentication failed')
+        setOnlineUsers([])
       } else {
-        console.error('❌ Failed to load presence data:', response.status)
+        console.error('❌ ChannelSidebar: Failed to load presence data:', response.status)
+        setOnlineUsers([])
       }
     } catch (error) {
-      console.error('Error loading online users:', error)
+      console.error('❌ ChannelSidebar: Error loading online users:', error)
+      setOnlineUsers([])
     }
   }
 
