@@ -88,6 +88,19 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    return NextResponse.json({
+      success: true,
+      presence: groupedPresence,
+      total_users: presenceData.length,
+      online_count: groupedPresence.online.length,
+      summary: {
+        online: groupedPresence.online.length,
+        away: groupedPresence.away.length,
+        busy: groupedPresence.busy.length,
+        offline: groupedPresence.offline.length
+      }
+    })
+
   } catch (error) {
     console.error('❌ Error fetching presence data:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
