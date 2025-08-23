@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { SystemPresenceTracker } from '@/components/SystemPresenceTracker';
 
 interface User {
   id: number;
@@ -164,6 +165,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={value}>
+      {/* System-wide presence tracking for all authenticated users */}
+      <SystemPresenceTracker />
       {children}
     </AuthContext.Provider>
   );

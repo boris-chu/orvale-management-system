@@ -354,38 +354,7 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
   // Load initial messages when channel changes
   useEffect(() => {
     loadMessages()
-    updateUserPresence('online')
-    
-    // Update presence every 30 seconds to keep user active
-    const presenceInterval = setInterval(() => {
-      if (!document.hidden) {
-        updateUserPresence('online')
-      }
-    }, 30000) // Every 30 seconds
-    
-    // Set user offline when component unmounts or tab closes
-    const handleBeforeUnload = () => {
-      updateUserPresence('offline')
-    }
-    
-    // Update presence based on page visibility
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        updateUserPresence('away')
-      } else {
-        updateUserPresence('online')
-      }
-    }
-    
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    
-    return () => {
-      clearInterval(presenceInterval)
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      updateUserPresence('offline')
-    }
+    // Presence tracking is now handled globally by SystemPresenceTracker
   }, [channel.id])
 
   // Auto-scroll to bottom on initial load
@@ -517,23 +486,7 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     return scrollHeight - scrollTop - clientHeight < 100 // Within 100px of bottom
   }
 
-  const updateUserPresence = async (status: 'online' | 'away' | 'busy' | 'offline') => {
-    try {
-      const token = getCleanToken()
-      if (!token) return
-
-      await fetch('/api/chat/presence', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status })
-      })
-    } catch (error) {
-      console.error('Error updating presence:', error)
-    }
-  }
+  // Presence tracking is now handled globally by SystemPresenceTracker
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })

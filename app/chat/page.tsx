@@ -32,26 +32,6 @@ export default function ChatPage() {
   const [showSearch, setShowSearch] = useState(false)
   const [totalUnread, setTotalUnread] = useState(0)
 
-  // Update user presence when chat page loads
-  const updateUserPresence = async (status: 'online' | 'away' | 'busy' | 'offline') => {
-    try {
-      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
-      if (!token) return
-
-      const cleanToken = token.trim().replace(/[\[\]"']/g, '')
-      await fetch('/api/chat/presence', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${cleanToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status })
-      })
-      console.log('✅ Chat page: Updated presence to', status)
-    } catch (error) {
-      console.error('❌ Chat page: Error updating presence:', error)
-    }
-  }
 
   useEffect(() => {
     if (!loading && user) {
@@ -64,38 +44,11 @@ export default function ChatPage() {
         hasChatAccess: user.permissions?.includes('chat.access_channels')
       })
       
-      // Set user as online immediately when chat page loads
-      updateUserPresence('online')
-      
       loadChannels()
       loadDirectMessages()
     }
   }, [user, loading])
 
-  // Handle page visibility changes for presence
-  useEffect(() => {
-    if (!user) return
-    
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        updateUserPresence('away')
-      } else {
-        updateUserPresence('online')
-      }
-    }
-    
-    const handleBeforeUnload = () => {
-      updateUserPresence('offline')
-    }
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-    }
-  }, [user])
 
   // Add keyboard shortcut for search (Ctrl/Cmd + K)
   useEffect(() => {
