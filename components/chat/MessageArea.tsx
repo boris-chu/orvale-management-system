@@ -193,12 +193,28 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     })
 
     newSocket.on('connect', () => {
-      console.log('Connected to chat socket')
+      console.log('🔌 Connected to chat socket:', {
+        socketId: newSocket.id,
+        channelId: channel.id,
+        channelName: channel.name
+      })
       // Join the current channel
       newSocket.emit('join_channel', { channelId: channel.id })
     })
 
+    newSocket.on('disconnect', () => {
+      console.log('🔌 Disconnected from chat socket')
+    })
+
     newSocket.on('message_received', (data: { message: Message; channel_id: string }) => {
+      console.log('📨 Socket message received:', {
+        messageId: data.message?.id,
+        channelId: data.channel_id,
+        currentChannelId: channel.id,
+        matches: data.channel_id === channel.id,
+        messageText: data.message?.message_text?.substring(0, 50)
+      })
+      
       if (data.channel_id === channel.id) {
         setMessages(prev => {
           // Check if message already exists (avoid duplicates)
@@ -282,7 +298,7 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     // Set up polling for new messages
     pollingIntervalRef.current = setInterval(() => {
       pollForNewMessages()
-    }, 3000) // Poll every 3 seconds
+    }, 1000) // Poll every 1 second for faster testing
     
     return () => {
       if (pollingIntervalRef.current) {
@@ -321,6 +337,15 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
 
       if (response.ok) {
         const data = await response.json()
+        
+        // Debug: Check what user data we're getting from the API
+        console.log('📊 API message data sample:', data.messages?.slice(0, 2)?.map(m => ({
+          id: m.id,
+          user_id: m.user_id,
+          display_name: m.display_name,
+          profile_picture: m.profile_picture,
+          message_text: m.message_text?.substring(0, 30)
+        })))
         
         if (before) {
           // Prepend older messages
@@ -377,7 +402,13 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
         limit: '50'
       })
 
-      console.log('🔄 Polling for new messages after:', latestMessage.created_at)
+      console.log('🔄 Polling for new messages:', {
+        channelId: channel.id,
+        channelName: channel.name,
+        after: latestMessage.created_at,
+        latestMessageId: latestMessage.id,
+        currentUser: currentUser.username
+      })
 
       const response = await fetch(`/api/chat/channels/${channel.id}/messages?${params}`, {
         headers: {
@@ -522,7 +553,9 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       if (socket) {
         socket.emit('send_message', {
           channelId: channel.id,
-          ...messageData
+          message: messageData.message_text,
+          messageType: messageData.message_type || 'text',
+          replyToId: messageData.reply_to_id
         })
       }
       
