@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { MessageBubble } from './MessageBubble'
 import { MessageInput } from './MessageInput'
 import { TypingIndicator } from './TypingIndicator'
+import { ImageLightbox } from './ImageLightbox'
 import { Button } from '@/components/ui/button'
 // import { ScrollArea } from '@/components/ui/scroll-area' // Using native scroll instead
 import { Badge } from '@/components/ui/badge'
@@ -87,6 +88,12 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
   const [lastMessageId, setLastMessageId] = useState<string | null>(null)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [eventSource, setEventSource] = useState<EventSource | null>(null)
+  const [lightboxImage, setLightboxImage] = useState<{
+    src: string
+    alt: string
+    filename?: string
+    downloadUrl?: string
+  } | null>(null)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -791,6 +798,9 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
                 onAddReaction={addReaction}
                 onRemoveReaction={removeReaction}
                 isGrouped={messageGroup.length > 1}
+                onImageClick={(src: string, alt: string, filename?: string, downloadUrl?: string) => {
+                  setLightboxImage({ src, alt, filename, downloadUrl })
+                }}
               />
             ))}
           </div>
@@ -828,6 +838,16 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
           currentUser={currentUser}
         />
       </div>
+      
+      {/* Image Lightbox */}
+      <ImageLightbox
+        src={lightboxImage?.src || ''}
+        alt={lightboxImage?.alt || ''}
+        filename={lightboxImage?.filename}
+        downloadUrl={lightboxImage?.downloadUrl}
+        isOpen={!!lightboxImage}
+        onClose={() => setLightboxImage(null)}
+      />
     </div>
   )
 }

@@ -74,6 +74,7 @@ interface MessageBubbleProps {
   onAddReaction: (messageId: string, emoji: string) => void
   onRemoveReaction: (messageId: string, emoji: string) => void
   isGrouped: boolean
+  onImageClick?: (src: string, alt: string, filename?: string, downloadUrl?: string) => void
 }
 
 const commonEmojis = ['👍', '❤️', '😂', '😮', '😢', '😡']
@@ -83,7 +84,8 @@ export function MessageBubble({
   currentUser, 
   onAddReaction, 
   onRemoveReaction,
-  isGrouped 
+  isGrouped,
+  onImageClick
 }: MessageBubbleProps) {
   const [hoveredMessage, setHoveredMessage] = useState<string | null>(null)
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null)
@@ -168,7 +170,18 @@ export function MessageBubble({
                         className="rounded-lg max-w-full h-auto shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
                         loading="lazy"
                         style={{ maxHeight: '400px' }}
-                        onClick={() => window.open(message.file_attachment.url, '_blank')}
+                        onClick={() => {
+                          if (onImageClick && message.file_attachment) {
+                            onImageClick(
+                              message.file_attachment.url,
+                              message.file_attachment.name || message.file_attachment.title || 'Image',
+                              message.file_attachment.name || message.file_attachment.title,
+                              message.file_attachment.downloadUrl || message.file_attachment.url
+                            )
+                          } else {
+                            window.open(message.file_attachment.url, '_blank')
+                          }
+                        }}
                         title="Click to view full size"
                       />
                       {/* Image overlay with filename and actions */}
@@ -182,39 +195,15 @@ export function MessageBubble({
                               size="sm" 
                               variant="ghost" 
                               className="h-6 w-6 p-0 bg-black bg-opacity-50 hover:bg-opacity-70"
-                              onClick={async (e) => {
+                              onClick={(e) => {
                                 e.stopPropagation()
-                                const url = message.file_attachment?.url
-                                console.log('🔍 Opening image URL:', url)
-                                
-                                if (!url) {
-                                  console.error('No image URL available')
-                                  return
-                                }
-                                
-                                try {
-                                  // For file serving, we need to fetch with auth and create blob URL
-                                  const token = (localStorage.getItem('authToken') || localStorage.getItem('token'))?.trim().replace(/[\[\]"']/g, '')
-                                  if (token && url.includes('/api/chat/files/')) {
-                                    const response = await fetch(url, {
-                                      headers: { 'Authorization': `Bearer ${token}` }
-                                    })
-                                    if (response.ok) {
-                                      const blob = await response.blob()
-                                      const blobUrl = URL.createObjectURL(blob)
-                                      window.open(blobUrl, '_blank', 'noopener,noreferrer')
-                                      // Clean up the blob URL after a short delay
-                                      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000)
-                                    } else {
-                                      console.error('Failed to fetch image:', response.status)
-                                      window.open(url, '_blank', 'noopener,noreferrer')
-                                    }
-                                  } else {
-                                    window.open(url, '_blank', 'noopener,noreferrer')
-                                  }
-                                } catch (error) {
-                                  console.error('Error opening image:', error)
-                                  window.open(url, '_blank', 'noopener,noreferrer')
+                                if (onImageClick && message.file_attachment) {
+                                  onImageClick(
+                                    message.file_attachment.url,
+                                    message.file_attachment.name || message.file_attachment.title || 'Image',
+                                    message.file_attachment.name || message.file_attachment.title,
+                                    message.file_attachment.downloadUrl || message.file_attachment.url
+                                  )
                                 }
                               }}
                               title="View full size"
