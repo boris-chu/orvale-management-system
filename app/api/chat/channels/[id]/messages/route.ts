@@ -119,10 +119,11 @@ export async function GET(
       })
     }
 
-    // Parse reactions JSON
+    // Parse JSON fields
     const messagesWithReactions = messages.map(message => ({
       ...message,
-      reactions: message.reactions ? JSON.parse(message.reactions) : []
+      reactions: message.reactions ? JSON.parse(message.reactions) : [],
+      file_attachment: message.file_attachment ? JSON.parse(message.file_attachment) : null
     }))
 
     // Update last read timestamp for the user
@@ -246,7 +247,7 @@ export async function POST(
       message_text.trim(), 
       message_type, 
       reply_to_id,
-      file_attachment,
+      file_attachment ? JSON.stringify(file_attachment) : null,
       ticket_reference
     ])
 
@@ -278,7 +279,8 @@ export async function POST(
       success: true,
       message: {
         ...messageData,
-        reactions: []
+        reactions: [],
+        file_attachment: messageData.file_attachment ? JSON.parse(messageData.file_attachment) : null
       }
     }, { status: 201 })
 
