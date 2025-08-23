@@ -18,6 +18,7 @@
     <p><strong>Timestamp:</strong> <span id="timestamp"></span></p>
 
     <button onclick="runDiagnostics()">🧪 Run Full Diagnostics</button>
+    <button onclick="testLogout()">🚪 Test Logout</button>
     <button onclick="clearStorage()">🗑️ Clear All Storage</button>
     <button onclick="window.location.reload()">🔄 Reload Page</button>
 
@@ -86,6 +87,45 @@ currentUser: ${localStorage.getItem('currentUser') ? 'Present' : 'NULL'}`,
                     response.ok ? 'success' : 'error');
             } catch (error) {
                 addResult('👤 User Endpoint Test', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLogout() {
+            addResult('🚪 Testing Logout', 'Calling logout API and checking cleanup...', 'warning');
+            
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    addResult('✅ Logout API Success', 'Server logout completed successfully', 'success');
+                } else {
+                    addResult('⚠️ Logout API Warning', `Server returned ${response.status}`, 'warning');
+                }
+                
+                // Check what's left in storage after logout
+                setTimeout(() => {
+                    const remainingTokens = {
+                        authToken: localStorage.getItem('authToken'),
+                        token: localStorage.getItem('token'),
+                        currentUser: localStorage.getItem('currentUser')
+                    };
+                    
+                    const hasRemainingData = Object.values(remainingTokens).some(val => val !== null);
+                    
+                    addResult('🔍 Post-Logout Storage Check', 
+                        JSON.stringify(remainingTokens, null, 2), 
+                        hasRemainingData ? 'error' : 'success');
+                        
+                    if (!hasRemainingData) {
+                        addResult('✅ Logout Cleanup Success', 'All authentication data properly cleared!', 'success');
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                addResult('❌ Logout Test Error', `${error.message}`, 'error');
             }
         }
 

@@ -51,6 +51,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       if (token && storedUser) {
+        // Validate token format first
+        const isValidJWT = token.trim().split('.').length === 3;
+        if (!isValidJWT) {
+          console.log('❌ Invalid JWT format detected, clearing corrupted token');
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('currentUser');
+          setLoading(false);
+          return;
+        }
+        
         // Use existing stored user data
         const userData = JSON.parse(storedUser);
         console.log('📱 Using stored user data:', userData);
@@ -58,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // First set the stored user data immediately
         setUser(userData);
         
-        // Then try to fetch fresh permissions from server
+        // Then validate token with server and fetch fresh data
         try {
           const response = await fetch('/api/auth/user', {
             headers: {
@@ -72,11 +82,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Handle both direct user object and wrapped user object
             const userObj = freshUserData.user || freshUserData;
             if (userObj && userObj.id) {
-              console.log('✅ Updated with fresh user data:', userObj);
+              console.log('✅ Token validated, updated with fresh user data:', userObj);
               setUser(userObj);
             } else {
               console.log('⚠️ Server returned invalid user data, keeping stored data');
             }
+          } else if (response.status === 401) {
+            // Token is invalid/expired, clear it
+            console.log('🚨 Token expired/invalid, clearing authentication data');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            setUser(null);
           } else {
             console.log('⚠️ Fresh data fetch failed, keeping stored data');
           }
@@ -88,6 +104,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('❌ Auth check failed:', error);
+      // Clear potentially corrupted data
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUser');
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -127,6 +147,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      console.log('🚪 AuthContext: Starting logout process...')
+      
       // Update user presence to offline before logging out
       if (user?.permissions?.includes('chat.access_channels')) {
         const token = localStorage.getItem('authToken') || localStorage.getItem('token')
@@ -151,27 +173,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear user state immediately
       setUser(null);
       
-      // Clear localStorage (existing system)
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('currentUser');
+      // 🧹 COMPREHENSIVE TOKEN CLEANUP
+      console.log('🧹 AuthContext: Clearing all authentication data...')
+      
+      // Clear all possible localStorage keys
+      const keysToRemove = [
+        'authToken', 
+        'token', 
+        'currentUser', 
+        'user',
+        'auth-token',
+        'sessionToken',
+        'accessToken'
+      ]
+      keysToRemove.forEach(key => {
+        if (localStorage.getItem(key)) {
+          console.log(`🗑️ Removing localStorage.${key}`)
+          localStorage.removeItem(key)
+        }
+      })
+      
+      // Clear sessionStorage too
+      const sessionKeys = ['authToken', 'token', 'currentUser', 'user']
+      sessionKeys.forEach(key => {
+        if (sessionStorage.getItem(key)) {
+          console.log(`🗑️ Removing sessionStorage.${key}`)
+          sessionStorage.removeItem(key)
+        }
+      })
+      
+      // Clear all possible auth cookies
+      const cookiesToClear = [
+        'auth-token',
+        'authToken', 
+        'token',
+        'session-token',
+        'access-token',
+        'jwt-token'
+      ]
+      cookiesToClear.forEach(cookieName => {
+        document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname}`;
+        document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      })
       
       // Call logout endpoint to clear server-side session
       try {
         await fetch('/api/auth/logout', {
           method: 'POST',
+          credentials: 'include' // Include cookies for server-side cleanup
         });
+        console.log('✅ AuthContext: Server-side logout completed')
       } catch (error) {
-        console.log('Logout endpoint call failed, but continuing with local cleanup');
+        console.log('⚠️ Logout endpoint call failed, but continuing with local cleanup:', error.message);
       }
       
-      // Clear any client-side tokens
-      document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      console.log('✅ AuthContext: Logout cleanup complete, redirecting...')
       
-      // Redirect to login or home
+      // Force redirect to home page
       window.location.href = '/';
     } catch (error) {
-      console.error('Logout failed:', error);
-      // Still redirect even if logout call fails
+      console.error('❌ Logout failed:', error);
+      // Even if logout fails, clear everything and redirect
+      localStorage.clear();
+      sessionStorage.clear();
       window.location.href = '/';
     }
   };
