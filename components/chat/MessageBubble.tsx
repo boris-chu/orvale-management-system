@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { UserAvatar } from '@/components/UserAvatar'
+import { AuthenticatedImage } from './AuthenticatedImage'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -75,6 +76,9 @@ interface MessageBubbleProps {
   onRemoveReaction: (messageId: string, emoji: string) => void
   isGrouped: boolean
   onImageClick?: (src: string, alt: string, filename?: string, downloadUrl?: string) => void
+  onReply?: (message: Message) => void
+  onEdit?: (message: Message) => void
+  onDelete?: (message: Message) => void
 }
 
 const commonEmojis = ['👍', '❤️', '😂', '😮', '😢', '😡']
@@ -85,7 +89,10 @@ export function MessageBubble({
   onAddReaction, 
   onRemoveReaction,
   isGrouped,
-  onImageClick
+  onImageClick,
+  onReply,
+  onEdit,
+  onDelete
 }: MessageBubbleProps) {
   const [hoveredMessage, setHoveredMessage] = useState<string | null>(null)
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null)
@@ -164,7 +171,7 @@ export function MessageBubble({
                 return (
                   <div className="space-y-2">
                     <div className="relative max-w-md group">
-                      <img
+                      <AuthenticatedImage
                         src={message.file_attachment.url}
                         alt={message.file_attachment.name || message.file_attachment.title || 'Image'}
                         className="rounded-lg max-w-full h-auto shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
@@ -606,6 +613,7 @@ export function MessageBubble({
                     variant="ghost"
                     size="sm"
                     className="h-8 w-8 p-0 hover:bg-gray-100"
+                    onClick={() => onReply?.(message)}
                     title="Reply"
                   >
                     <Reply className="h-3 w-3" />
@@ -617,6 +625,7 @@ export function MessageBubble({
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0 hover:bg-gray-100"
+                        onClick={() => onEdit?.(message)}
                         title="Edit"
                       >
                         <Edit className="h-3 w-3" />
@@ -625,6 +634,11 @@ export function MessageBubble({
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0 hover:bg-gray-100 hover:text-red-600"
+                        onClick={() => {
+                          if (confirm('Are you sure you want to delete this message?')) {
+                            onDelete?.(message)
+                          }
+                        }}
                         title="Delete"
                       >
                         <Trash2 className="h-3 w-3" />
@@ -636,6 +650,10 @@ export function MessageBubble({
                     variant="ghost"
                     size="sm"
                     className="h-8 w-8 p-0 hover:bg-gray-100"
+                    onClick={() => {
+                      // Show more options menu
+                      alert(`More options for message from ${message.display_name}:\n\n• Copy message text\n• Report message\n• Pin message\n• Forward message\n\nThese features will be implemented in a future update.`)
+                    }}
                     title="More"
                   >
                     <MoreHorizontal className="h-3 w-3" />

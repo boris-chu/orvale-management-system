@@ -801,6 +801,18 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
                 onImageClick={(src: string, alt: string, filename?: string, downloadUrl?: string) => {
                   setLightboxImage({ src, alt, filename, downloadUrl })
                 }}
+                onReply={(message) => {
+                  // TODO: Implement reply functionality
+                  alert(`Reply to ${message.display_name}:\n\n"${message.message_text}"\n\nThis feature will be implemented in a future update.`)
+                }}
+                onEdit={(message) => {
+                  // TODO: Implement edit functionality
+                  alert(`Edit message:\n\n"${message.message_text}"\n\nThis feature will be implemented in a future update.`)
+                }}
+                onDelete={(message) => {
+                  // TODO: Implement delete functionality
+                  alert(`Delete message from ${message.display_name}:\n\n"${message.message_text}"\n\nThis feature will be implemented in a future update.`)
+                }}
               />
             ))}
           </div>
