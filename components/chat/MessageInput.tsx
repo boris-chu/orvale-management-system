@@ -202,16 +202,19 @@ export function MessageInput({
         console.log('✅ File uploaded:', uploadData)
 
         // Send message with file attachment
+        const isImage = file.type.startsWith('image/')
         await onSendMessage({
-          message_text: `Shared a file: ${file.name}`,
+          message_text: isImage ? `Shared an image: ${file.name}` : `Shared a file: ${file.name}`,
           message_type: 'file',
           file_attachment: {
-            type: 'file',
+            type: isImage ? 'image' : 'file',
             name: file.name,
+            title: file.name,
             size: file.size,
             mimeType: file.type,
             url: uploadData.url,
-            downloadUrl: uploadData.downloadUrl
+            downloadUrl: uploadData.downloadUrl || uploadData.url,
+            thumbnail: isImage ? uploadData.url : undefined
           },
           reply_to_id: replyingTo?.id
         })

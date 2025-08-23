@@ -151,24 +151,93 @@ export function MessageBubble({
       case 'file':
         return (
           <div className="space-y-2">
-            {message.file_attachment && (
-              <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg border">
-                <div className="flex-1">
-                  <div className="font-medium text-sm">
-                    {message.file_attachment.title || 'File attachment'}
+            {message.file_attachment && (() => {
+              // Check if the file is an image
+              const isImage = message.file_attachment.mimeType?.startsWith('image/') || 
+                             message.file_attachment.type === 'image' ||
+                             /\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff)$/i.test(message.file_attachment.name || message.file_attachment.title || '')
+
+              if (isImage) {
+                // Display image preview
+                return (
+                  <div className="space-y-2">
+                    <div className="relative max-w-md group">
+                      <img
+                        src={message.file_attachment.url}
+                        alt={message.file_attachment.name || message.file_attachment.title || 'Image'}
+                        className="rounded-lg max-w-full h-auto shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+                        loading="lazy"
+                        style={{ maxHeight: '400px' }}
+                        onClick={() => window.open(message.file_attachment.url, '_blank')}
+                        title="Click to view full size"
+                      />
+                      {/* Image overlay with filename and actions */}
+                      <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all rounded-lg flex items-end p-2 opacity-0 group-hover:opacity-100">
+                        <div className="flex items-center justify-between w-full">
+                          <div className="text-white text-xs bg-black bg-opacity-50 px-2 py-1 rounded">
+                            {message.file_attachment.name || message.file_attachment.title}
+                          </div>
+                          <div className="flex space-x-1">
+                            <Button size="sm" variant="ghost" asChild className="h-6 w-6 p-0 bg-black bg-opacity-50 hover:bg-opacity-70">
+                              <a href={message.file_attachment.url} target="_blank" rel="noopener noreferrer" title="View full size">
+                                <ExternalLink className="h-3 w-3 text-white" />
+                              </a>
+                            </Button>
+                            <Button size="sm" variant="ghost" asChild className="h-6 w-6 p-0 bg-black bg-opacity-50 hover:bg-opacity-70">
+                              <a href={message.file_attachment.downloadUrl || message.file_attachment.url} download title="Download">
+                                <svg className="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              </a>
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {message.file_attachment.type?.toUpperCase() || 'FILE'}
+                )
+              } else {
+                // Display as file card for non-images
+                return (
+                  <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg border max-w-sm">
+                    <div className="flex-shrink-0">
+                      {/* File type icon */}
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm text-gray-900 truncate">
+                        {message.file_attachment.name || message.file_attachment.title || 'File attachment'}
+                      </div>
+                      <div className="text-xs text-gray-500 flex items-center space-x-2">
+                        <span>{message.file_attachment.mimeType?.split('/')[1]?.toUpperCase() || 'FILE'}</span>
+                        {message.file_attachment.size && (
+                          <span>• {(message.file_attachment.size / 1024).toFixed(1)} KB</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex space-x-1">
+                      <Button size="sm" variant="ghost" asChild className="h-8 w-8 p-0">
+                        <a href={message.file_attachment.url} target="_blank" rel="noopener noreferrer" title="View">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+                      <Button size="sm" variant="ghost" asChild className="h-8 w-8 p-0">
+                        <a href={message.file_attachment.downloadUrl || message.file_attachment.url} download title="Download">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </a>
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <Button size="sm" variant="ghost" asChild>
-                  <a href={message.file_attachment.url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </Button>
-              </div>
-            )}
-            {message.message_text && (
+                )
+              }
+            })()}
+            {message.message_text && !message.message_text.startsWith('Shared a file:') && (
               <div className="text-sm text-gray-900">
                 {formatMessageWithEmojiSpacing(message.message_text)}
               </div>
