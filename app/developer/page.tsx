@@ -23,7 +23,8 @@ import {
   ArrowLeft,
   User,
   Globe,
-  Table
+  Table,
+  MessageSquare
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -256,6 +257,16 @@ export default function DeveloperDashboard() {
         color: 'bg-teal-500',
         stats: 'Configure data displays',
         requiredPermissions: ['tables.view_config', 'admin.system_settings']
+      },
+      {
+        id: 'chat_management',
+        title: 'Chat System Management',
+        description: 'Manage chat channels, file sharing, and user presence',
+        icon: MessageSquare,
+        href: '/admin/chat-management',
+        color: 'bg-blue-500',
+        stats: 'Real-time messaging controls',
+        requiredPermissions: ['chat.admin_access', 'admin.system_settings']
       }
     ];
 

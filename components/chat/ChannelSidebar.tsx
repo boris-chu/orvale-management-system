@@ -373,9 +373,24 @@ export function ChannelSidebar({
               <div className="ml-1 space-y-0.5">
                 {filteredDirectMessages.map((dm) => {
                   const otherParticipant = dm.participants?.[0]
-                  // Find the presence status for this participant
-                  const participantPresence = onlineUsers.find(u => u.user_id === otherParticipant?.username)
+                  // Find the presence status for this participant - check both online and offline arrays
+                  const participantUserId = otherParticipant?.username || otherParticipant?.user_id
+                  const participantPresence = [...onlineUsers, ...offlineUsers].find(u => 
+                    u.user_id === participantUserId
+                  )
                   const presenceStatus = participantPresence?.status || 'offline'
+                  
+                  // Debug presence lookup for John Doe
+                  if (otherParticipant?.display_name === 'John Doe') {
+                    console.log('🔍 John Doe presence debug:', {
+                      participantUserId,
+                      participantPresence,
+                      presenceStatus,
+                      onlineUsersCount: onlineUsers.length,
+                      offlineUsersCount: offlineUsers.length,
+                      allPresenceUsers: [...onlineUsers, ...offlineUsers].map(u => `${u.display_name}(${u.status})`)
+                    })
+                  }
                   
                   return (
                     <Button

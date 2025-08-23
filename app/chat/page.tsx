@@ -110,8 +110,14 @@ export default function ChatPage() {
 
       if (response.ok) {
         const data = await response.json()
-        console.log('📋 Loaded channels:', data.channels?.length || 0, data.channels)
-        setChannels(data.channels || [])
+        console.log('📋 Loaded all channels from API:', data.channels?.length || 0, data.channels)
+        
+        // Filter out direct message channels - they should only appear in Direct Messages section
+        const actualChannels = (data.channels || []).filter((channel: Channel) => 
+          channel.type !== 'direct'
+        )
+        console.log('📋 Filtered channels (excluding direct messages):', actualChannels.length, actualChannels)
+        setChannels(actualChannels)
       } else if (response.status === 401) {
         setError('Authentication required. Please refresh the page.')
       } else if (response.status === 403) {
