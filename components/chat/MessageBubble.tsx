@@ -184,8 +184,13 @@ export function MessageBubble({
                               className="h-6 w-6 p-0 bg-black bg-opacity-50 hover:bg-opacity-70"
                               onClick={async (e) => {
                                 e.stopPropagation()
-                                const url = message.file_attachment.url
+                                const url = message.file_attachment?.url
                                 console.log('🔍 Opening image URL:', url)
+                                
+                                if (!url) {
+                                  console.error('No image URL available')
+                                  return
+                                }
                                 
                                 try {
                                   // For file serving, we need to fetch with auth and create blob URL
@@ -222,8 +227,13 @@ export function MessageBubble({
                               className="h-6 w-6 p-0 bg-black bg-opacity-50 hover:bg-opacity-70"
                               onClick={async (e) => {
                                 e.stopPropagation()
-                                const downloadUrl = message.file_attachment.downloadUrl || message.file_attachment.url
+                                const downloadUrl = message.file_attachment?.downloadUrl || message.file_attachment?.url
                                 console.log('📥 Downloading file from:', downloadUrl)
+                                
+                                if (!downloadUrl) {
+                                  console.error('No download URL available')
+                                  return
+                                }
                                 
                                 try {
                                   // For file downloads, we need to fetch with auth and create download link
@@ -308,8 +318,13 @@ export function MessageBubble({
                         className="h-8 w-8 p-0"
                         onClick={async (e) => {
                           e.stopPropagation()
-                          const url = message.file_attachment.url
+                          const url = message.file_attachment?.url
                           console.log('🔍 Opening file URL:', url)
+                          
+                          if (!url) {
+                            console.error('No file URL available')
+                            return
+                          }
                           
                           try {
                             // For file serving, we need to fetch with auth and create blob URL
@@ -346,8 +361,13 @@ export function MessageBubble({
                         className="h-8 w-8 p-0"
                         onClick={async (e) => {
                           e.stopPropagation()
-                          const downloadUrl = message.file_attachment.downloadUrl || message.file_attachment.url
+                          const downloadUrl = message.file_attachment?.downloadUrl || message.file_attachment?.url
                           console.log('📥 Downloading file from:', downloadUrl)
+                          
+                          if (!downloadUrl) {
+                            console.error('No download URL available')
+                            return
+                          }
                           
                           try {
                             // For file downloads, we need to fetch with auth and create download link

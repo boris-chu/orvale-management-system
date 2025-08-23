@@ -188,7 +188,7 @@ export async function POST(
       return NextResponse.json({ error: 'Message too long (max 4000 characters)' }, { status: 400 })
     }
 
-    if (!['text', 'file', 'system'].includes(message_type)) {
+    if (!['text', 'file', 'gif', 'system'].includes(message_type)) {
       return NextResponse.json({ error: 'Invalid message type' }, { status: 400 })
     }
 
