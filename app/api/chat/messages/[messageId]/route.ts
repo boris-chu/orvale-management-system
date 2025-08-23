@@ -55,7 +55,7 @@ export async function PATCH(
     // Update the message
     await runAsync(`
       UPDATE chat_messages 
-      SET message_text = ?, updated_at = datetime('now')
+      SET message_text = ?, edited_at = datetime('now')
       WHERE id = ?
     `, [message_text.trim(), messageId])
 
@@ -95,7 +95,7 @@ export async function PATCH(
         ...updatedMessage[0],
         reactions: [], // TODO: Get actual reactions
         file_attachment: parsedFileAttachment,
-        edited: true
+        edited: !!updatedMessage[0].edited_at
       }
     })
 
@@ -155,7 +155,7 @@ export async function DELETE(
     // Soft delete the message (mark as deleted instead of removing from DB)
     await runAsync(`
       UPDATE chat_messages 
-      SET deleted = 1, updated_at = datetime('now')
+      SET deleted_at = datetime('now')
       WHERE id = ?
     `, [messageId])
 

@@ -211,7 +211,7 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
         // Update local message to show as deleted
         setMessages(prev => prev.map(msg => 
           msg.id === messageId 
-            ? { ...msg, deleted: true, message_text: '', _isDeleted: true }
+            ? { ...msg, deleted: true, deleted_at: new Date().toISOString(), message_text: '', _isDeleted: true }
             : msg
         ))
         

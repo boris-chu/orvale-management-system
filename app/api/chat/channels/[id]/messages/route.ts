@@ -152,7 +152,9 @@ export async function GET(
       return {
         ...message,
         reactions: parsedReactions,
-        file_attachment: parsedFileAttachment
+        file_attachment: parsedFileAttachment,
+        edited: !!message.edited_at,
+        deleted: !!message.deleted_at
       }
     })
 
@@ -325,7 +327,9 @@ export async function POST(
       message: {
         ...messageData,
         reactions: [],
-        file_attachment: parsedFileAttachment
+        file_attachment: parsedFileAttachment,
+        edited: !!messageData.edited_at,
+        deleted: !!messageData.deleted_at
       }
     }, { status: 201 })
 
