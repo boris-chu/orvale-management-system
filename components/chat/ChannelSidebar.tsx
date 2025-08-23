@@ -447,14 +447,17 @@ export function ChannelSidebar({
                         showPresenceStatus={true}
                         presenceStatus={user.status}
                       />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm">{user.display_name}</div>
-                        {user.status_message && (
-                          <div className="truncate text-xs text-gray-500">
-                            {user.status_message}
-                          </div>
-                        )}
-                      </div>
+                      <span className={cn(
+                        "truncate",
+                        user.status === 'online' && "font-medium"
+                      )}>
+                        {user.display_name}
+                      </span>
+                      {user.status_message && (
+                        <div className="truncate text-xs text-gray-500 ml-2">
+                          {user.status_message}
+                        </div>
+                      )}
                     </div>
                   </Button>
                 ))}
@@ -505,7 +508,7 @@ export function ChannelSidebar({
                         presenceStatus="offline"
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm text-gray-600">{user.display_name}</div>
+                        <span className="truncate text-sm text-gray-600">{user.display_name}</span>
                         <div className="truncate text-xs text-gray-500">
                           Last seen {getLastSeenText(user.last_active)}
                         </div>
