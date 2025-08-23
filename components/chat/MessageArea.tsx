@@ -182,7 +182,16 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     }
   }
 
-  // Socket connection
+  // Socket connection (disabled for now due to Next.js 15 compatibility issues)
+  useEffect(() => {
+    // Socket.io has compatibility issues with Next.js 15 + App Router
+    // Using polling-based real-time updates instead
+    console.log('🔌 Socket.io disabled - using polling for real-time updates')
+    setSocket(null)
+  }, [channel.id, currentUser.username])
+
+  // Alternative real-time approach using Server-Sent Events (if needed later)
+  /*
   useEffect(() => {
     const token = getCleanToken()
     if (!token) return
@@ -211,100 +220,6 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
           forceNew: true
         })
 
-        newSocket.on('connect', () => {
-          console.log('🔌 Connected to chat socket:', {
-            socketId: newSocket.id,
-            channelId: channel.id,
-            channelName: channel.name
-          })
-          newSocket.emit('join_channel', { channelId: channel.id })
-        })
-
-        newSocket.on('disconnect', () => {
-          console.log('🔌 Disconnected from chat socket')
-        })
-
-        newSocket.on('message_received', (data: { message: Message; channel_id: string }) => {
-          console.log('📨 Socket message received:', {
-            messageId: data.message?.id,
-            channelId: data.channel_id,
-            currentChannelId: channel.id,
-            matches: data.channel_id === channel.id,
-            messageText: data.message?.message_text?.substring(0, 50)
-          })
-          
-          if (data.channel_id === channel.id) {
-            setMessages(prev => {
-              const exists = prev.some(msg => 
-                msg.id === data.message.id || 
-                (msg.id.startsWith('temp-') && msg.message_text === data.message.message_text && msg.user_id === data.message.user_id)
-              )
-              if (exists) {
-                console.log('🔄 Replacing temp message with real one:', {
-                  tempId: prev.find(m => m.id.startsWith('temp-') && m.message_text === data.message.message_text)?.id,
-                  realId: data.message.id,
-                  user_id: data.message.user_id,
-                  display_name: data.message.display_name,
-                  profile_picture: data.message.profile_picture
-                })
-                return prev.map(msg => 
-                  msg.id.startsWith('temp-') && msg.message_text === data.message.message_text && msg.user_id === data.message.user_id
-                    ? { ...data.message, _isNew: true }
-                    : msg
-                )
-              }
-              
-              return [...prev, { ...data.message, _isNew: true }]
-            })
-            
-            if (data.message.user_id !== currentUser.username) {
-              showNotification(data.message)
-              playNotificationSound()
-              onChannelUpdate()
-            }
-            
-            setTimeout(() => {
-              if (shouldAutoScroll()) {
-                scrollToBottom()
-              }
-            }, 100)
-          }
-        })
-
-        newSocket.on('user_typing', (data: { user: TypingUser; typing: boolean; channel_id: string }) => {
-          if (data.channel_id === channel.id && data.user.user_id !== currentUser.username) {
-            setTypingUsers(prev => {
-              const filtered = prev.filter(u => u.user_id !== data.user.user_id)
-              return data.typing ? [...filtered, data.user] : filtered
-            })
-          }
-        })
-
-        newSocket.on('error', (error: { message: string }) => {
-          console.error('🚨 Socket error:', error.message)
-        })
-
-        newSocket.on('connect_error', (error: Error) => {
-          console.error('🚨 Socket connection error:', error.message)
-          // Fallback to polling if Socket.io fails
-          console.log('🔄 Falling back to polling mechanism')
-        })
-
-        setSocket(newSocket)
-
-        return () => {
-          newSocket.emit('leave_channel', { channelId: channel.id })
-          newSocket.disconnect()
-        }
-
-      } catch (error) {
-        console.error('🚨 Failed to initialize Socket.io:', error)
-        console.log('🔄 Using polling-only mode')
-        setSocket(null)
-      }
-    }
-
-    connectSocket()
   }, [channel.id, currentUser.username])
 
   // Initialize notifications when component mounts
@@ -331,10 +246,10 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       clearInterval(pollingIntervalRef.current)
     }
     
-    // Set up polling for new messages (as backup to Socket.io)
+    // Set up polling for new messages (primary real-time mechanism)
     pollingIntervalRef.current = setInterval(() => {
       pollForNewMessages()
-    }, 5000) // Poll every 5 seconds as backup
+    }, 1500) // Poll every 1.5 seconds for responsive real-time feel
     
     return () => {
       if (pollingIntervalRef.current) {
@@ -593,17 +508,9 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     }, 50)
 
     try {
-      // Send via Socket.io for real-time delivery if available
-      if (socket && socket.connected) {
-        socket.emit('send_message', {
-          channelId: channel.id,
-          message: messageData.message_text,
-          messageType: messageData.message_type || 'text',
-          replyToId: messageData.reply_to_id
-        })
-      }
+      // Socket.io disabled - using API only with polling for real-time updates
       
-      // Also call the API for persistence
+      // Call the API for persistence
       const response = await fetch(`/api/chat/channels/${channel.id}/messages`, {
         method: 'POST',
         headers: {
