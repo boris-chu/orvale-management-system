@@ -178,17 +178,99 @@ export function MessageBubble({
                             {message.file_attachment.name || message.file_attachment.title}
                           </div>
                           <div className="flex space-x-1">
-                            <Button size="sm" variant="ghost" asChild className="h-6 w-6 p-0 bg-black bg-opacity-50 hover:bg-opacity-70">
-                              <a href={message.file_attachment.url} target="_blank" rel="noopener noreferrer" title="View full size">
-                                <ExternalLink className="h-3 w-3 text-white" />
-                              </a>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-6 w-6 p-0 bg-black bg-opacity-50 hover:bg-opacity-70"
+                              onClick={async (e) => {
+                                e.stopPropagation()
+                                const url = message.file_attachment.url
+                                console.log('🔍 Opening image URL:', url)
+                                
+                                try {
+                                  // For file serving, we need to fetch with auth and create blob URL
+                                  const token = (localStorage.getItem('authToken') || localStorage.getItem('token'))?.trim().replace(/[\[\]"']/g, '')
+                                  if (token && url.includes('/api/chat/files/')) {
+                                    const response = await fetch(url, {
+                                      headers: { 'Authorization': `Bearer ${token}` }
+                                    })
+                                    if (response.ok) {
+                                      const blob = await response.blob()
+                                      const blobUrl = URL.createObjectURL(blob)
+                                      window.open(blobUrl, '_blank', 'noopener,noreferrer')
+                                      // Clean up the blob URL after a short delay
+                                      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000)
+                                    } else {
+                                      console.error('Failed to fetch image:', response.status)
+                                      window.open(url, '_blank', 'noopener,noreferrer')
+                                    }
+                                  } else {
+                                    window.open(url, '_blank', 'noopener,noreferrer')
+                                  }
+                                } catch (error) {
+                                  console.error('Error opening image:', error)
+                                  window.open(url, '_blank', 'noopener,noreferrer')
+                                }
+                              }}
+                              title="View full size"
+                            >
+                              <ExternalLink className="h-3 w-3 text-white" />
                             </Button>
-                            <Button size="sm" variant="ghost" asChild className="h-6 w-6 p-0 bg-black bg-opacity-50 hover:bg-opacity-70">
-                              <a href={message.file_attachment.downloadUrl || message.file_attachment.url} download title="Download">
-                                <svg className="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                              </a>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-6 w-6 p-0 bg-black bg-opacity-50 hover:bg-opacity-70"
+                              onClick={async (e) => {
+                                e.stopPropagation()
+                                const downloadUrl = message.file_attachment.downloadUrl || message.file_attachment.url
+                                console.log('📥 Downloading file from:', downloadUrl)
+                                
+                                try {
+                                  // For file downloads, we need to fetch with auth and create download link
+                                  const token = (localStorage.getItem('authToken') || localStorage.getItem('token'))?.trim().replace(/[\[\]"']/g, '')
+                                  if (token && downloadUrl.includes('/api/chat/')) {
+                                    const response = await fetch(downloadUrl, {
+                                      headers: { 'Authorization': `Bearer ${token}` }
+                                    })
+                                    if (response.ok) {
+                                      const blob = await response.blob()
+                                      const blobUrl = URL.createObjectURL(blob)
+                                      
+                                      // Create download link
+                                      const link = document.createElement('a')
+                                      link.href = blobUrl
+                                      link.download = message.file_attachment.name || 'download'
+                                      link.style.display = 'none'
+                                      document.body.appendChild(link)
+                                      link.click()
+                                      document.body.removeChild(link)
+                                      
+                                      // Clean up the blob URL
+                                      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+                                    } else {
+                                      console.error('Failed to download file:', response.status)
+                                      alert('Failed to download file. Please try again.')
+                                    }
+                                  } else {
+                                    // Fallback for non-API URLs
+                                    const link = document.createElement('a')
+                                    link.href = downloadUrl
+                                    link.download = message.file_attachment.name || 'download'
+                                    link.style.display = 'none'
+                                    document.body.appendChild(link)
+                                    link.click()
+                                    document.body.removeChild(link)
+                                  }
+                                } catch (error) {
+                                  console.error('Error downloading file:', error)
+                                  alert('Failed to download file. Please try again.')
+                                }
+                              }}
+                              title="Download"
+                            >
+                              <svg className="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
                             </Button>
                           </div>
                         </div>
@@ -220,17 +302,99 @@ export function MessageBubble({
                       </div>
                     </div>
                     <div className="flex space-x-1">
-                      <Button size="sm" variant="ghost" asChild className="h-8 w-8 p-0">
-                        <a href={message.file_attachment.url} target="_blank" rel="noopener noreferrer" title="View">
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-8 w-8 p-0"
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          const url = message.file_attachment.url
+                          console.log('🔍 Opening file URL:', url)
+                          
+                          try {
+                            // For file serving, we need to fetch with auth and create blob URL
+                            const token = (localStorage.getItem('authToken') || localStorage.getItem('token'))?.trim().replace(/[\[\]\"']/g, '')
+                            if (token && url.includes('/api/chat/files/')) {
+                              const response = await fetch(url, {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                              })
+                              if (response.ok) {
+                                const blob = await response.blob()
+                                const blobUrl = URL.createObjectURL(blob)
+                                window.open(blobUrl, '_blank', 'noopener,noreferrer')
+                                // Clean up the blob URL after a short delay
+                                setTimeout(() => URL.revokeObjectURL(blobUrl), 5000)
+                              } else {
+                                console.error('Failed to fetch file:', response.status)
+                                window.open(url, '_blank', 'noopener,noreferrer')
+                              }
+                            } else {
+                              window.open(url, '_blank', 'noopener,noreferrer')
+                            }
+                          } catch (error) {
+                            console.error('Error opening file:', error)
+                            window.open(url, '_blank', 'noopener,noreferrer')
+                          }
+                        }}
+                        title="View"
+                      >
+                        <ExternalLink className="h-4 w-4" />
                       </Button>
-                      <Button size="sm" variant="ghost" asChild className="h-8 w-8 p-0">
-                        <a href={message.file_attachment.downloadUrl || message.file_attachment.url} download title="Download">
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </a>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-8 w-8 p-0"
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          const downloadUrl = message.file_attachment.downloadUrl || message.file_attachment.url
+                          console.log('📥 Downloading file from:', downloadUrl)
+                          
+                          try {
+                            // For file downloads, we need to fetch with auth and create download link
+                            const token = (localStorage.getItem('authToken') || localStorage.getItem('token'))?.trim().replace(/[\[\]\"']/g, '')
+                            if (token && downloadUrl.includes('/api/chat/')) {
+                              const response = await fetch(downloadUrl, {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                              })
+                              if (response.ok) {
+                                const blob = await response.blob()
+                                const blobUrl = URL.createObjectURL(blob)
+                                
+                                // Create download link
+                                const link = document.createElement('a')
+                                link.href = blobUrl
+                                link.download = message.file_attachment.name || 'download'
+                                link.style.display = 'none'
+                                document.body.appendChild(link)
+                                link.click()
+                                document.body.removeChild(link)
+                                
+                                // Clean up the blob URL
+                                setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+                              } else {
+                                console.error('Failed to download file:', response.status)
+                                alert('Failed to download file. Please try again.')
+                              }
+                            } else {
+                              // Fallback for non-API URLs
+                              const link = document.createElement('a')
+                              link.href = downloadUrl
+                              link.download = message.file_attachment.name || 'download'
+                              link.style.display = 'none'
+                              document.body.appendChild(link)
+                              link.click()
+                              document.body.removeChild(link)
+                            }
+                          } catch (error) {
+                            console.error('Error downloading file:', error)
+                            alert('Failed to download file. Please try again.')
+                          }
+                        }}
+                        title="Download"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
                       </Button>
                     </div>
                   </div>
