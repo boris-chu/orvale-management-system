@@ -17,7 +17,6 @@ import {
   Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { io, Socket } from 'socket.io-client'
 
 interface Message {
   id: string
@@ -85,20 +84,36 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
   const [loadingMore, setLoadingMore] = useState(false)
   const [showScrollToBottom, setShowScrollToBottom] = useState(false)
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([])
-  const [socket, setSocket] = useState<Socket | null>(null)
   const [lastMessageId, setLastMessageId] = useState<string | null>(null)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  const [eventSource, setEventSource] = useState<EventSource | null>(null)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const lastScrollTop = useRef(0)
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Utility function to get clean auth token
   const getCleanToken = () => {
-    let token = localStorage.getItem('authToken') || localStorage.getItem('token')
+    const rawToken1 = localStorage.getItem('authToken')
+    const rawToken2 = localStorage.getItem('token')
+    
+    console.log('🔍 Token retrieval debug:', {
+      authToken: rawToken1?.substring(0, 20) + '...',
+      token: rawToken2?.substring(0, 20) + '...',
+      authTokenLength: rawToken1?.length,
+      tokenLength: rawToken2?.length
+    })
+    
+    let token = rawToken1 || rawToken2
     if (token) {
       token = token.trim().replace(/[\[\]"']/g, '')
+      console.log('🔍 Cleaned token:', {
+        length: token.length,
+        preview: token.substring(0, 20) + '...',
+        isValidJWT: token.split('.').length === 3
+      })
+    } else {
+      console.log('❌ No token found in localStorage')
     }
     return token
   }
@@ -182,12 +197,99 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     }
   }
 
-  // Socket connection (disabled for now due to Next.js 15 compatibility issues)
+  // Server-Sent Events for real-time updates
   useEffect(() => {
-    // Socket.io has compatibility issues with Next.js 15 + App Router
-    // Using polling-based real-time updates instead
-    console.log('🔌 Socket.io disabled - using polling for real-time updates')
-    setSocket(null)
+    console.log('🔌 Setting up SSE connection for real-time updates')
+    
+    const token = getCleanToken()
+    if (!token || !channel?.id) return
+
+    // Close existing SSE connection
+    if (eventSource) {
+      eventSource.close()
+    }
+
+    // Create new SSE connection
+    const sseUrl = `/api/chat/channels/${channel.id}/stream?token=${encodeURIComponent(token)}&lastMessageId=${lastMessageId || ''}`
+    const newEventSource = new EventSource(sseUrl)
+    
+    newEventSource.onopen = () => {
+      console.log('✅ SSE connection established')
+    }
+
+    newEventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        
+        switch (data.type) {
+          case 'connected':
+            console.log('🔗 SSE connected to channel:', data.channelId)
+            break
+            
+          case 'messages':
+            if (data.messages && data.messages.length > 0) {
+              console.log('📥 New messages via SSE:', data.messages.length)
+              
+              setMessages(prev => {
+                // Filter out duplicates
+                const existingIds = new Set(prev.map(m => m.id))
+                const newMessages = data.messages
+                  .filter((m: Message) => !existingIds.has(m.id))
+                  .map((m: Message) => ({ ...m, _isNew: true }))
+                
+                if (newMessages.length > 0) {
+                  // Update last message ID for future SSE requests
+                  setLastMessageId(newMessages[newMessages.length - 1].id)
+                  
+                  // Show notifications for new messages from other users
+                  newMessages.forEach((message: Message) => {
+                    if (message.user_id !== currentUser.username) {
+                      console.log('🔔 Showing notification for SSE message:', message.message_text)
+                      showNotification(message)
+                      playNotificationSound()
+                    }
+                  })
+                  
+                  onChannelUpdate() // Update sidebar counters
+                  
+                  // Auto-scroll if user is near bottom
+                  setTimeout(() => {
+                    if (shouldAutoScroll()) {
+                      scrollToBottom()
+                    }
+                  }, 100)
+                  
+                  return [...prev, ...newMessages]
+                }
+                return prev
+              })
+            }
+            break
+            
+          case 'heartbeat':
+            // Connection is alive, no action needed
+            break
+            
+          case 'error':
+            console.error('❌ SSE error:', data.error)
+            break
+        }
+        
+      } catch (error) {
+        console.error('❌ Error parsing SSE message:', error)
+      }
+    }
+
+    newEventSource.onerror = (error) => {
+      console.error('❌ SSE connection error:', error)
+      // Reconnection is automatic with SSE
+    }
+
+    setEventSource(newEventSource)
+
+    return () => {
+      newEventSource.close()
+    }
   }, [channel.id, currentUser.username])
 
   // Alternative real-time approach using Server-Sent Events (if needed later)
@@ -245,26 +347,12 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     }
   }, [])
 
-  // Load messages when channel changes and set up polling
+  // Load initial messages when channel changes
   useEffect(() => {
     loadMessages()
     updateUserPresence('online')
     
-    // Clear any existing polling interval
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current)
-    }
-    
-    // Set up polling for new messages (primary real-time mechanism)
-    pollingIntervalRef.current = setInterval(() => {
-      pollForNewMessages()
-    }, 1500) // Poll every 1.5 seconds for responsive real-time feel
-    
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current)
-      }
-    }
+    // SSE handles real-time updates, no polling needed
   }, [channel.id])
 
   // Auto-scroll to bottom on initial load
@@ -276,6 +364,18 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
 
   const loadMessages = async (before?: string) => {
     try {
+      // Safety checks
+      if (!channel || !channel.id) {
+        console.error('❌ Cannot load messages: Invalid channel', { channel })
+        return
+      }
+      
+      const token = getCleanToken()
+      if (!token) {
+        console.error('❌ Cannot load messages: No authentication token')
+        return
+      }
+      
       if (!before) setLoading(true)
       else setLoadingMore(true)
 
@@ -286,10 +386,21 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       if (before) {
         params.append('before', before)
       }
+      
+      const fullUrl = `/api/chat/channels/${channel.id}/messages?${params.toString()}`
+      
+      console.log('🔍 Loading messages:', {
+        channelId: channel.id,
+        channelName: channel.name,
+        channelType: channel.type,
+        hasToken: !!token,
+        tokenPreview: token?.substring(0, 20) + '...',
+        before,
+        url: fullUrl,
+        params: params.toString()
+      })
 
-      const token = getCleanToken()
-
-      const response = await fetch(`/api/chat/channels/${channel.id}/messages?${params}`, {
+      const response = await fetch(fullUrl, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -313,20 +424,42 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
         } else {
           // Set initial messages
           setMessages(data.messages || [])
+          
+          // Set last message ID for SSE
+          if (data.messages && data.messages.length > 0) {
+            setLastMessageId(data.messages[data.messages.length - 1].id)
+          }
         }
         
         setHasMore(data.pagination?.has_more || false)
       } else {
-        console.error('Failed to load messages:', {
+        const errorText = await response.text()
+        console.error('❌ Failed to load messages:', {
           status: response.status,
           statusText: response.statusText,
-          channelId: channel.id
+          channelId: channel.id,
+          channelName: channel.name,
+          url: `/api/chat/channels/${channel.id}/messages?${params}`,
+          errorBody: errorText
         })
-        const errorText = await response.text()
-        console.error('Error response body:', errorText)
+        
+        // Try to parse error as JSON for more details
+        try {
+          const errorJson = JSON.parse(errorText)
+          console.error('❌ Parsed error details:', errorJson)
+        } catch (e) {
+          console.error('❌ Raw error response:', errorText)
+        }
       }
     } catch (error) {
-      console.error('Error loading messages:', error)
+      console.error('❌ Exception in loadMessages:', {
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorName: error instanceof Error ? error.name : 'Unknown',
+        errorStack: error instanceof Error ? error.stack : undefined,
+        channelId: channel?.id,
+        channelName: channel?.name,
+        hasToken: !!getCleanToken()
+      })
     } finally {
       setLoading(false)
       setLoadingMore(false)
@@ -342,93 +475,7 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     }
   }, [hasMore, loadingMore, messages])
 
-  const pollForNewMessages = async () => {
-    try {
-      const token = getCleanToken()
-      if (!token) {
-        console.log('❌ No token available for polling')
-        return
-      }
-
-      // Get the latest message timestamp
-      const latestMessage = messages[messages.length - 1]
-      if (!latestMessage) {
-        console.log('⏭️ No messages to poll after')
-        return
-      }
-
-      const params = new URLSearchParams({
-        after: latestMessage.created_at,
-        limit: '50'
-      })
-
-      console.log('🔄 Polling for new messages:', {
-        channelId: channel.id,
-        channelName: channel.name,
-        after: latestMessage.created_at,
-        latestMessageId: latestMessage.id,
-        currentUser: currentUser.username
-      })
-
-      const response = await fetch(`/api/chat/channels/${channel.id}/messages?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        console.log('📥 Polling response:', { 
-          messageCount: data.messages?.length || 0,
-          messages: data.messages?.map(m => ({ 
-            id: m.id, 
-            text: m.message_text?.substring(0, 50),
-            user_id: m.user_id,
-            display_name: m.display_name,
-            profile_picture: m.profile_picture
-          }))
-        })
-        
-        if (data.messages && data.messages.length > 0) {
-          setMessages(prev => {
-            // Filter out any duplicates
-            const existingIds = new Set(prev.map(m => m.id))
-            const newMessages = data.messages
-              .filter((m: Message) => !existingIds.has(m.id))
-              .map((m: Message) => ({ ...m, _isNew: true }))
-            
-            console.log('✨ New messages found:', newMessages.length)
-            
-            if (newMessages.length > 0) {
-              // Show notifications for new messages from other users
-              newMessages.forEach(message => {
-                if (message.user_id !== currentUser.username) {
-                  console.log('🔔 Showing notification for:', message.message_text)
-                  showNotification(message)
-                  playNotificationSound()
-                }
-              })
-              
-              onChannelUpdate() // Update sidebar counters
-              
-              // Auto-scroll if user is near bottom
-              setTimeout(() => {
-                if (shouldAutoScroll()) {
-                  scrollToBottom()
-                }
-              }, 100)
-            }
-            
-            return [...prev, ...newMessages]
-          })
-        }
-      } else {
-        console.error('❌ Polling failed:', response.status, response.statusText)
-      }
-    } catch (error) {
-      console.error('❌ Error polling for new messages:', error)
-    }
-  }
+  // SSE handles real-time updates, no need for polling function
 
   const shouldAutoScroll = () => {
     if (!scrollAreaRef.current) return true
@@ -542,6 +589,9 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
         setMessages(prev => prev.map(msg => 
           msg.id === tempId ? { ...data.message, _isNew: true } : msg
         ))
+        
+        // Update last message ID for SSE
+        setLastMessageId(data.message.id)
       } else {
         console.error('Failed to send message via API')
         // Remove optimistic message on failure
@@ -557,13 +607,9 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
   }
 
   const handleTyping = (isTyping: boolean) => {
-    if (!socket) return
-    
-    if (isTyping) {
-      socket.emit('typing_start', { channelId: channel.id })
-    } else {
-      socket.emit('typing_stop', { channelId: channel.id })
-    }
+    // Typing indicators would need to be implemented via API calls
+    // For now, disabled since SSE doesn't support client-to-server communication
+    console.log('Typing indicator:', isTyping ? 'started' : 'stopped')
   }
 
   const addReaction = async (messageId: string, emoji: string) => {

@@ -123,11 +123,29 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
       const channelsData = channelsResponse.ok ? await channelsResponse.json() : { channels: [] }
       const directData = directResponse.ok ? await directResponse.json() : { conversations: [] }
 
-      // Combine and sort by recent activity
-      const allConversations = [
+      // Combine and deduplicate by ID, then sort by recent activity
+      const combinedConversations = [
         ...(channelsData.channels || []),
         ...(directData.conversations || [])
-      ].sort((a, b) => {
+      ]
+      
+      // Deduplicate by ID to prevent duplicate keys
+      const deduplicatedConversations = combinedConversations.reduce((acc, current) => {
+        const existingIndex = acc.findIndex(item => item.id === current.id)
+        if (existingIndex === -1) {
+          acc.push(current)
+        } else {
+          // Keep the one with more recent activity
+          const existingTime = new Date(acc[existingIndex].last_message_at || acc[existingIndex].updated_at || acc[existingIndex].created_at).getTime()
+          const currentTime = new Date(current.last_message_at || current.updated_at || current.created_at).getTime()
+          if (currentTime > existingTime) {
+            acc[existingIndex] = current
+          }
+        }
+        return acc
+      }, [] as Conversation[])
+      
+      const allConversations = deduplicatedConversations.sort((a, b) => {
         const aTime = new Date(a.last_message_at || a.updated_at || a.created_at).getTime()
         const bTime = new Date(b.last_message_at || b.updated_at || b.created_at).getTime()
         return bTime - aTime
