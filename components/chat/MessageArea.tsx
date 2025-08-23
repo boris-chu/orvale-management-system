@@ -191,6 +191,7 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
   }, [channel.id, currentUser.username])
 
   // Alternative real-time approach using Server-Sent Events (if needed later)
+  // Socket.io implementation commented out due to Next.js 15 compatibility issues
   /*
   useEffect(() => {
     const token = getCleanToken()
@@ -219,8 +220,16 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
           autoConnect: true,
           forceNew: true
         })
-
+        
+        // ... rest of Socket.io implementation
+      } catch (error) {
+        console.error('Socket.io failed')
+      }
+    }
+    
+    connectSocket()
   }, [channel.id, currentUser.username])
+  */
 
   // Initialize notifications when component mounts
   useEffect(() => {
