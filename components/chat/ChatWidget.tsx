@@ -72,48 +72,81 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
   } = useRealTime()
 
   // Load conversations when user is available
+  // IMPORTANT: Load conversations immediately when user is authenticated for notification counting
   useEffect(() => {
-    if (user && isOpen) {
+    if (user) {
+      console.log('👤 User authenticated, loading conversations for notifications')
       loadConversations()
     }
-  }, [user, isOpen])
+  }, [user]) // Removed isOpen dependency
 
   // Real-time message updates for conversation list
+  // IMPORTANT: Always listen for messages regardless of widget open/closed state
   useEffect(() => {
-    if (!user || !isOpen) return
+    if (!user) return
 
-    console.log('🔌 ChatWidget: Setting up RealTimeProvider message listener')
+    console.log('🔌 ChatWidget: Setting up RealTimeProvider message listener (always active)')
     
     const unsubscribe = onMessage((realTimeMessage) => {
+      console.log('🔔 ChatWidget received real-time message:', realTimeMessage)
+      
       if (realTimeMessage.type === 'message') {
         const messageData = realTimeMessage.content
+        console.log('📧 Processing message data:', {
+          messageData,
+          currentUser: user.username,
+          widgetOpen: isOpen
+        })
         
         // Update conversation list with new message information
         if (messageData && messageData.channel_id) {
-          setConversations(prev => prev.map(conv => {
-            if (conv.id === messageData.channel_id) {
-              return {
-                ...conv,
-                last_message: messageData.message_text,
-                last_message_at: new Date().toISOString(),
-                last_message_by: messageData.display_name,
-                unread_count: messageData.user_id !== user.username 
-                  ? (conv.unread_count || 0) + 1 
-                  : conv.unread_count // Don't increment for own messages
+          console.log('📊 Updating conversations for channel:', messageData.channel_id)
+          
+          setConversations(prev => {
+            console.log('📋 Current conversations before update:', prev.map(c => ({ id: c.id, unread: c.unread_count })))
+            
+            const updated = prev.map(conv => {
+              if (conv.id === messageData.channel_id) {
+                const isFromOther = messageData.user_id !== user.username
+                const newUnreadCount = isFromOther ? (conv.unread_count || 0) + 1 : conv.unread_count
+                
+                console.log(`💬 Channel ${conv.id} update:`, {
+                  from: messageData.user_id,
+                  currentUser: user.username,
+                  isFromOther,
+                  oldUnread: conv.unread_count,
+                  newUnread: newUnreadCount
+                })
+                
+                return {
+                  ...conv,
+                  last_message: messageData.message_text,
+                  last_message_at: new Date().toISOString(),
+                  last_message_by: messageData.display_name,
+                  unread_count: newUnreadCount
+                }
               }
-            }
-            return conv
-          }))
+              return conv
+            })
+            
+            console.log('📋 Conversations after update:', updated.map(c => ({ id: c.id, unread: c.unread_count })))
+            return updated
+          })
+        } else {
+          console.warn('⚠️ Message missing channel_id:', messageData)
         }
       }
     })
 
     return unsubscribe
-  }, [user, isOpen, onMessage])
+  }, [user, onMessage]) // Removed isOpen dependency
 
   // Calculate total unread count
   useEffect(() => {
     const total = conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0)
+    console.log(`🔢 ChatWidget: Calculating total unread count: ${total}`, {
+      conversations: conversations.map(c => ({ id: c.id, unread: c.unread_count }))
+    })
     setTotalUnread(total)
   }, [conversations])
 

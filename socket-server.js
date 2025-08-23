@@ -60,20 +60,26 @@ const socketUsers = new Map(); // socket.id -> username
 // Authentication middleware
 io.use(async (socket, next) => {
   try {
+    console.log('🔐 Socket.IO: New connection attempt from:', socket.handshake.address);
     const token = socket.handshake.auth.token;
     
     if (!token) {
+      console.log('❌ Socket.IO: No token provided');
       return next(new Error('Authentication token required'));
     }
+
+    console.log('🔍 Socket.IO: Validating token:', token.substring(0, 20) + '...');
 
     // For development, we'll use a simple token validation
     // In production, use proper JWT verification
     const user = await validateAuthToken(token);
     
     if (!user) {
+      console.log('❌ Socket.IO: Token validation failed');
       return next(new Error('Invalid authentication token'));
     }
 
+    console.log('✅ Socket.IO: User authenticated:', user.username);
     socket.userId = user.username;
     socket.userInfo = user;
     next();
@@ -323,13 +329,184 @@ io.on("connection", (socket) => {
 // Health check endpoint for monitoring
 httpServer.on('request', (req, res) => {
   if (req.url === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
+    // Add CORS headers for health check requests from admin panel
+    res.writeHead(200, { 
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': CORS_ORIGIN,
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Accept, Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true'
+    });
     res.end(JSON.stringify({
       status: 'healthy',
       connectedUsers: connectedUsers.size,
       uptime: process.uptime(),
       timestamp: new Date().toISOString()
     }));
+  } else if (req.url === '/admin/reconnect-all' && req.method === 'POST') {
+    // Force reconnect all connected clients
+    res.writeHead(200, { 
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': CORS_ORIGIN,
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Accept, Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true'
+    });
+    
+    const clientCount = connectedUsers.size;
+    console.log(`🔄 Admin: Force reconnecting ${clientCount} clients`);
+    
+    // Send disconnect signal to all clients
+    io.emit('admin_reconnect', { 
+      reason: 'admin_requested_reconnect',
+      timestamp: new Date().toISOString()
+    });
+    
+    // Disconnect all sockets (they will auto-reconnect)
+    Array.from(io.sockets.sockets.values()).forEach(socket => {
+      socket.disconnect(true);
+    });
+    
+    res.end(JSON.stringify({
+      success: true,
+      clientCount,
+      message: 'Reconnect signal sent to all clients',
+      timestamp: new Date().toISOString()
+    }));
+  } else if (req.url === '/admin/logs' && req.method === 'GET') {
+    // Return recent server logs
+    res.writeHead(200, { 
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': CORS_ORIGIN,
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Accept, Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true'
+    });
+    
+    // For now, return recent connection events and stats
+    const recentLogs = [
+      `🎉 Socket.IO Server running on port ${PORT}`,
+      `📊 Currently connected users: ${connectedUsers.size}`,
+      `⏰ Server uptime: ${Math.floor(process.uptime())} seconds`,
+      `📡 CORS Origin: ${CORS_ORIGIN}`,
+      '',
+      '📋 Recent Activity:',
+      ...Array.from(connectedUsers.values()).map(user => 
+        `👤 ${user.displayName} (${user.username}) - Connected: ${user.connectedAt}`
+      ),
+      '',
+      `🔄 Last updated: ${new Date().toISOString()}`
+    ];
+    
+    res.end(JSON.stringify({
+      success: true,
+      logs: recentLogs,
+      count: recentLogs.length,
+      timestamp: new Date().toISOString()
+    }));
+  } else if (req.url === '/admin/presence-update' && req.method === 'POST') {
+    // Handle admin presence updates
+    res.writeHead(200, { 
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': CORS_ORIGIN,
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Accept, Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true'
+    });
+    
+    let body = '';
+    req.on('data', chunk => body += chunk.toString());
+    req.on('end', () => {
+      try {
+        const { username, settings, changedBy } = JSON.parse(body);
+        console.log(`🔧 Admin presence update for ${username} by ${changedBy}:`, settings);
+        
+        // Broadcast presence update to all clients
+        io.emit('admin_presence_update', {
+          username,
+          settings,
+          changedBy,
+          timestamp: new Date().toISOString()
+        });
+        
+        res.end(JSON.stringify({
+          success: true,
+          message: 'Presence update broadcasted',
+          affectedUser: username
+        }));
+      } catch (error) {
+        console.error('❌ Error processing admin presence update:', error);
+        res.end(JSON.stringify({ success: false, error: error.message }));
+      }
+    });
+    
+    return;
+  } else if (req.url === '/admin/force-disconnect' && req.method === 'POST') {
+    // Force disconnect specific user
+    res.writeHead(200, { 
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': CORS_ORIGIN,
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Accept, Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true'
+    });
+    
+    let body = '';
+    req.on('data', chunk => body += chunk.toString());
+    req.on('end', () => {
+      try {
+        const { username, reason, adminUser } = JSON.parse(body);
+        console.log(`🔌 Admin ${adminUser} forcing disconnect for ${username}, reason: ${reason}`);
+        
+        const userSocketId = userSockets.get(username);
+        let disconnectedUser = false;
+        
+        if (userSocketId) {
+          const socket = io.sockets.sockets.get(userSocketId);
+          if (socket) {
+            // Send admin disconnect message to user before disconnecting
+            socket.emit('admin_disconnect', {
+              reason,
+              message: `You have been disconnected by an administrator (${adminUser})`,
+              timestamp: new Date().toISOString()
+            });
+            
+            // Disconnect the user
+            socket.disconnect(true);
+            disconnectedUser = true;
+            
+            console.log(`✅ User ${username} (${userSocketId}) disconnected by admin ${adminUser}`);
+          }
+        }
+        
+        // Update presence to offline
+        updateUserPresence(username, 'offline');
+        broadcastPresenceUpdate(username, 'offline');
+        
+        res.end(JSON.stringify({
+          success: true,
+          message: disconnectedUser ? 'User disconnected successfully' : 'User was not connected',
+          username,
+          wasConnected: disconnectedUser,
+          adminUser,
+          timestamp: new Date().toISOString()
+        }));
+      } catch (error) {
+        console.error('❌ Error processing force disconnect:', error);
+        res.end(JSON.stringify({ success: false, error: error.message }));
+      }
+    });
+    
+    return;
+  } else if (req.method === 'OPTIONS') {
+    // Handle preflight requests
+    res.writeHead(200, {
+      'Access-Control-Allow-Origin': CORS_ORIGIN,
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Accept, Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true'
+    });
+    res.end();
   } else {
     res.writeHead(404);
     res.end('Not Found');

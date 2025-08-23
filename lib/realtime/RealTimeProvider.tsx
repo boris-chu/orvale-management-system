@@ -133,14 +133,16 @@ export function RealTimeProvider({
       });
 
       socket.on('connect', () => {
-        console.log('⚡ Socket.IO connected:', socket.id);
+        console.log('⚡ RealTimeProvider: Socket.IO connected successfully!', socket.id);
         setConnectionStatus('connected');
         socketRef.current = socket;
+        setConnectedUsers(prev => prev + 1); // Update user count
       });
 
       socket.on('disconnect', (reason) => {
-        console.log('❌ Socket.IO disconnected:', reason);
+        console.log('❌ RealTimeProvider: Socket.IO disconnected:', reason);
         setConnectionStatus('disconnected');
+        setConnectedUsers(prev => Math.max(0, prev - 1)); // Update user count
         
         // Auto-reconnect unless explicitly disconnected
         if (reason !== 'io client disconnect') {
@@ -153,7 +155,13 @@ export function RealTimeProvider({
       });
 
       socket.on('connect_error', (error) => {
-        console.error('❌ Socket.IO connection error:', error);
+        console.error('❌ RealTimeProvider: Socket.IO connection error:', error);
+        console.error('Error details:', {
+          message: error.message,
+          description: error.description,
+          context: error.context,
+          type: error.type
+        });
         setConnectionStatus('error');
         
         // Fallback to polling after 3 failed attempts
@@ -230,8 +238,36 @@ export function RealTimeProvider({
       // Initial connection check
       await checkConnection();
 
+      // In polling mode, get active user count from database
+      const updatePollingUserCount = async () => {
+        try {
+          const token = localStorage.getItem('authToken');
+          if (!token) return;
+
+          const response = await fetch('/api/admin/chat/presence', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            // Set connected users to the number of online users in polling mode
+            const onlineCount = data.stats?.online || 0;
+            setConnectedUsers(onlineCount);
+            console.log(`📊 Polling mode: ${onlineCount} users online`);
+          }
+        } catch (error) {
+          console.error('❌ Failed to get polling user count:', error);
+        }
+      };
+
+      // Get initial user count
+      await updatePollingUserCount();
+
       // Heartbeat polling every pollingInterval
-      pollingIntervalRef.current = setInterval(checkConnection, pollingInterval);
+      pollingIntervalRef.current = setInterval(async () => {
+        await checkConnection();
+        await updatePollingUserCount();
+      }, pollingInterval);
 
     } catch (error) {
       console.error('❌ Polling setup failed:', error);
@@ -273,23 +309,41 @@ export function RealTimeProvider({
 
     const startTime = Date.now();
     
+    console.log('📤 RealTimeProvider: Attempting to send message', {
+      connectionMode,
+      connectionStatus,
+      socketConnected: socketRef.current?.connected,
+      messageType: message.type,
+      channel: message.channel
+    });
+    
     try {
       if (connectionMode === 'socket' && socketRef.current?.connected) {
         // Send via Socket.IO
+        console.log('📡 RealTimeProvider: Sending via Socket.IO');
         socketRef.current.emit('message', fullMessage);
         
         // Track latency
         const latency = Date.now() - startTime;
         setStats(prev => ({ ...prev, averageLatency: latency }));
         
+        console.log('✅ RealTimeProvider: Message sent via Socket.IO');
         return true;
       } else {
         // Send via REST API
+        console.log('📡 RealTimeProvider: Sending via REST API fallback');
+        const token = localStorage.getItem('authToken');
+        
+        if (!token) {
+          console.error('❌ RealTimeProvider: No auth token available');
+          return false;
+        }
+        
         const response = await fetch('/api/chat/messages', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify(fullMessage)
         });
@@ -297,10 +351,17 @@ export function RealTimeProvider({
         const latency = Date.now() - startTime;
         setStats(prev => ({ ...prev, averageLatency: latency }));
 
-        return response.ok;
+        if (response.ok) {
+          console.log('✅ RealTimeProvider: Message sent via REST API');
+          return true;
+        } else {
+          const errorText = await response.text();
+          console.error('❌ RealTimeProvider: REST API failed:', response.status, errorText);
+          return false;
+        }
       }
     } catch (error) {
-      console.error('❌ Failed to send message:', error);
+      console.error('❌ RealTimeProvider: Failed to send message:', error);
       return false;
     }
   };
@@ -353,14 +414,32 @@ export function RealTimeProvider({
   const connect = async () => {
     let actualMode = connectionMode;
     
+    console.log('🔄 RealTimeProvider: Starting connection process', {
+      requestedMode: connectionMode,
+      socketUrl
+    });
+    
     if (connectionMode === 'auto') {
       actualMode = await detectBestMode();
-      console.log(`🔍 Auto-detected connection mode: ${actualMode}`);
+      console.log(`🔍 RealTimeProvider: Auto-detected connection mode: ${actualMode}`);
+    } else {
+      console.log(`⚙️ RealTimeProvider: Using explicit mode: ${actualMode}`);
     }
 
+    console.log('🔍 RealTimeProvider: Final connection decision', {
+      actualMode,
+      actualModeType: typeof actualMode,
+      isSocket: actualMode === 'socket',
+      actualModeString: String(actualMode),
+      connectionMode,
+      connectionModeType: typeof connectionMode
+    });
+
     if (actualMode === 'socket') {
+      console.log('🔌 RealTimeProvider: Attempting Socket.IO connection...');
       await connectSocket();
     } else {
+      console.log('📡 RealTimeProvider: Using polling mode...');
       await connectPolling();
     }
   };

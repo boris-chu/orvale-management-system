@@ -122,9 +122,32 @@ export function ChatManagementCard() {
     connectionMode: 'auto'
   });
   const [presenceUsers, setPresenceUsers] = useState<OnlineUser[]>([]);
+  const [presenceData, setPresenceData] = useState<{
+    stats: {
+      total: number;
+      online: number;
+      offline: number;
+      away: number;
+      busy: number;
+      stale: number;
+      invisible: number;
+      withIssues: number;
+    };
+    users: any[];
+    recentActivity: any[];
+    lastUpdated: string;
+  } | null>(null);
   const [testingGiphy, setTestingGiphy] = useState(false);
   const [giphyTestResult, setGiphyTestResult] = useState<'success' | 'error' | null>(null);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionTestResult, setConnectionTestResult] = useState<'success' | 'error' | null>(null);
+  const [reconnectingAll, setReconnectingAll] = useState(false);
+  const [serverLogs, setServerLogs] = useState<string[]>([]);
+  const [showLogs, setShowLogs] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<OnlineUser | null>(null);
+  const [showUserManagement, setShowUserManagement] = useState(false);
+  const [managingUser, setManagingUser] = useState(false);
   const [socketStatus, setSocketStatus] = useState<{
     isRunning: boolean;
     connectedClients: number;
@@ -157,23 +180,68 @@ export function ChatManagementCard() {
 
   const checkSocketStatus = async () => {
     try {
-      console.log('🔍 Checking Socket.IO server at:', settings.socketUrl);
-      const response = await fetch(`${settings.socketUrl}/health`);
+      console.log('🔍 ChatManagementCard: Checking Socket.IO server status...');
+      
+      // First try: Use our backend API proxy (more reliable)
+      try {
+        const token = localStorage.getItem('authToken');
+        const apiResponse = await fetch('/api/admin/socket-status', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+
+        if (apiResponse.ok) {
+          const data = await apiResponse.json();
+          console.log('✅ ChatManagementCard: Socket.IO status via API:', data);
+          
+          setSocketStatus({
+            isRunning: data.isRunning,
+            connectedClients: data.connectedClients || 0,
+            uptime: formatUptime(data.uptime || 0),
+            lastCheck: new Date().toLocaleTimeString()
+          });
+          return; // Success, exit early
+        } else {
+          console.log('⚠️ API proxy failed, trying direct connection...');
+        }
+      } catch (apiError) {
+        console.log('⚠️ API proxy error:', apiError.message, 'trying direct connection...');
+      }
+
+      // Second try: Direct connection to Socket.io server (fallback)
+      const socketUrl = settings.socketUrl || 'http://localhost:4000';
+      console.log('🔍 ChatManagementCard: Trying direct connection to:', socketUrl);
+      
+      const response = await fetch(`${socketUrl}/health`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
+        mode: 'cors'
+      });
+      
+      console.log('🔍 ChatManagementCard: Direct Socket.IO response:', response.status, response.statusText);
       
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ ChatManagementCard: Socket.IO server is healthy (direct):', data);
+        
         setSocketStatus({
           isRunning: true,
           connectedClients: data.connectedUsers || 0,
           uptime: formatUptime(data.uptime || 0),
           lastCheck: new Date().toLocaleTimeString()
         });
-        console.log('✅ Socket.IO server is healthy:', data);
       } else {
-        throw new Error(`Socket server returned ${response.status}: ${response.statusText}`);
+        throw new Error(`Direct connection failed: ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
-      console.log('❌ Socket.IO server not available:', error.message);
+      console.error('❌ ChatManagementCard: All Socket.IO checks failed:', error);
+      
       setSocketStatus({
         isRunning: false,
         connectedClients: 0,
@@ -307,6 +375,7 @@ export function ChatManagementCard() {
         const data = await response.json();
         console.log('✅ Presence data loaded:', data);
         setPresenceUsers(data.users || []);
+        setPresenceData(data); // Store full response data
         
         // Update stats with real data from presence API
         if (data.stats) {
@@ -480,6 +549,256 @@ export function ChatManagementCard() {
     }
   };
 
+  const testSocketConnection = async () => {
+    setTestingConnection(true);
+    setConnectionTestResult(null);
+    
+    try {
+      const startTime = Date.now();
+      
+      // Test direct Socket.IO connection
+      const response = await fetch(`${settings.socketUrl}/health`);
+      
+      if (response.ok) {
+        const healthData = await response.json();
+        const latency = Date.now() - startTime;
+        
+        console.log('✅ Socket.IO Connection Test Results:', {
+          status: 'success',
+          latency: `${latency}ms`,
+          serverInfo: healthData
+        });
+        
+        setConnectionTestResult('success');
+        
+        // Show success notification with details
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50';
+        notification.innerHTML = `
+          <strong>Connection Test Successful!</strong><br/>
+          Latency: ${latency}ms<br/>
+          Server: ${healthData.status || 'Running'}
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('❌ Socket.IO Connection Test Failed:', error);
+      setConnectionTestResult('error');
+      
+      // Show error notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50';
+      notification.innerHTML = `
+        <strong>Connection Test Failed!</strong><br/>
+        Error: ${error instanceof Error ? error.message : 'Unknown error'}
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 5000);
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  const forceReconnectAll = async () => {
+    setReconnectingAll(true);
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/reconnect-all', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Force Reconnect All successful:', result);
+        
+        // Show success notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded z-50';
+        notification.innerHTML = `
+          <strong>Reconnect Signal Sent!</strong><br/>
+          ${result.affectedClients || 'All'} clients will reconnect
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+        
+        // Refresh socket status after a delay
+        setTimeout(() => {
+          checkSocketStatus();
+          loadPresenceData();
+        }, 2000);
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('❌ Force Reconnect All failed:', error);
+      
+      // Show error notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50';
+      notification.innerHTML = `
+        <strong>Reconnect Failed!</strong><br/>
+        Error: ${error instanceof Error ? error.message : 'Unknown error'}
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 5000);
+    } finally {
+      setReconnectingAll(false);
+    }
+  };
+
+  const loadServerLogs = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/logs', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setServerLogs(data.logs || []);
+        setShowLogs(true);
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to load server logs:', error);
+      
+      // Show error notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50';
+      notification.innerHTML = `
+        <strong>Failed to Load Logs!</strong><br/>
+        Error: ${error instanceof Error ? error.message : 'Unknown error'}
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 5000);
+    }
+  };
+
+  const handleManageUser = (user: OnlineUser) => {
+    setSelectedUser(user);
+    setShowUserManagement(true);
+  };
+
+  const updateUserPresenceSettings = async (username: string, settings: {
+    forceInvisible?: boolean;
+    allowPresenceDisplay?: boolean;
+    presenceOverride?: 'online' | 'away' | 'busy' | 'offline' | null;
+  }) => {
+    setManagingUser(true);
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/presence/manage', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          username,
+          settings
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ User presence settings updated:', result);
+        
+        // Show success notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50';
+        notification.innerHTML = `
+          <strong>Presence Settings Updated!</strong><br/>
+          User: ${username}<br/>
+          Changes applied successfully
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+        
+        // Refresh presence data
+        loadPresenceData();
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to update user presence settings:', error);
+      
+      // Show error notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50';
+      notification.innerHTML = `
+        <strong>Update Failed!</strong><br/>
+        Error: ${error instanceof Error ? error.message : 'Unknown error'}
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 5000);
+    } finally {
+      setManagingUser(false);
+    }
+  };
+
+  const forceUserDisconnect = async (username: string) => {
+    setManagingUser(true);
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/presence/disconnect', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ User disconnected:', result);
+        
+        // Show success notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded z-50';
+        notification.innerHTML = `
+          <strong>User Disconnected!</strong><br/>
+          ${username} has been disconnected
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+        
+        // Refresh data after delay
+        setTimeout(() => {
+          loadPresenceData();
+          checkSocketStatus();
+        }, 1000);
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to disconnect user:', error);
+      
+      // Show error notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50';
+      notification.innerHTML = `
+        <strong>Disconnect Failed!</strong><br/>
+        Error: ${error instanceof Error ? error.message : 'Unknown error'}
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 5000);
+    } finally {
+      setManagingUser(false);
+    }
+  };
+
   // Chart data for analytics
   const messageVolumeData = [
     { name: '00:00', value: 12 },
@@ -616,6 +935,18 @@ export function ChatManagementCard() {
                       {socketStatus.isRunning ? "Online" : "Offline"}
                     </Badge>
                   </div>
+                  {/* Show Polling/SSE status when relevant */}
+                  {(connectionMode === 'polling' || (connectionMode === 'auto' && !socketStatus.isRunning)) && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Polling/SSE Server</span>
+                      <Badge 
+                        variant={connectionStatus === 'connected' ? "default" : "destructive"}
+                        className="text-xs"
+                      >
+                        {connectionStatus === 'connected' ? "Online" : "Offline"}
+                      </Badge>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Active Connection Mode</span>
                     <Badge 
@@ -634,26 +965,57 @@ export function ChatManagementCard() {
                     <span className="text-sm">Connected Users</span>
                     <Badge variant="outline" className="text-xs">
                       {(() => {
+                        console.log('🔍 ChatManagementCard Connected Users Debug:', {
+                          connectionStatus,
+                          connectionMode,
+                          socketStatusIsRunning: socketStatus.isRunning,
+                          socketConnectedClients: socketStatus.connectedClients,
+                          realTimeConnectedUsers: connectedUsers
+                        });
+                        
                         // Show user count based on active connection mode
                         if (connectionStatus !== 'connected') return '0';
                         
-                        const actualMode = connectionMode === 'auto' && socketStatus.isRunning ? 'socket' : 
-                                          connectionMode === 'auto' && !socketStatus.isRunning ? 'polling' : 
-                                          connectionMode;
-                        
-                        // If using Socket.io (either explicitly or via auto-detect), show Socket.io server count
-                        if (actualMode === 'socket' && socketStatus.isRunning) {
-                          return socketStatus.connectedClients.toString();
+                        // Determine actual active mode based on RealTimeProvider's auto-detection
+                        let actualMode = connectionMode;
+                        if (connectionMode === 'auto') {
+                          // If RealTimeProvider is connected and connectionStatus is 'connected',
+                          // it means auto-detection worked - check what it chose
+                          actualMode = socketStatus.isRunning ? 'socket' : 'polling';
                         }
                         
-                        // If using polling/SSE, show RealTimeProvider count  
-                        return connectedUsers.toString();
+                        // Show appropriate user count
+                        if (actualMode === 'socket') {
+                          // Use Socket.io server count if available, otherwise fall back to RealTimeProvider
+                          return socketStatus.isRunning ? 
+                                 socketStatus.connectedClients.toString() : 
+                                 connectedUsers.toString();
+                        } else {
+                          // Using polling/SSE - show RealTimeProvider count  
+                          return connectedUsers.toString();
+                        }
                       })()}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">API Status</span>
                     <Badge variant="outline">Online</Badge>
+                  </div>
+                  <div className="pt-2 border-t">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => {
+                        console.log('🔄 Manual refresh triggered');
+                        checkSocketStatus();
+                        loadPresenceData();
+                        loadChatStats();
+                      }}
+                      className="w-full"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refresh Status
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -669,6 +1031,20 @@ export function ChatManagementCard() {
                       Online
                     </span>
                     <span className="font-medium">{stats.onlineUsers}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm flex items-center">
+                      <Clock className="h-4 w-4 mr-2 text-yellow-500" />
+                      Away
+                    </span>
+                    <span className="font-medium">{presenceData?.stats?.away || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm flex items-center">
+                      <Eye className="h-4 w-4 mr-2 text-orange-500" />
+                      Busy
+                    </span>
+                    <span className="font-medium">{presenceData?.stats?.busy || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm flex items-center">
@@ -905,9 +1281,18 @@ export function ChatManagementCard() {
                   <p className="text-sm text-gray-600 mb-3">
                     Verify Socket.IO server connectivity and performance
                   </p>
-                  <Button size="sm" className="w-full">
-                    <Zap className="h-4 w-4 mr-2" />
-                    Test Connection
+                  <Button 
+                    size="sm" 
+                    className="w-full"
+                    onClick={testSocketConnection}
+                    disabled={testingConnection}
+                  >
+                    {testingConnection ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Zap className="h-4 w-4 mr-2" />
+                    )}
+                    {testingConnection ? 'Testing...' : 'Test Connection'}
                   </Button>
                 </CardContent>
               </Card>
@@ -918,9 +1303,19 @@ export function ChatManagementCard() {
                   <p className="text-sm text-gray-600 mb-3">
                     Force all connected clients to reconnect
                   </p>
-                  <Button size="sm" variant="outline" className="w-full">
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Reconnect All
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={forceReconnectAll}
+                    disabled={reconnectingAll}
+                  >
+                    {reconnectingAll ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                    )}
+                    {reconnectingAll ? 'Reconnecting...' : 'Reconnect All'}
                   </Button>
                 </CardContent>
               </Card>
@@ -931,7 +1326,12 @@ export function ChatManagementCard() {
                   <p className="text-sm text-gray-600 mb-3">
                     Monitor Socket.IO server logs and events
                   </p>
-                  <Button size="sm" variant="outline" className="w-full">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={loadServerLogs}
+                  >
                     <FileText className="h-4 w-4 mr-2" />
                     View Logs
                   </Button>
@@ -1129,7 +1529,10 @@ export function ChatManagementCard() {
                                 {user.display_name.charAt(0)}
                               </div>
                               <div className={`absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-white ${
-                                user.status === 'online' ? 'bg-green-500' : 'bg-gray-400'
+                                user.status === 'online' ? 'bg-green-500' : 
+                                user.status === 'away' ? 'bg-yellow-500' :
+                                user.status === 'busy' ? 'bg-orange-500' :
+                                user.status === 'invisible' ? 'bg-purple-500' : 'bg-gray-400'
                               }`} />
                             </div>
                             <div>
@@ -1138,10 +1541,27 @@ export function ChatManagementCard() {
                             </div>
                           </div>
                           <div className="flex items-center space-x-3">
-                            <Badge variant={user.status === 'online' ? 'default' : 'secondary'}>
+                            <Badge 
+                              variant={
+                                user.status === 'online' ? 'default' : 
+                                user.status === 'away' ? 'secondary' : 
+                                user.status === 'busy' ? 'destructive' : 
+                                'outline'
+                              }
+                              className={
+                                user.status === 'away' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                                user.status === 'busy' ? 'bg-orange-100 text-orange-800 border-orange-200' :
+                                user.status === 'invisible' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                                ''
+                              }
+                            >
                               {user.status}
                             </Badge>
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleManageUser(user)}
+                            >
                               Manage
                             </Button>
                           </div>
@@ -1348,6 +1768,222 @@ export function ChatManagementCard() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Server Logs Modal */}
+        {showLogs && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-3/4 flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h3 className="text-lg font-semibold">Socket.IO Server Logs</h3>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowLogs(false)}
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex-1 p-4 overflow-auto">
+                <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm">
+                  {serverLogs.length > 0 ? (
+                    serverLogs.map((log, index) => (
+                      <div key={index} className="mb-1">
+                        {log}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-gray-500">No logs available</div>
+                  )}
+                </div>
+              </div>
+              <div className="p-4 border-t flex justify-between">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={loadServerLogs}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh Logs
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setShowLogs(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* User Presence Management Modal */}
+        {showUserManagement && selectedUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b">
+                <div className="flex items-center space-x-3">
+                  <div className="relative">
+                    <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center text-lg font-medium">
+                      {selectedUser.display_name.charAt(0)}
+                    </div>
+                    <div className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white ${
+                      selectedUser.status === 'online' ? 'bg-green-500' : 
+                      selectedUser.status === 'away' ? 'bg-yellow-500' :
+                      selectedUser.status === 'busy' ? 'bg-orange-500' :
+                      selectedUser.status === 'invisible' ? 'bg-purple-500' : 'bg-gray-400'
+                    }`} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">Manage User Presence</h3>
+                    <p className="text-sm text-gray-600">{selectedUser.display_name} (@{selectedUser.username})</p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowUserManagement(false)}
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                {/* Current Status Info */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium mb-2">Current Status</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Status:</span>
+                      <Badge 
+                        variant={selectedUser.status === 'online' ? 'default' : 'secondary'}
+                        className="ml-2"
+                      >
+                        {selectedUser.status}
+                      </Badge>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Role:</span>
+                      <span className="ml-2 font-medium">{selectedUser.role_id || 'User'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Last Seen:</span>
+                      <span className="ml-2">{selectedUser.last_seen ? new Date(selectedUser.last_seen).toLocaleString() : 'Never'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Email:</span>
+                      <span className="ml-2">{selectedUser.email || 'Not provided'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Administrative Controls */}
+                <div className="space-y-4">
+                  <h4 className="font-medium">Administrative Actions</h4>
+                  
+                  {/* Visibility Controls */}
+                  <div className="border rounded-lg p-4">
+                    <h5 className="font-medium mb-3 flex items-center">
+                      <EyeOff className="h-4 w-4 mr-2 text-orange-500" />
+                      Presence Visibility Controls
+                    </h5>
+                    <div className="space-y-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full justify-start"
+                        disabled={managingUser}
+                        onClick={() => updateUserPresenceSettings(selectedUser.username, { forceInvisible: true })}
+                      >
+                        <EyeOff className="h-4 w-4 mr-2" />
+                        Force User Invisible (Hide from all presence displays)
+                      </Button>
+                      
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full justify-start"
+                        disabled={managingUser}
+                        onClick={() => updateUserPresenceSettings(selectedUser.username, { allowPresenceDisplay: false })}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Disable Presence Display (User appears offline to others)
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full justify-start"
+                        disabled={managingUser}
+                        onClick={() => updateUserPresenceSettings(selectedUser.username, { presenceOverride: 'away' })}
+                      >
+                        <Clock className="h-4 w-4 mr-2" />
+                        Override Status to "Away" 
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Connection Controls */}
+                  <div className="border rounded-lg p-4">
+                    <h5 className="font-medium mb-3 flex items-center">
+                      <Activity className="h-4 w-4 mr-2 text-red-500" />
+                      Connection Controls
+                    </h5>
+                    <div className="space-y-3">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="w-full justify-start"
+                        disabled={managingUser}
+                        onClick={() => forceUserDisconnect(selectedUser.username)}
+                      >
+                        {managingUser ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <XCircle className="h-4 w-4 mr-2" />
+                        )}
+                        Force Disconnect User
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      This will disconnect the user from the chat system. They can reconnect immediately.
+                    </p>
+                  </div>
+
+                  {/* Administrative Override */}
+                  <div className="border rounded-lg p-4 bg-yellow-50 border-yellow-200">
+                    <h5 className="font-medium mb-3 flex items-center">
+                      <Shield className="h-4 w-4 mr-2 text-yellow-600" />
+                      Administrative Override
+                    </h5>
+                    <div className="text-sm text-yellow-800 space-y-2">
+                      <p><strong>Important:</strong> These controls are for administrative purposes only.</p>
+                      <p>• System administrators and managers can be hidden from presence displays</p>
+                      <p>• Users with sensitive roles can have their status overridden for privacy</p>
+                      <p>• Use responsibly and document any changes for audit purposes</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-6 border-t flex justify-between">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => loadPresenceData()}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh User Data
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setShowUserManagement(false)}
+                >
+                  Done
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

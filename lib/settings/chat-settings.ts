@@ -35,10 +35,24 @@ export async function getChatSettings(): Promise<ChatSettings> {
       settings.map((s: any) => [s.setting_key, s.setting_value])
     )
 
+    // Helper function to parse JSON values from database
+    const parseSettingValue = (key: string, defaultValue: any) => {
+      const rawValue = settingsMap.get(key);
+      if (!rawValue) return defaultValue;
+      
+      try {
+        // Try to parse as JSON first (for values saved by admin API)
+        return JSON.parse(rawValue);
+      } catch {
+        // If JSON parse fails, return raw value (for plain string values)
+        return rawValue;
+      }
+    };
+
     return {
-      connectionMode: (settingsMap.get('chat_connection_mode') as ConnectionMode) || defaults.connectionMode,
-      socketUrl: settingsMap.get('chat_socket_url') || defaults.socketUrl,
-      pollingInterval: parseInt(settingsMap.get('chat_polling_interval') || defaults.pollingInterval.toString(), 10)
+      connectionMode: parseSettingValue('chat_connection_mode', defaults.connectionMode) as ConnectionMode,
+      socketUrl: parseSettingValue('chat_socket_url', defaults.socketUrl),
+      pollingInterval: parseInt(parseSettingValue('chat_polling_interval', defaults.pollingInterval.toString()), 10)
     }
   } catch (error) {
     console.error('❌ Error loading chat settings:', error)
