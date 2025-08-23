@@ -71,7 +71,7 @@ export function ChannelSidebar({
 
   useEffect(() => {
     loadOnlineUsers()
-    const interval = setInterval(loadOnlineUsers, 30000) // Refresh every 30 seconds
+    const interval = setInterval(loadOnlineUsers, 5000) // Refresh every 5 seconds for more responsive presence
     return () => clearInterval(interval)
   }, [])
 
@@ -84,6 +84,9 @@ export function ChannelSidebar({
 
   const loadOnlineUsers = async () => {
     try {
+      // First clean up stale presence data
+      await fetch('/api/chat/presence/cleanup')
+      
       const response = await fetch('/api/chat/presence', {
         headers: {
           'Authorization': `Bearer ${(localStorage.getItem('authToken') || localStorage.getItem('token'))?.trim().replace(/[\[\]"']/g, '')}`
@@ -293,6 +296,10 @@ export function ChannelSidebar({
               <div className="ml-1 space-y-0.5">
                 {filteredDirectMessages.map((dm) => {
                   const otherParticipant = dm.participants?.[0]
+                  // Find the presence status for this participant
+                  const participantPresence = onlineUsers.find(u => u.user_id === otherParticipant?.username)
+                  const presenceStatus = participantPresence?.status || 'offline'
+                  
                   return (
                     <Button
                       key={dm.id}
@@ -319,7 +326,7 @@ export function ChannelSidebar({
                             user={otherParticipant}
                             size="sm"
                             showPresenceStatus={true}
-                            presenceStatus={otherParticipant.presence_status || 'offline'}
+                            presenceStatus={presenceStatus}
                           />
                         ) : (
                           <MessageCircle className="h-4 w-4" />

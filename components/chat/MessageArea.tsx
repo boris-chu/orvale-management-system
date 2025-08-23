@@ -356,7 +356,28 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     loadMessages()
     updateUserPresence('online')
     
-    // SSE handles real-time updates, no polling needed
+    // Set user offline when component unmounts or tab closes
+    const handleBeforeUnload = () => {
+      updateUserPresence('offline')
+    }
+    
+    // Update presence based on page visibility
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        updateUserPresence('away')
+      } else {
+        updateUserPresence('online')
+      }
+    }
+    
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      updateUserPresence('offline')
+    }
   }, [channel.id])
 
   // Auto-scroll to bottom on initial load
