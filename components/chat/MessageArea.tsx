@@ -209,8 +209,8 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       eventSource.close()
     }
 
-    // Create new SSE connection
-    const sseUrl = `/api/chat/channels/${channel.id}/stream?token=${encodeURIComponent(token)}&lastMessageId=${lastMessageId || ''}`
+    // Create new SSE connection (without lastMessageId to prevent reconnection loops)
+    const sseUrl = `/api/chat/channels/${channel.id}/stream?token=${encodeURIComponent(token)}`
     const newEventSource = new EventSource(sseUrl)
     
     newEventSource.onopen = () => {
@@ -241,16 +241,20 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
                   // Update last message ID for future SSE requests
                   setLastMessageId(newMessages[newMessages.length - 1].id)
                   
-                  // Show notifications for new messages from other users
+                  // Show notifications for new messages from other users (only once)
                   newMessages.forEach((message: Message) => {
                     if (message.user_id !== currentUser.username) {
-                      console.log('🔔 Showing notification for SSE message:', message.message_text)
-                      showNotification(message)
-                      playNotificationSound()
+                      const messageAge = Date.now() - new Date(message.created_at).getTime()
+                      // Only show notification for recent messages (within 10 seconds)
+                      if (messageAge < 10000) {
+                        console.log('🔔 Showing notification for SSE message:', message.message_text)
+                        showNotification(message)
+                        playNotificationSound()
+                      }
                     }
                   })
                   
-                  onChannelUpdate() // Update sidebar counters
+                  // onChannelUpdate() // Disabled - causes sidebar to reload and disappear
                   
                   // Auto-scroll if user is near bottom
                   setTimeout(() => {

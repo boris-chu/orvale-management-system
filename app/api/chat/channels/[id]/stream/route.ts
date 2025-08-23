@@ -38,7 +38,7 @@ export async function GET(
 
     const params = await context.params
     const { id: channelId } = params
-    let lastMessageId = searchParams.get('lastMessageId')
+    let lastMessageId = null // Track server-side to prevent client reconnection loops
 
     // Check if user has access to this channel
     const channelAccess = await queryAsync(`
@@ -64,10 +64,27 @@ export async function GET(
     const encoder = new TextEncoder()
     
     const customReadable = new ReadableStream({
-      start(controller) {
+      async start(controller) {
         // Send initial connection confirmation
         const data = `data: ${JSON.stringify({ type: 'connected', channelId })}\n\n`
         controller.enqueue(encoder.encode(data))
+
+        // Get the current latest message ID to start tracking from
+        try {
+          const latestMessage = await queryAsync(`
+            SELECT id FROM chat_messages 
+            WHERE channel_id = ? 
+            ORDER BY created_at DESC 
+            LIMIT 1
+          `, [channelId])
+          
+          if (latestMessage.length > 0) {
+            lastMessageId = latestMessage[0].id.toString()
+            console.log(`🔍 SSE initial lastMessageId for channel ${channelId}:`, lastMessageId)
+          }
+        } catch (error) {
+          console.error('Error getting initial lastMessageId:', error)
+        }
 
         // Set up polling to check for new messages
         const pollInterval = setInterval(async () => {
@@ -99,6 +116,7 @@ export async function GET(
 
             // Only send if there are actually new messages
             if (messages.length > 0) {
+              console.log(`📤 SSE sending ${messages.length} new messages to channel ${channelId}`)
               // Update lastMessageId to prevent sending same messages again
               lastMessageId = messages[messages.length - 1].id.toString()
             }
@@ -119,7 +137,7 @@ export async function GET(
             const errorData = `data: ${JSON.stringify({ type: 'error', error: 'Failed to fetch messages' })}\n\n`
             controller.enqueue(encoder.encode(errorData))
           }
-        }, 3000) // Poll every 3 seconds to reduce server load
+        }, 1000) // Poll every 1 second for near-instant updates
 
         // Clean up interval when stream closes
         const cleanup = () => {
