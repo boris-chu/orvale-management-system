@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Presence Refresh Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; }
+        .result { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .online { background: #d4edda; border-left: 4px solid #28a745; }
+        .offline { background: #f8d7da; border-left: 4px solid #dc3545; }
+        .away { background: #fff3cd; border-left: 4px solid #ffc107; }
+        pre { background: white; padding: 10px; border-radius: 3px; overflow-x: auto; font-size: 12px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .user-card { padding: 10px; margin: 5px; border-radius: 5px; display: inline-block; min-width: 150px; }
+    </style>
+</head>
+<body>
+    <h1>🔄 Real-Time Presence Refresh Test</h1>
+    <p>This will test if Boris can see updated presence data for John Doe</p>
+
+    <button onclick="testOnce()">🧪 Test Once</button>
+    <button onclick="startAutoRefresh()">▶️ Start Auto Refresh (5s)</button>
+    <button onclick="stopAutoRefresh()">⏹️ Stop Auto Refresh</button>
+    <button onclick="forceCleanup()">🧹 Force Cleanup</button>
+    <button onclick="clearResults()">🗑️ Clear Results</button>
+
+    <div id="status">Ready to test...</div>
+    <div id="results"></div>
+
+    <script>
+        let autoRefreshInterval = null;
+        let testCount = 0;
+
+        function addResult(title, content, type = 'result') {
+            testCount++;
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `<h4>#${testCount} ${title} - ${new Date().toLocaleTimeString()}</h4><pre>${content}</pre>`;
+            document.getElementById('results').appendChild(div);
+            document.getElementById('results').scrollTop = document.getElementById('results').scrollHeight;
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').innerHTML = `<strong>${new Date().toLocaleTimeString()}: ${message}</strong>`;
+        }
+
+        async function testOnce() {
+            updateStatus('Testing presence API...');
+            
+            try {
+                const token = localStorage.getItem('authToken');
+                if (!token) {
+                    addResult('❌ No Token', 'No authToken found in localStorage', 'offline');
+                    return;
+                }
+
+                const response = await fetch('/api/chat/presence', {
+                    headers: {
+                        'Authorization': `Bearer ${token.trim().replace(/[\[\]"']/g, '')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Focus on the users we care about
+                    const focusUsers = ['john.doe', 'boris.chu', 'jane.smith'];
+                    const allUsers = [
+                        ...(data.presence?.online || []),
+                        ...(data.presence?.away || []),
+                        ...(data.presence?.busy || []),
+                        ...(data.presence?.offline || [])
+                    ];
+
+                    const relevantUsers = allUsers.filter(u => focusUsers.includes(u.user_id));
+                    const johnDoe = relevantUsers.find(u => u.user_id === 'john.doe');
+                    
+                    let resultType = 'result';
+                    if (johnDoe) {
+                        resultType = johnDoe.status === 'offline' ? 'offline' : 
+                                   johnDoe.status === 'online' ? 'online' : 'away';
+                    }
+
+                    addResult('✅ Presence API Response', 
+                        `John Doe Status: ${johnDoe ? johnDoe.status : 'NOT FOUND'}\n` +
+                        `John Doe Last Active: ${johnDoe ? johnDoe.last_active : 'N/A'}\n\n` +
+                        `All Relevant Users:\n${relevantUsers.map(u => 
+                            `  ${u.display_name} (${u.user_id}): ${u.status} - ${u.last_active}`
+                        ).join('\n')}\n\n` +
+                        `Summary:\n` +
+                        `Online: ${data.presence?.online?.length || 0}\n` +
+                        `Away: ${data.presence?.away?.length || 0}\n` +
+                        `Busy: ${data.presence?.busy?.length || 0}\n` +
+                        `Offline: ${data.presence?.offline?.length || 0}`,
+                        resultType
+                    );
+
+                    updateStatus(`Last test: John Doe is ${johnDoe?.status || 'NOT FOUND'}`);
+
+                } else {
+                    addResult('❌ API Error', `Status: ${response.status}\nResponse: ${await response.text()}`, 'offline');
+                    updateStatus('API Error');
+                }
+
+            } catch (error) {
+                addResult('❌ Network Error', error.message, 'offline');
+                updateStatus('Network Error');
+            }
+        }
+
+        async function forceCleanup() {
+            updateStatus('Running force cleanup...');
+            
+            try {
+                const response = await fetch('/api/chat/presence/force-cleanup', {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('🧹 Force Cleanup Result', 
+                        `Cleaned: ${data.cleaned} users\n` +
+                        `Users affected: ${data.users_affected?.join(', ') || 'none'}\n` +
+                        `Message: ${data.message}`,
+                        data.cleaned > 0 ? 'online' : 'away'
+                    );
+                    
+                    // Test presence again after cleanup
+                    setTimeout(testOnce, 1000);
+                } else {
+                    addResult('❌ Cleanup Error', await response.text(), 'offline');
+                }
+            } catch (error) {
+                addResult('❌ Cleanup Network Error', error.message, 'offline');
+            }
+        }
+
+        function startAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            
+            addResult('▶️ Auto Refresh Started', 'Will refresh every 5 seconds', 'online');
+            testOnce(); // Test immediately
+            autoRefreshInterval = setInterval(testOnce, 5000);
+            updateStatus('Auto-refresh running every 5 seconds');
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                addResult('⏹️ Auto Refresh Stopped', 'Manual testing mode', 'away');
+                updateStatus('Auto-refresh stopped');
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            testCount = 0;
+            updateStatus('Results cleared');
+        }
+
+        // Auto-run first test
+        setTimeout(testOnce, 500);
+    </script>
+</body>
+</html>

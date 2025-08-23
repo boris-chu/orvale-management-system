@@ -95,38 +95,60 @@ export function ChannelSidebar({
         return
       }
       
-      console.log('🔍 ChannelSidebar: Loading online users with token:', token.substring(0, 20) + '...')
+      const timestamp = Date.now()
+      console.log('🔍 ChannelSidebar: Loading online users at', new Date().toLocaleTimeString(), 'with token:', token.substring(0, 20) + '...')
       
       // First clean up stale presence data more aggressively
-      await fetch('/api/chat/presence/force-cleanup', { method: 'POST' })
+      try {
+        await fetch('/api/chat/presence/force-cleanup', { method: 'POST' })
+        console.log('✅ ChannelSidebar: Force cleanup completed')
+      } catch (cleanupError) {
+        console.warn('⚠️ ChannelSidebar: Force cleanup failed:', cleanupError.message)
+      }
       
-      const response = await fetch('/api/chat/presence', {
+      // Add cache busting to prevent stale data
+      const response = await fetch(`/api/chat/presence?_t=${timestamp}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
         }
       })
 
-      console.log('📡 ChannelSidebar: Presence API response:', response.status, response.ok)
+      console.log('📡 ChannelSidebar: Presence API response:', response.status, response.ok, 'at', new Date().toLocaleTimeString())
       
       if (response.ok) {
         const data = await response.json()
-        console.log('🔍 Sidebar presence data:', data.presence)
+        console.log('🔍 Sidebar presence data received:', data.summary || `${Object.keys(data.presence || {}).length} categories`)
+        
         const online = data.presence?.online || []
         const away = data.presence?.away || []
         const busy = data.presence?.busy || []
         const offline = data.presence?.offline || []
         
+        // Log specific users we're tracking
+        const johnDoe = [...online, ...away, ...busy, ...offline].find(u => u.user_id === 'john.doe')
+        const janeSmith = [...online, ...away, ...busy, ...offline].find(u => u.user_id === 'jane.smith')
+        
+        console.log('🎯 ChannelSidebar: Key users status:')
+        console.log('   John Doe:', johnDoe ? `${johnDoe.status} (${johnDoe.last_active})` : 'NOT FOUND')
+        console.log('   Jane Smith:', janeSmith ? `${janeSmith.status} (${janeSmith.last_active})` : 'NOT FOUND')
+        
         const allActiveUsers = [...online, ...away, ...busy]
         console.log('👥 Sidebar active users:', allActiveUsers.length, allActiveUsers.map(u => `${u.display_name}(${u.status})`).join(', '))
         console.log('👥 Sidebar offline users:', offline.length, offline.map(u => `${u.display_name}(${u.status})`).join(', '))
-        setOnlineUsers(allActiveUsers)
-        setOfflineUsers(offline)
+        
+        // Ensure state update happens
+        console.log('🔄 ChannelSidebar: Updating state with', allActiveUsers.length, 'active users and', offline.length, 'offline users')
+        setOnlineUsers([...allActiveUsers]) // Force new array reference
+        setOfflineUsers([...offline]) // Force new array reference
+        
       } else if (response.status === 401) {
         console.log('🔒 ChannelSidebar: Authentication failed')
         setOnlineUsers([])
         setOfflineUsers([])
       } else {
-        console.error('❌ ChannelSidebar: Failed to load presence data:', response.status)
+        console.error('❌ ChannelSidebar: Failed to load presence data:', response.status, await response.text())
         setOnlineUsers([])
         setOfflineUsers([])
       }
