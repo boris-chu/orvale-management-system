@@ -30,23 +30,29 @@ export async function PATCH(
       return NextResponse.json({ error: 'Message too long (max 4000 characters)' }, { status: 400 })
     }
 
-    // Check if message exists and user owns it
-    const message = await queryAsync(`
+    // Check if message exists
+    const messageCheck = await queryAsync(`
       SELECT cm.*, c.id as channel_id
       FROM chat_messages cm
       JOIN chat_channels c ON cm.channel_id = c.id
-      WHERE cm.id = ? AND cm.user_id = ? AND c.active = 1
-    `, [messageId, authResult.user.username])
+      WHERE cm.id = ? AND c.active = 1
+    `, [messageId])
 
-    if (!message || message.length === 0) {
-      return NextResponse.json({ error: 'Message not found or you do not have permission to edit it' }, { status: 404 })
+    if (!messageCheck || messageCheck.length === 0) {
+      return NextResponse.json({ error: 'Message not found' }, { status: 404 })
+    }
+
+    // Check if user owns the message
+    const message = messageCheck[0]
+    if (message.user_id !== authResult.user.username) {
+      return NextResponse.json({ error: 'You can only edit your own messages' }, { status: 403 })
     }
 
     // Check if user is still a member of the channel
     const membership = await queryAsync(`
       SELECT * FROM chat_channel_members 
       WHERE channel_id = ? AND user_id = ? AND active = 1
-    `, [message[0].channel_id, authResult.user.username])
+    `, [message.channel_id, authResult.user.username])
 
     if (!membership || membership.length === 0) {
       return NextResponse.json({ error: 'You are not a member of this channel' }, { status: 403 })
@@ -146,7 +152,7 @@ export async function DELETE(
     const membership = await queryAsync(`
       SELECT * FROM chat_channel_members 
       WHERE channel_id = ? AND user_id = ? AND active = 1
-    `, [message[0].channel_id, authResult.user.username])
+    `, [message.channel_id, authResult.user.username])
 
     if (!membership || membership.length === 0) {
       return NextResponse.json({ error: 'You are not a member of this channel' }, { status: 403 })
