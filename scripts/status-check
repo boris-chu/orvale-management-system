@@ -1,0 +1,2 @@
+#!/bin/bash
+echo "🔍 Quick Status:" && echo -n "Main (80): " && (curl -s --max-time 2 -o /dev/null http://localhost/ && echo "✅ UP" || echo "❌ DOWN") && echo -n "Socket (4000): " && (curl -s --max-time 2 -o /dev/null http://localhost:4000/health && echo "✅ UP" || echo "❌ DOWN")

@@ -3,8 +3,12 @@
  * Manages local storage of form data with configurable expiration and auto-renewal
  */
 
+// Define types for form data values
+type FormFieldValue = string | number | boolean | Date | null | undefined;
+type FormData = Record<string, FormFieldValue>;
+
 interface CachedFormData {
-  data: Record<string, any>;
+  data: FormData;
   timestamp: number;
   expiresAt: number;
   version: string;
@@ -57,7 +61,7 @@ class FormDataCache {
   /**
    * Save form data to cache with automatic expiration
    */
-  saveFormData(formId: string, formData: Record<string, any>): boolean {
+  saveFormData(formId: string, formData: FormData): boolean {
     if (!this.isAvailable()) return false;
 
     try {
@@ -87,7 +91,7 @@ class FormDataCache {
   /**
    * Load form data from cache
    */
-  loadFormData(formId: string): Record<string, any> | null {
+  loadFormData(formId: string): FormData | null {
     if (!this.isAvailable()) return null;
 
     try {
@@ -238,20 +242,21 @@ class FormDataCache {
    */
   autoSaveFormData(
     formId: string, 
-    formData: Record<string, any>, 
+    formData: FormData, 
     debounceMs: number = 2000
   ): void {
     if (!this.isAvailable()) return;
 
     // Clear existing timer
     const timerId = `${formId}_autosave`;
-    const existingTimer = (window as any)[timerId];
+    const windowWithTimers = window as Window & typeof globalThis & Record<string, NodeJS.Timeout>;
+    const existingTimer = windowWithTimers[timerId];
     if (existingTimer) {
       clearTimeout(existingTimer);
     }
 
     // Set new timer
-    (window as any)[timerId] = setTimeout(() => {
+    windowWithTimers[timerId] = setTimeout(() => {
       this.saveFormData(formId, formData);
     }, debounceMs);
   }
@@ -263,7 +268,7 @@ export const formCache = new FormDataCache();
 // Utility functions for React components
 export const useFormCache = () => {
   return {
-    saveForm: (formId: string, data: Record<string, any>) => 
+    saveForm: (formId: string, data: FormData) => 
       formCache.saveFormData(formId, data),
     
     loadForm: (formId: string) => 
@@ -272,7 +277,7 @@ export const useFormCache = () => {
     clearForm: (formId: string) => 
       formCache.clearFormData(formId),
     
-    autoSave: (formId: string, data: Record<string, any>) => 
+    autoSave: (formId: string, data: FormData) => 
       formCache.autoSaveFormData(formId, data),
     
     getCacheInfo: (formId: string) => 

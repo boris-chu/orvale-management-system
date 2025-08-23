@@ -43,9 +43,11 @@ export function usePresence() {
     }
   }
 
+  // Get updatePresence function from RealTimeProvider
+  const { updatePresence } = useRealTime()
+  
   // Function to manually update presence (for current user)
-  const updateUserPresence = async (status: 'online' | 'away' | 'busy' | 'offline', statusMessage?: string) => {
-    const { updatePresence } = useRealTime()
+  const updateUserPresence = async (status: 'online' | 'away' | 'busy' | 'offline', _statusMessage?: string) => {
     return await updatePresence(status)
   }
 

@@ -5,9 +5,10 @@ import { queryAsync, runAsync } from '@/lib/database'
 // DELETE /api/chat/messages/[id]/reactions/[emoji] - Remove reaction from message
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; emoji: string } }
+  context: { params: Promise<{ id: string; emoji: string }> }
 ) {
   try {
+    const params = await context.params
     const authResult = await verifyAuth(request)
     if (!authResult.success || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

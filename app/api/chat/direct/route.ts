@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions for direct messages' }, { status: 403 })
     }
 
-    // Get all direct message channels the user is part of
+    // Get direct message channels the user is part of with 3+ participants (group DMs only)
     const directChannels = await queryAsync(`
       SELECT 
         c.*,
@@ -53,6 +53,11 @@ export async function GET(request: NextRequest) {
         AND c.active = 1 
         AND ccm.user_id = ? 
         AND ccm.active = 1
+        AND (
+          SELECT COUNT(*)
+          FROM chat_channel_members ccm2
+          WHERE ccm2.channel_id = c.id AND ccm2.active = 1
+        ) >= 3
       ORDER BY 
         CASE WHEN last_message_at IS NOT NULL THEN last_message_at ELSE c.created_at END DESC
     `, [authResult.user.username])
@@ -115,9 +120,9 @@ export async function POST(request: NextRequest) {
     // Include the requesting user in participants
     const allParticipants = [...new Set([authResult.user.username, ...participants])]
 
-    // For now, only support 1-on-1 direct messages (2 participants total)
-    if (allParticipants.length !== 2) {
-      return NextResponse.json({ error: 'Direct messages currently support only 1-on-1 conversations' }, { status: 400 })
+    // Support group direct messages (3+ participants) or 1-on-1 (2 participants)
+    if (allParticipants.length < 2) {
+      return NextResponse.json({ error: 'Direct messages require at least 2 participants' }, { status: 400 })
     }
 
     // Validate all participants exist
@@ -182,10 +187,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new direct message channel
-    const otherUser = allParticipants.find(p => p !== authResult.user.username)
-    const otherUserInfo = userValidation.find(user => user[0]?.username === otherUser)?.[0]
+    const otherUsers = allParticipants.filter(p => p !== authResult.user.username)
+    const allUsersInfo = userValidation.map(user => user[0]).filter(Boolean)
     
-    const channelName = `DM: ${authResult.user.display_name} & ${otherUserInfo?.display_name}`
+    const channelName = allParticipants.length === 2 
+      ? `DM: ${allUsersInfo.map(u => u.display_name).join(' & ')}`
+      : `Group: ${allUsersInfo.map(u => u.display_name).join(', ')}`
     
     const channelResult = await runAsync(`
       INSERT INTO chat_channels (name, description, type, created_by)

@@ -5,9 +5,10 @@ import { queryAsync, runAsync } from '@/lib/database'
 // GET /api/chat/messages/[id]/reactions - Get reactions for a message
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params
     const authResult = await verifyAuth(request)
     if (!authResult.success || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -80,9 +81,10 @@ export async function GET(
 // POST /api/chat/messages/[id]/reactions - Add reaction to message
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params
     const authResult = await verifyAuth(request)
     if (!authResult.success || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

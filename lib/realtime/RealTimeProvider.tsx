@@ -6,12 +6,35 @@ import { io, Socket } from 'socket.io-client';
 export type ConnectionMode = 'socket' | 'polling' | 'auto';
 export type ConnectionStatus = 'connected' | 'disconnected' | 'connecting' | 'error';
 
+// Define content types for different message types
+export interface MessageContent {
+  text?: string;
+  attachments?: Array<{
+    filename: string;
+    url: string;
+    size: number;
+    type: string;
+  }>;
+  edited?: boolean;
+  editedAt?: string;
+  replyTo?: string;
+  mentions?: string[];
+}
+
+export interface SystemContent {
+  event: string;
+  data?: Record<string, unknown>;
+  message?: string;
+}
+
+export type RealTimeMessageContent = MessageContent | SystemContent | Record<string, unknown>;
+
 export interface RealTimeMessage {
   id: string;
   type: 'message' | 'presence' | 'system';
   channel?: string;
   from: string;
-  content: any;
+  content: RealTimeMessageContent;
   timestamp: string;
 }
 
@@ -154,7 +177,7 @@ export function RealTimeProvider({
         }
       });
 
-      socket.on('connect_error', (error) => {
+      socket.on('connect_error', (error: Error & { description?: string; context?: unknown; type?: string }) => {
         console.error('❌ RealTimeProvider: Socket.IO connection error:', error);
         console.error('Error details:', {
           message: error.message,

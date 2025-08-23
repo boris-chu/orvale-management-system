@@ -481,13 +481,19 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
                         >
                           <div className="flex items-center space-x-2">
                             {/* Icon or Avatar */}
-                            {conversation.type === 'direct' && conversation.participants?.[0] ? (
-                              <UserAvatar
-                                user={conversation.participants[0]}
-                                size="sm"
-                                showPresenceStatus={true}
-                                presenceStatus={conversation.participants[0].presence_status || 'offline'}
-                              />
+                            {conversation.type === 'direct' && conversation.participants?.length > 0 ? (
+                              conversation.participants.length === 1 ? (
+                                <UserAvatar
+                                  user={conversation.participants[0]}
+                                  size="sm"
+                                  showPresenceStatus={true}
+                                  presenceStatus={conversation.participants[0].presence_status || 'offline'}
+                                />
+                              ) : (
+                                <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-blue-500 rounded flex items-center justify-center">
+                                  <Users className="h-3 w-3 text-white" />
+                                </div>
+                              )
                             ) : (
                               <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center">
                                 <Hash className="h-3 w-3 text-gray-500" />
@@ -502,7 +508,9 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
                                   conversation.unread_count > 0 && "font-semibold"
                                 )}>
                                   {conversation.type === 'direct' 
-                                    ? conversation.participants?.[0]?.display_name || conversation.name
+                                    ? (conversation.participants?.length === 1 
+                                        ? conversation.participants[0]?.display_name 
+                                        : conversation.participants?.map(p => p.display_name).join(', ')) || conversation.name
                                     : conversation.name
                                   }
                                 </span>
@@ -537,14 +545,14 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
                 </ScrollArea>
               </div>
 
-          {/* Quick Message Input */}
+          {/* Quick Message Input - Show when expanded AND conversation is selected */}
           {isExpanded && selectedConversation && (
             <>
               <Separator />
               <div className="p-2">
                 <div className="text-xs text-gray-600 mb-2 truncate">
                   Message {selectedConversation.type === 'direct' 
-                    ? selectedConversation.participants?.[0]?.display_name 
+                    ? `${selectedConversation.participants?.map(p => p.display_name).join(', ')}` 
                     : selectedConversation.name}
                 </div>
                 <div className="flex space-x-2">
@@ -566,6 +574,42 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
                       <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
                       <Send className="h-3 w-3" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Alternative Message Input - Show when normal size and conversation selected */}
+          {!isExpanded && !isCollapsed && selectedConversation && (
+            <>
+              <Separator />
+              <div className="p-2">
+                <div className="text-xs text-gray-600 mb-1 truncate">
+                  {selectedConversation.type === 'direct' 
+                    ? selectedConversation.participants?.map(p => p.display_name).join(', ') 
+                    : selectedConversation.name}
+                </div>
+                <div className="flex space-x-1">
+                  <Input
+                    value={quickMessage}
+                    onChange={(e) => setQuickMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Message..."
+                    className="text-xs h-6"
+                    disabled={sending}
+                  />
+                  <Button
+                    onClick={sendQuickMessage}
+                    disabled={!quickMessage.trim() || sending}
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                  >
+                    {sending ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Send className="h-2.5 w-2.5" />
                     )}
                   </Button>
                 </div>

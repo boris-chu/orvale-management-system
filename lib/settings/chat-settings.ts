@@ -30,22 +30,33 @@ export async function getChatSettings(): Promise<ChatSettings> {
       pollingInterval: 2000
     }
 
+    // Database row interface
+    interface SettingRow {
+      setting_key: string;
+      setting_value: string;
+    }
+
     // Parse settings from database
     const settingsMap = new Map(
-      settings.map((s: any) => [s.setting_key, s.setting_value])
+      (settings as SettingRow[]).map((s: SettingRow) => [s.setting_key, s.setting_value])
     )
 
     // Helper function to parse JSON values from database
-    const parseSettingValue = (key: string, defaultValue: any) => {
+    const parseSettingValue = <T>(key: string, defaultValue: T): T => {
       const rawValue = settingsMap.get(key);
       if (!rawValue) return defaultValue;
       
       try {
         // Try to parse as JSON first (for values saved by admin API)
-        return JSON.parse(rawValue);
+        return JSON.parse(rawValue) as T;
       } catch {
         // If JSON parse fails, return raw value (for plain string values)
-        return rawValue;
+        // For numbers, try parsing
+        if (typeof defaultValue === 'number' && typeof rawValue === 'string') {
+          const parsed = parseInt(rawValue, 10);
+          return !isNaN(parsed) ? (parsed as T) : defaultValue;
+        }
+        return rawValue as T;
       }
     };
 

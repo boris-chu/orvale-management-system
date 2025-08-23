@@ -78,7 +78,7 @@ export async function GET(
 // POST /api/chat/channels/[id]/members - Add members to channel
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request)
@@ -86,6 +86,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const params = await context.params
     const channelId = params.id
     const body = await request.json()
     const { usernames, role = 'member' } = body

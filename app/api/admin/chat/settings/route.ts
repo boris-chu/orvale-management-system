@@ -35,8 +35,29 @@ export async function GET(request: NextRequest) {
       WHERE setting_key LIKE 'chat_%'
     `);
 
+    // Database row interface
+    interface SettingRow {
+      setting_key: string;
+      setting_value: string;
+    }
+
+    // Chat settings interface
+    interface ChatSettings {
+      fileShareEnabled: boolean;
+      fileTypes: string;
+      giphyEnabled: boolean;
+      giphyApiKey: string;
+      deletedMessageVisible: boolean;
+      notificationsEnabled: boolean;
+      maxFileSize: number;
+      retentionDays: number;
+      connectionMode: 'auto' | 'socket' | 'polling';
+      socketUrl: string;
+      pollingInterval: number;
+    }
+
     // Convert settings array to object with defaults
-    const settingsObj: any = {
+    const settingsObj: ChatSettings = {
       fileShareEnabled: true,
       fileTypes: 'all',
       giphyEnabled: true,
@@ -52,7 +73,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Override with database values if they exist
-    settings.forEach((setting: any) => {
+    (settings as SettingRow[]).forEach((setting: SettingRow) => {
       let key = setting.setting_key.replace('chat_', '');
       let value = setting.setting_value;
       
@@ -62,16 +83,26 @@ export async function GET(request: NextRequest) {
       else if (key === 'polling_interval') key = 'pollingInterval';
       
       // Parse JSON values (since system_settings stores as JSON)
+      let parsedValue: string | number | boolean = value;
       try {
-        value = JSON.parse(value);
+        parsedValue = JSON.parse(value);
       } catch {
         // If not JSON, keep as string and try boolean/numeric parsing
-        if (value === 'true') value = true;
-        else if (value === 'false') value = false;
-        else if (!isNaN(value)) value = parseInt(value);
+        if (value === 'true') parsedValue = true;
+        else if (value === 'false') parsedValue = false;
+        else if (!isNaN(Number(value))) parsedValue = parseInt(value, 10);
       }
       
-      settingsObj[key] = value;
+      // Type-safe assignment based on key
+      if (key === 'fileShareEnabled' || key === 'giphyEnabled' || key === 'deletedMessageVisible' || key === 'notificationsEnabled') {
+        (settingsObj as any)[key] = Boolean(parsedValue);
+      } else if (key === 'maxFileSize' || key === 'retentionDays' || key === 'pollingInterval') {
+        (settingsObj as any)[key] = Number(parsedValue);
+      } else if (key === 'connectionMode' && (parsedValue === 'auto' || parsedValue === 'socket' || parsedValue === 'polling')) {
+        settingsObj.connectionMode = parsedValue;
+      } else {
+        (settingsObj as any)[key] = String(parsedValue);
+      }
     });
 
     return NextResponse.json(settingsObj);
@@ -97,7 +128,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const body = await request.json();
+    // Request body interface
+    interface ChatSettingsUpdateRequest {
+      fileShareEnabled?: boolean;
+      fileTypes?: string;
+      giphyEnabled?: boolean;
+      giphyApiKey?: string;
+      deletedMessageVisible?: boolean;
+      notificationsEnabled?: boolean;
+      maxFileSize?: number;
+      retentionDays?: number;
+      connectionMode?: 'auto' | 'socket' | 'polling';
+      socketUrl?: string;
+      pollingInterval?: number;
+    }
+
+    const body = await request.json() as ChatSettingsUpdateRequest;
     const {
       fileShareEnabled,
       fileTypes,
@@ -124,8 +170,14 @@ export async function POST(request: NextRequest) {
       )
     `);
 
+    // Setting interface for database
+    interface SettingToSave {
+      name: string;
+      value: string | number | boolean;
+    }
+
     // Save each setting to the system_settings table
-    const settingsToSave = [
+    const settingsToSave: SettingToSave[] = [
       { name: 'chat_fileShareEnabled', value: fileShareEnabled },
       { name: 'chat_fileTypes', value: fileTypes },
       { name: 'chat_giphyEnabled', value: giphyEnabled },
@@ -138,7 +190,7 @@ export async function POST(request: NextRequest) {
       { name: 'chat_connection_mode', value: connectionMode },
       { name: 'chat_socket_url', value: socketUrl },
       { name: 'chat_polling_interval', value: pollingInterval }
-    ].filter(setting => setting.value !== undefined); // Only save settings that are provided
+    ].filter((setting): setting is SettingToSave => setting.value !== undefined); // Only save settings that are provided
 
     for (const setting of settingsToSave) {
       await runAsync(`

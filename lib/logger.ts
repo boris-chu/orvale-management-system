@@ -12,6 +12,12 @@ const LOG_LEVELS = {
 
 type LogLevel = keyof typeof LOG_LEVELS;
 
+// Database row interface for settings
+interface SettingRow {
+  setting_key: string;
+  setting_value: string;
+}
+
 // Get log level and pino enabled status from database settings or environment
 async function getLogSettings(): Promise<{ level: LogLevel; enabled: boolean }> {
   try {
@@ -19,12 +25,12 @@ async function getLogSettings(): Promise<{ level: LogLevel; enabled: boolean }> 
     const settings = await queryAsync(
       'SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN (?, ?)',
       ['logLevel', 'pinoEnabled']
-    );
+    ) as SettingRow[];
     
     let level: LogLevel = 'info';
     let enabled = true; // Default enabled
     
-    settings.forEach((row: any) => {
+    settings.forEach((row: SettingRow) => {
       try {
         const value = JSON.parse(row.setting_value);
         if (row.setting_key === 'logLevel' && value in LOG_LEVELS) {
@@ -64,8 +70,18 @@ const createLoggerConfig = (level: LogLevel, enabled: boolean) => {
   const isProduction = process.env.NODE_ENV === 'production';
   const isDevelopment = process.env.NODE_ENV === 'development';
   
+  // Pino configuration interface
+  interface PinoConfig {
+    level: string;
+    timestamp?: any;
+    formatters?: {
+      level: (label: string) => { level: string };
+    };
+    transport?: any;
+  }
+
   // Base configuration
-  const config: any = {
+  const config: PinoConfig = {
     level: level,
     timestamp: pino.stdTimeFunctions.isoTime,
     formatters: {
@@ -165,8 +181,12 @@ const updateLogLevel = async (): Promise<void> => {
 };
 
 // Enhanced logger with context and structured logging
-export const createContextLogger = (context: string) => {
-  const safeLog = (level: string, logFn: Function, obj: any, msg?: string) => {
+export // Define types for logging data
+type LogData = Record<string, unknown>;
+type LogFunction = (obj: LogData, msg?: string) => void;
+
+const createContextLogger = (context: string) => {
+  const safeLog = (level: string, logFn: LogFunction, obj: LogData, msg?: string) => {
     if (!pinoEnabled) {
       // Use console logging when Pino is disabled
       console.log(`[${level.toUpperCase()}] ${context}:`, msg || '', obj);
@@ -181,17 +201,17 @@ export const createContextLogger = (context: string) => {
   };
 
   return {
-    error: (obj: any, msg?: string) => safeLog('error', logger.error.bind(logger), obj, msg),
-    warn: (obj: any, msg?: string) => safeLog('warn', logger.warn.bind(logger), obj, msg),
-    info: (obj: any, msg?: string) => safeLog('info', logger.info.bind(logger), obj, msg),
-    debug: (obj: any, msg?: string) => safeLog('debug', logger.debug.bind(logger), obj, msg),
+    error: (obj: LogData, msg?: string) => safeLog('error', logger.error.bind(logger), obj, msg),
+    warn: (obj: LogData, msg?: string) => safeLog('warn', logger.warn.bind(logger), obj, msg),
+    info: (obj: LogData, msg?: string) => safeLog('info', logger.info.bind(logger), obj, msg),
+    debug: (obj: LogData, msg?: string) => safeLog('debug', logger.debug.bind(logger), obj, msg),
     
     // Convenience methods for simple logging
-    logError: (message: string, error?: any) => 
+    logError: (message: string, error?: unknown) => 
       safeLog('error', logger.error.bind(logger), { error, event: 'error' }, message),
-    logInfo: (message: string, data?: any) => 
+    logInfo: (message: string, data?: LogData) => 
       safeLog('info', logger.info.bind(logger), { ...data, event: 'info' }, message),
-    logDebug: (message: string, data?: any) => 
+    logDebug: (message: string, data?: LogData) => 
       safeLog('debug', logger.debug.bind(logger), { ...data, event: 'debug' }, message),
   };
 };
@@ -206,7 +226,7 @@ export const ticketLogger = {
       assigned_team: team 
     }, `Ticket created: ${ticketId}`),
     
-  updated: (ticketId: string, updatedBy: string, changes: any) =>
+  updated: (ticketId: string, updatedBy: string, changes: LogData) =>
     pinoEnabled && logger.info({ 
       event: 'ticket_updated', 
       ticket_id: ticketId, 
@@ -246,7 +266,7 @@ export const ticketLogger = {
       reason 
     }, `Ticket deleted: ${ticketId}`),
     
-  staffCreated: (ticketId: string, createdBy: string, onBehalfOf: string, team?: string, additionalContext?: any) =>
+  staffCreated: (ticketId: string, createdBy: string, onBehalfOf: string, team?: string, additionalContext?: LogData) =>
     pinoEnabled && logger.info({ 
       event: 'ticket_staff_created',
       ticket_id: ticketId, 
@@ -310,7 +330,7 @@ export const systemLogger = {
       event: 'database_connected' 
     }, 'Database connection established'),
     
-  databaseError: (error: any) =>
+  databaseError: (error: unknown) =>
     pinoEnabled && logger.error({ 
       event: 'database_error', 
       error 
@@ -323,13 +343,13 @@ export const systemLogger = {
       updated_by: updatedBy 
     }, `System configuration updated: ${setting}`),
     
-  info: (data: any, message: string) =>
+  info: (data: LogData, message: string) =>
     pinoEnabled && logger.info(data, message),
     
-  warn: (data: any, message: string) =>
+  warn: (data: LogData, message: string) =>
     pinoEnabled && logger.warn(data, message),
     
-  error: (data: any, message: string) =>
+  error: (data: LogData, message: string) =>
     pinoEnabled && logger.error(data, message),
 };
 
@@ -353,7 +373,7 @@ export const apiLogger = {
       duration_ms: duration 
     }, `${method} ${path} → ${status}`),
     
-  error: (method: string, path: string, error: any, userId?: string) =>
+  error: (method: string, path: string, error: unknown, userId?: string) =>
     pinoEnabled && logger.error({ 
       event: 'api_error', 
       method, 
@@ -376,5 +396,5 @@ getLogSettings().then(({ level, enabled }) => {
 
 // Export default logger and utilities
 export default logger;
-export { updateLogLevel, LOG_LEVELS };
+export { updateLogLevel, LOG_LEVELS, createContextLogger };
 export type { LogLevel };

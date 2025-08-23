@@ -1,0 +1,3 @@
+#!/bin/bash
+# Quick status check shortcut
+cd "$(dirname "$0")/.." && ./scripts/health-check.sh

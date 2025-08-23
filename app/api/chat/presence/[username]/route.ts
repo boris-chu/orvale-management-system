@@ -5,9 +5,10 @@ import { queryAsync, runAsync } from '@/lib/database'
 // GET /api/chat/presence/[username] - Get specific user's presence status
 export async function GET(
   request: NextRequest,
-  { params }: { params: { username: string } }
+  context: { params: Promise<{ username: string }> }
 ) {
   try {
+    const params = await context.params
     const authResult = await verifyAuth(request)
     if (!authResult.success || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -74,9 +75,10 @@ export async function GET(
 // PUT /api/chat/presence/[username] - Update specific user's presence (admin only)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { username: string } }
+  context: { params: Promise<{ username: string }> }
 ) {
   try {
+    const params = await context.params
     const authResult = await verifyAuth(request)
     if (!authResult.success || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

@@ -135,7 +135,7 @@ export async function GET(
 // POST /api/chat/direct/[username] - Create direct conversation with specific user
 export async function POST(
   request: NextRequest,
-  { params }: { params: { username: string } }
+  context: { params: Promise<{ username: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request)
@@ -147,6 +147,7 @@ export async function POST(
       return NextResponse.json({ error: 'Insufficient permissions for direct messages' }, { status: 403 })
     }
 
+    const params = await context.params
     const targetUsername = params.username
     const body = await request.json()
     const { initial_message = null } = body

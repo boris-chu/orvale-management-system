@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   MessageSquare,
+  MessageCircle,
   Users,
   Settings,
   FileText,
@@ -857,14 +858,15 @@ export function ChatManagementCard() {
 
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7 mb-4">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="connection">Connection</TabsTrigger>
-            <TabsTrigger value="files">Files & Media</TabsTrigger>
-            <TabsTrigger value="presence">Users</TabsTrigger>
-            <TabsTrigger value="messages">Messages</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsList className="flex w-full justify-start overflow-x-auto mb-4">
+            <TabsTrigger value="dashboard" className="flex-shrink-0">Dashboard</TabsTrigger>
+            <TabsTrigger value="connection" className="flex-shrink-0">Connection</TabsTrigger>
+            <TabsTrigger value="widget" className="flex-shrink-0">Widget</TabsTrigger>
+            <TabsTrigger value="files" className="flex-shrink-0">Files & Media</TabsTrigger>
+            <TabsTrigger value="presence" className="flex-shrink-0">Users</TabsTrigger>
+            <TabsTrigger value="messages" className="flex-shrink-0">Messages</TabsTrigger>
+            <TabsTrigger value="notifications" className="flex-shrink-0">Notifications</TabsTrigger>
+            <TabsTrigger value="analytics" className="flex-shrink-0">Analytics</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-6">
@@ -1372,6 +1374,275 @@ export function ChatManagementCard() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="widget" className="mt-6 space-y-6">
+            {/* Widget Customization Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <MessageSquare className="h-5 w-5" />
+                  <span>Chat Widget Appearance</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Color Scheme */}
+                <div className="space-y-4">
+                  <h4 className="font-medium">Color Scheme</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Primary Color</label>
+                      <div className="flex items-center space-x-2">
+                        <input 
+                          type="color" 
+                          className="w-12 h-8 rounded border border-gray-300 cursor-pointer"
+                          defaultValue="#3b82f6"
+                        />
+                        <Input 
+                          type="text" 
+                          defaultValue="#3b82f6"
+                          className="flex-1 text-sm"
+                          placeholder="#3b82f6"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Secondary Color</label>
+                      <div className="flex items-center space-x-2">
+                        <input 
+                          type="color" 
+                          className="w-12 h-8 rounded border border-gray-300 cursor-pointer"
+                          defaultValue="#9333ea"
+                        />
+                        <Input 
+                          type="text" 
+                          defaultValue="#9333ea"
+                          className="flex-1 text-sm"
+                          placeholder="#9333ea"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Widget Size & Position */}
+                <div className="space-y-4">
+                  <h4 className="font-medium">Size & Position</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Widget Size</label>
+                      <FormControl fullWidth size="small">
+                        <Select defaultValue="normal">
+                          <MenuItem value="compact">Compact</MenuItem>
+                          <MenuItem value="normal">Normal</MenuItem>
+                          <MenuItem value="large">Large</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Position</label>
+                      <FormControl fullWidth size="small">
+                        <Select defaultValue="bottom-right">
+                          <MenuItem value="bottom-right">Bottom Right</MenuItem>
+                          <MenuItem value="bottom-left">Bottom Left</MenuItem>
+                          <MenuItem value="top-right">Top Right</MenuItem>
+                          <MenuItem value="top-left">Top Left</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Border Radius</label>
+                      <div className="flex items-center space-x-2">
+                        <Input 
+                          type="number" 
+                          defaultValue="16"
+                          className="w-16 text-sm"
+                          min="0"
+                          max="32"
+                        />
+                        <span className="text-sm text-gray-500">px</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Animation & Effects */}
+                <div className="space-y-4">
+                  <h4 className="font-medium">Animation & Effects</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Enable Glassmorphism</p>
+                        <p className="text-sm text-gray-500">Translucent background with blur effect</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Pulse Animation</p>
+                        <p className="text-sm text-gray-500">Notification pulse effect for new messages</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Smooth Transitions</p>
+                        <p className="text-sm text-gray-500">Smooth animations when opening/closing</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Typography */}
+                <div className="space-y-4">
+                  <h4 className="font-medium">Typography</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Font Family</label>
+                      <FormControl fullWidth size="small">
+                        <Select defaultValue="system">
+                          <MenuItem value="system">System Default</MenuItem>
+                          <MenuItem value="inter">Inter</MenuItem>
+                          <MenuItem value="roboto">Roboto</MenuItem>
+                          <MenuItem value="poppins">Poppins</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Font Size</label>
+                      <FormControl fullWidth size="small">
+                        <Select defaultValue="normal">
+                          <MenuItem value="small">Small</MenuItem>
+                          <MenuItem value="normal">Normal</MenuItem>
+                          <MenuItem value="large">Large</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview Section */}
+                <div className="space-y-4 border-t pt-4">
+                  <h4 className="font-medium">Live Preview</h4>
+                  <div className="bg-gray-100 p-6 rounded-lg relative min-h-48">
+                    <div className="absolute bottom-4 right-4">
+                      {/* Mini Widget Preview */}
+                      <div className="relative">
+                        {/* Closed state preview */}
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 shadow-lg flex items-center justify-center text-white">
+                          <MessageCircle className="h-6 w-6" />
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-bold">3</span>
+                          </div>
+                        </div>
+                        
+                        {/* Expanded state preview (shown on hover) */}
+                        <div className="absolute bottom-16 right-0 w-64 h-48 bg-white/90 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                          <div className="p-3 border-b border-white/20 bg-gradient-to-r from-blue-50/80 to-purple-50/80 rounded-t-xl">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-sm bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Chat</span>
+                              <div className="flex space-x-1">
+                                <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                                <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                                <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="p-2 space-y-2">
+                            <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
+                              <div className="w-6 h-6 bg-blue-500 rounded-full"></div>
+                              <div className="flex-1">
+                                <div className="text-xs font-medium">General</div>
+                                <div className="text-xs text-gray-500">Latest message...</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                              <div className="w-6 h-6 bg-green-500 rounded-full"></div>
+                              <div className="flex-1">
+                                <div className="text-xs font-medium">Team Alpha</div>
+                                <div className="text-xs text-gray-500">John: Hey team!</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="absolute top-4 left-4 text-sm text-gray-600">
+                      <p>Hover over the widget to see expanded preview</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <Button variant="outline">
+                    Reset to Default
+                  </Button>
+                  <div className="flex space-x-2">
+                    <Button variant="outline">
+                      Preview Changes
+                    </Button>
+                    <Button>
+                      Save Customization
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Widget Behavior Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Settings className="h-5 w-5" />
+                  <span>Widget Behavior</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Auto-hide when inactive</p>
+                    <p className="text-sm text-gray-500">Hide widget after 5 minutes of no activity</p>
+                  </div>
+                  <Switch />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Sound notifications</p>
+                    <p className="text-sm text-gray-500">Play sound when new messages arrive</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Desktop notifications</p>
+                    <p className="text-sm text-gray-500">Show browser notifications for messages</p>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Default widget state</label>
+                  <FormControl fullWidth size="small">
+                    <Select defaultValue="closed">
+                      <MenuItem value="closed">Always closed</MenuItem>
+                      <MenuItem value="minimized">Minimized</MenuItem>
+                      <MenuItem value="open">Always open</MenuItem>
+                    </Select>
+                  </FormControl>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="files" className="mt-6 space-y-6">

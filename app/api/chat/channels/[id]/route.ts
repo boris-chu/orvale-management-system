@@ -95,7 +95,8 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: channelId } = await params
+    const resolvedParams = await params
+    const { id: channelId } = resolvedParams
     const body = await request.json()
     const { name, description, type } = body
 
@@ -124,7 +125,7 @@ export async function PUT(
 
     // Validate updates
     const updates: any = {}
-    const params: any[] = []
+    const queryParams: any[] = []
 
     if (name !== undefined) {
       if (!name || name.trim().length === 0) {
@@ -212,7 +213,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: channelId } = await params
+    const resolvedParams = await params
+    const { id: channelId } = resolvedParams
 
     // Get current channel info
     const channel = await queryAsync(`

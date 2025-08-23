@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import fs from 'fs';
-import path from 'path';
 
 export async function GET(request: NextRequest) {
   try {
