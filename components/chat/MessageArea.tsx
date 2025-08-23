@@ -153,7 +153,7 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       console.log('✏️ Editing message:', messageId, newText.substring(0, 50) + '...')
 
       const response = await fetch(`/api/chat/messages/${messageId}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

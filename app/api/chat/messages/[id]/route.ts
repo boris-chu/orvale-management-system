@@ -161,7 +161,7 @@ export async function PUT(
     // Update the message
     await runAsync(`
       UPDATE chat_messages 
-      SET message_text = ?, updated_at = datetime('now'), edited = 1
+      SET message_text = ?, edited_at = datetime('now')
       WHERE id = ?
     `, [message_text.trim(), messageId])
 
@@ -180,9 +180,30 @@ export async function PUT(
       WHERE cm.id = ?
     `, [messageId])
 
+    // Parse file_attachment safely for response
+    let parsedFileAttachment = null
+    if (updatedMessage[0].file_attachment) {
+      try {
+        if (typeof updatedMessage[0].file_attachment === 'object') {
+          parsedFileAttachment = updatedMessage[0].file_attachment
+        } else {
+          parsedFileAttachment = JSON.parse(updatedMessage[0].file_attachment)
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to parse file_attachment JSON in PUT response:', messageId, error)
+        parsedFileAttachment = null
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: updatedMessage[0]
+      message: {
+        ...updatedMessage[0],
+        edited: !!updatedMessage[0].edited_at,
+        deleted: !!updatedMessage[0].deleted_at,
+        file_attachment: parsedFileAttachment,
+        reactions: [] // Will be populated by frontend from existing state
+      }
     })
 
   } catch (error) {
@@ -231,7 +252,7 @@ export async function DELETE(
     // Soft delete the message
     await runAsync(`
       UPDATE chat_messages 
-      SET message_text = '[Message deleted]', deleted = 1, updated_at = datetime('now')
+      SET message_text = '[Message deleted]', deleted_at = datetime('now')
       WHERE id = ?
     `, [messageId])
 
