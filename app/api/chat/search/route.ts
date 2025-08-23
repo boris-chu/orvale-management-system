@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
           FROM chat_messages cm_before 
           WHERE cm_before.channel_id = cm.channel_id 
             AND cm_before.created_at < cm.created_at 
-            AND cm_before.deleted != 1
+            AND cm_before.deleted_at IS NULL
           ORDER BY cm_before.created_at DESC 
           LIMIT 1
         ) as context_before,
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
           FROM chat_messages cm_after 
           WHERE cm_after.channel_id = cm.channel_id 
             AND cm_after.created_at > cm.created_at 
-            AND cm_after.deleted != 1
+            AND cm_after.deleted_at IS NULL
           ORDER BY cm_after.created_at ASC 
           LIMIT 1
         ) as context_after
@@ -59,27 +59,19 @@ export async function GET(request: NextRequest) {
       JOIN users u ON cm.user_id = u.username
       LEFT JOIN chat_channel_members ccm ON c.id = ccm.channel_id AND ccm.user_id = ?
       WHERE c.active = 1 
-        AND cm.deleted != 1
+        AND cm.deleted_at IS NULL
         AND cm.message_text LIKE ?
         AND (
-          -- User has access to this channel
+          -- User has access to this channel (simplified)
           c.type = 'public' 
           OR ccm.user_id IS NOT NULL 
           OR c.created_by = ?
-          OR ? IN (
-            SELECT permission_id FROM role_permissions rp 
-            JOIN roles r ON rp.role_id = r.id 
-            JOIN users u2 ON u2.role = r.id 
-            WHERE u2.username = ? AND permission_id = 'chat.manage_channels'
-          )
         )
     `
 
     const params = [
       authResult.user.username,
       `%${query.trim()}%`,
-      authResult.user.username,
-      authResult.user.username,
       authResult.user.username
     ]
 

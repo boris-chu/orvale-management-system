@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
         cm.created_at,
         cm.message_type
       FROM chat_messages cm
-      WHERE cm.deleted != 1
+      WHERE cm.deleted_at IS NULL
         AND cm.message_text LIKE ?
       ORDER BY cm.created_at DESC 
       LIMIT 10
