@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Orvale Auth Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; }
+        .result { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; }
+        pre { background: white; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Orvale Authentication & Presence Debug</h1>
+    <p><strong>Current URL:</strong> <span id="current-url"></span></p>
+    <p><strong>Timestamp:</strong> <span id="timestamp"></span></p>
+
+    <button onclick="runDiagnostics()">🧪 Run Full Diagnostics</button>
+    <button onclick="clearStorage()">🗑️ Clear All Storage</button>
+    <button onclick="window.location.reload()">🔄 Reload Page</button>
+
+    <div id="results"></div>
+
+    <script>
+        document.getElementById('current-url').textContent = window.location.href;
+        document.getElementById('timestamp').textContent = new Date().toLocaleString();
+
+        function addResult(title, content, type = 'result') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `<h3>${title}</h3><pre>${content}</pre>`;
+            document.getElementById('results').appendChild(div);
+        }
+
+        async function runDiagnostics() {
+            document.getElementById('results').innerHTML = '';
+
+            // Test 1: Check localStorage
+            addResult('📦 LocalStorage Tokens', 
+                `authToken: ${localStorage.getItem('authToken') || 'NULL'}
+token: ${localStorage.getItem('token') || 'NULL'}
+currentUser: ${localStorage.getItem('currentUser') ? 'Present' : 'NULL'}`, 
+                localStorage.getItem('authToken') || localStorage.getItem('token') ? 'success' : 'error');
+
+            // Test 2: Check cookies
+            addResult('🍪 Cookies', document.cookie || 'None found');
+
+            // Test 3: Test API with token
+            const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+            if (token) {
+                try {
+                    const response = await fetch('/api/debug/auth-test', {
+                        headers: {
+                            'Authorization': `Bearer ${token.trim().replace(/[\[\]"']/g, '')}`
+                        }
+                    });
+                    const data = await response.json();
+                    addResult('🔐 API Test (with token)', JSON.stringify(data, null, 2), 
+                        data.recommendations?.authWorking ? 'success' : 'error');
+                } catch (error) {
+                    addResult('🔐 API Test (with token)', `Error: ${error.message}`, 'error');
+                }
+            }
+
+            // Test 4: Test API without token (cookies only)
+            try {
+                const response = await fetch('/api/debug/auth-test', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                addResult('🔐 API Test (cookies only)', JSON.stringify(data, null, 2), 
+                    data.recommendations?.authWorking ? 'success' : 'warning');
+            } catch (error) {
+                addResult('🔐 API Test (cookies only)', `Error: ${error.message}`, 'error');
+            }
+
+            // Test 5: Check if we can reach other endpoints
+            try {
+                const response = await fetch('/api/auth/user', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                addResult('👤 User Endpoint Test', JSON.stringify(data, null, 2), 
+                    response.ok ? 'success' : 'error');
+            } catch (error) {
+                addResult('👤 User Endpoint Test', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        function clearStorage() {
+            localStorage.clear();
+            sessionStorage.clear();
+            addResult('🗑️ Storage Cleared', 'All localStorage and sessionStorage cleared. Please refresh the page.', 'warning');
+        }
+
+        // Auto-run diagnostics
+        setTimeout(runDiagnostics, 500);
+    </script>
+</body>
+</html>

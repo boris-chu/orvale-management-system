@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Presence System Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; font-family: monospace; }
+        .online { color: green; }
+        .offline { color: red; }
+        .error { color: red; background: #ffe6e6; }
+        .success { color: green; background: #e6ffe6; }
+    </style>
+</head>
+<body>
+    <h1>Orvale Chat System Debug</h1>
+    
+    <div>
+        <h3>1. Check Authentication</h3>
+        <button onclick="checkAuth()">Test Auth</button>
+        <div id="auth-result" class="log"></div>
+    </div>
+
+    <div>
+        <h3>2. Check Presence API</h3>
+        <button onclick="checkPresence()">Test Presence</button>
+        <div id="presence-result" class="log"></div>
+    </div>
+
+    <div>
+        <h3>3. Test SSE Connection</h3>
+        <button onclick="testSSE()">Test SSE (Channel 1)</button>
+        <button onclick="stopSSE()">Stop SSE</button>
+        <div id="sse-result" class="log"></div>
+    </div>
+
+    <div>
+        <h3>4. System Information</h3>
+        <div id="system-info" class="log">
+            <div>Current URL: <span id="current-url"></span></div>
+            <div>LocalStorage authToken: <span id="auth-token"></span></div>
+            <div>LocalStorage token: <span id="token"></span></div>
+        </div>
+    </div>
+
+    <script>
+        let eventSource = null;
+
+        // Load system information
+        document.getElementById('current-url').textContent = window.location.href;
+        document.getElementById('auth-token').textContent = localStorage.getItem('authToken') ? 'Present (' + localStorage.getItem('authToken').substring(0, 20) + '...)' : 'Missing';
+        document.getElementById('token').textContent = localStorage.getItem('token') ? 'Present (' + localStorage.getItem('token').substring(0, 20) + '...)' : 'Missing';
+
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : (type === 'success' ? 'success' : '');
+            element.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function getToken() {
+            const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+            if (!token) {
+                log('auth-result', 'No authentication token found in localStorage', 'error');
+                return null;
+            }
+            return token.trim().replace(/[\[\]"']/g, '');
+        }
+
+        async function checkAuth() {
+            const token = getToken();
+            if (!token) return;
+
+            try {
+                log('auth-result', 'Testing authentication...');
+                const response = await fetch('/api/auth/user', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const userData = await response.json();
+                    log('auth-result', `✅ Auth successful: ${JSON.stringify(userData)}`, 'success');
+                } else {
+                    const errorText = await response.text();
+                    log('auth-result', `❌ Auth failed (${response.status}): ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log('auth-result', `❌ Auth error: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkPresence() {
+            const token = getToken();
+            if (!token) return;
+
+            try {
+                log('presence-result', 'Testing presence API...');
+                const response = await fetch('/api/chat/presence', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const presenceData = await response.json();
+                    log('presence-result', `✅ Presence data: ${JSON.stringify(presenceData, null, 2)}`, 'success');
+                } else {
+                    const errorText = await response.text();
+                    log('presence-result', `❌ Presence failed (${response.status}): ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log('presence-result', `❌ Presence error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSSE() {
+            const token = getToken();
+            if (!token) return;
+
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            try {
+                log('sse-result', 'Starting SSE connection...');
+                const sseUrl = `/api/chat/channels/1/stream?token=${encodeURIComponent(token)}`;
+                log('sse-result', `SSE URL: ${sseUrl}`);
+                
+                eventSource = new EventSource(sseUrl);
+
+                eventSource.onopen = function(event) {
+                    log('sse-result', '✅ SSE connection opened', 'success');
+                };
+
+                eventSource.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        log('sse-result', `📨 SSE message: ${JSON.stringify(data)}`, 'success');
+                    } catch (e) {
+                        log('sse-result', `📨 SSE raw data: ${event.data}`);
+                    }
+                };
+
+                eventSource.onerror = function(event) {
+                    log('sse-result', `❌ SSE error: ${JSON.stringify(event)}`, 'error');
+                };
+
+            } catch (error) {
+                log('sse-result', `❌ SSE setup error: ${error.message}`, 'error');
+            }
+        }
+
+        function stopSSE() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+                log('sse-result', '🛑 SSE connection closed');
+            } else {
+                log('sse-result', 'No active SSE connection to close');
+            }
+        }
+
+        // Automatically run basic checks
+        setTimeout(() => {
+            log('system-info', 'Running automatic diagnostics...', 'info');
+            checkAuth();
+            setTimeout(checkPresence, 1000);
+        }, 500);
+    </script>
+</body>
+</html>

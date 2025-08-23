@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; }
+        .form { background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0; }
+        .result { background: #e7f3ff; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+        input { width: 200px; padding: 8px; margin: 5px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: white; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Manual Login Test</h1>
+    
+    <div class="form">
+        <h3>Test Login</h3>
+        <div>
+            <input type="text" id="username" placeholder="Username" value="jane.smith" />
+            <input type="password" id="password" placeholder="Password" value="password" />
+        </div>
+        <button onclick="testLogin()">🚀 Test Login</button>
+        <button onclick="checkStorage()">📦 Check Storage</button>
+        <button onclick="clearAll()">🗑️ Clear All</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        function addResult(content, type = 'result') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = content;
+            document.getElementById('results').appendChild(div);
+        }
+
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                addResult('<h3>❌ Error</h3><p>Please enter username and password</p>', 'error');
+                return;
+            }
+
+            try {
+                addResult('<h3>🔄 Testing Login...</h3><p>Calling /api/auth/login</p>');
+
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password }),
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Store token manually
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    
+                    addResult(`<h3>✅ Login Success!</h3>
+                        <p><strong>User:</strong> ${data.user.display_name}</p>
+                        <p><strong>Token stored:</strong> ${data.token.substring(0, 50)}...</p>
+                        <p><strong>Permissions:</strong> ${data.user.permissions?.length || 0}</p>
+                        <p><strong>Chat Permission:</strong> ${data.user.permissions?.includes('chat.access_channels') ? '✅' : '❌'}</p>`, 'success');
+                    
+                    // Test the stored token immediately
+                    setTimeout(checkAuth, 1000);
+                } else {
+                    addResult(`<h3>❌ Login Failed</h3><pre>${JSON.stringify(data, null, 2)}</pre>`, 'error');
+                }
+            } catch (error) {
+                addResult(`<h3>❌ Login Error</h3><p>${error.message}</p>`, 'error');
+            }
+        }
+
+        function checkStorage() {
+            const authToken = localStorage.getItem('authToken');
+            const currentUser = localStorage.getItem('currentUser');
+            
+            addResult(`<h3>📦 Storage Check</h3>
+                <p><strong>authToken:</strong> ${authToken ? authToken.substring(0, 50) + '...' : 'NULL'}</p>
+                <p><strong>currentUser:</strong> ${currentUser ? 'Present' : 'NULL'}</p>
+                <p><strong>Token valid JWT:</strong> ${authToken && authToken.split('.').length === 3 ? '✅' : '❌'}</p>`);
+        }
+
+        async function checkAuth() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                addResult('<h3>❌ No Token</h3><p>No token found in localStorage</p>', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/debug/auth-test', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                
+                addResult(`<h3>🔍 Auth Test Result</h3>
+                    <p><strong>Auth Working:</strong> ${data.recommendations?.authWorking ? '✅' : '❌'}</p>
+                    <p><strong>Presence Working:</strong> ${data.recommendations?.presenceWorking ? '✅' : '❌'}</p>
+                    <p><strong>Chat Permission:</strong> ${data.recommendations?.chatPermission ? '✅' : '❌'}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>`, 
+                    data.recommendations?.authWorking ? 'success' : 'error');
+            } catch (error) {
+                addResult(`<h3>❌ Auth Test Error</h3><p>${error.message}</p>`, 'error');
+            }
+        }
+
+        function clearAll() {
+            localStorage.clear();
+            sessionStorage.clear();
+            addResult('<h3>🗑️ Cleared</h3><p>All storage cleared. You may need to refresh.</p>');
+        }
+
+        // Auto-check storage on load
+        setTimeout(checkStorage, 500);
+    </script>
+</body>
+</html>
