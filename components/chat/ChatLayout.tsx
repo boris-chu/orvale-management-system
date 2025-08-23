@@ -18,7 +18,7 @@ export function ChatLayout({ sidebar, main, className }: ChatLayoutProps) {
       </div>
       
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {main}
       </div>
     </div>

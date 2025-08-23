@@ -739,9 +739,9 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-white">
       {/* Channel Header */}
-      <div className="border-b border-gray-200 px-6 py-4">
+      <div className="border-b border-gray-200 px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             {getChannelIcon()}
@@ -767,9 +767,9 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative overflow-hidden">
         <ScrollArea 
-          className="h-full px-6 py-4"
+          className="absolute inset-0 px-6 py-4"
           onScrollCapture={handleScroll}
           ref={scrollAreaRef}
         >
@@ -827,7 +827,7 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       </div>
 
       {/* Message Input */}
-      <div className="border-t border-gray-200 p-4">
+      <div className="border-t border-gray-200 p-4 flex-shrink-0">
         <MessageInput
           onSendMessage={handleSendMessage}
           onTyping={handleTyping}
