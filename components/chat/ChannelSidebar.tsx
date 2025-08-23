@@ -94,8 +94,8 @@ export function ChannelSidebar({
       
       console.log('🔍 ChannelSidebar: Loading online users with token:', token.substring(0, 20) + '...')
       
-      // First clean up stale presence data
-      await fetch('/api/chat/presence/cleanup', { method: 'GET' })
+      // First clean up stale presence data more aggressively
+      await fetch('/api/chat/presence/force-cleanup', { method: 'POST' })
       
       const response = await fetch('/api/chat/presence', {
         headers: {

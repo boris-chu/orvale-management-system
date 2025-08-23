@@ -58,36 +58,34 @@ export function SystemPresenceTracker({}: SystemPresenceTrackerProps) {
 
     // Handle user leaving the system
     const handleBeforeUnload = () => {
-      // Use navigator.sendBeacon for more reliable offline updates
+      console.log('🚨 SystemPresence: Page unload detected, setting offline')
       const token = localStorage.getItem('authToken') || localStorage.getItem('token')
       if (token) {
         const cleanToken = token.trim().replace(/[\[\]"']/g, '')
-        const url = '/api/chat/presence'
-        const data = JSON.stringify({ status: 'offline' })
         
+        // Try synchronous fetch first for immediate logout
         try {
-          navigator.sendBeacon(url, new Blob([data], {
-            type: 'application/json',
-            headers: { 'Authorization': `Bearer ${cleanToken}` }
-          }))
-        } catch (error) {
-          // Fallback to regular fetch
-          fetch(url, {
+          fetch('/api/chat/presence', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${cleanToken}`,
               'Content-Type': 'application/json'
             },
-            body: data,
-            keepalive: true
-          }).catch(() => {})
+            body: JSON.stringify({ status: 'offline' }),
+            keepalive: true // Important: keeps request alive even as page unloads
+          }).catch(() => {
+            console.log('⚠️ SystemPresence: Fetch failed during unload')
+          })
+        } catch (error) {
+          console.log('⚠️ SystemPresence: Error during unload presence update')
         }
       }
     }
 
-    // Handle tab/window close
+    // Handle tab/window close (additional handler)
     const handleUnload = () => {
-      updateSystemPresence('offline')
+      console.log('🚨 SystemPresence: Window unload detected')
+      // This fires after beforeunload, so just log it
     }
 
     // Mouse movement and keyboard activity to detect user activity

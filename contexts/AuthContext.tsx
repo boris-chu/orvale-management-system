@@ -127,6 +127,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      // Update user presence to offline before logging out
+      if (user?.permissions?.includes('chat.access_channels')) {
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+        if (token) {
+          try {
+            const cleanToken = token.trim().replace(/[\[\]"']/g, '')
+            await fetch('/api/chat/presence', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${cleanToken}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ status: 'offline' })
+            })
+            console.log('✅ AuthContext: Set user offline before logout')
+          } catch (error) {
+            console.error('❌ AuthContext: Error setting offline status:', error)
+          }
+        }
+      }
+      
       // Clear user state immediately
       setUser(null);
       
