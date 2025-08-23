@@ -108,6 +108,17 @@ export async function GET(
 
     const messages = await queryAsync(messagesQuery, queryParams)
 
+    // Debug: Log a sample message to see what user data we're getting
+    if (messages.length > 0) {
+      console.log('🔍 Sample message from database:', {
+        id: messages[0].id,
+        user_id: messages[0].user_id,
+        display_name: messages[0].display_name,
+        profile_picture: messages[0].profile_picture,
+        message_text: messages[0].message_text?.substring(0, 50)
+      })
+    }
+
     // Parse reactions JSON
     const messagesWithReactions = messages.map(message => ({
       ...message,

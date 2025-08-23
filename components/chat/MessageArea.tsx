@@ -187,99 +187,123 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     const token = getCleanToken()
     if (!token) return
 
-    const newSocket = io('/api/socket', {
-      auth: { token },
-      transports: ['websocket', 'polling']
-    })
-
-    newSocket.on('connect', () => {
-      console.log('🔌 Connected to chat socket:', {
-        socketId: newSocket.id,
-        channelId: channel.id,
-        channelName: channel.name
-      })
-      // Join the current channel
-      newSocket.emit('join_channel', { channelId: channel.id })
-    })
-
-    newSocket.on('disconnect', () => {
-      console.log('🔌 Disconnected from chat socket')
-    })
-
-    newSocket.on('message_received', (data: { message: Message; channel_id: string }) => {
-      console.log('📨 Socket message received:', {
-        messageId: data.message?.id,
-        channelId: data.channel_id,
-        currentChannelId: channel.id,
-        matches: data.channel_id === channel.id,
-        messageText: data.message?.message_text?.substring(0, 50)
-      })
-      
-      if (data.channel_id === channel.id) {
-        setMessages(prev => {
-          // Check if message already exists (avoid duplicates)
-          const exists = prev.some(msg => 
-            msg.id === data.message.id || 
-            (msg.id.startsWith('temp-') && msg.message_text === data.message.message_text && msg.user_id === data.message.user_id)
-          )
-          if (exists) {
-            // Replace temp message with real one
-            console.log('🔄 Replacing temp message with real one:', {
-              tempId: prev.find(m => m.id.startsWith('temp-') && m.message_text === data.message.message_text)?.id,
-              realId: data.message.id,
-              user_id: data.message.user_id,
-              display_name: data.message.display_name,
-              profile_picture: data.message.profile_picture
-            })
-            return prev.map(msg => 
-              msg.id.startsWith('temp-') && msg.message_text === data.message.message_text && msg.user_id === data.message.user_id
-                ? { ...data.message, _isNew: true }
-                : msg
-            )
+    const connectSocket = async () => {
+      try {
+        // Initialize Socket.io server by hitting the endpoint first
+        console.log('🔌 Initializing Socket.io server...')
+        await fetch('/api/socket', { 
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
           }
+        })
+        
+        // Wait a bit for server to initialize
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // Now connect to Socket.io
+        const newSocket = io({
+          path: '/api/socket',
+          auth: { token },
+          transports: ['polling', 'websocket'], // Try polling first, then upgrade to WebSocket
+          upgrade: true,
+          rememberUpgrade: true
+        })
+
+        newSocket.on('connect', () => {
+          console.log('🔌 Connected to chat socket:', {
+            socketId: newSocket.id,
+            channelId: channel.id,
+            channelName: channel.name
+          })
+          newSocket.emit('join_channel', { channelId: channel.id })
+        })
+
+        newSocket.on('disconnect', () => {
+          console.log('🔌 Disconnected from chat socket')
+        })
+
+        newSocket.on('message_received', (data: { message: Message; channel_id: string }) => {
+          console.log('📨 Socket message received:', {
+            messageId: data.message?.id,
+            channelId: data.channel_id,
+            currentChannelId: channel.id,
+            matches: data.channel_id === channel.id,
+            messageText: data.message?.message_text?.substring(0, 50)
+          })
           
-          return [...prev, { ...data.message, _isNew: true }]
-        })
-        
-        // Show notification for new messages from other users
-        if (data.message.user_id !== currentUser.username) {
-          showNotification(data.message)
-          playNotificationSound()
-          onChannelUpdate() // Update sidebar counters
-        }
-        
-        // Auto-scroll if user is near bottom
-        setTimeout(() => {
-          if (shouldAutoScroll()) {
-            scrollToBottom()
+          if (data.channel_id === channel.id) {
+            setMessages(prev => {
+              const exists = prev.some(msg => 
+                msg.id === data.message.id || 
+                (msg.id.startsWith('temp-') && msg.message_text === data.message.message_text && msg.user_id === data.message.user_id)
+              )
+              if (exists) {
+                console.log('🔄 Replacing temp message with real one:', {
+                  tempId: prev.find(m => m.id.startsWith('temp-') && m.message_text === data.message.message_text)?.id,
+                  realId: data.message.id,
+                  user_id: data.message.user_id,
+                  display_name: data.message.display_name,
+                  profile_picture: data.message.profile_picture
+                })
+                return prev.map(msg => 
+                  msg.id.startsWith('temp-') && msg.message_text === data.message.message_text && msg.user_id === data.message.user_id
+                    ? { ...data.message, _isNew: true }
+                    : msg
+                )
+              }
+              
+              return [...prev, { ...data.message, _isNew: true }]
+            })
+            
+            if (data.message.user_id !== currentUser.username) {
+              showNotification(data.message)
+              playNotificationSound()
+              onChannelUpdate()
+            }
+            
+            setTimeout(() => {
+              if (shouldAutoScroll()) {
+                scrollToBottom()
+              }
+            }, 100)
           }
-        }, 100)
-      }
-    })
-
-    newSocket.on('user_typing', (data: { user: TypingUser; typing: boolean; channel_id: string }) => {
-      if (data.channel_id === channel.id && data.user.user_id !== currentUser.username) {
-        setTypingUsers(prev => {
-          const filtered = prev.filter(u => u.user_id !== data.user.user_id)
-          return data.typing ? [...filtered, data.user] : filtered
         })
+
+        newSocket.on('user_typing', (data: { user: TypingUser; typing: boolean; channel_id: string }) => {
+          if (data.channel_id === channel.id && data.user.user_id !== currentUser.username) {
+            setTypingUsers(prev => {
+              const filtered = prev.filter(u => u.user_id !== data.user.user_id)
+              return data.typing ? [...filtered, data.user] : filtered
+            })
+          }
+        })
+
+        newSocket.on('error', (error: { message: string }) => {
+          console.error('🚨 Socket error:', error.message)
+        })
+
+        newSocket.on('connect_error', (error: Error) => {
+          console.error('🚨 Socket connection error:', error.message)
+          // Fallback to polling if Socket.io fails
+          console.log('🔄 Falling back to polling mechanism')
+        })
+
+        setSocket(newSocket)
+
+        return () => {
+          newSocket.emit('leave_channel', { channelId: channel.id })
+          newSocket.disconnect()
+        }
+
+      } catch (error) {
+        console.error('🚨 Failed to initialize Socket.io:', error)
+        console.log('🔄 Using polling-only mode')
+        setSocket(null)
       }
-    })
-
-    newSocket.on('error', (error: { message: string }) => {
-      console.error('🚨 Socket error:', error.message)
-    })
-
-    newSocket.on('connect_error', (error: Error) => {
-      console.error('🚨 Socket connection error:', error.message)
-    })
-
-    setSocket(newSocket)
-
-    return () => {
-      newSocket.emit('leave_channel', { channelId: channel.id })
-      newSocket.disconnect()
     }
+
+    connectSocket()
   }, [channel.id, currentUser.username])
 
   // Initialize notifications when component mounts
@@ -306,10 +330,10 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       clearInterval(pollingIntervalRef.current)
     }
     
-    // Set up polling for new messages (disabled while testing Socket.io)
-    // pollingIntervalRef.current = setInterval(() => {
-    //   pollForNewMessages()
-    // }, 1000) // Poll every 1 second for faster testing
+    // Set up polling for new messages (Socket.io not working, so we need polling)
+    pollingIntervalRef.current = setInterval(() => {
+      pollForNewMessages()
+    }, 2000) // Poll every 2 seconds
     
     return () => {
       if (pollingIntervalRef.current) {
@@ -569,7 +593,7 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
 
     try {
       // Send via Socket.io for real-time delivery if available
-      if (socket) {
+      if (socket && socket.connected) {
         socket.emit('send_message', {
           channelId: channel.id,
           message: messageData.message_text,
