@@ -741,7 +741,15 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
               <Users className="h-3 w-3 mr-1" />
               {channel.member_count} members
             </Badge>
-            <Button variant="ghost" size="sm">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                // TODO: Open channel settings modal
+                alert(`Channel Settings for ${getChannelDisplayName()}\n\nFeatures available:\n• Channel information\n• Member management\n• Notification settings\n• Channel permissions\n\nThis will be implemented in a future update.`)
+              }}
+              title="Channel settings"
+            >
               <Settings className="h-4 w-4" />
             </Button>
           </div>

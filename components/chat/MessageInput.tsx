@@ -150,12 +150,87 @@ export function MessageInput({
     const file = event.target.files?.[0]
     if (!file) return
 
-    // For now, we'll just handle this as a placeholder
-    // In a real implementation, you'd upload to a file storage service
-    console.log('File selected:', file.name)
-    
-    // Reset the input
-    event.target.value = ''
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    if (file.size > maxSize) {
+      alert('File size must be less than 10MB')
+      event.target.value = ''
+      return
+    }
+
+    // Validate file type
+    const allowedTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'video/mp4', 'video/webm', 'video/mov',
+      'application/pdf',
+      'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain', 'text/csv',
+      'application/zip', 'application/x-zip-compressed'
+    ]
+
+    if (!allowedTypes.includes(file.type)) {
+      alert('File type not supported. Please upload images, videos, documents, or zip files.')
+      event.target.value = ''
+      return
+    }
+
+    setSending(true)
+
+    try {
+      console.log('📎 Uploading file:', file.name, file.size, file.type)
+      
+      // Create FormData for file upload
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('originalName', file.name)
+      formData.append('fileType', file.type)
+      formData.append('fileSize', file.size.toString())
+
+      // Upload file to server
+      const token = (localStorage.getItem('authToken') || localStorage.getItem('token'))?.trim().replace(/[\[\]"']/g, '')
+      
+      const uploadResponse = await fetch('/api/chat/upload-file', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      })
+
+      if (uploadResponse.ok) {
+        const uploadData = await uploadResponse.json()
+        console.log('✅ File uploaded:', uploadData)
+
+        // Send message with file attachment
+        await onSendMessage({
+          message_text: `Shared a file: ${file.name}`,
+          message_type: 'file',
+          file_attachment: {
+            type: 'file',
+            name: file.name,
+            size: file.size,
+            mimeType: file.type,
+            url: uploadData.url,
+            downloadUrl: uploadData.downloadUrl
+          },
+          reply_to_id: replyingTo?.id
+        })
+
+        console.log('✅ File message sent successfully')
+        if (onCancelReply) onCancelReply()
+      } else {
+        const errorData = await uploadResponse.json()
+        console.error('❌ File upload failed:', errorData)
+        alert(`File upload failed: ${errorData.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('❌ Error uploading file:', error)
+      alert('Failed to upload file. Please try again.')
+    } finally {
+      setSending(false)
+      // Reset the input
+      event.target.value = ''
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
