@@ -202,12 +202,13 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
         await new Promise(resolve => setTimeout(resolve, 500))
         
         // Now connect to Socket.io
-        const newSocket = io({
+        const newSocket = io('/', {
           path: '/api/socket',
           auth: { token },
-          transports: ['polling', 'websocket'], // Try polling first, then upgrade to WebSocket
-          upgrade: true,
-          rememberUpgrade: true
+          transports: ['polling'], // Use only HTTP long-polling (no WebSocket upgrade)
+          upgrade: false,
+          autoConnect: true,
+          forceNew: true
         })
 
         newSocket.on('connect', () => {
@@ -330,10 +331,10 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       clearInterval(pollingIntervalRef.current)
     }
     
-    // Set up polling for new messages (Socket.io not working, so we need polling)
+    // Set up polling for new messages (as backup to Socket.io)
     pollingIntervalRef.current = setInterval(() => {
       pollForNewMessages()
-    }, 2000) // Poll every 2 seconds
+    }, 5000) // Poll every 5 seconds as backup
     
     return () => {
       if (pollingIntervalRef.current) {
