@@ -297,8 +297,8 @@ export function MessageInput({
               </Button>
               
               {showEmojiPicker && (
-                <div className="absolute bottom-12 right-0 z-40 bg-white border border-gray-200 rounded-lg shadow-lg p-2">
-                  <div className="grid grid-cols-6 gap-1">
+                <div className="absolute bottom-12 right-0 z-40 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-64">
+                  <div className="grid grid-cols-6 gap-2">
                     {commonEmojis.map((emoji) => (
                       <Button
                         key={emoji}
@@ -306,7 +306,7 @@ export function MessageInput({
                         variant="ghost"
                         size="sm"
                         onClick={() => addEmoji(emoji)}
-                        className="h-8 w-8 p-0 text-lg hover:bg-gray-100"
+                        className="h-10 w-10 p-0 text-xl hover:bg-gray-100 flex items-center justify-center"
                       >
                         {emoji}
                       </Button>

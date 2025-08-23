@@ -97,7 +97,13 @@ export async function GET(
       queryParams.push(after)
     }
 
-    messagesQuery += ' ORDER BY cm.created_at DESC LIMIT ?'
+    // Use ascending order for 'after' queries (polling for new messages)
+    // Use descending order for 'before' queries (loading older messages) or initial load
+    if (after) {
+      messagesQuery += ' ORDER BY cm.created_at ASC LIMIT ?'
+    } else {
+      messagesQuery += ' ORDER BY cm.created_at DESC LIMIT ?'
+    }
     queryParams.push(limit)
 
     const messages = await queryAsync(messagesQuery, queryParams)
@@ -115,15 +121,19 @@ export async function GET(
       WHERE channel_id = ? AND user_id = ?
     `, [channelId, authResult.user.username])
 
+    // For 'after' queries, messages are already in chronological order (ASC)
+    // For other queries, we need to reverse to get chronological order
+    const finalMessages = after ? messagesWithReactions : messagesWithReactions.reverse()
+
     return NextResponse.json({
       success: true,
-      messages: messagesWithReactions.reverse(), // Return in chronological order
+      messages: finalMessages, // Return in chronological order
       pagination: {
         page,
         limit,
         has_more: messages.length === limit,
-        oldest_id: messages.length > 0 ? messages[messages.length - 1].id : null,
-        newest_id: messages.length > 0 ? messages[0].id : null
+        oldest_id: messages.length > 0 ? (after ? messages[0].id : messages[messages.length - 1].id) : null,
+        newest_id: messages.length > 0 ? (after ? messages[messages.length - 1].id : messages[0].id) : null
       }
     })
 
@@ -228,6 +238,13 @@ export async function POST(
       file_attachment,
       ticket_reference
     ])
+
+    // Update sender's last_read_at timestamp (so their own message is marked as read)
+    await runAsync(`
+      UPDATE chat_channel_members 
+      SET last_read_at = CURRENT_TIMESTAMP 
+      WHERE channel_id = ? AND user_id = ?
+    `, [channelId, authResult.user.username])
 
     // Get the complete message with user info
     const fullMessage = await queryAsync(`

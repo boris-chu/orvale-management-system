@@ -31,6 +31,7 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null)
   const [showSearch, setShowSearch] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [totalUnread, setTotalUnread] = useState(0)
 
   useEffect(() => {
     if (!loading && user) {
@@ -167,6 +168,21 @@ export default function ChatPage() {
     loadChannels()
     loadDirectMessages()
   }
+
+  // Update page title with unread count
+  useEffect(() => {
+    const channelUnread = channels.reduce((total, channel) => total + (channel.unread_count || 0), 0)
+    const dmUnread = directMessages.reduce((total, dm) => total + (dm.unread_count || 0), 0)
+    const total = channelUnread + dmUnread
+    setTotalUnread(total)
+    
+    // Update page title
+    if (total > 0) {
+      document.title = `(${total}) Orvale Chat`
+    } else {
+      document.title = 'Orvale Chat'
+    }
+  }, [channels, directMessages])
 
   const handleSearchResultSelect = async (result: any) => {
     // Find the channel for this search result

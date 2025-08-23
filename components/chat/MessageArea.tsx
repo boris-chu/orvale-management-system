@@ -86,10 +86,13 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
   const [showScrollToBottom, setShowScrollToBottom] = useState(false)
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([])
   const [socket, setSocket] = useState<Socket | null>(null)
+  const [lastMessageId, setLastMessageId] = useState<string | null>(null)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const lastScrollTop = useRef(0)
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Utility function to get clean auth token
   const getCleanToken = () => {
@@ -98,6 +101,85 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       token = token.trim().replace(/[\[\]"']/g, '')
     }
     return token
+  }
+
+  // Request notification permissions
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission()
+      setNotificationsEnabled(permission === 'granted')
+      return permission === 'granted'
+    }
+    return false
+  }
+
+  // Show browser notification
+  const showNotification = (message: Message) => {
+    if (!notificationsEnabled || message.user_id === currentUser.username) return
+    
+    // Don't show if page is visible and user is active
+    if (document.visibilityState === 'visible' && shouldAutoScroll()) return
+
+    const notification = new Notification(`New message from ${message.display_name}`, {
+      body: message.message_type === 'text' ? message.message_text : `Sent a ${message.message_type}`,
+      icon: message.profile_picture || '/default-avatar.png',
+      tag: `chat-${channel.id}`,
+      renotify: true
+    })
+
+    notification.onclick = () => {
+      window.focus()
+      notification.close()
+    }
+
+    // Auto close after 5 seconds
+    setTimeout(() => notification.close(), 5000)
+  }
+
+  // Play notification sound
+  const playNotificationSound = () => {
+    try {
+      console.log('🔊 Attempting to play notification sound')
+      // Try to use Web Audio API directly (more reliable than loading MP3)
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const oscillator = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
+      
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContext.destination)
+      
+      // Create a pleasant notification tone (two beeps)
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime)
+      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1)
+      
+      oscillator.start(audioContext.currentTime)
+      oscillator.stop(audioContext.currentTime + 0.1)
+      
+      // Second beep
+      setTimeout(() => {
+        try {
+          const oscillator2 = audioContext.createOscillator()
+          const gainNode2 = audioContext.createGain()
+          
+          oscillator2.connect(gainNode2)
+          gainNode2.connect(audioContext.destination)
+          
+          oscillator2.frequency.setValueAtTime(1000, audioContext.currentTime)
+          gainNode2.gain.setValueAtTime(0.1, audioContext.currentTime)
+          gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1)
+          
+          oscillator2.start(audioContext.currentTime)
+          oscillator2.stop(audioContext.currentTime + 0.1)
+          console.log('✅ Notification sound played successfully')
+        } catch (e) {
+          console.log('⚠️ Second beep failed:', e)
+        }
+      }, 150)
+      
+    } catch (error) {
+      console.log('❌ Could not play notification sound:', error)
+    }
   }
 
   // Socket connection
@@ -120,11 +202,28 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       if (data.channel_id === channel.id) {
         setMessages(prev => {
           // Check if message already exists (avoid duplicates)
-          const exists = prev.some(msg => msg.id === data.message.id)
-          if (exists) return prev
+          const exists = prev.some(msg => 
+            msg.id === data.message.id || 
+            (msg.id.startsWith('temp-') && msg.message_text === data.message.message_text && msg.user_id === data.message.user_id)
+          )
+          if (exists) {
+            // Replace temp message with real one
+            return prev.map(msg => 
+              msg.id.startsWith('temp-') && msg.message_text === data.message.message_text && msg.user_id === data.message.user_id
+                ? { ...data.message, _isNew: true }
+                : msg
+            )
+          }
           
-          return [...prev, data.message]
+          return [...prev, { ...data.message, _isNew: true }]
         })
+        
+        // Show notification for new messages from other users
+        if (data.message.user_id !== currentUser.username) {
+          showNotification(data.message)
+          playNotificationSound()
+          onChannelUpdate() // Update sidebar counters
+        }
         
         // Auto-scroll if user is near bottom
         setTimeout(() => {
@@ -156,9 +255,40 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     }
   }, [channel.id, currentUser.username])
 
-  // Load messages when channel changes
+  // Initialize notifications when component mounts
+  useEffect(() => {
+    if ('Notification' in window) {
+      if (Notification.permission === 'granted') {
+        setNotificationsEnabled(true)
+      } else if (Notification.permission === 'default') {
+        // Request permission after a short delay to not be too intrusive
+        setTimeout(() => {
+          requestNotificationPermission()
+        }, 2000)
+      }
+    }
+  }, [])
+
+  // Load messages when channel changes and set up polling
   useEffect(() => {
     loadMessages()
+    updateUserPresence('online')
+    
+    // Clear any existing polling interval
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current)
+    }
+    
+    // Set up polling for new messages
+    pollingIntervalRef.current = setInterval(() => {
+      pollForNewMessages()
+    }, 3000) // Poll every 3 seconds
+    
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+      }
+    }
   }, [channel.id])
 
   // Auto-scroll to bottom on initial load
@@ -227,11 +357,111 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     }
   }, [hasMore, loadingMore, messages])
 
+  const pollForNewMessages = async () => {
+    try {
+      const token = getCleanToken()
+      if (!token) {
+        console.log('❌ No token available for polling')
+        return
+      }
+
+      // Get the latest message timestamp
+      const latestMessage = messages[messages.length - 1]
+      if (!latestMessage) {
+        console.log('⏭️ No messages to poll after')
+        return
+      }
+
+      const params = new URLSearchParams({
+        after: latestMessage.created_at,
+        limit: '50'
+      })
+
+      console.log('🔄 Polling for new messages after:', latestMessage.created_at)
+
+      const response = await fetch(`/api/chat/channels/${channel.id}/messages?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log('📥 Polling response:', { 
+          messageCount: data.messages?.length || 0,
+          messages: data.messages?.map(m => ({ 
+            id: m.id, 
+            text: m.message_text?.substring(0, 50),
+            user_id: m.user_id,
+            display_name: m.display_name,
+            profile_picture: m.profile_picture
+          }))
+        })
+        
+        if (data.messages && data.messages.length > 0) {
+          setMessages(prev => {
+            // Filter out any duplicates
+            const existingIds = new Set(prev.map(m => m.id))
+            const newMessages = data.messages
+              .filter((m: Message) => !existingIds.has(m.id))
+              .map((m: Message) => ({ ...m, _isNew: true }))
+            
+            console.log('✨ New messages found:', newMessages.length)
+            
+            if (newMessages.length > 0) {
+              // Show notifications for new messages from other users
+              newMessages.forEach(message => {
+                if (message.user_id !== currentUser.username) {
+                  console.log('🔔 Showing notification for:', message.message_text)
+                  showNotification(message)
+                  playNotificationSound()
+                }
+              })
+              
+              onChannelUpdate() // Update sidebar counters
+              
+              // Auto-scroll if user is near bottom
+              setTimeout(() => {
+                if (shouldAutoScroll()) {
+                  scrollToBottom()
+                }
+              }, 100)
+            }
+            
+            return [...prev, ...newMessages]
+          })
+        }
+      } else {
+        console.error('❌ Polling failed:', response.status, response.statusText)
+      }
+    } catch (error) {
+      console.error('❌ Error polling for new messages:', error)
+    }
+  }
+
   const shouldAutoScroll = () => {
     if (!scrollAreaRef.current) return true
     
     const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef.current
     return scrollHeight - scrollTop - clientHeight < 100 // Within 100px of bottom
+  }
+
+  const updateUserPresence = async (status: 'online' | 'away' | 'busy' | 'offline') => {
+    try {
+      const token = getCleanToken()
+      if (!token) return
+
+      await fetch('/api/chat/presence', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status })
+      })
+    } catch (error) {
+      console.error('Error updating presence:', error)
+    }
   }
 
   const scrollToBottom = () => {
@@ -259,15 +489,42 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     file_attachment?: any
     reply_to_id?: string
   }) => {
-    if (!socket) return
-
     setSending(true)
+    
+    // Create optimistic message with temporary ID
+    const tempId = `temp-${Date.now()}-${Math.random()}`
+    const optimisticMessage: Message = {
+      id: tempId,
+      channel_id: channel.id,
+      user_id: currentUser.username,
+      display_name: currentUser.display_name,
+      profile_picture: currentUser.profile_picture,
+      message_text: messageData.message_text,
+      message_type: messageData.message_type || 'text',
+      file_attachment: messageData.file_attachment,
+      reply_to_id: messageData.reply_to_id,
+      reactions: [],
+      created_at: new Date().toISOString(),
+      edited: false,
+      deleted: false
+    }
+    
+    // Add message optimistically with animation
+    setMessages(prev => [...prev, optimisticMessage])
+    
+    // Auto-scroll to bottom for new message
+    setTimeout(() => {
+      scrollToBottom()
+    }, 50)
+
     try {
-      // Send via Socket.io for real-time delivery
-      socket.emit('send_message', {
-        channelId: channel.id,
-        ...messageData
-      })
+      // Send via Socket.io for real-time delivery if available
+      if (socket) {
+        socket.emit('send_message', {
+          channelId: channel.id,
+          ...messageData
+        })
+      }
       
       // Also call the API for persistence
       const response = await fetch(`/api/chat/channels/${channel.id}/messages`, {
@@ -279,11 +536,21 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
         body: JSON.stringify(messageData)
       })
 
-      if (!response.ok) {
+      if (response.ok) {
+        const data = await response.json()
+        // Replace temporary message with real one from server
+        setMessages(prev => prev.map(msg => 
+          msg.id === tempId ? { ...data.message, _isNew: true } : msg
+        ))
+      } else {
         console.error('Failed to send message via API')
+        // Remove optimistic message on failure
+        setMessages(prev => prev.filter(msg => msg.id !== tempId))
       }
     } catch (error) {
       console.error('Error sending message:', error)
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== tempId))
     } finally {
       setSending(false)
     }

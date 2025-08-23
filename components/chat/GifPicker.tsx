@@ -48,8 +48,8 @@ interface GifPickerProps {
   onClose: () => void
 }
 
-// Note: In production, you'd want to store this in environment variables
-const GIPHY_API_KEY = 'demo_api_key' // Replace with actual API key
+// Giphy API configuration
+const GIPHY_API_KEY = process.env.NEXT_PUBLIC_GIPHY_API_KEY || 'demo_api_key'
 const GIPHY_BASE_URL = 'https://api.giphy.com/v1/gifs'
 
 const categories = [
@@ -133,26 +133,40 @@ export function GifPicker({ onSelectGif, onClose }: GifPickerProps) {
           url = `${GIPHY_BASE_URL}/search?${params}`
       }
 
+      console.log('Fetching GIFs from:', url)
       const response = await fetch(url)
       
       if (!response.ok) {
-        throw new Error('Failed to fetch GIFs')
+        console.error('Giphy API error:', response.status, response.statusText)
+        throw new Error(`Failed to fetch GIFs: ${response.status} ${response.statusText}`)
       }
 
       const data = await response.json()
+      const newGifs = data.data || []
       
       if (replace) {
-        setGifs(data.data || [])
+        setGifs(newGifs)
         setOffset(20)
       } else {
-        setGifs(prev => [...prev, ...(data.data || [])])
+        // Filter out duplicates when appending
+        setGifs(prev => {
+          const existingIds = new Set(prev.map(g => g.id))
+          const uniqueNewGifs = newGifs.filter(gif => !existingIds.has(gif.id))
+          return [...prev, ...uniqueNewGifs]
+        })
         setOffset(prev => prev + 20)
       }
       
       setHasMore(data.pagination?.total_count > offset + 20)
     } catch (err) {
       console.error('Error loading GIFs:', err)
-      setError('Failed to load GIFs. Using demo mode.')
+      
+      // Check if it's a rate limit error
+      if (err instanceof Error && err.message.includes('429')) {
+        setError('API rate limit reached (100/hour for beta key). Try again later.')
+      } else {
+        setError('Failed to load GIFs. Using demo mode.')
+      }
       
       // Fallback to demo GIFs when API fails
       if (replace || gifs.length === 0) {
@@ -240,7 +254,7 @@ export function GifPicker({ onSelectGif, onClose }: GifPickerProps) {
 
       {/* Categories */}
       <div className="px-4 py-2 border-b border-gray-100">
-        <div className="flex space-x-1">
+        <div className="flex flex-wrap gap-1">
           {categories.map((category) => {
             const Icon = category.icon
             return (
@@ -250,7 +264,7 @@ export function GifPicker({ onSelectGif, onClose }: GifPickerProps) {
                 size="sm"
                 onClick={() => handleCategorySelect(category.id)}
                 className={cn(
-                  "h-8 px-3 text-xs",
+                  "h-8 px-2 text-xs flex-shrink-0",
                   selectedCategory === category.id && !searchQuery
                     ? "bg-blue-100 text-blue-700"
                     : "text-gray-600 hover:text-gray-900"
@@ -280,9 +294,9 @@ export function GifPicker({ onSelectGif, onClose }: GifPickerProps) {
         ref={scrollAreaRef}
       >
         <div className="grid grid-cols-2 gap-2">
-          {gifs.map((gif) => (
+          {gifs.map((gif, index) => (
             <button
-              key={gif.id}
+              key={`${gif.id}-${index}`}
               onClick={() => handleGifSelect(gif)}
               className="relative aspect-video bg-gray-100 rounded overflow-hidden hover:ring-2 hover:ring-blue-500 transition-all group"
             >

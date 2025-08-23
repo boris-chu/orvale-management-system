@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -19,6 +19,16 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
+import { motion, AnimatePresence } from 'framer-motion'
+
+// Helper function to add spacing between consecutive emojis
+const formatMessageWithEmojiSpacing = (text: string): string => {
+  // Regular expression to match emoji sequences
+  const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/gu
+  
+  // Add a thin space between consecutive emojis
+  return text.replace(/(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/gu, '$1 $2')
+}
 
 interface Message {
   id: string
@@ -47,6 +57,7 @@ interface Message {
   updated_at?: string
   edited?: boolean
   deleted?: boolean
+  _isNew?: boolean
 }
 
 interface User {
@@ -158,7 +169,7 @@ export function MessageBubble({
             )}
             {message.message_text && (
               <div className="text-sm text-gray-900">
-                {message.message_text}
+                {formatMessageWithEmojiSpacing(message.message_text)}
               </div>
             )}
           </div>
@@ -167,7 +178,7 @@ export function MessageBubble({
       case 'system':
         return (
           <div className="text-sm text-gray-500 italic">
-            {message.message_text}
+            {formatMessageWithEmojiSpacing(message.message_text)}
           </div>
         )
 
@@ -186,7 +197,7 @@ export function MessageBubble({
               </div>
             )}
             <div className="text-sm text-gray-900 whitespace-pre-wrap break-words">
-              {message.message_text}
+              {formatMessageWithEmojiSpacing(message.message_text)}
             </div>
             {message.ticket_reference && (
               <Badge variant="outline" className="text-xs">
@@ -204,7 +215,9 @@ export function MessageBubble({
     return (
       <div className="flex flex-wrap gap-1 mt-2">
         {message.reactions.map((reaction) => {
-          const userReacted = reaction.users.some(u => u.user_id === currentUser.username)
+          const userReacted = reaction.users && Array.isArray(reaction.users) 
+            ? reaction.users.some(u => u.user_id === currentUser.username)
+            : false
           return (
             <TooltipProvider key={reaction.emoji}>
               <Tooltip>
@@ -226,7 +239,10 @@ export function MessageBubble({
                 </TooltipTrigger>
                 <TooltipContent>
                   <div className="text-xs">
-                    {reaction.users.map(u => u.display_name).join(', ')}
+                    {reaction.users && Array.isArray(reaction.users) 
+                      ? reaction.users.map(u => u.display_name).join(', ')
+                      : 'No users'
+                    }
                   </div>
                 </TooltipContent>
               </Tooltip>
@@ -239,13 +255,25 @@ export function MessageBubble({
 
   return (
     <div className={cn("group", isGrouped ? "space-y-1" : "space-y-3")}>
-      {messages.map((message, index) => (
-        <div
-          key={message.id}
-          className="flex space-x-3 hover:bg-gray-50 rounded-lg px-2 py-1 -mx-2 transition-colors"
-          onMouseEnter={() => setHoveredMessage(message.id)}
-          onMouseLeave={() => setHoveredMessage(null)}
-        >
+      <AnimatePresence>
+        {messages.map((message, index) => (
+          <motion.div
+            key={message.id}
+            initial={message._isNew ? { opacity: 0, y: 20, scale: 0.95 } : false}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ 
+              duration: 0.3,
+              ease: "easeOut"
+            }}
+            className={cn(
+              "flex space-x-3 rounded-lg px-2 py-1 -mx-2 transition-all",
+              message._isNew && "animate-pulse-once",
+              "hover:bg-gray-50"
+            )}
+            onMouseEnter={() => setHoveredMessage(message.id)}
+            onMouseLeave={() => setHoveredMessage(null)}
+          >
           {/* Avatar */}
           <div className="flex-shrink-0">
             {showAvatar && index === 0 ? (
@@ -353,8 +381,9 @@ export function MessageBubble({
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
       ))}
+      </AnimatePresence>
     </div>
   )
 }

@@ -19,3 +19,9 @@ Screenshot*.png
 # Log files
 logs/*.log
 logs/*.log.*
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development

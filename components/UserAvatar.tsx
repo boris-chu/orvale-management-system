@@ -50,10 +50,15 @@ const presenceLabels = {
   offline: 'Offline'
 };
 
-const getInitials = (name?: string): string => {
-  if (!name) return 'N/A';
-  return name
+const getInitials = (name?: string, username?: string): string => {
+  // Use display_name first (if not empty), then fallback to username, then 'U' for User
+  const displayName = (name && name.trim()) || (username && username.trim()) || 'User';
+  
+  if (displayName === 'User') return 'U';
+  
+  return displayName
     .split(' ')
+    .filter(part => part.length > 0) // Filter out empty parts
     .map(part => part.charAt(0))
     .join('')
     .toUpperCase()
@@ -93,8 +98,8 @@ export function UserAvatar({
   // Legacy support
   showOnlineIndicator = false 
 }: UserAvatarProps) {
-  const initials = getInitials(user.display_name);
-  const gradient = getGradientFromName(user.display_name);
+  const initials = getInitials(user.display_name, user.username);
+  const gradient = getGradientFromName(user.display_name || user.username);
   
   // Show presence if either new prop or legacy prop is true
   const shouldShowPresence = showPresenceStatus || showOnlineIndicator;
