@@ -5,7 +5,7 @@ import { MessageBubble } from './MessageBubble'
 import { MessageInput } from './MessageInput'
 import { TypingIndicator } from './TypingIndicator'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
+// import { ScrollArea } from '@/components/ui/scroll-area' // Using native scroll instead
 import { Badge } from '@/components/ui/badge'
 import { 
   Hash, 
@@ -768,11 +768,12 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
 
       {/* Messages Area */}
       <div className="flex-1 relative overflow-hidden">
-        <ScrollArea 
-          className="absolute inset-0 px-6 py-4"
-          onScrollCapture={handleScroll}
+        <div 
+          className="h-full w-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+          onScroll={handleScroll}
           ref={scrollAreaRef}
         >
+          <div className="px-6 py-4">
           {/* Load More Button */}
           {hasMore && (
             <div className="text-center mb-4">
@@ -812,7 +813,8 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
           )}
 
           <div ref={messagesEndRef} />
-        </ScrollArea>
+          </div>
+        </div>
 
         {/* Scroll to Bottom Button */}
         {showScrollToBottom && (
