@@ -88,14 +88,20 @@ export async function GET(
             
             const queryParams = [channelId]
             
-            if (lastMessageId) {
+            if (lastMessageId && lastMessageId !== '') {
               query += ' AND cm.id > ?'
-              queryParams.push(lastMessageId)
+              queryParams.push(parseInt(lastMessageId))
             }
             
             query += ' ORDER BY cm.created_at ASC LIMIT 50'
 
             const messages = await queryAsync(query, queryParams)
+
+            // Only send if there are actually new messages
+            if (messages.length > 0) {
+              // Update lastMessageId to prevent sending same messages again
+              lastMessageId = messages[messages.length - 1].id.toString()
+            }
 
             if (messages.length > 0) {
               const data = `data: ${JSON.stringify({
@@ -108,16 +114,12 @@ export async function GET(
               controller.enqueue(encoder.encode(data))
             }
 
-            // Send heartbeat to keep connection alive
-            const heartbeat = `data: ${JSON.stringify({ type: 'heartbeat', timestamp: Date.now() })}\n\n`
-            controller.enqueue(encoder.encode(heartbeat))
-
           } catch (error) {
             console.error('SSE polling error:', error)
             const errorData = `data: ${JSON.stringify({ type: 'error', error: 'Failed to fetch messages' })}\n\n`
             controller.enqueue(encoder.encode(errorData))
           }
-        }, 2000) // Poll every 2 seconds (more efficient than 1.5s)
+        }, 3000) // Poll every 3 seconds to reduce server load
 
         // Clean up interval when stream closes
         const cleanup = () => {

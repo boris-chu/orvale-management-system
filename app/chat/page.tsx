@@ -111,6 +111,7 @@ export default function ChatPage() {
 
       if (response.ok) {
         const data = await response.json()
+        console.log('📋 Loaded channels:', data.channels?.length || 0, data.channels)
         setChannels(data.channels || [])
       } else if (response.status === 401) {
         setError('Authentication required. Please refresh the page.')
@@ -148,6 +149,7 @@ export default function ChatPage() {
 
       if (response.ok) {
         const data = await response.json()
+        console.log('💬 Loaded direct messages:', data.conversations?.length || 0, data.conversations)
         setDirectMessages(data.conversations || [])
       } else {
         // It's ok if DMs fail - user might not have permission
@@ -251,6 +253,13 @@ export default function ChatPage() {
       </div>
     )
   }
+
+  // Debug: Chat page state
+  // console.log('🔍 Chat page render state:', {
+  //   channelsLength: channels.length,
+  //   directMessagesLength: directMessages.length,
+  //   selectedChannel: selectedChannel?.id
+  // })
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">

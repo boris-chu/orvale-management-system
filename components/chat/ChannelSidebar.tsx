@@ -163,6 +163,13 @@ export function ChannelSidebar({
     }
   }
 
+  // Debug: Sidebar rendering properly with data
+  // console.log('🔍 ChannelSidebar render:', {
+  //   channelsCount: channels.length,
+  //   directMessagesCount: directMessages.length,
+  //   currentUser: currentUser?.username
+  // })
+
   return (
     <div className="h-full flex flex-col">
       {/* Search */}
