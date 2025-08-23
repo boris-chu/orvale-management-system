@@ -128,20 +128,22 @@ export async function DELETE(
 
     const { messageId } = await params
 
-    // Check if message exists and user owns it or has admin permissions
-    const message = await queryAsync(`
+    // Check if message exists
+    const messageCheck = await queryAsync(`
       SELECT cm.*, c.id as channel_id
       FROM chat_messages cm
       JOIN chat_channels c ON cm.channel_id = c.id
       WHERE cm.id = ? AND c.active = 1
     `, [messageId])
 
-    if (!message || message.length === 0) {
+    if (!messageCheck || messageCheck.length === 0) {
       return NextResponse.json({ error: 'Message not found' }, { status: 404 })
     }
 
+    const message = messageCheck[0]
+
     // Check permissions - user owns message OR has admin permissions
-    const isOwner = message[0].user_id === authResult.user.username
+    const isOwner = message.user_id === authResult.user.username
     const isAdmin = authResult.user.permissions?.includes('chat.manage_channels')
 
     if (!isOwner && !isAdmin) {
