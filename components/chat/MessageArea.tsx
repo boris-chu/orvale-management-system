@@ -94,6 +94,12 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     filename?: string
     downloadUrl?: string
   } | null>(null)
+  const [replyingTo, setReplyingTo] = useState<{
+    id: string
+    user_name: string
+    message_text: string
+  } | null>(null)
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -133,6 +139,94 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       return permission === 'granted'
     }
     return false
+  }
+
+  // Edit message function
+  const handleEditMessage = async (messageId: string, newText: string) => {
+    try {
+      const token = getCleanToken()
+      if (!token) {
+        console.error('No authentication token available')
+        return false
+      }
+
+      console.log('✏️ Editing message:', messageId, newText.substring(0, 50) + '...')
+
+      const response = await fetch(`/api/chat/messages/${messageId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message_text: newText })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log('✅ Message edited successfully:', data.message.id)
+        
+        // Update local message
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageId 
+            ? { ...data.message, _isEdited: true }
+            : msg
+        ))
+        
+        setEditingMessage(null)
+        return true
+      } else {
+        const errorData = await response.json()
+        console.error('❌ Failed to edit message:', errorData.error)
+        alert(`Failed to edit message: ${errorData.error}`)
+        return false
+      }
+    } catch (error) {
+      console.error('Error editing message:', error)
+      alert('Failed to edit message. Please try again.')
+      return false
+    }
+  }
+
+  // Delete message function
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      const token = getCleanToken()
+      if (!token) {
+        console.error('No authentication token available')
+        return false
+      }
+
+      console.log('🗑️ Deleting message:', messageId)
+
+      const response = await fetch(`/api/chat/messages/${messageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        console.log('✅ Message deleted successfully')
+        
+        // Update local message to show as deleted
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageId 
+            ? { ...msg, deleted: true, message_text: '', _isDeleted: true }
+            : msg
+        ))
+        
+        return true
+      } else {
+        const errorData = await response.json()
+        console.error('❌ Failed to delete message:', errorData.error)
+        alert(`Failed to delete message: ${errorData.error}`)
+        return false
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error)
+      alert('Failed to delete message. Please try again.')
+      return false
+    }
   }
 
   // Show browser notification
@@ -802,16 +896,19 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
                   setLightboxImage({ src, alt, filename, downloadUrl })
                 }}
                 onReply={(message) => {
-                  // TODO: Implement reply functionality
-                  alert(`Reply to ${message.display_name}:\n\n"${message.message_text}"\n\nThis feature will be implemented in a future update.`)
+                  setReplyingTo({
+                    id: message.id,
+                    user_name: message.display_name,
+                    message_text: message.message_text
+                  })
                 }}
                 onEdit={(message) => {
-                  // TODO: Implement edit functionality
-                  alert(`Edit message:\n\n"${message.message_text}"\n\nThis feature will be implemented in a future update.`)
+                  setEditingMessage(message)
                 }}
-                onDelete={(message) => {
-                  // TODO: Implement delete functionality
-                  alert(`Delete message from ${message.display_name}:\n\n"${message.message_text}"\n\nThis feature will be implemented in a future update.`)
+                onDelete={async (message) => {
+                  if (confirm('Are you sure you want to delete this message? This cannot be undone.')) {
+                    await handleDeleteMessage(message.id)
+                  }
                 }}
               />
             ))}
@@ -846,8 +943,13 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
           onSendMessage={handleSendMessage}
           onTyping={handleTyping}
           disabled={sending}
-          placeholder={`Message ${getChannelDisplayName()}`}
+          placeholder={editingMessage ? `Edit message...` : `Message ${getChannelDisplayName()}`}
           currentUser={currentUser}
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(null)}
+          editingMessage={editingMessage}
+          onEditMessage={handleEditMessage}
+          onCancelEdit={() => setEditingMessage(null)}
         />
       </div>
       

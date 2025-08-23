@@ -39,6 +39,13 @@ interface MessageInputProps {
     message_text: string
   } | null
   onCancelReply?: () => void
+  editingMessage?: {
+    id: string
+    message_text: string
+    display_name: string
+  } | null
+  onEditMessage?: (messageId: string, newText: string) => Promise<boolean>
+  onCancelEdit?: () => void
 }
 
 export function MessageInput({
@@ -48,7 +55,10 @@ export function MessageInput({
   placeholder = "Type a message...",
   currentUser,
   replyingTo,
-  onCancelReply
+  onCancelReply,
+  editingMessage,
+  onEditMessage,
+  onCancelEdit
 }: MessageInputProps) {
   const [message, setMessage] = useState('')
   const [showGifPicker, setShowGifPicker] = useState(false)
@@ -64,6 +74,16 @@ export function MessageInput({
     // Focus input when component mounts
     inputRef.current?.focus()
   }, [])
+
+  // Populate input when editing a message
+  useEffect(() => {
+    if (editingMessage) {
+      setMessage(editingMessage.message_text)
+      setTimeout(() => inputRef.current?.focus(), 100)
+    } else {
+      setMessage('')
+    }
+  }, [editingMessage])
 
   useEffect(() => {
     // Handle typing indicator
@@ -103,14 +123,24 @@ export function MessageInput({
     onTyping(false)
 
     try {
-      await onSendMessage({
-        message_text: trimmedMessage,
-        message_type: 'text',
-        reply_to_id: replyingTo?.id
-      })
-      
-      setMessage('')
-      if (onCancelReply) onCancelReply()
+      if (editingMessage && onEditMessage) {
+        // Edit mode
+        const success = await onEditMessage(editingMessage.id, trimmedMessage)
+        if (success) {
+          setMessage('')
+          if (onCancelEdit) onCancelEdit()
+        }
+      } else {
+        // New message mode
+        await onSendMessage({
+          message_text: trimmedMessage,
+          message_type: 'text',
+          reply_to_id: replyingTo?.id
+        })
+        
+        setMessage('')
+        if (onCancelReply) onCancelReply()
+      }
     } catch (error) {
       console.error('Error sending message:', error)
     } finally {
@@ -242,8 +272,12 @@ export function MessageInput({
       handleSubmit(e as any)
     }
     
-    if (e.key === 'Escape' && replyingTo && onCancelReply) {
-      onCancelReply()
+    if (e.key === 'Escape') {
+      if (editingMessage && onCancelEdit) {
+        onCancelEdit()
+      } else if (replyingTo && onCancelReply) {
+        onCancelReply()
+      }
     }
   }
 
@@ -280,6 +314,30 @@ export function MessageInput({
               variant="ghost"
               size="sm"
               onClick={onCancelReply}
+              className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+            >
+              ×
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Edit Preview */}
+      {editingMessage && (
+        <div className="flex items-start space-x-2 p-3 bg-orange-50 rounded-lg border-l-4 border-orange-500">
+          <div className="flex-1 min-w-0">
+            <div className="text-xs text-orange-600 mb-1">
+              Editing message from {editingMessage.display_name}
+            </div>
+            <div className="text-sm text-gray-700 truncate">
+              Original: {editingMessage.message_text}
+            </div>
+          </div>
+          {onCancelEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onCancelEdit}
               className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
             >
               ×
@@ -399,7 +457,7 @@ export function MessageInput({
               type="submit"
               disabled={!message.trim() || disabled || sending || message.length > 4000}
               className="h-10 w-10 p-0"
-              title="Send message"
+              title={editingMessage ? "Save changes" : "Send message"}
             >
               {sending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
