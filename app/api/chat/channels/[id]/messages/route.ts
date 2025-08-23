@@ -119,12 +119,42 @@ export async function GET(
       })
     }
 
-    // Parse JSON fields
-    const messagesWithReactions = messages.map(message => ({
-      ...message,
-      reactions: message.reactions ? JSON.parse(message.reactions) : [],
-      file_attachment: message.file_attachment ? JSON.parse(message.file_attachment) : null
-    }))
+    // Parse JSON fields with error handling
+    const messagesWithReactions = messages.map(message => {
+      let parsedReactions = []
+      let parsedFileAttachment = null
+
+      // Parse reactions safely
+      if (message.reactions) {
+        try {
+          parsedReactions = JSON.parse(message.reactions)
+        } catch (error) {
+          console.warn('⚠️ Failed to parse reactions JSON:', message.id, error)
+          parsedReactions = []
+        }
+      }
+
+      // Parse file_attachment safely
+      if (message.file_attachment) {
+        try {
+          // Check if it's already an object (shouldn't happen, but defensive)
+          if (typeof message.file_attachment === 'object') {
+            parsedFileAttachment = message.file_attachment
+          } else {
+            parsedFileAttachment = JSON.parse(message.file_attachment)
+          }
+        } catch (error) {
+          console.warn('⚠️ Failed to parse file_attachment JSON:', message.id, error)
+          parsedFileAttachment = null
+        }
+      }
+
+      return {
+        ...message,
+        reactions: parsedReactions,
+        file_attachment: parsedFileAttachment
+      }
+    })
 
     // Update last read timestamp for the user
     await runAsync(`
@@ -275,12 +305,27 @@ export async function POST(
 
     const messageData = fullMessage[0]
 
+    // Parse file_attachment safely for response
+    let parsedFileAttachment = null
+    if (messageData.file_attachment) {
+      try {
+        if (typeof messageData.file_attachment === 'object') {
+          parsedFileAttachment = messageData.file_attachment
+        } else {
+          parsedFileAttachment = JSON.parse(messageData.file_attachment)
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to parse file_attachment JSON in POST response:', messageData.id, error)
+        parsedFileAttachment = null
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: {
         ...messageData,
         reactions: [],
-        file_attachment: messageData.file_attachment ? JSON.parse(messageData.file_attachment) : null
+        file_attachment: parsedFileAttachment
       }
     }, { status: 201 })
 
