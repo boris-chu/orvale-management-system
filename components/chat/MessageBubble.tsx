@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
+import { formatLocalTime, formatMessageTime, formatLocalDateTime } from '@/lib/date-utils'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // Helper function to add spacing between consecutive emojis
@@ -106,8 +107,8 @@ export function MessageBubble({
   }
 
   const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp)
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    // Use our utility to show appropriate time format
+    return formatMessageTime(timestamp)
   }
 
   const renderMessageContent = (message: Message) => {
@@ -291,7 +292,18 @@ export function MessageBubble({
               <div className="w-8 h-8 flex items-center justify-center">
                 {hoveredMessage === message.id && (
                   <span className="text-xs text-gray-400">
-                    {formatTime(message.created_at)}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-default">
+                            {formatTime(message.created_at)}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {formatLocalDateTime(message.created_at)}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </span>
                 )}
               </div>
@@ -306,9 +318,18 @@ export function MessageBubble({
                 <span className="font-semibold text-sm text-gray-900">
                   {message.display_name}
                 </span>
-                <span className="text-xs text-gray-500">
-                  {formatTime(message.created_at)}
-                </span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-xs text-gray-500 cursor-default">
+                        {formatTime(message.created_at)}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {formatLocalDateTime(message.created_at)}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 {message.edited && (
                   <span className="text-xs text-gray-400">(edited)</span>
                 )}
