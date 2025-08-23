@@ -101,13 +101,16 @@ export function UserProfileMenu({
       }
     }
 
-    // Initial fetch
-    fetchPresence()
+    // Initial fetch with a small delay to allow chat page to set presence first
+    const timeoutId = setTimeout(fetchPresence, 1000)
 
     // Refresh presence every 10 seconds
     const interval = setInterval(fetchPresence, 10000)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearTimeout(timeoutId)
+      clearInterval(interval)
+    }
   }, [user, showPresence])
 
   // Close menu when clicking outside

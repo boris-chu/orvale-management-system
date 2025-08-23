@@ -12,7 +12,7 @@
   </style>
 </head>
 <body>
-<p class="p1"><span class="s1">main-app.js?v=1755922650632:1181 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools</span></p>
+<p class="p1"><span class="s1">main-app.js?v=1755924116124:1181 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools</span></p>
 <p class="p1"><span class="s1">AuthContext.tsx:45 🔍 AuthContext Debug: {hasToken: true, hasStoredUser: true, tokenValue: 'eyJhbGciOi...', storedUserData: {…}}</span></p>
 <p class="p1"><span class="s1">AuthContext.tsx:55 📱 Using stored user data: {id: 85, username: 'jane.smith', display_name: 'Jane Smith', email: 'jane.smith@orvale.gov', role: 'helpdesk_supervisor', …}</span></p>
 <p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
@@ -21,252 +21,142 @@
 <p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
 <p class="p1"><span class="s1">AuthContext.tsx:70 🔄 Server response: {id: 85, username: 'jane.smith', display_name: 'Jane Smith', email: 'jane.smith@orvale.gov', role: 'helpdesk_supervisor', …}</span></p>
 <p class="p1"><span class="s1">AuthContext.tsx:74 ✅ Updated with fresh user data: {id: 85, username: 'jane.smith', display_name: 'Jane Smith', email: 'jane.smith@orvale.gov', role: 'helpdesk_supervisor', …}</span></p>
-<p class="p1"><span class="s1">VM24617 page.tsx:113 🔍 Chat loadChannels debug: {hasToken: true, tokenPrefix: 'eyJhbGciOi...', tokenParts: 3, user: 'jane.smith', permissions: 55}</span></p>
-<p class="p1"><span class="s1">VM24617 page.tsx:129 🔍 Chat channels API response: {status: 200, ok: true, statusText: 'OK'}</span></p>
-<p class="p1"><span class="s1">VM24617 page.tsx:137 📋 Loaded channels: 6 (6) [{…}, {…}, {…}, {…}, {…}, {…}]</span></p>
-<p class="p1"><span class="s1">VM24617 page.tsx:171 💬 Loaded direct messages: 1 [{…}]</span></p>
+<p class="p1"><span class="s1">page.tsx:37 👤 Chat page: User loaded: {username: 'jane.smith', display_name: 'Jane Smith', role: 'helpdesk_supervisor', permissions: 55, hasAuthToken: true, …}</span></p>
+<p class="p1"><span class="s1">page.tsx:83 🔍 Chat loadChannels debug: {hasToken: true, tokenPrefix: 'eyJhbGciOi...', tokenParts: 3, user: 'jane.smith', permissions: 55}</span></p>
+<p class="p1"><span class="s1">page.tsx:102 🔍 Chat channels API response: {status: 200, ok: true, statusText: 'OK'}</span></p>
+<p class="p1"><span class="s1">page.tsx:110 📋 Loaded channels: 6 (6) [{…}, {…}, {…}, {…}, {…}, {…}]</span></p>
+<p class="p1"><span class="s1">page.tsx:148 💬 Loaded direct messages: 1 [{…}]</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:59 🔍 UserProfileMenu: Fetching presence with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:95 🔍 ChannelSidebar: Loading online users with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:59 🔍 UserProfileMenu: Fetching presence with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:95 🔍 ChannelSidebar: Loading online users with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:67 📡 UserProfileMenu: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:71 📊 UserProfileMenu: Presence data received: {online: 0, away: 0, busy: 0, offline: 0}</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:86 ❓ UserProfileMenu: User not found in presence data, defaulting to online</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:67 📡 UserProfileMenu: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:71 📊 UserProfileMenu: Presence data received: {online: 0, away: 0, busy: 0, offline: 0}</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:86 ❓ UserProfileMenu: User not found in presence data, defaulting to online</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:106 📡 ChannelSidebar: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:110 🔍 Sidebar presence data: {online: Array(0), away: Array(0), busy: Array(0), offline: Array(0)}</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:116 👥 Sidebar active users: 0<span class="Apple-converted-space"> </span></span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:106 📡 ChannelSidebar: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:110 🔍 Sidebar presence data: {online: Array(0), away: Array(0), busy: Array(0), offline: Array(0)}</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:116 👥 Sidebar active users: 0<span class="Apple-converted-space"> </span></span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:59 🔍 UserProfileMenu: Fetching presence with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:95 🔍 ChannelSidebar: Loading online users with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:67 📡 UserProfileMenu: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:71 📊 UserProfileMenu: Presence data received: {online: 0, away: 0, busy: 0, offline: 0}</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:86 ❓ UserProfileMenu: User not found in presence data, defaulting to online</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:106 📡 ChannelSidebar: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:110 🔍 Sidebar presence data: {online: Array(0), away: Array(0), busy: Array(0), offline: Array(0)}</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:116 👥 Sidebar active users: 0<span class="Apple-converted-space"> </span></span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:59 🔍 UserProfileMenu: Fetching presence with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:95 🔍 ChannelSidebar: Loading online users with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:67 📡 UserProfileMenu: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:71 📊 UserProfileMenu: Presence data received: {online: 0, away: 0, busy: 0, offline: 0}</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:86 ❓ UserProfileMenu: User not found in presence data, defaulting to online</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:106 📡 ChannelSidebar: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:110 🔍 Sidebar presence data: {online: Array(0), away: Array(0), busy: Array(0), offline: Array(0)}</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:116 👥 Sidebar active users: 0<span class="Apple-converted-space"> </span></span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:59 🔍 UserProfileMenu: Fetching presence with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:95 🔍 ChannelSidebar: Loading online users with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:67 📡 UserProfileMenu: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:71 📊 UserProfileMenu: Presence data received: {online: 0, away: 0, busy: 0, offline: 0}</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:86 ❓ UserProfileMenu: User not found in presence data, defaulting to online</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:106 📡 ChannelSidebar: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:110 🔍 Sidebar presence data: {online: Array(0), away: Array(0), busy: Array(0), offline: Array(0)}</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:116 👥 Sidebar active users: 0<span class="Apple-converted-space"> </span></span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:59 🔍 UserProfileMenu: Fetching presence with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:95 🔍 ChannelSidebar: Loading online users with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:67 📡 UserProfileMenu: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:71 📊 UserProfileMenu: Presence data received: {online: 0, away: 0, busy: 0, offline: 0}</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:86 ❓ UserProfileMenu: User not found in presence data, defaulting to online</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:106 📡 ChannelSidebar: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:110 🔍 Sidebar presence data: {online: Array(0), away: Array(0), busy: Array(0), offline: Array(0)}</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:116 👥 Sidebar active users: 0<span class="Apple-converted-space"> </span></span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:59 🔍 UserProfileMenu: Fetching presence with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:95 🔍 ChannelSidebar: Loading online users with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:67 📡 UserProfileMenu: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:71 📊 UserProfileMenu: Presence data received: {online: 0, away: 0, busy: 0, offline: 0}</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:86 ❓ UserProfileMenu: User not found in presence data, defaulting to online</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:106 📡 ChannelSidebar: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:110 🔍 Sidebar presence data: {online: Array(0), away: Array(0), busy: Array(0), offline: Array(0)}</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:116 👥 Sidebar active users: 0<span class="Apple-converted-space"> </span></span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:59 🔍 UserProfileMenu: Fetching presence with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:95 🔍 ChannelSidebar: Loading online users with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:67 📡 UserProfileMenu: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:71 📊 UserProfileMenu: Presence data received: {online: 0, away: 0, busy: 0, offline: 0}</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:86 ❓ UserProfileMenu: User not found in presence data, defaulting to online</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:106 📡 ChannelSidebar: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:110 🔍 Sidebar presence data: {online: Array(0), away: Array(0), busy: Array(0), offline: Array(0)}</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:116 👥 Sidebar active users: 0<span class="Apple-converted-space"> </span></span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:59 🔍 UserProfileMenu: Fetching presence with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:95 🔍 ChannelSidebar: Loading online users with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:67 📡 UserProfileMenu: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:71 📊 UserProfileMenu: Presence data received: {online: 0, away: 0, busy: 0, offline: 0}</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:86 ❓ UserProfileMenu: User not found in presence data, defaulting to online</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:106 📡 ChannelSidebar: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:110 🔍 Sidebar presence data: {online: Array(0), away: Array(0), busy: Array(0), offline: Array(0)}</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:116 👥 Sidebar active users: 0<span class="Apple-converted-space"> </span></span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:202 🔌 Setting up SSE connection for real-time updates</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:100 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:110 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:100 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:110 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:425 🔍 Loading messages: {channelId: 15, channelName: 'DM: Jane Smith &amp; Boris Chu', channelType: 'direct', hasToken: true, tokenPreview: 'eyJhbGciOiJIUzI1NiIs...', …}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:100 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:110 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:100 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:110 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:202 🔌 Setting up SSE connection for real-time updates</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:100 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:110 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:100 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:110 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:425 🔍 Loading messages: {channelId: 15, channelName: 'DM: Jane Smith &amp; Boris Chu', channelType: 'direct', hasToken: true, tokenPreview: 'eyJhbGciOiJIUzI1NiIs...', …}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:100 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:110 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
 <p class="p1"><span class="s1">hot-reloader-app.tsx:278 [Fast Refresh] rebuilding</span></p>
-<p class="p1"><span class="s1">report-hmr-latency.ts:26 [Fast Refresh] done in 363ms</span></p>
+<p class="p1"><span class="s1">report-hmr-latency.ts:26 [Fast Refresh] done in 302ms</span></p>
 <p class="p1"><span class="s1">hot-reloader-app.tsx:278 [Fast Refresh] rebuilding</span></p>
-<p class="p1"><span class="s1">report-hmr-latency.ts:26 [Fast Refresh] done in 219ms</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:136 🔌 Setting up SSE connection for real-time updates</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:50 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:59 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:50 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:59 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:363 🔍 Loading messages: {channelId: 15, channelName: 'DM: Jane Smith &amp; Boris Chu', channelType: 'direct', hasToken: true, tokenPreview: 'eyJhbGciOiJIUzI1NiIs...', …}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:50 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:59 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:50 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:59 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:136 🔌 Setting up SSE connection for real-time updates</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:50 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:59 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:50 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:59 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:363 🔍 Loading messages: {channelId: 15, channelName: 'DM: Jane Smith &amp; Boris Chu', channelType: 'direct', hasToken: true, tokenPreview: 'eyJhbGciOiJIUzI1NiIs...', …}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:50 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:59 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:148 ✅ SSE connection established</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:157 🔗 SSE connected to channel: 15</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:382 📊 API message data sample: (2) [{…}, {…}]</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:382 📊 API message data sample: (2) [{…}, {…}]</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:161 📥 New messages via SSE: 1</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:186 🔔 Showing notification for SSE message: does this work?</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:99 🔊 Attempting to play notification sound</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:186 🔔 Showing notification for SSE message: does this work?</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:99 🔊 Attempting to play notification sound</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:124 ✅ Notification sound played successfully</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:124 ✅ Notification sound played successfully</span></p>
-<p class="p1"><span class="s1">hot-reloader-app.tsx:278 [Fast Refresh] rebuilding</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:50 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
-<p class="p1"><span class="s1">VM24624 MessageArea.tsx:59 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
-<p class="p1"><span class="s1">report-hmr-latency.ts:26 [Fast Refresh] done in 1627ms</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">page.tsx:75 🔍 Chat loadChannels debug: {hasToken: true, tokenPrefix: 'eyJhbGciOi...', tokenParts: 3, user: 'jane.smith', permissions: 55}</span></p>
-<p class="p1"><span class="s1">page.tsx:75 🔍 Chat loadChannels debug: {hasToken: true, tokenPrefix: 'eyJhbGciOi...', tokenParts: 3, user: 'jane.smith', permissions: 55}</span></p>
-<p class="p1"><span class="s1">page.tsx:94 🔍 Chat channels API response: {status: 200, ok: true, statusText: 'OK'}</span></p>
-<p class="p1"><span class="s1">page.tsx:102 📋 Loaded channels: 6 (6) [{…}, {…}, {…}, {…}, {…}, {…}]</span></p>
-<p class="p1"><span class="s1">page.tsx:140 💬 Loaded direct messages: 1 [{…}]</span></p>
-<p class="p1"><span class="s1">page.tsx:94 🔍 Chat channels API response: {status: 200, ok: true, statusText: 'OK'}</span></p>
-<p class="p1"><span class="s1">page.tsx:102 📋 Loaded channels: 6 (6) [{…}, {…}, {…}, {…}, {…}, {…}]</span></p>
-<p class="p1"><span class="s1">page.tsx:140 💬 Loaded direct messages: 1 [{…}]</span></p>
-<p class="p1"><span class="s1">hot-reloader-app.tsx:278 [Fast Refresh] rebuilding</span></p>
-<p class="p1"><span class="s1">report-hmr-latency.ts:26 [Fast Refresh] done in 307ms</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">hot-reloader-app.tsx:278 [Fast Refresh] rebuilding</span></p>
-<p class="p1"><span class="s1">report-hmr-latency.ts:26 [Fast Refresh] done in 235ms</span></p>
-<p class="p1"><span class="s1">hot-reloader-app.tsx:278 [Fast Refresh] rebuilding</span></p>
-<p class="p1"><span class="s1">hot-reloader-app.tsx:278 [Fast Refresh] rebuilding</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.tsx:50 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 404 (Not Found)</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.useEffect.fetchPresence @ UserProfileMenu.tsx:50</span></p>
-<p class="p1"><span class="s1">report-hmr-latency.ts:26 [Fast Refresh] done in 94ms</span></p>
-<p class="p1"><span class="s1">report-hmr-latency.ts:26 [Fast Refresh] done in 360ms</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.tsx:50 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.useEffect.fetchPresence @ UserProfileMenu.tsx:50</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.tsx:50 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.useEffect.fetchPresence @ UserProfileMenu.tsx:50</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.tsx:50 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.useEffect.fetchPresence @ UserProfileMenu.tsx:50</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.tsx:50 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.useEffect.fetchPresence @ UserProfileMenu.tsx:50</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.tsx:50 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.useEffect.fetchPresence @ UserProfileMenu.tsx:50</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.tsx:50 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.useEffect.fetchPresence @ UserProfileMenu.tsx:50</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.tsx:50 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.useEffect.fetchPresence @ UserProfileMenu.tsx:50</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.tsx:50 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.useEffect.fetchPresence @ UserProfileMenu.tsx:50</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.tsx:50 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.useEffect.fetchPresence @ UserProfileMenu.tsx:50</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.tsx:50 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.useEffect.fetchPresence @ UserProfileMenu.tsx:50</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.tsx:50 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.useEffect.fetchPresence @ UserProfileMenu.tsx:50</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.tsx:50 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">UserProfileMenu.useEffect.fetchPresence @ UserProfileMenu.tsx:50</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:74 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence/cleanup 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:74</span></p>
-<p class="p1"><span class="s1">VM24618 ChannelSidebar.tsx:75 <span class="Apple-converted-space">  </span>GET http://localhost:3000/api/chat/presence 500 (Internal Server Error)</span></p>
-<p class="p1"><span class="s1">loadOnlineUsers @ VM24618 ChannelSidebar.tsx:75</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">Refused to apply style from '&lt;URL&gt;' because its MIME type ('text/plain') is not a supported stylesheet MIME type, and strict MIME checking is enabled.</span></p>
-<p class="p1"><span class="s1">Refused to apply style from '&lt;URL&gt;' because its MIME type ('text/plain') is not a supported stylesheet MIME type, and strict MIME checking is enabled.</span></p>
-<p class="p1"><span class="s1">Refused to apply style from '&lt;URL&gt;' because its MIME type ('text/plain') is not a supported stylesheet MIME type, and strict MIME checking is enabled.</span></p>
-<p class="p1"><span class="s1">Refused to apply style from '&lt;URL&gt;' because its MIME type ('text/plain') is not a supported stylesheet MIME type, and strict MIME checking is enabled.</span></p>
-<p class="p1"><span class="s1">Refused to apply style from '&lt;URL&gt;' because its MIME type ('text/plain') is not a supported stylesheet MIME type, and strict MIME checking is enabled.</span></p>
-<p class="p1"><span class="s1">Refused to apply style from '&lt;URL&gt;' because its MIME type ('text/plain') is not a supported stylesheet MIME type, and strict MIME checking is enabled.</span></p>
-<p class="p1"><span class="s1">Refused to apply style from '&lt;URL&gt;' because its MIME type ('text/plain') is not a supported stylesheet MIME type, and strict MIME checking is enabled.</span></p>
-<p class="p1"><span class="s1">Refused to apply style from '&lt;URL&gt;' because its MIME type ('text/plain') is not a supported stylesheet MIME type, and strict MIME checking is enabled.</span></p>
-<p class="p1"><span class="s1">chat:1<span class="Apple-converted-space">  </span>Uncaught (in promise) Event {isTrusted: true, type: 'error', target: link, currentTarget: null, eventPhase: 0, …}</span></p>
-<p class="p1"><span class="s1">hot-reloader-app.tsx:278 [Fast Refresh] rebuilding</span></p>
-<p class="p1"><span class="s1">report-hmr-latency.ts:26 [Fast Refresh] done in 450ms</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">chat:1<span class="Apple-converted-space">  </span>Uncaught (in promise) Event {isTrusted: true, type: 'error', target: link, currentTarget: null, eventPhase: 0, …}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">chat:1<span class="Apple-converted-space">  </span>Uncaught (in promise) Event {isTrusted: true, type: 'error', target: link, currentTarget: null, eventPhase: 0, …}</span></p>
-<p class="p1"><span class="s1">hot-reloader-app.tsx:278 [Fast Refresh] rebuilding</span></p>
-<p class="p1"><span class="s1">report-hmr-latency.ts:26 [Fast Refresh] done in 205ms</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:96 🔍 MaintenanceWrapper Debug: {pathname: '/chat', maintenanceStatus: {…}, userPermissions: Array(55), shouldShow: false}</span></p>
-<p class="p1"><span class="s1">MaintenanceWrapper.tsx:108 ❌ Not showing maintenance page - showing normal content</span></p>
-<p class="p1"><span class="s1">chat:1<span class="Apple-converted-space">  </span>Uncaught (in promise) Event {isTrusted: true, type: 'error', target: link, currentTarget: null, eventPhase: 0, …}</span></p>
-<p class="p1"><span class="s1">hot-reloader-app.tsx:278 [Fast Refresh] rebuilding</span></p>
-<p class="p1"><span class="s1">report-hmr-latency.ts:26 [Fast Refresh] done in 661ms</span></p>
+<p class="p1"><span class="s1">report-hmr-latency.ts:26 [Fast Refresh] done in 210ms</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:217 ✅ SSE connection established</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:226 🔗 SSE connected to channel: 15</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:446 📊 API message data sample: (2) [{…}, {…}]</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:446 📊 API message data sample: (2) [{…}, {…}]</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:59 🔍 UserProfileMenu: Fetching presence with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:95 🔍 ChannelSidebar: Loading online users with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:67 📡 UserProfileMenu: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:71 📊 UserProfileMenu: Presence data received: {online: 0, away: 0, busy: 0, offline: 0}</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:86 ❓ UserProfileMenu: User not found in presence data, defaulting to online</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:106 📡 ChannelSidebar: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:110 🔍 Sidebar presence data: {online: Array(0), away: Array(0), busy: Array(0), offline: Array(0)}</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:116 👥 Sidebar active users: 0<span class="Apple-converted-space"> </span></span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:59 🔍 UserProfileMenu: Fetching presence with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:95 🔍 ChannelSidebar: Loading online users with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:67 📡 UserProfileMenu: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:71 📊 UserProfileMenu: Presence data received: {online: 0, away: 0, busy: 0, offline: 0}</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:86 ❓ UserProfileMenu: User not found in presence data, defaulting to online</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:106 📡 ChannelSidebar: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:110 🔍 Sidebar presence data: {online: Array(0), away: Array(0), busy: Array(0), offline: Array(0)}</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:116 👥 Sidebar active users: 0<span class="Apple-converted-space"> </span></span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:59 🔍 UserProfileMenu: Fetching presence with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:95 🔍 ChannelSidebar: Loading online users with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:67 📡 UserProfileMenu: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:71 📊 UserProfileMenu: Presence data received: {online: 0, away: 0, busy: 0, offline: 0}</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:86 ❓ UserProfileMenu: User not found in presence data, defaulting to online</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:106 📡 ChannelSidebar: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:110 🔍 Sidebar presence data: {online: Array(0), away: Array(0), busy: Array(0), offline: Array(0)}</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:116 👥 Sidebar active users: 0<span class="Apple-converted-space"> </span></span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:100 🔍 Token retrieval debug: {authToken: 'eyJhbGciOiJIUzI1NiIs...', token: 'undefined...', authTokenLength: 237, tokenLength: undefined}</span></p>
+<p class="p1"><span class="s1">MessageArea.tsx:110 🔍 Cleaned token: {length: 237, preview: 'eyJhbGciOiJIUzI1NiIs...', isValidJWT: true}</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:59 🔍 UserProfileMenu: Fetching presence with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:95 🔍 ChannelSidebar: Loading online users with token: eyJhbGciOiJIUzI1NiIs...</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:67 📡 UserProfileMenu: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:71 📊 UserProfileMenu: Presence data received: {online: 1, away: 0, busy: 0, offline: 0}</span></p>
+<p class="p1"><span class="s1">UserProfileMenu.tsx:83 👤 UserProfileMenu: Found user presence: jane.smith online</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:106 📡 ChannelSidebar: Presence API response: 200 true</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:110 🔍 Sidebar presence data: {online: Array(1), away: Array(0), busy: Array(0), offline: Array(0)}</span></p>
+<p class="p1"><span class="s1">ChannelSidebar.tsx:116 👥 Sidebar active users: 1 Jane Smith(online)</span></p>
 </body>
 </html>
