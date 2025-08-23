@@ -350,20 +350,20 @@ export default function ChatPage() {
                 onChannelUpdate={handleChannelUpdate}
               />
             ) : (
-              <div className="flex-1 flex items-center justify-center bg-white">
-                <div className="text-center max-w-md">
-                  <Hash className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <div className="flex-1 flex items-center justify-center bg-white px-8 py-12">
+                <div className="text-center w-full max-w-2xl">
+                  <Hash className="h-20 w-20 text-gray-300 mx-auto mb-6" />
+                  <h3 className="text-2xl font-semibold text-gray-900 mb-4">
                     Welcome to Orvale Chat
                   </h3>
-                  <p className="text-gray-500 mb-6">
+                  <p className="text-lg text-gray-600 mb-8 leading-relaxed">
                     Select a channel from the sidebar to start messaging, or create a new conversation.
                   </p>
                   {channels.length === 0 && directMessages.length === 0 && (
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-400">No channels available yet.</p>
+                    <div className="space-y-4 bg-gray-50 rounded-lg p-6">
+                      <p className="text-gray-500">No channels available yet.</p>
                       {user.permissions?.includes('chat.create_channels') && (
-                        <Button size="sm" onClick={handleChannelUpdate}>
+                        <Button onClick={handleChannelUpdate} className="mt-4">
                           <Plus className="h-4 w-4 mr-2" />
                           Create Channel
                         </Button>
