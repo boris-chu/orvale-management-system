@@ -19,6 +19,7 @@ import {
   Circle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface Channel {
   id: string
@@ -490,38 +491,44 @@ export function ChannelSidebar({
             </Button>
 
             {showOfflineUsers && (
-              <div className="ml-1 space-y-0.5">
-                {filteredOfflineUsers.map((user) => (
-                  <Button
-                    key={user.user_id}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => startDirectMessage(user.user_id)}
-                    className="w-full justify-start px-2 py-1.5 h-auto text-sm font-normal text-gray-700 hover:bg-gray-100 opacity-75"
-                    disabled={!currentUser.permissions?.includes('chat.create_direct')}
-                  >
-                    <div className="flex items-start space-x-2 min-w-0 flex-1">
-                      <UserAvatar
-                        user={user}
-                        size="sm"
-                        showPresenceStatus={true}
-                        presenceStatus="offline"
-                      />
-                      <div className="min-w-0">
-                        <div className="truncate text-sm text-gray-600">{user.display_name}</div>
-                        <div className="truncate text-xs text-gray-500">
-                          Last seen {getLastSeenText(user.last_active)}
-                        </div>
+              <TooltipProvider>
+                <div className="ml-1 space-y-0.5">
+                  {filteredOfflineUsers.map((user) => (
+                    <Button
+                      key={user.user_id}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => startDirectMessage(user.user_id)}
+                      className="w-full justify-start px-2 py-1.5 h-auto text-sm font-normal text-gray-700 hover:bg-gray-100 opacity-75"
+                      disabled={!currentUser.permissions?.includes('chat.create_direct')}
+                    >
+                      <div className="flex items-center space-x-2 min-w-0 flex-1">
+                        <UserAvatar
+                          user={user}
+                          size="sm"
+                          showPresenceStatus={true}
+                          presenceStatus="offline"
+                        />
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="truncate text-gray-600">
+                              {user.display_name}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Last seen {getLastSeenText(user.last_active)}</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
+                    </Button>
+                  ))}
+                  {filteredOfflineUsers.length === 0 && (
+                    <div className="px-2 py-1 text-xs text-gray-500">
+                      No recent users
                     </div>
-                  </Button>
-                ))}
-                {filteredOfflineUsers.length === 0 && (
-                  <div className="px-2 py-1 text-xs text-gray-500">
-                    No recent users
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              </TooltipProvider>
             )}
           </div>
         </div>
