@@ -500,15 +500,15 @@ export function ChannelSidebar({
                     className="w-full justify-start px-2 py-1.5 h-auto text-sm font-normal text-gray-700 hover:bg-gray-100 opacity-75"
                     disabled={!currentUser.permissions?.includes('chat.create_direct')}
                   >
-                    <div className="flex items-center space-x-2 min-w-0 flex-1">
+                    <div className="flex items-start space-x-2 min-w-0 flex-1">
                       <UserAvatar
                         user={user}
                         size="sm"
                         showPresenceStatus={true}
                         presenceStatus="offline"
                       />
-                      <div className="min-w-0 flex-1">
-                        <span className="truncate text-sm text-gray-600">{user.display_name}</span>
+                      <div className="min-w-0">
+                        <div className="truncate text-sm text-gray-600">{user.display_name}</div>
                         <div className="truncate text-xs text-gray-500">
                           Last seen {getLastSeenText(user.last_active)}
                         </div>
