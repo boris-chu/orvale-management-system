@@ -1,0 +1,20 @@
+# Node.js server files
+server/
+scripts/
+socket-server.js
+
+# Build outputs
+.next/
+dist/
+build/
+
+# Node modules
+node_modules/
+
+# Database files
+*.db
+*.db-*
+
+# Logs
+logs/
+*.log

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid import data format' }, { status: 400 });
     }
 
-    let importResults = {
+    const importResults = {
       supportTeamAssignments: { success: false, count: 0, error: null },
       portalSettings: { success: false, error: null },
       statistics: { processed: 0, errors: 0 }

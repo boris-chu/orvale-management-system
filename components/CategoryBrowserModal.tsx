@@ -192,7 +192,7 @@ export default function CategoryBrowserModal({
   };
 
   const applyFiltersAndSort = () => {
-    let filtered = allPaths.filter(path => {
+    const filtered = allPaths.filter(path => {
       if (!searchTerm) return true;
       
       const searchLower = searchTerm.toLowerCase();

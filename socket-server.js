@@ -1,14 +1,15 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 const { createServer } = require("node:http");
 const { Server } = require("socket.io");
-const jwt = require('jsonwebtoken');
+// const jwt = require('jsonwebtoken'); // TODO: Add JWT authentication
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 // Configuration
 const PORT = process.env.SOCKET_PORT || 4000;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-key';
+// const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-key'; // TODO: Add JWT authentication
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:80";
 
 // Database setup
@@ -83,7 +84,7 @@ io.use(async (socket, next) => {
 });
 
 // Simple auth token validation (replace with your actual auth logic)
-async function validateAuthToken(token) {
+async function validateAuthToken(_token) {
   try {
     // For now, we'll just check if the token exists in localStorage format
     // and extract basic user info. Replace this with actual JWT verification.

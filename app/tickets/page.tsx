@@ -1207,7 +1207,7 @@ export default function TicketsPage() {
     const nextStatus = statusOrder[nextIndex];
     
     // Auto-assign if unassigned
-    let updatedTicket = { ...selectedTicket, status: nextStatus };
+    const updatedTicket = { ...selectedTicket, status: nextStatus };
     if (!selectedTicket.assigned_to && currentUser?.username) {
       updatedTicket.assigned_to = currentUser.username;
       showNotification(`Ticket automatically assigned to you`, 'success');
@@ -1229,7 +1229,7 @@ export default function TicketsPage() {
     const nextPriority = priorityOrder[nextIndex];
     
     // Auto-assign if unassigned
-    let updatedTicket = { ...selectedTicket, priority: nextPriority };
+    const updatedTicket = { ...selectedTicket, priority: nextPriority };
     if (!selectedTicket.assigned_to && currentUser?.username) {
       updatedTicket.assigned_to = currentUser.username;
       showNotification(`Ticket automatically assigned to you`, 'success');

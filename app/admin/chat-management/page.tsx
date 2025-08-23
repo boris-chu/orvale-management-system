@@ -86,7 +86,7 @@ export default function ChatManagementPage() {
 
               {/* User Profile Menu */}
               {currentUser && (
-                <UserProfileMenu user={currentUser} />
+                <UserProfileMenu />
               )}
             </div>
           </div>

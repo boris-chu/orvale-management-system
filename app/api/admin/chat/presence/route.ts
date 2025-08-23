@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Recent activity (users active in last 24 hours)
-    let recentActivity = [];
+    let recentActivity: any[] = [];
     try {
       recentActivity = await queryAsync(`
         SELECT 
