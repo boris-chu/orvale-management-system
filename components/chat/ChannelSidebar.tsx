@@ -67,7 +67,9 @@ export function ChannelSidebar({
   const [showChannels, setShowChannels] = useState(true)
   const [showDirectMessages, setShowDirectMessages] = useState(true)
   const [showOnlineUsers, setShowOnlineUsers] = useState(true)
+  const [showOfflineUsers, setShowOfflineUsers] = useState(false)
   const [totalUnreadCount, setTotalUnreadCount] = useState(0)
+  const [offlineUsers, setOfflineUsers] = useState<OnlineUser[]>([])
 
   useEffect(() => {
     loadOnlineUsers()
@@ -111,20 +113,26 @@ export function ChannelSidebar({
         const online = data.presence?.online || []
         const away = data.presence?.away || []
         const busy = data.presence?.busy || []
+        const offline = data.presence?.offline || []
         
         const allActiveUsers = [...online, ...away, ...busy]
         console.log('👥 Sidebar active users:', allActiveUsers.length, allActiveUsers.map(u => `${u.display_name}(${u.status})`).join(', '))
+        console.log('👥 Sidebar offline users:', offline.length, offline.map(u => `${u.display_name}(${u.status})`).join(', '))
         setOnlineUsers(allActiveUsers)
+        setOfflineUsers(offline)
       } else if (response.status === 401) {
         console.log('🔒 ChannelSidebar: Authentication failed')
         setOnlineUsers([])
+        setOfflineUsers([])
       } else {
         console.error('❌ ChannelSidebar: Failed to load presence data:', response.status)
         setOnlineUsers([])
+        setOfflineUsers([])
       }
     } catch (error) {
       console.error('❌ ChannelSidebar: Error loading online users:', error)
       setOnlineUsers([])
+      setOfflineUsers([])
     }
   }
 
@@ -143,6 +151,11 @@ export function ChannelSidebar({
     user.user_id !== currentUser.username
   )
 
+  const filteredOfflineUsers = offlineUsers.filter(user =>
+    user.display_name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    user.user_id !== currentUser.username
+  )
+
   const getChannelIcon = (channel: Channel) => {
     switch (channel.type) {
       case 'public':
@@ -154,6 +167,25 @@ export function ChannelSidebar({
       default:
         return <Hash className="h-4 w-4" />
     }
+  }
+
+  // Helper function to format "last seen" text
+  const getLastSeenText = (lastActive: string) => {
+    if (!lastActive) return 'unknown'
+    
+    const lastActiveDate = new Date(lastActive)
+    const now = new Date()
+    const diffMs = now.getTime() - lastActiveDate.getTime()
+    
+    const diffMinutes = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    
+    if (diffMinutes < 1) return 'just now'
+    if (diffMinutes < 60) return `${diffMinutes}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return lastActiveDate.toLocaleDateString()
   }
 
   const startDirectMessage = async (username: string) => {
@@ -429,6 +461,61 @@ export function ChannelSidebar({
                 {filteredOnlineUsers.length === 0 && (
                   <div className="px-2 py-1 text-xs text-gray-500">
                     No users online
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <Separator className="my-2" />
+
+          {/* Offline Users Section */}
+          <div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowOfflineUsers(!showOfflineUsers)}
+              className="w-full justify-start px-2 py-1 h-auto text-xs font-medium text-gray-700 hover:bg-gray-100"
+            >
+              {showOfflineUsers ? (
+                <ChevronDown className="h-3 w-3 mr-1" />
+              ) : (
+                <ChevronRight className="h-3 w-3 mr-1" />
+              )}
+              <Circle className="h-2 w-2 fill-gray-400 text-gray-400 mr-1" />
+              OFFLINE ({filteredOfflineUsers.length})
+            </Button>
+
+            {showOfflineUsers && (
+              <div className="ml-1 space-y-0.5">
+                {filteredOfflineUsers.map((user) => (
+                  <Button
+                    key={user.user_id}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => startDirectMessage(user.user_id)}
+                    className="w-full justify-start px-2 py-1.5 h-auto text-sm font-normal text-gray-700 hover:bg-gray-100 opacity-75"
+                    disabled={!currentUser.permissions?.includes('chat.create_direct')}
+                  >
+                    <div className="flex items-center space-x-2 min-w-0 flex-1">
+                      <UserAvatar
+                        user={user}
+                        size="sm"
+                        showPresenceStatus={true}
+                        presenceStatus="offline"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm text-gray-600">{user.display_name}</div>
+                        <div className="truncate text-xs text-gray-500">
+                          Last seen {getLastSeenText(user.last_active)}
+                        </div>
+                      </div>
+                    </div>
+                  </Button>
+                ))}
+                {filteredOfflineUsers.length === 0 && (
+                  <div className="px-2 py-1 text-xs text-gray-500">
+                    No recent users
                   </div>
                 )}
               </div>

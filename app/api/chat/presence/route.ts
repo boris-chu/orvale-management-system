@@ -37,10 +37,7 @@ export async function GET(request: NextRequest) {
     if (status && ['online', 'away', 'busy', 'offline'].includes(status)) {
       query += ' AND up.status = ?'
       params.push(status)
-    } else if (!include_offline) {
-      query += ' AND up.status != ?'
-      params.push('offline')
-    }
+    // Note: We now include offline users for sidebar display, so remove the offline filter
 
     // Filter by team
     if (team_id) {
@@ -48,10 +45,8 @@ export async function GET(request: NextRequest) {
       params.push(team_id)
     }
 
-    // Only show users active in last 24 hours (unless specifically including offline)
-    if (!include_offline) {
-      query += ' AND up.last_active > datetime("now", "-24 hours")'
-    }
+    // Include recently active users (last 24 hours) even if offline for sidebar display
+    query += ' AND up.last_active > datetime("now", "-24 hours")'
 
     query += ' ORDER BY up.status ASC, up.last_active DESC'
 
