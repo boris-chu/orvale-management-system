@@ -137,7 +137,7 @@ export async function GET(
             const errorData = `data: ${JSON.stringify({ type: 'error', error: 'Failed to fetch messages' })}\n\n`
             controller.enqueue(encoder.encode(errorData))
           }
-        }, 1000) // Poll every 1 second for near-instant updates
+        }, 250) // Poll every 250ms (4x per second) for near-instant updates
 
         // Clean up interval when stream closes
         const cleanup = () => {
