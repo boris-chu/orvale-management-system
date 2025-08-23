@@ -356,6 +356,13 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     loadMessages()
     updateUserPresence('online')
     
+    // Update presence every 30 seconds to keep user active
+    const presenceInterval = setInterval(() => {
+      if (!document.hidden) {
+        updateUserPresence('online')
+      }
+    }, 30000) // Every 30 seconds
+    
     // Set user offline when component unmounts or tab closes
     const handleBeforeUnload = () => {
       updateUserPresence('offline')
@@ -374,6 +381,7 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     document.addEventListener('visibilitychange', handleVisibilityChange)
     
     return () => {
+      clearInterval(presenceInterval)
       window.removeEventListener('beforeunload', handleBeforeUnload)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       updateUserPresence('offline')

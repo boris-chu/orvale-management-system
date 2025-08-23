@@ -71,7 +71,7 @@ export function ChannelSidebar({
 
   useEffect(() => {
     loadOnlineUsers()
-    const interval = setInterval(loadOnlineUsers, 5000) // Refresh every 5 seconds for more responsive presence
+    const interval = setInterval(loadOnlineUsers, 10000) // Refresh every 10 seconds to match UserProfileMenu
     return () => clearInterval(interval)
   }, [])
 
@@ -85,7 +85,7 @@ export function ChannelSidebar({
   const loadOnlineUsers = async () => {
     try {
       // First clean up stale presence data
-      await fetch('/api/chat/presence/cleanup')
+      await fetch('/api/chat/presence/cleanup', { method: 'GET' })
       
       const response = await fetch('/api/chat/presence', {
         headers: {
@@ -95,11 +95,16 @@ export function ChannelSidebar({
 
       if (response.ok) {
         const data = await response.json()
+        console.log('🔍 Sidebar presence data:', data.presence)
         const online = data.presence?.online || []
         const away = data.presence?.away || []
         const busy = data.presence?.busy || []
         
-        setOnlineUsers([...online, ...away, ...busy])
+        const allActiveUsers = [...online, ...away, ...busy]
+        console.log('👥 Sidebar active users:', allActiveUsers.length, allActiveUsers.map(u => `${u.display_name}(${u.status})`).join(', '))
+        setOnlineUsers(allActiveUsers)
+      } else {
+        console.error('❌ Failed to load presence data:', response.status)
       }
     } catch (error) {
       console.error('Error loading online users:', error)
@@ -415,18 +420,20 @@ export function ChannelSidebar({
         </div>
       </ScrollArea>
 
-      {/* User Status */}
+      {/* User Status - Use UserProfileMenu for consistency */}
       <div className="border-t border-gray-200 p-3">
-        <div className="flex items-center space-x-2">
-          <UserAvatar
-            user={currentUser}
-            size="sm"
-            showPresenceStatus={true}
-            presenceStatus="online"
-          />
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium truncate">{currentUser.display_name}</div>
-            <div className="text-xs text-gray-500">Online</div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <UserAvatar
+              user={currentUser}
+              size="sm"
+              showPresenceStatus={true}
+              presenceStatus="online"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium truncate">{currentUser.display_name}</div>
+              <div className="text-xs text-gray-500">Active</div>
+            </div>
           </div>
           <Button variant="ghost" size="sm" className="p-1 h-auto">
             <Users className="h-4 w-4" />

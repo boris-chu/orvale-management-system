@@ -56,6 +56,8 @@ export async function GET(request: NextRequest) {
     query += ' ORDER BY up.status ASC, up.last_active DESC'
 
     const presenceData = await queryAsync(query, params)
+    console.log('🔍 Raw presence query results:', presenceData.length, 'users')
+    console.log('📊 Presence data sample:', presenceData.slice(0, 3).map(u => `${u.display_name}(${u.status}, last_active: ${u.last_active})`).join(', '))
 
     // Group by status for easier consumption
     const groupedPresence = {
@@ -69,6 +71,13 @@ export async function GET(request: NextRequest) {
       if (groupedPresence[user.status]) {
         groupedPresence[user.status].push(user)
       }
+    })
+    
+    console.log('👥 Grouped presence summary:', {
+      online: groupedPresence.online.map(u => u.display_name),
+      away: groupedPresence.away.map(u => u.display_name),
+      busy: groupedPresence.busy.map(u => u.display_name),
+      offline: groupedPresence.offline.map(u => u.display_name)
     })
 
     return NextResponse.json({
@@ -114,11 +123,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Status message too long (max 100 characters)' }, { status: 400 })
     }
 
+    console.log('🔄 Updating presence for user:', authResult.user.username, 'to status:', status)
+    
     // Update user presence
     await runAsync(`
       INSERT OR REPLACE INTO user_presence (user_id, status, status_message, last_active)
       VALUES (?, ?, ?, datetime('now'))
     `, [authResult.user.username, status, status_message?.trim() || null])
+    
+    console.log('✅ Presence updated successfully for:', authResult.user.username)
 
     // Get updated presence data
     const updatedPresence = await queryAsync(`
