@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
     if (status && ['online', 'away', 'busy', 'offline'].includes(status)) {
       query += ' AND up.status = ?'
       params.push(status)
+    }
     // Note: We now include offline users for sidebar display, so remove the offline filter
 
     // Filter by team
@@ -73,19 +74,6 @@ export async function GET(request: NextRequest) {
       away: groupedPresence.away.map(u => u.display_name),
       busy: groupedPresence.busy.map(u => u.display_name),
       offline: groupedPresence.offline.map(u => u.display_name)
-    })
-
-    return NextResponse.json({
-      success: true,
-      presence: groupedPresence,
-      total_users: presenceData.length,
-      online_count: groupedPresence.online.length,
-      summary: {
-        online: groupedPresence.online.length,
-        away: groupedPresence.away.length,
-        busy: groupedPresence.busy.length,
-        offline: groupedPresence.offline.length
-      }
     })
 
     return NextResponse.json({
