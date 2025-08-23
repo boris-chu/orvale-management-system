@@ -5,12 +5,16 @@ import { queryAsync } from '@/lib/database'
 // GET /api/chat/search - Search messages across all accessible channels
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 Chat search endpoint called')
+    
     const authResult = await verifyAuth(request)
     if (!authResult.success || !authResult.user) {
+      console.log('❌ Chat search: Authentication failed')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     if (!authResult.user.permissions?.includes('chat.access_channels')) {
+      console.log('❌ Chat search: Insufficient permissions')
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
@@ -88,7 +92,12 @@ export async function GET(request: NextRequest) {
     searchQuery += ' ORDER BY cm.created_at DESC LIMIT ?'
     params.push(limit)
 
+    console.log('🔍 Executing search query for:', query.trim())
+    console.log('📋 Query params length:', params.length)
+    
     const results = await queryAsync(searchQuery, params)
+    
+    console.log('✅ Search results count:', results.length)
 
     // Process results to highlight matches and clean up
     const processedResults = results.map((result: any) => ({
@@ -116,6 +125,11 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Error searching messages:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    })
+    return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 })
   }
 }

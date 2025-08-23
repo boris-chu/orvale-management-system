@@ -88,18 +88,24 @@ export function MessageSearch({ isOpen, onClose, onSelectMessage, currentUser }:
         return
       }
 
+      console.log('🔍 MessageSearch: Performing search for:', searchQuery)
+      
       const response = await fetch(`/api/chat/search?q=${encodeURIComponent(searchQuery)}&limit=20`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       })
 
+      console.log('📡 MessageSearch: API response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('📊 MessageSearch: Search results:', data.results?.length || 0)
         setResults(data.results || [])
         setSelectedIndex(0)
       } else {
-        console.error('Search failed:', response.status)
+        const errorText = await response.text()
+        console.error('Search failed:', response.status, errorText)
         setResults([])
       }
     } catch (error) {
