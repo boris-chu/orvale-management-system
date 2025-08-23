@@ -224,6 +224,13 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
           )
           if (exists) {
             // Replace temp message with real one
+            console.log('🔄 Replacing temp message with real one:', {
+              tempId: prev.find(m => m.id.startsWith('temp-') && m.message_text === data.message.message_text)?.id,
+              realId: data.message.id,
+              user_id: data.message.user_id,
+              display_name: data.message.display_name,
+              profile_picture: data.message.profile_picture
+            })
             return prev.map(msg => 
               msg.id.startsWith('temp-') && msg.message_text === data.message.message_text && msg.user_id === data.message.user_id
                 ? { ...data.message, _isNew: true }
@@ -260,7 +267,11 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     })
 
     newSocket.on('error', (error: { message: string }) => {
-      console.error('Socket error:', error.message)
+      console.error('🚨 Socket error:', error.message)
+    })
+
+    newSocket.on('connect_error', (error: Error) => {
+      console.error('🚨 Socket connection error:', error.message)
     })
 
     setSocket(newSocket)
@@ -295,10 +306,10 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       clearInterval(pollingIntervalRef.current)
     }
     
-    // Set up polling for new messages
-    pollingIntervalRef.current = setInterval(() => {
-      pollForNewMessages()
-    }, 1000) // Poll every 1 second for faster testing
+    // Set up polling for new messages (disabled while testing Socket.io)
+    // pollingIntervalRef.current = setInterval(() => {
+    //   pollForNewMessages()
+    // }, 1000) // Poll every 1 second for faster testing
     
     return () => {
       if (pollingIntervalRef.current) {
@@ -540,6 +551,14 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       deleted: false
     }
     
+    console.log('📝 Creating optimistic message:', {
+      tempId,
+      user_id: currentUser.username,
+      display_name: currentUser.display_name,
+      profile_picture: currentUser.profile_picture,
+      message_text: messageData.message_text?.substring(0, 50)
+    })
+    
     // Add message optimistically with animation
     setMessages(prev => [...prev, optimisticMessage])
     
@@ -571,6 +590,13 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
 
       if (response.ok) {
         const data = await response.json()
+        console.log('✅ API message response:', {
+          messageId: data.message?.id,
+          user_id: data.message?.user_id,
+          display_name: data.message?.display_name,
+          profile_picture: data.message?.profile_picture,
+          message_text: data.message?.message_text?.substring(0, 50)
+        })
         // Replace temporary message with real one from server
         setMessages(prev => prev.map(msg => 
           msg.id === tempId ? { ...data.message, _isNew: true } : msg
