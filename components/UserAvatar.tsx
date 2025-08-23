@@ -3,6 +3,7 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { useUserPresence } from '@/lib/hooks/usePresence';
 
 interface UserAvatarProps {
   user: {
@@ -16,6 +17,8 @@ interface UserAvatarProps {
   onClick?: () => void;
   showPresenceStatus?: boolean;
   presenceStatus?: 'online' | 'away' | 'busy' | 'offline';
+  // Real-time presence integration
+  useRealTimePresence?: boolean;
   // Legacy support
   showOnlineIndicator?: boolean;
 }
@@ -95,16 +98,30 @@ export function UserAvatar({
   onClick,
   showPresenceStatus = false,
   presenceStatus = 'offline',
+  useRealTimePresence = false,
   // Legacy support
   showOnlineIndicator = false 
 }: UserAvatarProps) {
   const initials = getInitials(user.display_name, user.username);
   const gradient = getGradientFromName(user.display_name || user.username);
   
+  // Get real-time presence data if enabled
+  const { presence: realTimePresence } = useUserPresence(user.username || '');
+  
   // Show presence if either new prop or legacy prop is true
   const shouldShowPresence = showPresenceStatus || showOnlineIndicator;
-  // Use legacy behavior for showOnlineIndicator (green = online)
-  const effectiveStatus = showOnlineIndicator && !showPresenceStatus ? 'online' : presenceStatus;
+  
+  // Determine effective status based on priority:
+  // 1. Real-time presence (if enabled)  
+  // 2. Passed presenceStatus prop
+  // 3. Legacy behavior (always online)
+  let effectiveStatus = presenceStatus;
+  
+  if (useRealTimePresence && user.username) {
+    effectiveStatus = realTimePresence.status;
+  } else if (showOnlineIndicator && !showPresenceStatus) {
+    effectiveStatus = 'online'; // Legacy behavior
+  }
   
   return (
     <div className="relative">

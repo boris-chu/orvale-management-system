@@ -188,69 +188,50 @@ export function RealTimeProvider({
     }
   };
 
-  // Polling connection management
+  // Polling connection management (simplified for RealTimeProvider)
   const connectPolling = async () => {
     try {
       setConnectionStatus('connecting');
+      console.log('📡 Setting up polling mode (no global SSE stream available)');
       
-      // Server-Sent Events for real-time updates
-      const eventSource = new EventSource('/api/chat/stream', {
-        // Add auth header if supported
-      });
-
-      eventSource.onopen = () => {
-        console.log('📡 Polling connection established (SSE)');
-        setConnectionStatus('connected');
-        eventSourceRef.current = eventSource;
-      };
-
-      eventSource.onmessage = (event) => {
+      // For RealTimeProvider polling mode, we don't use SSE streams
+      // Instead, we rely on individual components to handle their own SSE connections
+      // This is just a heartbeat-based connection status
+      
+      const checkConnection = async () => {
         try {
-          const data = JSON.parse(event.data);
-          
-          if (data.type === 'message') {
-            updateMessageStats();
-            messageCallbacksRef.current.forEach(callback => callback(data));
-          } else if (data.type === 'presence') {
-            presenceCallbacksRef.current.forEach(callback => callback(data));
-          } else if (data.type === 'user_count') {
-            setConnectedUsers(data.count);
-            userCountCallbacksRef.current.forEach(callback => callback(data.count));
+          const token = localStorage.getItem('authToken');
+          if (!token) {
+            setConnectionStatus('disconnected');
+            return;
           }
-        } catch (error) {
-          console.error('❌ Error parsing SSE data:', error);
-        }
-      };
 
-      eventSource.onerror = (error) => {
-        console.error('❌ SSE connection error:', error);
-        setConnectionStatus('error');
-        
-        // Retry after 5 seconds
-        setTimeout(() => {
-          if (connectionMode === 'polling') {
-            connectPolling();
-          }
-        }, 5000);
-      };
-
-      // Heartbeat polling for additional updates
-      pollingIntervalRef.current = setInterval(async () => {
-        try {
-          const response = await fetch('/api/chat/heartbeat', {
+          // Simple heartbeat to verify we can reach the API
+          const response = await fetch('/api/chat/channels', {
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+              'Authorization': `Bearer ${token}`
             }
           });
           
           if (response.ok) {
-            const data = await response.json();
-            setConnectedUsers(data.connectedUsers || 0);
+            if (connectionStatus !== 'connected') {
+              console.log('📡 Polling connection established (API heartbeat)');
+              setConnectionStatus('connected');
+            }
+          } else {
+            setConnectionStatus('error');
           }
         } catch (error) {
-          console.error('❌ Heartbeat failed:', error);
+          console.error('❌ Polling heartbeat failed:', error);
+          setConnectionStatus('error');
         }
-      }, pollingInterval);
+      };
+
+      // Initial connection check
+      await checkConnection();
+
+      // Heartbeat polling every pollingInterval
+      pollingIntervalRef.current = setInterval(checkConnection, pollingInterval);
 
     } catch (error) {
       console.error('❌ Polling setup failed:', error);

@@ -30,6 +30,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRealTime } from '@/lib/realtime/RealTimeProvider';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -88,6 +89,15 @@ export function ChatManagementCard() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+  
+  // Real-time connection status
+  const { 
+    connectionStatus, 
+    connectionMode, 
+    connectedUsers, 
+    stats: realTimeStats,
+    setConnectionMode 
+  } = useRealTime();
   const [stats, setStats] = useState<ChatStats>({
     activeUsers: 0,
     totalChannels: 0,
@@ -421,6 +431,27 @@ export function ChatManagementCard() {
     setSaveTimeout(timeout);
   };
 
+  // Real-time connection mode switching
+  const handleConnectionModeChange = async (newMode: 'auto' | 'socket' | 'polling') => {
+    try {
+      console.log(`🔄 Admin panel: Switching connection mode to ${newMode}`);
+      
+      // 1. Update RealTimeProvider immediately for live switching
+      await setConnectionMode(newMode);
+      console.log('✅ RealTimeProvider connection mode updated');
+      
+      // 2. Update settings and save to database
+      const newSettings = { ...settings, connectionMode: newMode };
+      debouncedSaveChatSettings(newSettings);
+      
+      console.log(`✅ Connection mode switched to ${newMode} and saved to database`);
+    } catch (error) {
+      console.error('❌ Failed to switch connection mode:', error);
+      // Still update local settings for consistency
+      debouncedSaveChatSettings({ ...settings, connectionMode: newMode });
+    }
+  };
+
   const testGiphyApi = async () => {
     setTestingGiphy(true);
     setGiphyTestResult(null);
@@ -577,12 +608,48 @@ export function ChatManagementCard() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">SSE Connections</span>
-                    <Badge variant="outline">Active</Badge>
+                    <span className="text-sm">Socket.io Server</span>
+                    <Badge 
+                      variant={socketStatus.isRunning ? "default" : "destructive"}
+                      className="text-xs"
+                    >
+                      {socketStatus.isRunning ? "Online" : "Offline"}
+                    </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Database</span>
-                    <Badge variant="outline">Healthy</Badge>
+                    <span className="text-sm">Active Connection Mode</span>
+                    <Badge 
+                      variant={connectionStatus === 'connected' ? "default" : 
+                              connectionStatus === 'connecting' ? "secondary" : "destructive"}
+                      className="text-xs"
+                    >
+                      {connectionStatus === 'connected' ? 
+                        (connectionMode === 'auto' && socketStatus.isRunning ? 'SOCKET' : 
+                         connectionMode === 'auto' && !socketStatus.isRunning ? 'POLLING' : 
+                         connectionMode.toUpperCase()) : 
+                       connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Connected Users</span>
+                    <Badge variant="outline" className="text-xs">
+                      {(() => {
+                        // Show user count based on active connection mode
+                        if (connectionStatus !== 'connected') return '0';
+                        
+                        const actualMode = connectionMode === 'auto' && socketStatus.isRunning ? 'socket' : 
+                                          connectionMode === 'auto' && !socketStatus.isRunning ? 'polling' : 
+                                          connectionMode;
+                        
+                        // If using Socket.io (either explicitly or via auto-detect), show Socket.io server count
+                        if (actualMode === 'socket' && socketStatus.isRunning) {
+                          return socketStatus.connectedClients.toString();
+                        }
+                        
+                        // If using polling/SSE, show RealTimeProvider count  
+                        return connectedUsers.toString();
+                      })()}
+                    </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">API Status</span>
@@ -734,7 +801,7 @@ export function ChatManagementCard() {
                         value={settings.connectionMode || 'auto'}
                         label="Connection Mode"
                         onChange={(e) => 
-                          debouncedSaveChatSettings({ ...settings, connectionMode: e.target.value as 'auto' | 'socket' | 'polling' })
+                          handleConnectionModeChange(e.target.value as 'auto' | 'socket' | 'polling')
                         }
                       >
                         <MenuItem value="auto">Auto-detect (Recommended)</MenuItem>
@@ -779,28 +846,31 @@ export function ChatManagementCard() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
                     <div className="text-2xl font-bold text-blue-600">
-                      {socketStatus.isRunning ? 'WebSocket' : 'Polling'}
+                      {connectionStatus === 'connected' ? 
+                        (connectionMode === 'auto' && socketStatus.isRunning ? 'SOCKET' : 
+                         connectionMode === 'auto' && !socketStatus.isRunning ? 'POLLING' : 
+                         connectionMode.toUpperCase()) : 'DISCONNECTED'}
                     </div>
-                    <div className="text-sm text-gray-500">Current Mode</div>
+                    <div className="text-sm text-gray-500">Active Mode</div>
                   </div>
                   
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
                     <div className="text-2xl font-bold text-green-600">
-                      {stats.averageLatency}ms
+                      {realTimeStats?.averageLatency || 0}ms
                     </div>
                     <div className="text-sm text-gray-500">Avg Latency</div>
                   </div>
                   
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
                     <div className="text-2xl font-bold text-orange-600">
-                      {stats.messagesPerMinute}
+                      {realTimeStats?.messagesPerMinute || 0}
                     </div>
                     <div className="text-sm text-gray-500">Msg/Minute</div>
                   </div>
                   
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
                     <div className="text-2xl font-bold text-purple-600">
-                      {stats.reconnectCount}
+                      {realTimeStats?.reconnectCount || 0}
                     </div>
                     <div className="text-sm text-gray-500">Reconnects</div>
                   </div>

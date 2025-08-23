@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRealTime } from '@/lib/realtime/RealTimeProvider'
 
 interface SystemPresenceTrackerProps {
   /**
@@ -12,23 +13,49 @@ interface SystemPresenceTrackerProps {
 
 export function SystemPresenceTracker({}: SystemPresenceTrackerProps) {
   const { user } = useAuth()
+  
+  // Use RealTimeProvider for presence management
+  const { 
+    connectionStatus, 
+    connectionMode,
+    updatePresence
+  } = useRealTime()
 
-  // Update user presence across the entire system
+  // Update user presence across the entire system using RealTimeProvider
   const updateSystemPresence = async (status: 'online' | 'away' | 'busy' | 'offline') => {
     try {
-      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
-      if (!token || !user?.permissions?.includes('chat.access_channels')) return
+      if (!user?.permissions?.includes('chat.access_channels')) return
 
-      const cleanToken = token.trim().replace(/[\[\]"']/g, '')
-      await fetch('/api/chat/presence', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${cleanToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status })
+      console.log('🌐 SystemPresence: Updating presence via RealTimeProvider', {
+        status,
+        user: user.username,
+        connectionMode,
+        connectionStatus
       })
-      console.log('🌐 SystemPresence: Updated to', status, 'for user', user.username)
+
+      // Use RealTimeProvider's updatePresence instead of direct API call
+      const success = await updatePresence(status)
+      
+      if (success) {
+        console.log('✅ SystemPresence: Updated to', status, 'for user', user.username, 'via RealTimeProvider')
+      } else {
+        console.error('❌ SystemPresence: Failed to update presence via RealTimeProvider, falling back to API')
+        
+        // Fallback to direct API call if RealTimeProvider fails
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+        if (token) {
+          const cleanToken = token.trim().replace(/[\[\]"']/g, '')
+          await fetch('/api/chat/presence', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${cleanToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status })
+          })
+          console.log('✅ SystemPresence: Updated via API fallback to', status)
+        }
+      }
     } catch (error) {
       console.error('❌ SystemPresence: Error updating presence:', error)
     }

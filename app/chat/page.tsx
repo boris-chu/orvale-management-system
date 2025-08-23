@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { MessageSquare, Users, Hash, Plus, Search, Settings, LogOut, User } from 'lucide-react'
 import { UserAvatar } from '@/components/UserAvatar'
 import { UserProfileMenu } from '@/components/UserProfileMenu'
+import { useRealTime } from '@/lib/realtime/RealTimeProvider'
 
 interface Channel {
   id: string
@@ -32,6 +33,13 @@ export default function ChatPage() {
   const [showSearch, setShowSearch] = useState(false)
   const [totalUnread, setTotalUnread] = useState(0)
 
+  // Real-time integration for channel updates
+  const { 
+    connectionStatus, 
+    connectionMode,
+    onMessage 
+  } = useRealTime()
+
 
   useEffect(() => {
     if (!loading && user) {
@@ -41,13 +49,60 @@ export default function ChatPage() {
         role: user.role,
         permissions: user.permissions?.length || 0,
         hasAuthToken: !!(localStorage.getItem('authToken') || localStorage.getItem('token')),
-        hasChatAccess: user.permissions?.includes('chat.access_channels')
+        hasChatAccess: user.permissions?.includes('chat.access_channels'),
+        connectionStatus,
+        connectionMode
       })
       
       loadChannels()
       loadDirectMessages()
     }
-  }, [user, loading])
+  }, [user, loading, connectionStatus])
+
+  // Real-time channel list updates when messages arrive
+  useEffect(() => {
+    if (!user) return
+
+    console.log('🔌 Chat page: Setting up RealTimeProvider listener for channel updates')
+    
+    const unsubscribe = onMessage((realTimeMessage) => {
+      if (realTimeMessage.type === 'message') {
+        const messageData = realTimeMessage.content
+        
+        if (messageData && messageData.channel_id) {
+          console.log('📥 Chat page: Updating channel list for new message in:', messageData.channel_id)
+          
+          // Update channel unread counts and last message info
+          setChannels(prev => prev.map(channel => {
+            if (channel.id === messageData.channel_id) {
+              return {
+                ...channel,
+                unread_count: messageData.user_id !== user.username 
+                  ? (channel.unread_count || 0) + 1 
+                  : channel.unread_count // Don't increment for own messages
+              }
+            }
+            return channel
+          }))
+          
+          // Update direct messages too
+          setDirectMessages(prev => prev.map(dm => {
+            if (dm.id === messageData.channel_id) {
+              return {
+                ...dm,
+                unread_count: messageData.user_id !== user.username 
+                  ? (dm.unread_count || 0) + 1 
+                  : dm.unread_count
+              }
+            }
+            return dm
+          }))
+        }
+      }
+    })
+
+    return unsubscribe
+  }, [user, onMessage])
 
 
   // Add keyboard shortcut for search (Ctrl/Cmd + K)

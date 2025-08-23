@@ -18,6 +18,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useRealTime } from '@/lib/realtime/RealTimeProvider'
 
 interface Message {
   id: string
@@ -87,7 +88,16 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([])
   const [lastMessageId, setLastMessageId] = useState<string | null>(null)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
-  const [eventSource, setEventSource] = useState<EventSource | null>(null)
+  
+  // Real-time messaging via RealTimeProvider
+  const { 
+    connectionStatus, 
+    connectionMode,
+    connectedUsers,
+    onMessage, 
+    sendMessage: realTimeSendMessage,
+    stats 
+  } = useRealTime()
   const [lightboxImage, setLightboxImage] = useState<{
     src: string
     alt: string
@@ -298,145 +308,98 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     }
   }
 
-  // Server-Sent Events for real-time updates
+  // Real-time message handling via RealTimeProvider
   useEffect(() => {
-    console.log('🔌 Setting up SSE connection for real-time updates')
+    console.log('🔌 Setting up RealTimeProvider message listener for channel:', channel?.id)
     
-    const token = getCleanToken()
-    if (!token || !channel?.id) return
+    if (!channel?.id) return
 
-    // Close existing SSE connection
-    if (eventSource) {
-      eventSource.close()
-    }
+    const unsubscribe = onMessage((realTimeMessage) => {
+      // Filter messages for current channel
+      if (realTimeMessage.channel && realTimeMessage.channel !== channel.id) {
+        return
+      }
 
-    // Create new SSE connection (without lastMessageId to prevent reconnection loops)
-    const sseUrl = `/api/chat/channels/${channel.id}/stream?token=${encodeURIComponent(token)}`
-    const newEventSource = new EventSource(sseUrl)
-    
-    newEventSource.onopen = () => {
-      console.log('✅ SSE connection established')
-    }
-
-    newEventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
+      // Handle different message types from RealTimeProvider
+      if (realTimeMessage.type === 'message') {
+        const messageData = realTimeMessage.content
         
-        switch (data.type) {
-          case 'connected':
-            console.log('🔗 SSE connected to channel:', data.channelId)
-            break
+        if (messageData && Array.isArray(messageData.messages)) {
+          console.log('📥 New messages via RealTimeProvider:', messageData.messages.length)
+          
+          setMessages(prev => {
+            // Filter out duplicates
+            const existingIds = new Set(prev.map(m => m.id))
+            const newMessages = messageData.messages
+              .filter((m: Message) => !existingIds.has(m.id))
+              .map((m: Message) => ({ ...m, _isNew: true }))
             
-          case 'messages':
-            if (data.messages && data.messages.length > 0) {
-              console.log('📥 New messages via SSE:', data.messages.length)
+            if (newMessages.length > 0) {
+              // Update last message ID for tracking
+              setLastMessageId(newMessages[newMessages.length - 1].id)
               
-              setMessages(prev => {
-                // Filter out duplicates
-                const existingIds = new Set(prev.map(m => m.id))
-                const newMessages = data.messages
-                  .filter((m: Message) => !existingIds.has(m.id))
-                  .map((m: Message) => ({ ...m, _isNew: true }))
-                
-                if (newMessages.length > 0) {
-                  // Update last message ID for future SSE requests
-                  setLastMessageId(newMessages[newMessages.length - 1].id)
-                  
-                  // Show notifications for new messages from other users (only once)
-                  newMessages.forEach((message: Message) => {
-                    if (message.user_id !== currentUser.username) {
-                      const messageAge = Date.now() - new Date(message.created_at).getTime()
-                      // Only show notification for recent messages (within 10 seconds)
-                      if (messageAge < 10000) {
-                        console.log('🔔 Showing notification for SSE message:', message.message_text)
-                        showNotification(message)
-                        playNotificationSound()
-                      }
-                    }
-                  })
-                  
-                  // onChannelUpdate() // Disabled - causes sidebar to reload and disappear
-                  
-                  // Auto-scroll if user is near bottom
-                  setTimeout(() => {
-                    if (shouldAutoScroll()) {
-                      scrollToBottom()
-                    }
-                  }, 100)
-                  
-                  return [...prev, ...newMessages]
+              // Show notifications for new messages from other users
+              newMessages.forEach((message: Message) => {
+                if (message.user_id !== currentUser.username) {
+                  const messageAge = Date.now() - new Date(message.created_at).getTime()
+                  // Only show notification for recent messages (within 10 seconds)
+                  if (messageAge < 10000) {
+                    console.log('🔔 Showing notification for RealTime message:', message.message_text)
+                    showNotification(message)
+                    playNotificationSound()
+                  }
                 }
-                return prev
               })
+              
+              // Auto-scroll if user is near bottom
+              setTimeout(() => {
+                if (shouldAutoScroll()) {
+                  scrollToBottom()
+                }
+              }, 100)
+              
+              return [...prev, ...newMessages]
             }
-            break
-            
-          case 'heartbeat':
-            // Connection is alive, no action needed
-            break
-            
-          case 'error':
-            console.error('❌ SSE error:', data.error)
-            break
+            return prev
+          })
+        } else if (messageData && messageData.id) {
+          // Single message
+          console.log('📥 New single message via RealTimeProvider:', messageData.message_text)
+          
+          setMessages(prev => {
+            const existingIds = new Set(prev.map(m => m.id))
+            if (!existingIds.has(messageData.id)) {
+              const newMessage = { ...messageData, _isNew: true }
+              
+              // Show notification if from another user
+              if (messageData.user_id !== currentUser.username) {
+                const messageAge = Date.now() - new Date(messageData.created_at).getTime()
+                if (messageAge < 10000) {
+                  showNotification(newMessage)
+                  playNotificationSound()
+                }
+              }
+              
+              // Auto-scroll if user is near bottom
+              setTimeout(() => {
+                if (shouldAutoScroll()) {
+                  scrollToBottom()
+                }
+              }, 100)
+              
+              return [...prev, newMessage]
+            }
+            return prev
+          })
         }
-        
-      } catch (error) {
-        console.error('❌ Error parsing SSE message:', error)
       }
-    }
+    })
 
-    newEventSource.onerror = (error) => {
-      console.error('❌ SSE connection error:', error)
-      // Reconnection is automatic with SSE
-    }
+    return unsubscribe
+  }, [channel.id, currentUser.username, onMessage])
 
-    setEventSource(newEventSource)
-
-    return () => {
-      newEventSource.close()
-    }
-  }, [channel.id, currentUser.username])
-
-  // Alternative real-time approach using Server-Sent Events (if needed later)
-  // Socket.io implementation commented out due to Next.js 15 compatibility issues
-  /*
-  useEffect(() => {
-    const token = getCleanToken()
-    if (!token) return
-
-    const connectSocket = async () => {
-      try {
-        // Initialize Socket.io server by hitting the endpoint first
-        console.log('🔌 Initializing Socket.io server...')
-        await fetch('/api/socket', { 
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        })
-        
-        // Wait a bit for server to initialize
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        // Now connect to Socket.io
-        const newSocket = io('/', {
-          path: '/api/socket',
-          auth: { token },
-          transports: ['polling'], // Use only HTTP long-polling (no WebSocket upgrade)
-          upgrade: false,
-          autoConnect: true,
-          forceNew: true
-        })
-        
-        // ... rest of Socket.io implementation
-      } catch (error) {
-        console.error('Socket.io failed')
-      }
-    }
-    
-    connectSocket()
-  }, [channel.id, currentUser.username])
-  */
+  // NOTE: Socket.io implementation now handled by RealTimeProvider
+  // The old manual Socket.io code has been removed in favor of the unified provider approach
 
   // Initialize notifications when component mounts
   useEffect(() => {
@@ -634,12 +597,13 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
       deleted: false
     }
     
-    console.log('📝 Creating optimistic message:', {
+    console.log('📝 Creating optimistic message via RealTimeProvider:', {
       tempId,
       user_id: currentUser.username,
       display_name: currentUser.display_name,
-      profile_picture: currentUser.profile_picture,
-      message_text: messageData.message_text?.substring(0, 50)
+      message_text: messageData.message_text?.substring(0, 50),
+      connectionMode,
+      connectionStatus
     })
     
     // Add message optimistically with animation
@@ -651,41 +615,59 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     }, 50)
 
     try {
-      // Socket.io disabled - using API only with polling for real-time updates
-      
-      // Call the API for persistence
-      const response = await fetch(`/api/chat/channels/${channel.id}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${getCleanToken()}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(messageData)
-      })
+      // Use RealTimeProvider's sendMessage instead of direct API call
+      const realTimeMessage = {
+        type: 'message' as const,
+        channel: channel.id,
+        from: currentUser.username,
+        content: {
+          ...messageData,
+          user_id: currentUser.username,
+          display_name: currentUser.display_name,
+          profile_picture: currentUser.profile_picture,
+          channel_id: channel.id
+        }
+      }
 
-      if (response.ok) {
-        const data = await response.json()
-        console.log('✅ API message response:', {
-          messageId: data.message?.id,
-          user_id: data.message?.user_id,
-          display_name: data.message?.display_name,
-          profile_picture: data.message?.profile_picture,
-          message_text: data.message?.message_text?.substring(0, 50)
-        })
-        // Replace temporary message with real one from server
-        setMessages(prev => prev.map(msg => 
-          msg.id === tempId ? { ...data.message, _isNew: true } : msg
-        ))
+      const success = await realTimeSendMessage(realTimeMessage)
+
+      if (success) {
+        console.log('✅ Message sent successfully via RealTimeProvider')
+        // Note: The actual message replacement will happen via the real-time listener
+        // when the server confirms the message. For now, we keep the optimistic message.
         
-        // Update last message ID for SSE
-        setLastMessageId(data.message.id)
+        // If we're using polling mode, we might need to manually replace the optimistic message
+        if (connectionMode === 'polling') {
+          // In polling mode, we might not get immediate real-time updates
+          // So we should still make a direct API call to get the confirmed message
+          try {
+            const response = await fetch(`/api/chat/channels/${channel.id}/messages`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${getCleanToken()}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(messageData)
+            })
+
+            if (response.ok) {
+              const data = await response.json()
+              setMessages(prev => prev.map(msg => 
+                msg.id === tempId ? { ...data.message, _isNew: true } : msg
+              ))
+              setLastMessageId(data.message.id)
+            }
+          } catch (apiError) {
+            console.warn('API fallback failed, relying on real-time updates:', apiError)
+          }
+        }
       } else {
-        console.error('Failed to send message via API')
+        console.error('Failed to send message via RealTimeProvider')
         // Remove optimistic message on failure
         setMessages(prev => prev.filter(msg => msg.id !== tempId))
       }
     } catch (error) {
-      console.error('Error sending message:', error)
+      console.error('Error sending message via RealTimeProvider:', error)
       // Remove optimistic message on error
       setMessages(prev => prev.filter(msg => msg.id !== tempId))
     } finally {

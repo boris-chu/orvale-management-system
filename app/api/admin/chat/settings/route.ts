@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       WHERE setting_key LIKE 'chat_%'
     `);
 
-    // Convert settings array to object
+    // Convert settings array to object with defaults
     const settingsObj: any = {
       fileShareEnabled: true,
       fileTypes: 'all',
@@ -44,13 +44,22 @@ export async function GET(request: NextRequest) {
       deletedMessageVisible: false,
       notificationsEnabled: true,
       maxFileSize: 10,
-      retentionDays: 365
+      retentionDays: 365,
+      // Real-time connection defaults
+      connectionMode: 'auto',
+      socketUrl: 'http://localhost:4000',
+      pollingInterval: 2000
     };
 
     // Override with database values if they exist
     settings.forEach((setting: any) => {
-      const key = setting.setting_key.replace('chat_', '');
+      let key = setting.setting_key.replace('chat_', '');
       let value = setting.setting_value;
+      
+      // Handle special key mappings for connection settings
+      if (key === 'connection_mode') key = 'connectionMode';
+      else if (key === 'socket_url') key = 'socketUrl';
+      else if (key === 'polling_interval') key = 'pollingInterval';
       
       // Parse JSON values (since system_settings stores as JSON)
       try {
@@ -97,7 +106,11 @@ export async function POST(request: NextRequest) {
       deletedMessageVisible,
       notificationsEnabled,
       maxFileSize,
-      retentionDays
+      retentionDays,
+      // Real-time connection settings
+      connectionMode,
+      socketUrl,
+      pollingInterval
     } = body;
 
     // Create system_settings table if it doesn't exist
@@ -120,8 +133,12 @@ export async function POST(request: NextRequest) {
       { name: 'chat_deletedMessageVisible', value: deletedMessageVisible },
       { name: 'chat_notificationsEnabled', value: notificationsEnabled },
       { name: 'chat_maxFileSize', value: maxFileSize },
-      { name: 'chat_retentionDays', value: retentionDays }
-    ];
+      { name: 'chat_retentionDays', value: retentionDays },
+      // Real-time connection settings
+      { name: 'chat_connection_mode', value: connectionMode },
+      { name: 'chat_socket_url', value: socketUrl },
+      { name: 'chat_polling_interval', value: pollingInterval }
+    ].filter(setting => setting.value !== undefined); // Only save settings that are provided
 
     for (const setting of settingsToSave) {
       await runAsync(`

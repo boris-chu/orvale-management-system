@@ -24,6 +24,7 @@ import {
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useRealTime } from '@/lib/realtime/RealTimeProvider'
 
 interface Conversation {
   id: string
@@ -62,12 +63,53 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
 
   const widgetRef = useRef<HTMLDivElement>(null)
 
+  // Real-time messaging via RealTimeProvider
+  const { 
+    connectionStatus, 
+    connectionMode,
+    onMessage, 
+    sendMessage: realTimeSendMessage 
+  } = useRealTime()
+
   // Load conversations when user is available
   useEffect(() => {
     if (user && isOpen) {
       loadConversations()
     }
   }, [user, isOpen])
+
+  // Real-time message updates for conversation list
+  useEffect(() => {
+    if (!user || !isOpen) return
+
+    console.log('🔌 ChatWidget: Setting up RealTimeProvider message listener')
+    
+    const unsubscribe = onMessage((realTimeMessage) => {
+      if (realTimeMessage.type === 'message') {
+        const messageData = realTimeMessage.content
+        
+        // Update conversation list with new message information
+        if (messageData && messageData.channel_id) {
+          setConversations(prev => prev.map(conv => {
+            if (conv.id === messageData.channel_id) {
+              return {
+                ...conv,
+                last_message: messageData.message_text,
+                last_message_at: new Date().toISOString(),
+                last_message_by: messageData.display_name,
+                unread_count: messageData.user_id !== user.username 
+                  ? (conv.unread_count || 0) + 1 
+                  : conv.unread_count // Don't increment for own messages
+              }
+            }
+            return conv
+          }))
+        }
+      }
+    })
+
+    return unsubscribe
+  }, [user, isOpen, onMessage])
 
   // Calculate total unread count
   useEffect(() => {
@@ -163,28 +205,54 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
     if (!quickMessage.trim() || !selectedConversation || !user || sending) return
 
     setSending(true)
-    try {
-      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
-      
-      const response = await fetch(`/api/chat/channels/${selectedConversation.id}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          message_text: quickMessage.trim(),
-          message_type: 'text'
-        })
-      })
+    console.log('📤 ChatWidget: Sending message via RealTimeProvider', {
+      conversationId: selectedConversation.id,
+      connectionMode,
+      connectionStatus
+    })
 
-      if (response.ok) {
+    try {
+      // Use RealTimeProvider's sendMessage instead of direct API call
+      const realTimeMessage = {
+        type: 'message' as const,
+        channel: selectedConversation.id,
+        from: user.username,
+        content: {
+          message_text: quickMessage.trim(),
+          message_type: 'text',
+          user_id: user.username,
+          display_name: user.display_name || user.username,
+          channel_id: selectedConversation.id
+        }
+      }
+
+      const success = await realTimeSendMessage(realTimeMessage)
+
+      if (success) {
+        console.log('✅ ChatWidget: Message sent successfully via RealTimeProvider')
         setQuickMessage('')
-        // Refresh conversations to update last message
-        loadConversations()
+        
+        // For immediate UI feedback in the widget, update the conversation's last message
+        setConversations(prev => prev.map(conv => 
+          conv.id === selectedConversation.id 
+            ? {
+                ...conv,
+                last_message: quickMessage.trim(),
+                last_message_at: new Date().toISOString(),
+                last_message_by: user.display_name || user.username
+              }
+            : conv
+        ))
+        
+        // If using polling mode, we might need API fallback for conversation refresh
+        if (connectionMode === 'polling') {
+          setTimeout(() => loadConversations(), 1000) // Refresh after a delay
+        }
+      } else {
+        console.error('❌ ChatWidget: Failed to send message via RealTimeProvider')
       }
     } catch (error) {
-      console.error('Error sending message:', error)
+      console.error('❌ ChatWidget: Error sending message via RealTimeProvider:', error)
     } finally {
       setSending(false)
     }
