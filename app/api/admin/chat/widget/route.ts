@@ -1,5 +1,73 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
+import sqlite3 from 'sqlite3'
+import path from 'path'
+
+// Get widget settings from database
+const getWidgetSettings = (): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    const dbPath = path.join(process.cwd(), 'orvale_tickets.db')
+    const db = new sqlite3.Database(dbPath)
+    
+    db.all(
+      `SELECT setting_key, setting_value FROM system_settings WHERE setting_key LIKE 'widget_%'`,
+      (err, rows) => {
+        db.close()
+        if (err) {
+          reject(err)
+          return
+        }
+        
+        // Default widget settings
+        const defaultSettings = {
+          type: 'glassmorphism',
+          primaryColor: '#3b82f6',
+          secondaryColor: '#9333ea',
+          size: 'normal',
+          position: 'bottom-right',
+          shape: 'circle',
+          borderRadius: 16,
+          enableGlassmorphism: true,
+          enablePulseAnimation: true,
+          enableSmoothTransitions: true,
+          enableHoverEffects: true,
+          enableShadows: true,
+          fontFamily: 'system',
+          fontSize: 'normal',
+          fontWeight: 'normal',
+          lineHeight: 'normal',
+          animationSpeed: 'normal',
+          autoHide: false,
+          soundNotifications: true,
+          desktopNotifications: true,
+          defaultState: 'closed',
+          edgeDistance: 16,
+          zIndex: 50,
+          // Time display settings
+          timeDisplay: 'relative',
+          timeFormat: '12h',
+          showTimeTooltip: true,
+          // Widget controls
+          showFileUpload: true,
+          showEmojiPicker: true
+        }
+        
+        // Merge database settings with defaults
+        const settings = { ...defaultSettings }
+        rows.forEach((row: any) => {
+          const key = row.setting_key.replace('widget_', '')
+          try {
+            settings[key] = JSON.parse(row.setting_value)
+          } catch {
+            settings[key] = row.setting_value
+          }
+        })
+        
+        resolve(settings)
+      }
+    )
+  })
+}
 
 // GET /api/admin/chat/widget - Get widget settings
 export async function GET(request: NextRequest) {
@@ -11,25 +79,9 @@ export async function GET(request: NextRequest) {
 
     // Widget settings are readable by all authenticated users for applying styling
     // Only saving settings requires admin_access permission
-
-    // Default widget settings
-    const widgetSettings = {
-      type: 'glassmorphism',
-      primaryColor: '#3b82f6',
-      secondaryColor: '#9333ea',
-      size: 'normal',
-      position: 'bottom-right',
-      borderRadius: 16,
-      enableGlassmorphism: true,
-      enablePulseAnimation: true,
-      enableSmoothTransitions: true,
-      fontFamily: 'system',
-      fontSize: 'normal',
-      autoHide: false,
-      soundNotifications: true,
-      desktopNotifications: true,
-      defaultState: 'closed'
-    }
+    
+    const widgetSettings = await getWidgetSettings()
+    console.log('🎨 Loading widget settings from database:', widgetSettings)
 
     return NextResponse.json({
       success: true,
@@ -40,6 +92,44 @@ export async function GET(request: NextRequest) {
     console.error('❌ Error fetching widget settings:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
+}
+
+// Save widget settings to database
+const saveWidgetSettings = (settings: any, username: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const dbPath = path.join(process.cwd(), 'orvale_tickets.db')
+    const db = new sqlite3.Database(dbPath)
+    
+    db.serialize(() => {
+      // Clear existing widget settings
+      db.run(`DELETE FROM system_settings WHERE setting_key LIKE 'widget_%'`, (err) => {
+        if (err) {
+          console.error('❌ Error clearing widget settings:', err)
+        }
+      })
+      
+      // Insert new settings
+      const insertStmt = db.prepare(`
+        INSERT OR REPLACE INTO system_settings (setting_key, setting_value, updated_by, updated_at) 
+        VALUES (?, ?, ?, datetime('now'))
+      `)
+      
+      Object.entries(settings).forEach(([key, value]) => {
+        const settingKey = `widget_${key}`
+        const settingValue = typeof value === 'object' ? JSON.stringify(value) : String(value)
+        insertStmt.run(settingKey, settingValue, username)
+      })
+      
+      insertStmt.finalize((err) => {
+        db.close()
+        if (err) {
+          reject(err)
+        } else {
+          resolve()
+        }
+      })
+    })
+  })
 }
 
 // POST /api/admin/chat/widget - Save widget settings
@@ -61,9 +151,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Settings are required' }, { status: 400 })
     }
 
-    // In a real implementation, you would save these to a database
-    // For now, we'll just return success
-    console.log('💾 Widget settings would be saved:', settings)
+    // Save to database
+    await saveWidgetSettings(settings, authResult.user.username)
+    console.log('💾 Widget settings saved to database by:', authResult.user.username)
 
     return NextResponse.json({
       success: true,

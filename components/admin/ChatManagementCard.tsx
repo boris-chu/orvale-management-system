@@ -93,6 +93,11 @@ export function ChatManagementCard() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   
+  // Widget save feedback states
+  const [savingWidget, setSavingWidget] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  
   // Real-time connection status
   const { 
     connectionStatus, 
@@ -933,6 +938,8 @@ export function ChatManagementCard() {
 
   const saveWidgetSettings = async (newSettings: typeof widgetSettings) => {
     setWidgetSettings(newSettings);
+    setSavingWidget(true);
+    setSaveError(null);
     
     // Save to backend
     try {
@@ -948,10 +955,28 @@ export function ChatManagementCard() {
 
       if (response.ok) {
         console.log(`✅ Widget settings saved`);
+        setSaveSuccess(true);
+        
+        // Reset success state after 2 seconds
+        setTimeout(() => setSaveSuccess(false), 2000);
+      } else {
+        const errorData = await response.text();
+        throw new Error(`Save failed: ${response.status} ${errorData}`);
       }
     } catch (error) {
       console.error('❌ Failed to save widget settings:', error);
+      setSaveError(error instanceof Error ? error.message : 'Unknown error');
+      
+      // Clear error after 5 seconds
+      setTimeout(() => setSaveError(null), 5000);
+    } finally {
+      setSavingWidget(false);
     }
+  };
+  
+  // Manual save function for the main save button
+  const handleManualSave = async () => {
+    await saveWidgetSettings(widgetSettings);
   };
 
   const switchWidgetType = async (newType: string) => {
@@ -2509,11 +2534,90 @@ export function ChatManagementCard() {
                     <Button variant="outline">
                       Preview Changes
                     </Button>
-                    <Button>
-                      Save Customization
-                    </Button>
+                    <motion.div
+                      animate={{
+                        scale: saveSuccess ? [1, 1.05, 1] : 1
+                      }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Button 
+                        onClick={handleManualSave}
+                        disabled={savingWidget}
+                        className={cn(
+                          "relative transition-all duration-300",
+                          saveSuccess && "bg-green-600 hover:bg-green-700",
+                          saveError && "bg-red-600 hover:bg-red-700"
+                        )}
+                      >
+                        <AnimatePresence mode="wait">
+                          {savingWidget ? (
+                            <motion.div
+                              key="saving"
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.8 }}
+                              className="flex items-center"
+                            >
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </motion.div>
+                          ) : saveSuccess ? (
+                            <motion.div
+                              key="success"
+                              initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.8, y: -10 }}
+                              className="flex items-center"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Saved!
+                            </motion.div>
+                          ) : saveError ? (
+                            <motion.div
+                              key="error"
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.8 }}
+                              className="flex items-center"
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Failed
+                            </motion.div>
+                          ) : (
+                            <motion.div
+                              key="default"
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.8 }}
+                              className="flex items-center"
+                            >
+                              <Send className="h-4 w-4 mr-2" />
+                              Save Customization
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </Button>
+                    </motion.div>
                   </div>
                 </div>
+                
+                {/* Save Status Notification */}
+                <AnimatePresence>
+                  {saveError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                      className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg"
+                    >
+                      <div className="flex items-center space-x-2 text-red-700">
+                        <AlertTriangle className="h-4 w-4" />
+                        <span className="text-sm font-medium">Save Failed</span>
+                      </div>
+                      <p className="text-sm text-red-600 mt-1">{saveError}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </CardContent>
             </Card>
 
