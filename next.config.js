@@ -73,7 +73,9 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; img-src 'self' data: https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com https://i.giphy.com https://via.placeholder.com; connect-src 'self' https://api.giphy.com;",
+            value: process.env.NODE_ENV === 'development' 
+              ? "default-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: blob: https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com https://i.giphy.com https://via.placeholder.com; connect-src 'self' https://api.giphy.com ws: wss:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+              : "default-src 'self'; img-src 'self' data: https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com https://i.giphy.com; connect-src 'self' https://api.giphy.com; script-src 'self'; style-src 'self' 'unsafe-inline';",
           },
         ],
       },
