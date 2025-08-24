@@ -149,7 +149,7 @@ export function MessageInput({
     attribution?: string
   }) => {
     setSending(true)
-    setShowGifPicker(false)
+    // setShowGifPicker is now handled by the shared GifPickerButton component
 
     try {
       await onSendMessage({
