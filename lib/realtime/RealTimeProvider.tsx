@@ -180,14 +180,22 @@ export function RealTimeProvider({
         }
       });
 
-      socket.on('connect_error', (error: Error & { description?: string; context?: unknown; type?: string }) => {
+      socket.on('connect_error', (error: any) => {
         console.error('❌ RealTimeProvider: Socket.IO connection error:', error);
-        console.error('Error details:', {
-          message: error.message,
-          description: error.description,
-          context: error.context,
-          type: error.type
-        });
+        
+        // Safely log error details with fallbacks
+        if (error && typeof error === 'object') {
+          const errorDetails = {
+            message: error.message || 'Unknown connection error',
+            description: error.description || 'No description available',
+            context: error.context || 'No context available',
+            type: error.type || 'Unknown error type',
+            stack: error.stack || 'No stack trace available'
+          };
+          console.error('Error details:', errorDetails);
+        } else {
+          console.error('Error details: Error object is null, undefined, or not an object:', error);
+        }
         setConnectionStatus('error');
         
         // Fallback to polling after 3 failed attempts
