@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { FileUploadButton, EmojiPickerButton } from '@/components/chat/shared'
+import { AuthenticatedImage } from '@/components/chat/AuthenticatedImage'
 import { 
   MessageCircle, 
   X, 
@@ -414,6 +415,101 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
         })
   }
 
+  // Render message content based on type
+  const renderMessageContent = (message: any) => {
+    if (message.deleted) {
+      return <p className="text-sm italic opacity-70">This message was deleted</p>
+    }
+
+    switch (message.message_type) {
+      case 'gif':
+        return (
+          <div className="space-y-1">
+            {message.file_attachment && (
+              <div className="max-w-48">
+                <img
+                  src={message.file_attachment.preview_url || message.file_attachment.url}
+                  alt={message.file_attachment.title || 'GIF'}
+                  className="rounded max-w-full h-auto"
+                  loading="lazy"
+                  style={{ maxHeight: '200px' }}
+                />
+                {message.file_attachment.attribution && (
+                  <div className="text-xs opacity-50 mt-1">
+                    via {message.file_attachment.attribution}
+                  </div>
+                )}
+              </div>
+            )}
+            {message.message_text && message.message_text !== 'Sent a GIF' && (
+              <p className="text-sm break-words">{message.message_text}</p>
+            )}
+          </div>
+        )
+
+      case 'file':
+        return (
+          <div className="space-y-1">
+            {message.file_attachment && (() => {
+              // Check if the file is an image
+              const isImage = message.file_attachment.mimeType?.startsWith('image/') || 
+                             message.file_attachment.type === 'image' ||
+                             /\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff)$/i.test(message.file_attachment.name || message.file_attachment.title || '')
+
+              if (isImage) {
+                // Display image preview
+                return (
+                  <div className="max-w-48">
+                    <AuthenticatedImage
+                      src={message.file_attachment.url}
+                      alt={message.file_attachment.name || message.file_attachment.title || 'Image'}
+                      className="rounded max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+                      loading="lazy"
+                      style={{ maxHeight: '200px' }}
+                      onClick={() => {
+                        window.open(message.file_attachment.url, '_blank')
+                      }}
+                      title="Click to open full size"
+                    />
+                    <div className="text-xs opacity-70 mt-1 truncate">
+                      {message.file_attachment.name || message.file_attachment.title}
+                    </div>
+                  </div>
+                )
+              } else {
+                // Display as file card for non-images
+                return (
+                  <div className="flex items-center space-x-2 p-2 bg-black/10 rounded max-w-48">
+                    <div className="flex-shrink-0">
+                      <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
+                        <svg className="h-3 w-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium truncate">
+                        {message.file_attachment.name || message.file_attachment.title || 'File'}
+                      </div>
+                      <div className="text-xs opacity-70">
+                        {message.file_attachment.mimeType?.split('/')[1]?.toUpperCase() || 'FILE'}
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+            })()}
+            {message.message_text && !message.message_text.startsWith('Shared a file:') && (
+              <p className="text-sm break-words">{message.message_text}</p>
+            )}
+          </div>
+        )
+
+      default:
+        return <p className="text-sm break-words">{message.message_text}</p>
+    }
+  }
+
   return (
     <div 
       ref={widgetRef}
@@ -676,7 +772,7 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
                                 : "bg-gray-100 text-gray-900"
                             )}
                           >
-                            <p className="text-sm break-words">{msg.message_text}</p>
+                            {renderMessageContent(msg)}
                             <p 
                               className="text-xs opacity-70 mt-1 cursor-pointer"
                               title={getTimeTooltip(msg.created_at)}
