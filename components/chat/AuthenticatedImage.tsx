@@ -47,12 +47,13 @@ export function AuthenticatedImage({
         const token = (localStorage.getItem('authToken') || localStorage.getItem('token'))?.trim().replace(/[\[\]\"']/g, '')
         
         if (!token) {
-          console.error('No auth token available for image:', src)
+          console.error('🔐 No auth token available for image:', src)
           setError(true)
           setIsLoading(false)
           return
         }
 
+        console.log('🖼️ Loading authenticated image:', src)
         const response = await fetch(src, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -62,20 +63,21 @@ export function AuthenticatedImage({
         if (response.ok) {
           const blob = await response.blob()
           const url = URL.createObjectURL(blob)
+          console.log('✅ Image loaded successfully:', src)
           
           if (mounted) {
             setBlobUrl(url)
             setIsLoading(false)
           }
         } else {
-          console.error('Failed to fetch authenticated image:', response.status, src)
+          console.error('❌ Failed to fetch authenticated image:', response.status, response.statusText, src)
           if (mounted) {
             setError(true)
             setIsLoading(false)
           }
         }
       } catch (error) {
-        console.error('Error loading authenticated image:', error, src)
+        console.error('❌ Error loading authenticated image:', error, src)
         if (mounted) {
           setError(true)
           setIsLoading(false)

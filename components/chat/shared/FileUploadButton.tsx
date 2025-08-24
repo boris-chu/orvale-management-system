@@ -50,8 +50,8 @@ export function FileUploadButton({
     if (variant === 'simple' && onFileSelect) {
       // Simple mode - just pass the file to parent
       onFileSelect(file)
-    } else if (variant === 'full' && onFileUpload) {
-      // Full mode - handle upload with validation
+    } else if (variant === 'full' && (onFileUpload || onFileMessage)) {
+      // Full mode - handle upload with validation (supports both callback types)
       await handleFullFileUpload(event)
     }
   }

@@ -316,7 +316,8 @@ export function GifPicker({ onSelectGif, onClose }: GifPickerProps) {
                 className="w-full h-full object-cover"
                 loading="lazy"
                 onError={(e) => {
-                  console.error('Failed to load GIF image:', gif.images.fixed_height_small.url)
+                  console.error('❌ Failed to load GIF image:', gif.images.fixed_height_small.url)
+                  console.error('❌ GIF load error details:', e)
                   // Fallback to a placeholder
                   e.currentTarget.src = `https://via.placeholder.com/150x100/4F46E5/white?text=GIF+Error`
                 }}

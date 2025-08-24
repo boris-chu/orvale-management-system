@@ -178,6 +178,7 @@ export function MessageBubble({
                         loading="lazy"
                         style={{ maxHeight: '400px' }}
                         onClick={() => {
+                          console.log('🖼️ Image clicked:', message.file_attachment?.url)
                           if (onImageClick && message.file_attachment) {
                             onImageClick(
                               message.file_attachment.url,

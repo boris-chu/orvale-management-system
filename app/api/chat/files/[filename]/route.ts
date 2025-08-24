@@ -65,7 +65,7 @@ export async function GET(
       })
 
     } catch (fileError) {
-      console.error('❌ File not found:', filePath)
+      console.error('❌ File not found:', filePath, fileError)
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
