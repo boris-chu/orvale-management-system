@@ -14,7 +14,8 @@ import {
   Send,
   Hash,
   ChevronDown,
-  Loader2
+  Loader2,
+  Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
@@ -494,11 +495,15 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
                       >
                         <div className="flex items-start space-x-3">
                           <div className="relative">
-                            {conv.type === 'direct' ? (
+                            {conv.type === 'direct' && conv.participants?.[0] ? (
                               <UserAvatar 
-                                user={conv.participants?.[0]} 
+                                user={conv.participants[0]} 
                                 size="sm" 
                               />
+                            ) : conv.type === 'direct' ? (
+                              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                <Users className="h-5 w-5 text-gray-500" />
+                              </div>
                             ) : (
                               <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
                                 <Hash className="h-5 w-5 text-gray-500" />

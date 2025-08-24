@@ -4,6 +4,7 @@ import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useUserPresence } from '@/lib/hooks/usePresence';
+import { User } from 'lucide-react';
 
 interface UserAvatarProps {
   user: {
@@ -102,6 +103,25 @@ export function UserAvatar({
   // Legacy support
   showOnlineIndicator = false 
 }: UserAvatarProps) {
+  // Handle cases where user might be undefined
+  if (!user) {
+    return (
+      <div className={cn(
+        'relative rounded-full bg-gray-200 flex items-center justify-center text-gray-500',
+        sizeClasses[size],
+        className
+      )}>
+        <User className={cn(
+          size === 'xs' ? 'h-3 w-3' :
+          size === 'sm' ? 'h-4 w-4' :
+          size === 'lg' ? 'h-8 w-8' :
+          size === 'xl' ? 'h-10 w-10' :
+          'h-5 w-5'
+        )} />
+      </div>
+    );
+  }
+
   const initials = getInitials(user.display_name, user.username);
   const gradient = getGradientFromName(user.display_name || user.username);
   
