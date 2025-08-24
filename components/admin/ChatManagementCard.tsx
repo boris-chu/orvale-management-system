@@ -45,6 +45,7 @@ import {
 } from '@mui/material';
 import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { SystemBroadcastModal } from '@/components/admin/SystemBroadcastModal';
+import { ChatMonitoringTab } from '@/components/admin/ChatMonitoringTab';
 
 interface ChatStats {
   activeUsers: number;
@@ -1049,6 +1050,7 @@ export function ChatManagementCard() {
             <TabsTrigger value="files" className="flex-shrink-0">Files & Media</TabsTrigger>
             <TabsTrigger value="presence" className="flex-shrink-0">Users</TabsTrigger>
             <TabsTrigger value="messages" className="flex-shrink-0">Messages</TabsTrigger>
+            <TabsTrigger value="monitoring" className="flex-shrink-0">🔒 Monitor</TabsTrigger>
             <TabsTrigger value="notifications" className="flex-shrink-0">Notifications</TabsTrigger>
             <TabsTrigger value="analytics" className="flex-shrink-0">Analytics</TabsTrigger>
           </TabsList>
@@ -3169,6 +3171,10 @@ export function ChatManagementCard() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="monitoring" className="mt-6">
+            <ChatMonitoringTab />
           </TabsContent>
         </Tabs>
 

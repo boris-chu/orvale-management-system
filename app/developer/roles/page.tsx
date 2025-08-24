@@ -578,6 +578,12 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     description: 'End calls for others\n• Administrative call control\n• Disconnect disruptive participants\n• Call moderation' 
   },
   { 
+    id: 'chat.monitor_conversations', 
+    name: 'Monitor Conversations', 
+    category: 'Chat', 
+    description: '⚠️ HIGH-RISK: Monitor all conversations\n• View private messages\n• Security auditing\n• Compliance monitoring\n• Privacy implications' 
+  },
+  { 
     id: 'chat.admin_access', 
     name: 'Chat Administration', 
     category: 'Chat', 

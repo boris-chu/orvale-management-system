@@ -807,6 +807,121 @@ Visual tables and data grid configuration system
 
 ---
 
+## 💬 Chat System Permissions (10 Permissions)
+
+### **Core Chat Access**
+
+#### `chat.access_channels`
+- **Name:** Access Chat Channels
+- **Description:** Basic access to chat system and channels
+- **Use Cases:**
+  - Join public channels
+  - View channel lists
+  - Participate in team communication
+  - Essential for any chat functionality
+- **Granted To:** All Users with chat access
+
+#### `chat.access_private`
+- **Name:** Access Private Channels
+- **Description:** Join and view private channels
+- **Use Cases:**
+  - Access restricted team discussions
+  - Confidential project channels
+  - Sensitive information sharing
+  - Management-level communications
+- **Granted To:** Managers, Admins, Selected Users
+
+### **Channel Management**
+
+#### `chat.create_channels`
+- **Name:** Create Channels
+- **Description:** Create new public channels
+- **Use Cases:**
+  - Start project discussions
+  - Create team workspaces
+  - Organize communications
+  - Channel administration
+- **Granted To:** Managers, Admins, Team Leads
+
+#### `chat.manage_channels`
+- **Name:** Manage All Channels
+- **Description:** Full channel management rights
+- **Use Cases:**
+  - Modify any channel settings
+  - Add/remove members
+  - Archive channels
+  - Channel moderation powers
+- **Granted To:** Admins
+
+#### `chat.create_direct`
+- **Name:** Create Direct Messages
+- **Description:** Start direct message conversations
+- **Use Cases:**
+  - One-on-one conversations
+  - Private discussions
+  - Personal communications
+  - Group direct messages
+- **Granted To:** All Users with chat access
+
+### **Content Management**
+
+#### `chat.send_files`
+- **Name:** Send Files
+- **Description:** Upload and share files in chat
+- **Use Cases:**
+  - Share documents
+  - Upload images/screenshots
+  - File collaboration
+  - Resource sharing
+- **Granted To:** All Users with chat access
+
+#### `chat.delete_messages`
+- **Name:** Delete Messages
+- **Description:** Delete own and others' messages
+- **Use Cases:**
+  - Remove inappropriate content
+  - Correct mistakes
+  - Content moderation
+  - Message cleanup
+- **Granted To:** Admins, Channel Moderators
+
+### **Communication Features**
+
+#### `chat.initiate_calls`
+- **Name:** Initiate Calls
+- **Description:** Start audio/video calls
+- **Use Cases:**
+  - Voice communications
+  - Team meetings
+  - Quick discussions
+  - Real-time collaboration
+- **Granted To:** All Users with chat access
+
+#### `chat.join_calls`
+- **Name:** Join Calls
+- **Description:** Participate in ongoing calls
+- **Use Cases:**
+  - Accept call invitations
+  - Join group calls
+  - Meeting participation
+  - Collaborative discussions
+- **Granted To:** All Users with chat access
+
+### **Administrative & Monitoring**
+
+#### `chat.monitor_conversations`
+- **Name:** Monitor Conversations
+- **Description:** View and monitor all chat conversations for compliance and security
+- **Use Cases:**
+  - Security auditing
+  - Compliance monitoring
+  - Incident investigation
+  - Content moderation oversight
+  - ⚠️ **HIGH-RISK PERMISSION** - Privacy implications
+- **Granted To:** Admins, Compliance Officers
+
+---
+
 ## 🎭 Default Role Permissions
 
 ### **IT User Role**
