@@ -154,6 +154,13 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
   // Edit message function
   const handleEditMessage = async (messageId: string, newText: string) => {
     try {
+      // Prevent editing of temporary/optimistic messages
+      if (messageId.startsWith('temp-')) {
+        console.warn('⚠️ Cannot edit temporary message, waiting for server ID:', messageId)
+        alert('Please wait a moment for the message to be fully sent before editing.')
+        return false
+      }
+
       const token = getCleanToken()
       if (!token) {
         console.error('No authentication token available')
@@ -200,6 +207,13 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
   // Delete message function
   const handleDeleteMessage = async (messageId: string) => {
     try {
+      // Prevent deletion of temporary/optimistic messages
+      if (messageId.startsWith('temp-')) {
+        console.warn('⚠️ Cannot delete temporary message, waiting for server ID:', messageId)
+        alert('Please wait a moment for the message to be fully sent before deleting.')
+        return false
+      }
+
       const token = getCleanToken()
       if (!token) {
         console.error('No authentication token available')
