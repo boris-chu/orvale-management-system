@@ -67,6 +67,9 @@ export interface RealTimeContextType {
     reconnectCount: number;
     lastReconnect?: string;
   };
+  
+  // Socket instance for call functionality
+  socket: Socket | null;
 }
 
 const RealTimeContext = createContext<RealTimeContextType | null>(null);
@@ -514,7 +517,8 @@ export function RealTimeProvider({
     onMessage,
     onPresenceUpdate,
     onUserCount,
-    stats
+    stats,
+    socket: socketRef.current
   };
 
   return (

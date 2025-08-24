@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ChatWidget } from './ChatWidget'
+import { CallManager } from './CallManager'
 import { useRouter, usePathname } from 'next/navigation'
 
 interface ChatWidgetProviderProps {
@@ -109,6 +110,11 @@ export function ChatWidgetProvider({ children }: ChatWidgetProviderProps) {
           initialState={widgetState}
           onStateChange={handleStateChange}
         />
+      )}
+
+      {/* Call Manager - Available globally when user has chat permissions */}
+      {user?.permissions?.includes('chat.access_channels') && (
+        <CallManager currentUser={user} />
       )}
     </>
   )

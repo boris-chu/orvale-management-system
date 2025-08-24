@@ -273,6 +273,298 @@ export default async function handler(req, res) {
       })
       
       // =======================
+      // CALL EVENT HANDLERS (Phase 8: WebRTC Foundation)
+      // =======================
+      
+      // Initiate a call
+      socket.on('call_initiate', async (data) => {
+        try {
+          const { channelId, callType, targetUsers = [], sessionId } = data
+          
+          console.log(`📞 Call initiated by ${socket.userId}: ${callType} call, session ${sessionId}`)
+          
+          if (channelId) {
+            // Channel-based call - notify all channel members
+            socket.to(`channel_${channelId}`).emit('incoming_call', {
+              sessionId,
+              callType,
+              channelId,
+              initiator: socket.userInfo,
+              timestamp: new Date().toISOString()
+            })
+          } else if (targetUsers && targetUsers.length > 0) {
+            // Direct call - find target users' sockets and notify them
+            const targetSockets = await io.fetchSockets()
+            targetSockets.forEach(targetSocket => {
+              if (targetUsers.includes(targetSocket.userId)) {
+                targetSocket.emit('incoming_call', {
+                  sessionId,
+                  callType,
+                  initiator: socket.userInfo,
+                  participants: [socket.userId, ...targetUsers],
+                  timestamp: new Date().toISOString()
+                })
+              }
+            })
+          }
+          
+        } catch (error) {
+          console.error('❌ Error handling call initiation:', error)
+          socket.emit('error', { message: 'Failed to initiate call' })
+        }
+      })
+      
+      // Accept a call
+      socket.on('call_accept', async (data) => {
+        try {
+          const { sessionId } = data
+          
+          console.log(`✅ Call accepted by ${socket.userId}: session ${sessionId}`)
+          
+          // Get call session details to notify other participants
+          const callSession = await queryAsync(`
+            SELECT cs.*, u.display_name as initiator_name
+            FROM call_sessions cs
+            LEFT JOIN users u ON cs.initiator_user_id = u.username
+            WHERE cs.id = ?
+          `, [sessionId])
+          
+          if (callSession && callSession.length > 0) {
+            const session = callSession[0]
+            const participants = JSON.parse(session.participants || '[]')
+            
+            // Notify all participants that someone accepted
+            const allSockets = await io.fetchSockets()
+            allSockets.forEach(participantSocket => {
+              if (participants.includes(participantSocket.userId) && participantSocket.userId !== socket.userId) {
+                participantSocket.emit('call_accepted', {
+                  sessionId,
+                  participant: socket.userInfo,
+                  timestamp: new Date().toISOString()
+                })
+              }
+            })
+            
+            // Join the call room for WebRTC signaling
+            socket.join(`call_${sessionId}`)
+          }
+          
+        } catch (error) {
+          console.error('❌ Error handling call accept:', error)
+          socket.emit('error', { message: 'Failed to accept call' })
+        }
+      })
+      
+      // Decline a call
+      socket.on('call_decline', async (data) => {
+        try {
+          const { sessionId, reason = 'declined' } = data
+          
+          console.log(`❌ Call declined by ${socket.userId}: session ${sessionId}, reason: ${reason}`)
+          
+          // Get call session details
+          const callSession = await queryAsync(`
+            SELECT cs.*, u.display_name as initiator_name
+            FROM call_sessions cs
+            LEFT JOIN users u ON cs.initiator_user_id = u.username
+            WHERE cs.id = ?
+          `, [sessionId])
+          
+          if (callSession && callSession.length > 0) {
+            const session = callSession[0]
+            const participants = JSON.parse(session.participants || '[]')
+            
+            // Notify all participants that someone declined
+            const allSockets = await io.fetchSockets()
+            allSockets.forEach(participantSocket => {
+              if (participants.includes(participantSocket.userId) && participantSocket.userId !== socket.userId) {
+                participantSocket.emit('call_declined', {
+                  sessionId,
+                  participant: socket.userInfo,
+                  reason,
+                  timestamp: new Date().toISOString()
+                })
+              }
+            })
+          }
+          
+        } catch (error) {
+          console.error('❌ Error handling call decline:', error)
+          socket.emit('error', { message: 'Failed to decline call' })
+        }
+      })
+      
+      // End a call
+      socket.on('call_end', async (data) => {
+        try {
+          const { sessionId, reason = 'completed' } = data
+          
+          console.log(`🔚 Call ended by ${socket.userId}: session ${sessionId}, reason: ${reason}`)
+          
+          // Get call session details
+          const callSession = await queryAsync(`
+            SELECT cs.*, u.display_name as initiator_name
+            FROM call_sessions cs
+            LEFT JOIN users u ON cs.initiator_user_id = u.username
+            WHERE cs.id = ?
+          `, [sessionId])
+          
+          if (callSession && callSession.length > 0) {
+            const session = callSession[0]
+            const participants = JSON.parse(session.participants || '[]')
+            
+            // Notify all participants that call ended
+            const allSockets = await io.fetchSockets()
+            allSockets.forEach(participantSocket => {
+              if (participants.includes(participantSocket.userId)) {
+                participantSocket.emit('call_ended', {
+                  sessionId,
+                  endedBy: socket.userInfo,
+                  reason,
+                  duration: session.duration_seconds,
+                  timestamp: new Date().toISOString()
+                })
+                
+                // Remove from call room
+                participantSocket.leave(`call_${sessionId}`)
+              }
+            })
+          }
+          
+        } catch (error) {
+          console.error('❌ Error handling call end:', error)
+          socket.emit('error', { message: 'Failed to end call' })
+        }
+      })
+      
+      // WebRTC Signaling Events
+      
+      // Handle WebRTC offer
+      socket.on('webrtc_offer', async (data) => {
+        try {
+          const { sessionId, offer, targetUser } = data
+          
+          console.log(`🔄 WebRTC offer from ${socket.userId} to ${targetUser} (session: ${sessionId})`)
+          
+          // Find target user's socket
+          const allSockets = await io.fetchSockets()
+          const targetSocket = allSockets.find(s => s.userId === targetUser)
+          
+          if (targetSocket) {
+            targetSocket.emit('webrtc_offer_received', {
+              sessionId,
+              offer,
+              fromUser: socket.userId,
+              fromUserInfo: socket.userInfo,
+              timestamp: new Date().toISOString()
+            })
+          } else {
+            socket.emit('error', { message: `Target user ${targetUser} not found or offline` })
+          }
+          
+        } catch (error) {
+          console.error('❌ Error handling WebRTC offer:', error)
+          socket.emit('error', { message: 'Failed to send WebRTC offer' })
+        }
+      })
+      
+      // Handle WebRTC answer
+      socket.on('webrtc_answer', async (data) => {
+        try {
+          const { sessionId, answer, targetUser } = data
+          
+          console.log(`🔄 WebRTC answer from ${socket.userId} to ${targetUser} (session: ${sessionId})`)
+          
+          // Find target user's socket
+          const allSockets = await io.fetchSockets()
+          const targetSocket = allSockets.find(s => s.userId === targetUser)
+          
+          if (targetSocket) {
+            targetSocket.emit('webrtc_answer_received', {
+              sessionId,
+              answer,
+              fromUser: socket.userId,
+              fromUserInfo: socket.userInfo,
+              timestamp: new Date().toISOString()
+            })
+          } else {
+            socket.emit('error', { message: `Target user ${targetUser} not found or offline` })
+          }
+          
+        } catch (error) {
+          console.error('❌ Error handling WebRTC answer:', error)
+          socket.emit('error', { message: 'Failed to send WebRTC answer' })
+        }
+      })
+      
+      // Handle ICE candidates
+      socket.on('webrtc_ice_candidate', async (data) => {
+        try {
+          const { sessionId, candidate, targetUser } = data
+          
+          console.log(`🧊 ICE candidate from ${socket.userId} to ${targetUser} (session: ${sessionId})`)
+          
+          // Find target user's socket  
+          const allSockets = await io.fetchSockets()
+          const targetSocket = allSockets.find(s => s.userId === targetUser)
+          
+          if (targetSocket) {
+            targetSocket.emit('webrtc_ice_candidate_received', {
+              sessionId,
+              candidate,
+              fromUser: socket.userId,
+              fromUserInfo: socket.userInfo,
+              timestamp: new Date().toISOString()
+            })
+          }
+          // Note: ICE candidates can be sent multiple times, so we don't emit errors for missing users
+          
+        } catch (error) {
+          console.error('❌ Error handling ICE candidate:', error)
+        }
+      })
+      
+      // Join call room (for WebRTC signaling)
+      socket.on('join_call', async (data) => {
+        try {
+          const { sessionId } = data
+          
+          socket.join(`call_${sessionId}`)
+          console.log(`📞 ${socket.userId} joined call room: ${sessionId}`)
+          
+          // Notify other participants in the call
+          socket.to(`call_${sessionId}`).emit('call_participant_joined', {
+            sessionId,
+            participant: socket.userInfo,
+            timestamp: new Date().toISOString()
+          })
+          
+        } catch (error) {
+          console.error('❌ Error joining call room:', error)
+        }
+      })
+      
+      // Leave call room
+      socket.on('leave_call', async (data) => {
+        try {
+          const { sessionId } = data
+          
+          socket.leave(`call_${sessionId}`)
+          console.log(`📞 ${socket.userId} left call room: ${sessionId}`)
+          
+          // Notify other participants in the call
+          socket.to(`call_${sessionId}`).emit('call_participant_left', {
+            sessionId,
+            participant: socket.userInfo,
+            timestamp: new Date().toISOString()
+          })
+          
+        } catch (error) {
+          console.error('❌ Error leaving call room:', error)
+        }
+      })
+      
+      // =======================
       // DISCONNECTION HANDLER
       // =======================
       

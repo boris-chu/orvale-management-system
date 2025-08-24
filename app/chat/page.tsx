@@ -445,6 +445,8 @@ export default function ChatPage() {
         onSelectMessage={handleSearchResultSelect}
         currentUser={user}
       />
+
+      {/* Note: CallManager is handled globally by ChatWidgetProvider */}
     </div>
   )
 }

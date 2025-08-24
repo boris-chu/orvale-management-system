@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { FileUploadButton, EmojiPickerButton } from '@/components/chat/shared'
 import { AuthenticatedImage } from '@/components/chat/AuthenticatedImage'
+import { CallInitiator } from './CallInitiator'
 import { 
   MessageCircle, 
   X, 
@@ -78,7 +79,8 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
   const { 
     connectionStatus, 
     connectionMode,
-    onMessage
+    onMessage,
+    socket
   } = useRealTime()
 
   // Load widget settings from API
@@ -797,58 +799,79 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
                 ) : (
                   <div className="p-2 space-y-1">
                     {conversations.map((conv) => (
-                      <button
-                        key={conv.id}
-                        onClick={() => handleSelectConversation(conv)}
-                        className="w-full text-left p-3 rounded-lg hover:bg-gray-100 transition-colors"
-                      >
-                        <div className="flex items-start space-x-3">
-                          <div className="relative">
-                            {conv.type === 'direct' && conv.participants?.[0] ? (
-                              <UserAvatar 
-                                user={conv.participants[0]} 
-                                size="sm" 
-                              />
-                            ) : conv.type === 'direct' ? (
-                              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                <Users className="h-5 w-5 text-gray-500" />
-                              </div>
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                <Hash className="h-5 w-5 text-gray-500" />
-                              </div>
-                            )}
-                            {conv.unread_count > 0 && (
-                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <p className="font-medium text-sm truncate">
-                                {conv.name}
-                              </p>
-                              {conv.last_message_at && (
-                                <span 
-                                  className="text-xs text-gray-500 cursor-pointer"
-                                  title={getTimeTooltip(conv.last_message_at)}
-                                >
-                                  {formatMessageTime(conv.last_message_at)}
-                                </span>
+                      <div key={conv.id} className="group relative">
+                        <button
+                          onClick={() => handleSelectConversation(conv)}
+                          className="w-full text-left p-3 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <div className="flex items-start space-x-3">
+                            <div className="relative">
+                              {conv.type === 'direct' && conv.participants?.[0] ? (
+                                <UserAvatar 
+                                  user={conv.participants[0]} 
+                                  size="sm" 
+                                />
+                              ) : conv.type === 'direct' ? (
+                                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                  <Users className="h-5 w-5 text-gray-500" />
+                                </div>
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                  <Hash className="h-5 w-5 text-gray-500" />
+                                </div>
+                              )}
+                              {conv.unread_count > 0 && (
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
                               )}
                             </div>
-                            {conv.last_message && (
-                              <p className="text-xs text-gray-600 truncate mt-1">
-                                {conv.last_message_by && (
-                                  <span className="font-medium">
-                                    {conv.last_message_by === user?.username ? 'You' : conv.last_message_by}:
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <p className="font-medium text-sm truncate">
+                                  {conv.name}
+                                </p>
+                                {conv.last_message_at && (
+                                  <span 
+                                    className="text-xs text-gray-500 cursor-pointer"
+                                    title={getTimeTooltip(conv.last_message_at)}
+                                  >
+                                    {formatMessageTime(conv.last_message_at)}
                                   </span>
-                                )}{' '}
-                                {conv.last_message}
-                              </p>
-                            )}
+                                )}
+                              </div>
+                              {conv.last_message && (
+                                <p className="text-xs text-gray-600 truncate mt-1">
+                                  {conv.last_message_by && (
+                                    <span className="font-medium">
+                                      {conv.last_message_by === user?.username ? 'You' : conv.last_message_by}:
+                                    </span>
+                                  )}{' '}
+                                  {conv.last_message}
+                                </p>
+                              )}
+                            </div>
                           </div>
+                        </button>
+
+                        {/* Call Initiator - Show on hover for direct messages or always for channels */}
+                        <div className={cn(
+                          "absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity",
+                          conv.type === 'public' && "opacity-100" // Always show for channels
+                        )}>
+                          <CallInitiator
+                            channelId={conv.type === 'direct' ? undefined : conv.id}
+                            targetUsers={conv.type === 'direct' && conv.participants ? 
+                              conv.participants.map(p => p.username || p.user_id).filter(id => id !== user?.username) : 
+                              undefined
+                            }
+                            socket={socket}
+                            variant="icon"
+                            size="sm"
+                            onCallInitiated={(sessionId, callType) => {
+                              console.log(`📞 Call initiated from widget: ${callType} call in ${conv.name}, session ${sessionId}`)
+                            }}
+                          />
                         </div>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 )}

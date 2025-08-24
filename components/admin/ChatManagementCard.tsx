@@ -44,6 +44,7 @@ import {
   InputLabel,
 } from '@mui/material';
 import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { SystemBroadcastModal } from '@/components/admin/SystemBroadcastModal';
 
 interface ChatStats {
   activeUsers: number;
@@ -97,6 +98,9 @@ export function ChatManagementCard() {
   const [savingWidget, setSavingWidget] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  
+  // System broadcast modal state
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   
   // Real-time connection status
   const { 
@@ -1255,7 +1259,12 @@ export function ChatManagementCard() {
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Refresh Statistics
                   </Button>
-                  <Button size="sm" variant="outline" className="w-full justify-start">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => setShowBroadcastModal(true)}
+                  >
                     <Globe className="h-4 w-4 mr-2" />
                     System Broadcast
                   </Button>
@@ -3394,6 +3403,17 @@ export function ChatManagementCard() {
           </div>
         )}
       </CardContent>
+      
+      {/* System Broadcast Modal */}
+      <SystemBroadcastModal
+        open={showBroadcastModal}
+        onClose={() => setShowBroadcastModal(false)}
+        onBroadcastSent={(messageId) => {
+          console.log('Broadcast sent with ID:', messageId);
+          // Optionally refresh stats to show updated message counts
+          loadChatStats();
+        }}
+      />
     </Card>
   );
 }

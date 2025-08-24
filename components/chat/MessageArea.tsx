@@ -6,6 +6,7 @@ import { MessageInput } from './MessageInput'
 import { TypingIndicator } from './TypingIndicator'
 import { ImageLightbox } from './ImageLightbox'
 import { ChannelSettingsModal } from './ChannelSettingsModal'
+import { CallInitiator } from './CallInitiator'
 import { Button } from '@/components/ui/button'
 // import { ScrollArea } from '@/components/ui/scroll-area' // Using native scroll instead
 import { Badge } from '@/components/ui/badge'
@@ -97,7 +98,8 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     connectedUsers,
     onMessage, 
     sendMessage: realTimeSendMessage,
-    stats 
+    stats,
+    socket
   } = useRealTime()
   const [lightboxImage, setLightboxImage] = useState<{
     src: string
@@ -840,6 +842,17 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
               <Users className="h-3 w-3 mr-1" />
               {channel.member_count} members
             </Badge>
+            
+            {/* Call Initiator */}
+            <CallInitiator
+              channelId={channel.id}
+              socket={socket}
+              variant="icon"
+              onCallInitiated={(sessionId, callType) => {
+                console.log(`📞 Call initiated in ${channel.name}: ${callType} call, session ${sessionId}`)
+              }}
+            />
+            
             <Button 
               variant="ghost" 
               size="sm"

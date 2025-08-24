@@ -90,6 +90,40 @@ CREATE TABLE IF NOT EXISTS message_reactions (
 );
 `;
 
+// Call sessions tracking (Phase 8: WebRTC Foundation)
+const createCallSessionsTable = `
+CREATE TABLE IF NOT EXISTS call_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel_id INTEGER,
+    initiator_user_id TEXT NOT NULL,
+    call_type TEXT CHECK(call_type IN ('audio', 'video', 'screen_share')) NOT NULL,
+    participants TEXT NOT NULL, -- JSON array of user IDs
+    status TEXT CHECK(status IN ('ringing', 'active', 'ended', 'missed')) DEFAULT 'ringing',
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    answered_at TIMESTAMP,
+    ended_at TIMESTAMP,
+    duration_seconds INTEGER,
+    recording_path TEXT,
+    end_reason TEXT, -- 'completed', 'declined', 'timeout', 'error'
+    FOREIGN KEY (channel_id) REFERENCES chat_channels(id),
+    FOREIGN KEY (initiator_user_id) REFERENCES users(username)
+);
+`;
+
+// Call participants details (Phase 8: WebRTC Foundation)
+const createCallParticipantsTable = `
+CREATE TABLE IF NOT EXISTS call_participants (
+    call_session_id INTEGER NOT NULL,
+    user_id TEXT NOT NULL,
+    joined_at TIMESTAMP,
+    left_at TIMESTAMP,
+    connection_quality TEXT, -- 'excellent', 'good', 'poor', 'disconnected'
+    PRIMARY KEY (call_session_id, user_id),
+    FOREIGN KEY (call_session_id) REFERENCES call_sessions(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(username)
+);
+`;
+
 // Create indexes for performance
 const createIndexes = `
 -- Channel indexes
@@ -115,6 +149,16 @@ CREATE INDEX IF NOT EXISTS idx_user_presence_last_active ON user_presence(last_a
 -- Reactions indexes
 CREATE INDEX IF NOT EXISTS idx_message_reactions_message_id ON message_reactions(message_id);
 CREATE INDEX IF NOT EXISTS idx_message_reactions_user_id ON message_reactions(user_id);
+
+-- Call sessions indexes
+CREATE INDEX IF NOT EXISTS idx_call_sessions_channel_id ON call_sessions(channel_id);
+CREATE INDEX IF NOT EXISTS idx_call_sessions_initiator ON call_sessions(initiator_user_id);
+CREATE INDEX IF NOT EXISTS idx_call_sessions_status ON call_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_call_sessions_started_at ON call_sessions(started_at);
+
+-- Call participants indexes
+CREATE INDEX IF NOT EXISTS idx_call_participants_user_id ON call_participants(user_id);
+CREATE INDEX IF NOT EXISTS idx_call_participants_joined ON call_participants(joined_at);
 `;
 
 // Execute table creation
@@ -123,7 +167,9 @@ const tables = [
   { name: 'chat_channel_members', sql: createChannelMembersTable },
   { name: 'chat_messages', sql: createMessagesTable },
   { name: 'user_presence', sql: createPresenceTable },
-  { name: 'message_reactions', sql: createReactionsTable }
+  { name: 'message_reactions', sql: createReactionsTable },
+  { name: 'call_sessions', sql: createCallSessionsTable },
+  { name: 'call_participants', sql: createCallParticipantsTable }
 ];
 
 async function createTables() {
@@ -160,13 +206,15 @@ async function createTables() {
   console.log('   - chat_messages: Messages with threading, files, ticket links');
   console.log('   - user_presence: Real-time online/offline status tracking');
   console.log('   - message_reactions: Emoji reactions with unique constraints');
-  console.log('   - Performance indexes: Optimized for real-time queries');
+  console.log('   - call_sessions: WebRTC call tracking with audio/video/screen share');
+  console.log('   - call_participants: Call participant status and connection quality');
+  console.log('   - Performance indexes: Optimized for real-time queries and call management');
   
   db.close((err) => {
     if (err) {
       console.error('Error closing database:', err.message);
     } else {
-      console.log('\n🎉 Chat system database setup complete!');
+      console.log('\n🎉 Chat system database setup complete with WebRTC call support!');
     }
   });
 }

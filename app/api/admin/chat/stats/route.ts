@@ -33,9 +33,9 @@ export async function GET(request: NextRequest) {
         FROM user_presence
       `).catch(() => [{ online_count: 0, offline_count: totalUsers, total_presence: totalUsers }]);
 
-      // Get real channel data
+      // Get real channel data (public channels only - exclude direct messages)
       const channelStats = await queryAsync(`
-        SELECT COUNT(*) as total_channels FROM chat_channels WHERE active = 1
+        SELECT COUNT(*) as total_channels FROM chat_channels WHERE active = 1 AND type = 'public'
       `).catch(() => [{ total_channels: 3 }]);
 
       // Get real message statistics for the last hour
