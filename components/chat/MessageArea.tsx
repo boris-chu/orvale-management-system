@@ -5,6 +5,7 @@ import { MessageBubble } from './MessageBubble'
 import { MessageInput } from './MessageInput'
 import { TypingIndicator } from './TypingIndicator'
 import { ImageLightbox } from './ImageLightbox'
+import { ChannelSettingsModal } from './ChannelSettingsModal'
 import { Button } from '@/components/ui/button'
 // import { ScrollArea } from '@/components/ui/scroll-area' // Using native scroll instead
 import { Badge } from '@/components/ui/badge'
@@ -104,6 +105,7 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
     filename?: string
     downloadUrl?: string
   } | null>(null)
+  const [showChannelSettings, setShowChannelSettings] = useState(false)
   const [replyingTo, setReplyingTo] = useState<{
     id: string
     user_name: string
@@ -841,10 +843,7 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
             <Button 
               variant="ghost" 
               size="sm"
-              onClick={() => {
-                // TODO: Open channel settings modal
-                alert(`Channel Settings for ${getChannelDisplayName()}\n\nFeatures available:\n• Channel information\n• Member management\n• Notification settings\n• Channel permissions\n\nThis will be implemented in a future update.`)
-              }}
+              onClick={() => setShowChannelSettings(true)}
               title="Channel settings"
             >
               <Settings className="h-4 w-4" />
@@ -957,6 +956,14 @@ export function MessageArea({ channel, currentUser, onChannelUpdate }: MessageAr
         downloadUrl={lightboxImage?.downloadUrl}
         isOpen={!!lightboxImage}
         onClose={() => setLightboxImage(null)}
+      />
+
+      {/* Channel Settings Modal */}
+      <ChannelSettingsModal
+        channel={channel}
+        open={showChannelSettings}
+        onClose={() => setShowChannelSettings(false)}
+        currentUser={currentUser}
       />
     </div>
   )

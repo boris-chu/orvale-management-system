@@ -102,7 +102,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, description, type = 'public', team_id, members = [] } = body
+    const { name, description, type = 'public', team_id, members = [], participants = [] } = body
+    
+    // Support both 'members' and 'participants' field names
+    const membersList = participants.length > 0 ? participants : members
 
     // Validate required fields
     if (!name || name.trim().length === 0) {
@@ -157,8 +160,8 @@ export async function POST(request: NextRequest) {
     `, [channelId, authResult.user.username])
 
     // Add additional members if provided
-    if (members && members.length > 0) {
-      for (const memberUsername of members) {
+    if (membersList && membersList.length > 0) {
+      for (const memberUsername of membersList) {
         // Verify member exists
         const user = await queryAsync('SELECT username FROM users WHERE username = ?', [memberUsername])
         if (user && user.length > 0 && memberUsername !== authResult.user.username) {
