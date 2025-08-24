@@ -112,6 +112,9 @@ export async function POST(request: NextRequest) {
 
     console.log(`🔔 Call initiated: ${callType} call by ${authResult.user.display_name} (${participants.length + 1} participants)`)
 
+    // Note: Socket.IO events will be handled by the CallInitiator component
+    // which emits 'call_initiate' event after receiving this API response
+
     return NextResponse.json({
       success: true,
       callSession: callSession[0],

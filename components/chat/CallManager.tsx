@@ -126,6 +126,21 @@ export function CallManager({ currentUser }: CallManagerProps) {
       }
     }
 
+    const handleCallInitiated = (data: any) => {
+      console.log('🎬 Call initiated by current user:', data)
+      
+      // Start AudioCallWidget for the initiator
+      const call: ActiveCall = {
+        sessionId: data.sessionId,
+        callType: data.callType,
+        participants: data.participants || [],
+        isInitiator: true,
+        startedAt: new Date().toISOString()
+      }
+
+      setActiveCall(call)
+    }
+
     // Register event listeners
     socket.on('incoming_call', handleIncomingCall)
     socket.on('call_accepted', handleCallAccepted)
@@ -133,6 +148,7 @@ export function CallManager({ currentUser }: CallManagerProps) {
     socket.on('call_ended', handleCallEnded)
     socket.on('call_participant_joined', handleCallParticipantJoined)
     socket.on('call_participant_left', handleCallParticipantLeft)
+    socket.on('call_initiated_success', handleCallInitiated)
 
     return () => {
       socket.off('incoming_call', handleIncomingCall)
@@ -141,6 +157,7 @@ export function CallManager({ currentUser }: CallManagerProps) {
       socket.off('call_ended', handleCallEnded)
       socket.off('call_participant_joined', handleCallParticipantJoined)
       socket.off('call_participant_left', handleCallParticipantLeft)
+      socket.off('call_initiated_success', handleCallInitiated)
       
       // Clear auto-decline timer
       if (autoDeclineTimerRef.current) {

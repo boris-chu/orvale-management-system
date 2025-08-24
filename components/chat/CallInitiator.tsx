@@ -78,6 +78,15 @@ export function CallInitiator({
         sessionId: callSession.id
       })
 
+      // Emit event to start AudioCallWidget for the initiator
+      socket.emit('call_initiated_success', {
+        sessionId: callSession.id,
+        callType,
+        participants,
+        isInitiator: true,
+        startedAt: new Date().toISOString()
+      })
+
       // Notify parent component
       if (onCallInitiated) {
         onCallInitiated(callSession.id, callType)
