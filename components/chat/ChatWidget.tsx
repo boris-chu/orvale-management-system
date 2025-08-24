@@ -17,7 +17,9 @@ import {
   Hash,
   ChevronDown,
   Loader2,
-  Users
+  Users,
+  ExternalLink,
+  Download
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
@@ -479,21 +481,130 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
               } else {
                 // Display as file card for non-images
                 return (
-                  <div className="flex items-center space-x-2 p-2 bg-black/10 rounded max-w-48">
-                    <div className="flex-shrink-0">
-                      <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
-                        <svg className="h-3 w-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2 p-2 bg-black/10 rounded max-w-48">
+                      <div className="flex-shrink-0">
+                        <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
+                          <svg className="h-3 w-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium truncate">
+                          {message.file_attachment.name || message.file_attachment.title || 'File'}
+                        </div>
+                        <div className="text-xs opacity-70">
+                          {message.file_attachment.mimeType?.split('/')[1]?.toUpperCase() || 'FILE'}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium truncate">
-                        {message.file_attachment.name || message.file_attachment.title || 'File'}
-                      </div>
-                      <div className="text-xs opacity-70">
-                        {message.file_attachment.mimeType?.split('/')[1]?.toUpperCase() || 'FILE'}
-                      </div>
+                    {/* Action buttons */}
+                    <div className="flex space-x-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-xs hover:bg-black/10"
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          const url = message.file_attachment?.url
+                          console.log('🔍 Widget: Opening file URL:', url)
+                          
+                          if (!url) {
+                            console.error('No file URL available')
+                            return
+                          }
+                          
+                          try {
+                            // For file serving, we need to fetch with auth and create blob URL
+                            const token = (localStorage.getItem('authToken') || localStorage.getItem('token'))?.trim().replace(/[\[\]\"']/g, '')
+                            if (token && url.includes('/api/chat/files/')) {
+                              const response = await fetch(url, {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                              })
+                              if (response.ok) {
+                                const blob = await response.blob()
+                                const blobUrl = URL.createObjectURL(blob)
+                                window.open(blobUrl, '_blank', 'noopener,noreferrer')
+                                // Clean up the blob URL after a short delay
+                                setTimeout(() => URL.revokeObjectURL(blobUrl), 5000)
+                              } else {
+                                console.error('Failed to fetch file:', response.status)
+                                window.open(url, '_blank', 'noopener,noreferrer')
+                              }
+                            } else {
+                              window.open(url, '_blank', 'noopener,noreferrer')
+                            }
+                          } catch (error) {
+                            console.error('Error opening file:', error)
+                            window.open(url, '_blank', 'noopener,noreferrer')
+                          }
+                        }}
+                        title="View"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        View
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-xs hover:bg-black/10"
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          const downloadUrl = message.file_attachment?.downloadUrl || message.file_attachment?.url
+                          console.log('📥 Widget: Downloading file from:', downloadUrl)
+                          
+                          if (!downloadUrl) {
+                            console.error('No download URL available')
+                            return
+                          }
+                          
+                          try {
+                            // For file downloads, we need to fetch with auth and create download link
+                            const token = (localStorage.getItem('authToken') || localStorage.getItem('token'))?.trim().replace(/[\[\]\"']/g, '')
+                            if (token && downloadUrl.includes('/api/chat/')) {
+                              const response = await fetch(downloadUrl, {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                              })
+                              if (response.ok) {
+                                const blob = await response.blob()
+                                const blobUrl = URL.createObjectURL(blob)
+                                
+                                // Create download link
+                                const link = document.createElement('a')
+                                link.href = blobUrl
+                                link.download = message.file_attachment.name || 'download'
+                                link.style.display = 'none'
+                                document.body.appendChild(link)
+                                link.click()
+                                document.body.removeChild(link)
+                                
+                                // Clean up the blob URL
+                                setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+                              } else {
+                                console.error('Failed to download file:', response.status)
+                                alert('Failed to download file. Please try again.')
+                              }
+                            } else {
+                              // Fallback for non-API URLs
+                              const link = document.createElement('a')
+                              link.href = downloadUrl
+                              link.download = message.file_attachment.name || 'download'
+                              link.style.display = 'none'
+                              document.body.appendChild(link)
+                              link.click()
+                              document.body.removeChild(link)
+                            }
+                          } catch (error) {
+                            console.error('Error downloading file:', error)
+                            alert('Failed to download file. Please try again.')
+                          }
+                        }}
+                        title="Download"
+                      >
+                        <Download className="h-3 w-3 mr-1" />
+                        Download
+                      </Button>
                     </div>
                   </div>
                 )
