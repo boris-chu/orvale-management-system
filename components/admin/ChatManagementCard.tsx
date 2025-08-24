@@ -28,7 +28,8 @@ import {
   RefreshCw,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  Send
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRealTime } from '@/lib/realtime/RealTimeProvider';
@@ -149,6 +150,47 @@ export function ChatManagementCard() {
   const [selectedUser, setSelectedUser] = useState<OnlineUser | null>(null);
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [managingUser, setManagingUser] = useState(false);
+  const [widgetSettings, setWidgetSettings] = useState<any>({
+    type: 'glassmorphism',
+    primaryColor: '#3b82f6',
+    secondaryColor: '#9333ea',
+    size: 'normal',
+    position: 'bottom-right',
+    borderRadius: 16,
+    enableGlassmorphism: true,
+    enablePulseAnimation: true,
+    enableSmoothTransitions: true,
+    fontFamily: 'system',
+    fontSize: 'normal',
+    autoHide: false,
+    soundNotifications: true,
+    desktopNotifications: true,
+    defaultState: 'closed'
+  });
+  const [testingWidget, setTestingWidget] = useState<string | null>(null);
+  const [widgetTestResults, setWidgetTestResults] = useState<{[key: string]: any}>({});
+  const [analyticsData, setAnalyticsData] = useState({
+    messageVolumeData: [
+      { name: '00:00', value: 0 },
+      { name: '04:00', value: 0 },
+      { name: '08:00', value: 0 },
+      { name: '12:00', value: 0 },
+      { name: '16:00', value: 0 },
+      { name: '20:00', value: 0 },
+    ],
+    fileTypeData: [
+      { name: 'Images', value: 0 },
+      { name: 'Documents', value: 0 },
+      { name: 'Links', value: 0 },
+    ],
+    systemMetrics: {
+      averageResponseTime: '0ms',
+      uptime: '100%',
+      errorRate: '0%',
+      peakConcurrentUsers: 0
+    },
+    channelActivity: []
+  });
   const [socketStatus, setSocketStatus] = useState<{
     isRunning: boolean;
     connectedClients: number;
@@ -166,6 +208,7 @@ export function ChatManagementCard() {
     loadChatStats();
     loadChatSettings();
     loadPresenceData();
+    loadAnalyticsData();
     checkSocketStatus();
   }, []);
 
@@ -174,6 +217,7 @@ export function ChatManagementCard() {
     const interval = setInterval(() => {
       loadChatStats();
       loadPresenceData();
+      loadAnalyticsData();
       checkSocketStatus();
     }, 30000);
     return () => clearInterval(interval);
@@ -407,6 +451,25 @@ export function ChatManagementCard() {
     } catch (error) {
       console.error('❌ Network error loading presence data:', error);
       await loadBasicUserStats();
+    }
+  };
+
+  const loadAnalyticsData = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/analytics', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📊 Analytics data loaded:', data);
+        setAnalyticsData(data);
+      } else {
+        console.warn('⚠️ Failed to load analytics data, using defaults');
+      }
+    } catch (error) {
+      console.error('❌ Error loading analytics data:', error);
     }
   };
 
@@ -800,21 +863,104 @@ export function ChatManagementCard() {
     }
   };
 
-  // Chart data for analytics
-  const messageVolumeData = [
-    { name: '00:00', value: 12 },
-    { name: '04:00', value: 3 },
-    { name: '08:00', value: 35 },
-    { name: '12:00', value: 58 },
-    { name: '16:00', value: 42 },
-    { name: '20:00', value: 28 },
-  ];
+  // Widget testing functions
+  const runWidgetTest = async (testType: string) => {
+    setTestingWidget(testType);
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/widget', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ testType })
+      });
 
-  const fileTypeData = [
-    { name: 'Images', value: 65 },
-    { name: 'Documents', value: 25 },
-    { name: 'GIFs', value: 10 },
-  ];
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`✅ Widget test ${testType} completed:`, result);
+        
+        setWidgetTestResults(prev => ({
+          ...prev,
+          [testType]: result
+        }));
+
+        // Show success notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50';
+        notification.innerHTML = `
+          <strong>Test Completed!</strong><br/>
+          ${result.message}<br/>
+          <small>${JSON.stringify(result.details, null, 2).slice(0, 100)}...</small>
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 5000);
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error(`❌ Widget test ${testType} failed:`, error);
+      
+      setWidgetTestResults(prev => ({
+        ...prev,
+        [testType]: { success: false, message: error.message }
+      }));
+
+      // Show error notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50';
+      notification.innerHTML = `
+        <strong>Test Failed!</strong><br/>
+        ${testType}: ${error instanceof Error ? error.message : 'Unknown error'}
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 5000);
+    } finally {
+      setTestingWidget(null);
+    }
+  };
+
+  const saveWidgetSettings = async (newSettings: typeof widgetSettings) => {
+    setWidgetSettings(newSettings);
+    
+    // Save to backend
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/widget', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ settings: newSettings })
+      });
+
+      if (response.ok) {
+        console.log(`✅ Widget settings saved`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to save widget settings:', error);
+    }
+  };
+
+  const switchWidgetType = async (newType: string) => {
+    const newSettings = { ...widgetSettings, type: newType };
+    await saveWidgetSettings(newSettings);
+    
+    // Show success notification
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 right-4 bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded z-50';
+    notification.innerHTML = `
+      <strong>Widget Updated!</strong><br/>
+      Switched to ${newType} theme
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+  };
+
+  // Chart data is now loaded dynamically via loadAnalyticsData()
 
   if (loading) {
     return (
@@ -1377,18 +1523,266 @@ export function ChatManagementCard() {
           </TabsContent>
 
           <TabsContent value="widget" className="mt-6 space-y-6">
-            {/* Widget Customization Settings */}
+            {/* Widget Type Selection */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <MessageSquare className="h-5 w-5" />
-                  <span>Chat Widget Appearance</span>
+                  <MessageCircle className="h-5 w-5" />
+                  <span>Widget Type & Style</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Widget Type Selection */}
+                <div className="space-y-4">
+                  <h4 className="font-medium">Select Widget Type</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Glassmorphism Widget */}
+                    <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
+                      <div className="flex items-center justify-between mb-3">
+                        <h5 className="font-medium">Glassmorphism</h5>
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      </div>
+                      <div className="text-sm text-gray-600 mb-3">
+                        Modern transparent design with blur effects and smooth animations
+                      </div>
+                      <div className="flex items-center space-x-2 mb-3">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 shadow-lg flex items-center justify-center">
+                          <MessageCircle className="h-4 w-4 text-white" />
+                        </div>
+                        <div className="text-xs text-gray-500">Current Active</div>
+                      </div>
+                      <Button size="sm" variant="default" className="w-full" disabled>
+                        ✨ Currently Active
+                      </Button>
+                    </div>
+
+                    {/* Material Design Widget */}
+                    <div className="border rounded-lg p-4 hover:border-green-200 hover:bg-green-50 transition-colors">
+                      <div className="flex items-center justify-between mb-3">
+                        <h5 className="font-medium">Material Design</h5>
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      </div>
+                      <div className="text-sm text-gray-600 mb-3">
+                        Clean material design with elevation shadows and subtle animations
+                      </div>
+                      <div className="flex items-center space-x-2 mb-3">
+                        <div className="w-8 h-8 rounded-full bg-white shadow-lg border flex items-center justify-center">
+                          <MessageCircle className="h-4 w-4 text-green-600" />
+                        </div>
+                        <div className="text-xs text-gray-500">Material UI</div>
+                      </div>
+                      <Button size="sm" variant="outline" className="w-full" onClick={() => switchWidgetType('material')}>
+                        Switch to Material
+                      </Button>
+                    </div>
+
+                    {/* Minimal Widget */}
+                    <div className="border rounded-lg p-4 hover:border-gray-400 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center justify-between mb-3">
+                        <h5 className="font-medium">Minimal</h5>
+                        <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                      </div>
+                      <div className="text-sm text-gray-600 mb-3">
+                        Simple, lightweight design with minimal visual elements
+                      </div>
+                      <div className="flex items-center space-x-2 mb-3">
+                        <div className="w-8 h-8 rounded bg-gray-600 flex items-center justify-center">
+                          <MessageCircle className="h-4 w-4 text-white" />
+                        </div>
+                        <div className="text-xs text-gray-500">Minimal UI</div>
+                      </div>
+                      <Button size="sm" variant="outline" className="w-full" onClick={() => switchWidgetType('minimal')}>
+                        Switch to Minimal
+                      </Button>
+                    </div>
+
+                    {/* Corporate Widget */}
+                    <div className="border rounded-lg p-4 hover:border-indigo-200 hover:bg-indigo-50 transition-colors">
+                      <div className="flex items-center justify-between mb-3">
+                        <h5 className="font-medium">Corporate</h5>
+                        <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
+                      </div>
+                      <div className="text-sm text-gray-600 mb-3">
+                        Professional business design with corporate branding support
+                      </div>
+                      <div className="flex items-center space-x-2 mb-3">
+                        <div className="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center">
+                          <MessageCircle className="h-4 w-4 text-white" />
+                        </div>
+                        <div className="text-xs text-gray-500">Corporate</div>
+                      </div>
+                      <Button size="sm" variant="outline" className="w-full" onClick={() => switchWidgetType('corporate')}>
+                        Switch to Corporate
+                      </Button>
+                    </div>
+
+                    {/* Gaming Widget */}
+                    <div className="border rounded-lg p-4 hover:border-purple-200 hover:bg-purple-50 transition-colors">
+                      <div className="flex items-center justify-between mb-3">
+                        <h5 className="font-medium">Gaming</h5>
+                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                      </div>
+                      <div className="text-sm text-gray-600 mb-3">
+                        RGB effects with gaming-inspired design and neon accents
+                      </div>
+                      <div className="flex items-center space-x-2 mb-3">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 shadow-lg flex items-center justify-center animate-pulse">
+                          <MessageCircle className="h-4 w-4 text-white" />
+                        </div>
+                        <div className="text-xs text-gray-500">RGB Gaming</div>
+                      </div>
+                      <Button size="sm" variant="outline" className="w-full" onClick={() => switchWidgetType('gaming')}>
+                        Switch to Gaming
+                      </Button>
+                    </div>
+
+                    {/* Retro Widget */}
+                    <div className="border rounded-lg p-4 hover:border-yellow-200 hover:bg-yellow-50 transition-colors">
+                      <div className="flex items-center justify-between mb-3">
+                        <h5 className="font-medium">Retro</h5>
+                        <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                      </div>
+                      <div className="text-sm text-gray-600 mb-3">
+                        Vintage 90s design with terminal-style interface
+                      </div>
+                      <div className="flex items-center space-x-2 mb-3">
+                        <div className="w-8 h-8 rounded border-2 border-yellow-600 bg-yellow-100 flex items-center justify-center">
+                          <MessageCircle className="h-4 w-4 text-yellow-800" />
+                        </div>
+                        <div className="text-xs text-gray-500">Terminal Style</div>
+                      </div>
+                      <Button size="sm" variant="outline" className="w-full" onClick={() => switchWidgetType('retro')}>
+                        Switch to Retro
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Widget Debugging Section */}
+                <div className="border-t pt-6">
+                  <h4 className="font-medium mb-4 flex items-center">
+                    <AlertTriangle className="h-4 w-4 mr-2 text-orange-500" />
+                    Widget Debugging & Testing
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card className="p-4">
+                      <h5 className="font-medium mb-2 text-sm">Message Sending Test</h5>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span>Widget Visibility:</span>
+                          <Badge variant="default" className="text-xs">✅ Visible</Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Authentication:</span>
+                          <Badge variant={currentUser ? "default" : "destructive"} className="text-xs">
+                            {currentUser ? "✅ Valid" : "❌ Invalid"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Connection Status:</span>
+                          <Badge variant={connectionStatus === 'connected' ? "default" : "destructive"} className="text-xs">
+                            {connectionStatus === 'connected' ? "✅ Connected" : "❌ Disconnected"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Socket.IO Server:</span>
+                          <Badge variant={socketStatus.isRunning ? "default" : "secondary"} className="text-xs">
+                            {socketStatus.isRunning ? "✅ Running" : "⚠️ Fallback"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Permissions:</span>
+                          <Badge variant={currentUser?.permissions?.includes('chat.access_channels') ? "default" : "destructive"} className="text-xs">
+                            {currentUser?.permissions?.includes('chat.access_channels') ? "✅ Valid" : "❌ Missing"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        className="w-full mt-3" 
+                        variant="outline"
+                        onClick={() => runWidgetTest('full_diagnostic')}
+                        disabled={testingWidget === 'full_diagnostic'}
+                      >
+                        {testingWidget === 'full_diagnostic' ? (
+                          <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                        ) : (
+                          <Activity className="h-3 w-3 mr-2" />
+                        )}
+                        {testingWidget === 'full_diagnostic' ? 'Testing...' : 'Run Full Diagnostic'}
+                      </Button>
+                    </Card>
+
+                    <Card className="p-4">
+                      <h5 className="font-medium mb-2 text-sm">Real-time Widget Test</h5>
+                      <div className="text-xs text-gray-600 mb-3">
+                        Test widget functionality with live data
+                      </div>
+                      <div className="space-y-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="w-full text-xs"
+                          onClick={() => runWidgetTest('message_send')}
+                          disabled={testingWidget === 'message_send'}
+                        >
+                          {testingWidget === 'message_send' ? (
+                            <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                          ) : (
+                            <MessageCircle className="h-3 w-3 mr-2" />
+                          )}
+                          Test Message Send
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="w-full text-xs"
+                          onClick={() => runWidgetTest('connection')}
+                          disabled={testingWidget === 'connection'}
+                        >
+                          {testingWidget === 'connection' ? (
+                            <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3 mr-2" />
+                          )}
+                          Test Connection
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="w-full text-xs"
+                          onClick={() => runWidgetTest('conversations_load')}
+                          disabled={testingWidget === 'conversations_load'}
+                        >
+                          {testingWidget === 'conversations_load' ? (
+                            <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                          ) : (
+                            <Users className="h-3 w-3 mr-2" />
+                          )}
+                          Test Conversations Load
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="w-full text-xs"
+                          onClick={() => runWidgetTest('notifications')}
+                          disabled={testingWidget === 'notifications'}
+                        >
+                          {testingWidget === 'notifications' ? (
+                            <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                          ) : (
+                            <Bell className="h-3 w-3 mr-2" />
+                          )}
+                          Test Notifications
+                        </Button>
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+
                 {/* Color Scheme */}
                 <div className="space-y-4">
-                  <h4 className="font-medium">Color Scheme</h4>
+                  <h4 className="font-medium">Color Customization</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Primary Color</label>
@@ -1396,15 +1790,24 @@ export function ChatManagementCard() {
                         <input 
                           type="color" 
                           className="w-12 h-8 rounded border border-gray-300 cursor-pointer"
-                          defaultValue="#3b82f6"
+                          value={widgetSettings.primaryColor}
+                          onChange={(e) => {
+                            const newSettings = { ...widgetSettings, primaryColor: e.target.value };
+                            saveWidgetSettings(newSettings);
+                          }}
                         />
                         <Input 
                           type="text" 
-                          defaultValue="#3b82f6"
+                          value={widgetSettings.primaryColor}
+                          onChange={(e) => {
+                            const newSettings = { ...widgetSettings, primaryColor: e.target.value };
+                            saveWidgetSettings(newSettings);
+                          }}
                           className="flex-1 text-sm"
                           placeholder="#3b82f6"
                         />
                       </div>
+                      <p className="text-xs text-gray-500">Used for widget button and accent colors</p>
                     </div>
                     
                     <div className="space-y-2">
@@ -1413,15 +1816,71 @@ export function ChatManagementCard() {
                         <input 
                           type="color" 
                           className="w-12 h-8 rounded border border-gray-300 cursor-pointer"
-                          defaultValue="#9333ea"
+                          value={widgetSettings.secondaryColor}
+                          onChange={(e) => {
+                            const newSettings = { ...widgetSettings, secondaryColor: e.target.value };
+                            saveWidgetSettings(newSettings);
+                          }}
                         />
                         <Input 
                           type="text" 
-                          defaultValue="#9333ea"
+                          value={widgetSettings.secondaryColor}
+                          onChange={(e) => {
+                            const newSettings = { ...widgetSettings, secondaryColor: e.target.value };
+                            saveWidgetSettings(newSettings);
+                          }}
                           className="flex-1 text-sm"
                           placeholder="#9333ea"
                         />
                       </div>
+                      <p className="text-xs text-gray-500">Used for gradient effects and highlights</p>
+                    </div>
+                  </div>
+                  
+                  {/* Color Presets */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Quick Color Presets</label>
+                    <div className="flex items-center space-x-2">
+                      <button 
+                        className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 border-2 border-white shadow-md hover:scale-110 transition-transform"
+                        onClick={() => {
+                          const newSettings = { ...widgetSettings, primaryColor: '#3b82f6', secondaryColor: '#9333ea' };
+                          saveWidgetSettings(newSettings);
+                        }}
+                        title="Blue to Purple (Default)"
+                      />
+                      <button 
+                        className="w-8 h-8 rounded-full bg-gradient-to-r from-green-500 to-teal-500 border-2 border-white shadow-md hover:scale-110 transition-transform"
+                        onClick={() => {
+                          const newSettings = { ...widgetSettings, primaryColor: '#10b981', secondaryColor: '#14b8a6' };
+                          saveWidgetSettings(newSettings);
+                        }}
+                        title="Green to Teal"
+                      />
+                      <button 
+                        className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-red-500 border-2 border-white shadow-md hover:scale-110 transition-transform"
+                        onClick={() => {
+                          const newSettings = { ...widgetSettings, primaryColor: '#ec4899', secondaryColor: '#ef4444' };
+                          saveWidgetSettings(newSettings);
+                        }}
+                        title="Pink to Red"
+                      />
+                      <button 
+                        className="w-8 h-8 rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 border-2 border-white shadow-md hover:scale-110 transition-transform"
+                        onClick={() => {
+                          const newSettings = { ...widgetSettings, primaryColor: '#f97316', secondaryColor: '#eab308' };
+                          saveWidgetSettings(newSettings);
+                        }}
+                        title="Orange to Yellow"
+                      />
+                      <button 
+                        className="w-8 h-8 rounded-full bg-gradient-to-r from-gray-600 to-gray-800 border-2 border-white shadow-md hover:scale-110 transition-transform"
+                        onClick={() => {
+                          const newSettings = { ...widgetSettings, primaryColor: '#4b5563', secondaryColor: '#1f2937' };
+                          saveWidgetSettings(newSettings);
+                        }}
+                        title="Gray to Dark Gray"
+                      />
                     </div>
                   </div>
                 </div>
@@ -1433,24 +1892,38 @@ export function ChatManagementCard() {
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Widget Size</label>
                       <FormControl fullWidth size="small">
-                        <Select defaultValue="normal">
-                          <MenuItem value="compact">Compact</MenuItem>
-                          <MenuItem value="normal">Normal</MenuItem>
-                          <MenuItem value="large">Large</MenuItem>
+                        <Select 
+                          value={widgetSettings.size}
+                          onChange={(e) => {
+                            const newSettings = { ...widgetSettings, size: e.target.value };
+                            saveWidgetSettings(newSettings);
+                          }}
+                        >
+                          <MenuItem value="compact">Compact (48px)</MenuItem>
+                          <MenuItem value="normal">Normal (64px)</MenuItem>
+                          <MenuItem value="large">Large (80px)</MenuItem>
                         </Select>
                       </FormControl>
+                      <p className="text-xs text-gray-500">Affects widget button and expanded size</p>
                     </div>
                     
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Position</label>
                       <FormControl fullWidth size="small">
-                        <Select defaultValue="bottom-right">
+                        <Select 
+                          value={widgetSettings.position}
+                          onChange={(e) => {
+                            const newSettings = { ...widgetSettings, position: e.target.value };
+                            saveWidgetSettings(newSettings);
+                          }}
+                        >
                           <MenuItem value="bottom-right">Bottom Right</MenuItem>
                           <MenuItem value="bottom-left">Bottom Left</MenuItem>
                           <MenuItem value="top-right">Top Right</MenuItem>
                           <MenuItem value="top-left">Top Left</MenuItem>
                         </Select>
                       </FormControl>
+                      <p className="text-xs text-gray-500">Screen position of the widget</p>
                     </div>
                     
                     <div className="space-y-2">
@@ -1458,12 +1931,56 @@ export function ChatManagementCard() {
                       <div className="flex items-center space-x-2">
                         <Input 
                           type="number" 
-                          defaultValue="16"
+                          value={widgetSettings.borderRadius}
+                          onChange={(e) => {
+                            const newSettings = { ...widgetSettings, borderRadius: parseInt(e.target.value) || 16 };
+                            saveWidgetSettings(newSettings);
+                          }}
                           className="w-16 text-sm"
                           min="0"
                           max="32"
                         />
                         <span className="text-sm text-gray-500">px</span>
+                      </div>
+                      <p className="text-xs text-gray-500">Roundness of widget corners</p>
+                    </div>
+                  </div>
+                  
+                  {/* Distance from Edge */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Distance from Edge</label>
+                      <div className="flex items-center space-x-2">
+                        <Input 
+                          type="number" 
+                          value={widgetSettings.edgeDistance || 16}
+                          onChange={(e) => {
+                            const newSettings = { ...widgetSettings, edgeDistance: parseInt(e.target.value) || 16 };
+                            saveWidgetSettings(newSettings);
+                          }}
+                          className="w-20 text-sm"
+                          min="8"
+                          max="100"
+                        />
+                        <span className="text-sm text-gray-500">px from screen edge</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Z-Index</label>
+                      <div className="flex items-center space-x-2">
+                        <Input 
+                          type="number" 
+                          value={widgetSettings.zIndex || 50}
+                          onChange={(e) => {
+                            const newSettings = { ...widgetSettings, zIndex: parseInt(e.target.value) || 50 };
+                            saveWidgetSettings(newSettings);
+                          }}
+                          className="w-20 text-sm"
+                          min="1"
+                          max="999"
+                        />
+                        <span className="text-sm text-gray-500">Layer priority</span>
                       </div>
                     </div>
                   </div>
@@ -1478,7 +1995,13 @@ export function ChatManagementCard() {
                         <p className="font-medium">Enable Glassmorphism</p>
                         <p className="text-sm text-gray-500">Translucent background with blur effect</p>
                       </div>
-                      <Switch defaultChecked />
+                      <Switch 
+                        checked={widgetSettings.enableGlassmorphism}
+                        onCheckedChange={(checked) => {
+                          const newSettings = { ...widgetSettings, enableGlassmorphism: checked };
+                          saveWidgetSettings(newSettings);
+                        }}
+                      />
                     </div>
                     
                     <div className="flex items-center justify-between">
@@ -1486,7 +2009,13 @@ export function ChatManagementCard() {
                         <p className="font-medium">Pulse Animation</p>
                         <p className="text-sm text-gray-500">Notification pulse effect for new messages</p>
                       </div>
-                      <Switch defaultChecked />
+                      <Switch 
+                        checked={widgetSettings.enablePulseAnimation}
+                        onCheckedChange={(checked) => {
+                          const newSettings = { ...widgetSettings, enablePulseAnimation: checked };
+                          saveWidgetSettings(newSettings);
+                        }}
+                      />
                     </div>
                     
                     <div className="flex items-center justify-between">
@@ -1494,8 +2023,62 @@ export function ChatManagementCard() {
                         <p className="font-medium">Smooth Transitions</p>
                         <p className="text-sm text-gray-500">Smooth animations when opening/closing</p>
                       </div>
-                      <Switch defaultChecked />
+                      <Switch 
+                        checked={widgetSettings.enableSmoothTransitions}
+                        onCheckedChange={(checked) => {
+                          const newSettings = { ...widgetSettings, enableSmoothTransitions: checked };
+                          saveWidgetSettings(newSettings);
+                        }}
+                      />
                     </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Hover Effects</p>
+                        <p className="text-sm text-gray-500">Scale and glow effects on hover</p>
+                      </div>
+                      <Switch 
+                        checked={widgetSettings.enableHoverEffects !== false}
+                        onCheckedChange={(checked) => {
+                          const newSettings = { ...widgetSettings, enableHoverEffects: checked };
+                          saveWidgetSettings(newSettings);
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Shadow Effects</p>
+                        <p className="text-sm text-gray-500">Drop shadows and depth effects</p>
+                      </div>
+                      <Switch 
+                        checked={widgetSettings.enableShadows !== false}
+                        onCheckedChange={(checked) => {
+                          const newSettings = { ...widgetSettings, enableShadows: checked };
+                          saveWidgetSettings(newSettings);
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Animation Speed */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Animation Speed</label>
+                    <FormControl fullWidth size="small">
+                      <Select 
+                        value={widgetSettings.animationSpeed || 'normal'}
+                        onChange={(e) => {
+                          const newSettings = { ...widgetSettings, animationSpeed: e.target.value };
+                          setWidgetSettings(newSettings);
+                          saveWidgetSettings(newSettings);
+                        }}
+                      >
+                        <MenuItem value="slow">Slow (600ms)</MenuItem>
+                        <MenuItem value="normal">Normal (300ms)</MenuItem>
+                        <MenuItem value="fast">Fast (150ms)</MenuItem>
+                        <MenuItem value="instant">Instant (0ms)</MenuItem>
+                      </Select>
+                    </FormControl>
                   </div>
                 </div>
 
@@ -1506,77 +2089,281 @@ export function ChatManagementCard() {
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Font Family</label>
                       <FormControl fullWidth size="small">
-                        <Select defaultValue="system">
+                        <Select 
+                          value={widgetSettings.fontFamily}
+                          onChange={(e) => {
+                            const newSettings = { ...widgetSettings, fontFamily: e.target.value };
+                            saveWidgetSettings(newSettings);
+                          }}
+                        >
                           <MenuItem value="system">System Default</MenuItem>
-                          <MenuItem value="inter">Inter</MenuItem>
-                          <MenuItem value="roboto">Roboto</MenuItem>
-                          <MenuItem value="poppins">Poppins</MenuItem>
+                          <MenuItem value="inter">Inter (Modern)</MenuItem>
+                          <MenuItem value="roboto">Roboto (Google)</MenuItem>
+                          <MenuItem value="poppins">Poppins (Rounded)</MenuItem>
+                          <MenuItem value="helvetica">Helvetica (Classic)</MenuItem>
+                          <MenuItem value="arial">Arial (Standard)</MenuItem>
                         </Select>
                       </FormControl>
+                      <p className="text-xs text-gray-500">Font used in widget text</p>
                     </div>
                     
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Font Size</label>
                       <FormControl fullWidth size="small">
-                        <Select defaultValue="normal">
-                          <MenuItem value="small">Small</MenuItem>
-                          <MenuItem value="normal">Normal</MenuItem>
-                          <MenuItem value="large">Large</MenuItem>
+                        <Select 
+                          value={widgetSettings.fontSize}
+                          onChange={(e) => {
+                            const newSettings = { ...widgetSettings, fontSize: e.target.value };
+                            saveWidgetSettings(newSettings);
+                          }}
+                        >
+                          <MenuItem value="xs">Extra Small (10px)</MenuItem>
+                          <MenuItem value="small">Small (12px)</MenuItem>
+                          <MenuItem value="normal">Normal (14px)</MenuItem>
+                          <MenuItem value="large">Large (16px)</MenuItem>
+                          <MenuItem value="xl">Extra Large (18px)</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <p className="text-xs text-gray-500">Base font size for widget</p>
+                    </div>
+                  </div>
+                  
+                  {/* Additional Typography Options */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Font Weight</label>
+                      <FormControl fullWidth size="small">
+                        <Select 
+                          value={widgetSettings.fontWeight || 'normal'}
+                          onChange={(e) => {
+                            const newSettings = { ...widgetSettings, fontWeight: e.target.value };
+                            saveWidgetSettings(newSettings);
+                          }}
+                        >
+                          <MenuItem value="light">Light (300)</MenuItem>
+                          <MenuItem value="normal">Normal (400)</MenuItem>
+                          <MenuItem value="medium">Medium (500)</MenuItem>
+                          <MenuItem value="semibold">Semibold (600)</MenuItem>
+                          <MenuItem value="bold">Bold (700)</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Line Height</label>
+                      <FormControl fullWidth size="small">
+                        <Select 
+                          value={widgetSettings.lineHeight || 'normal'}
+                          onChange={(e) => {
+                            const newSettings = { ...widgetSettings, lineHeight: e.target.value };
+                            saveWidgetSettings(newSettings);
+                          }}
+                        >
+                          <MenuItem value="tight">Tight (1.25)</MenuItem>
+                          <MenuItem value="normal">Normal (1.5)</MenuItem>
+                          <MenuItem value="relaxed">Relaxed (1.75)</MenuItem>
+                          <MenuItem value="loose">Loose (2.0)</MenuItem>
                         </Select>
                       </FormControl>
                     </div>
                   </div>
                 </div>
 
-                {/* Preview Section */}
+                {/* Enhanced Preview Section */}
                 <div className="space-y-4 border-t pt-4">
-                  <h4 className="font-medium">Live Preview</h4>
-                  <div className="bg-gray-100 p-6 rounded-lg relative min-h-48">
-                    <div className="absolute bottom-4 right-4">
-                      {/* Mini Widget Preview */}
-                      <div className="relative">
-                        {/* Closed state preview */}
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 shadow-lg flex items-center justify-center text-white">
-                          <MessageCircle className="h-6 w-6" />
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-bold">3</span>
-                          </div>
-                        </div>
-                        
-                        {/* Expanded state preview (shown on hover) */}
-                        <div className="absolute bottom-16 right-0 w-64 h-48 bg-white/90 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                          <div className="p-3 border-b border-white/20 bg-gradient-to-r from-blue-50/80 to-purple-50/80 rounded-t-xl">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-sm bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Chat</span>
-                              <div className="flex space-x-1">
-                                <div className="w-4 h-4 bg-gray-200 rounded"></div>
-                                <div className="w-4 h-4 bg-gray-200 rounded"></div>
-                                <div className="w-4 h-4 bg-gray-200 rounded"></div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="p-2 space-y-2">
-                            <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
-                              <div className="w-6 h-6 bg-blue-500 rounded-full"></div>
-                              <div className="flex-1">
-                                <div className="text-xs font-medium">General</div>
-                                <div className="text-xs text-gray-500">Latest message...</div>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
-                              <div className="w-6 h-6 bg-green-500 rounded-full"></div>
-                              <div className="flex-1">
-                                <div className="text-xs font-medium">Team Alpha</div>
-                                <div className="text-xs text-gray-500">John: Hey team!</div>
-                              </div>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">Live Widget Preview</h4>
+                    <div className="flex items-center space-x-2">
+                      <Button size="sm" variant="outline">
+                        <RefreshCw className="h-3 w-3 mr-2" />
+                        Refresh Preview
+                      </Button>
+                      <Button size="sm">
+                        <Eye className="h-3 w-3 mr-2" />
+                        Full Screen Preview
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Multi-widget preview grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Glassmorphism Preview */}
+                    <div className="bg-gradient-to-br from-blue-100 to-purple-100 p-4 rounded-lg relative min-h-32">
+                      <div className="absolute top-2 left-2 text-xs text-gray-600">Glassmorphism</div>
+                      <div className="absolute bottom-4 right-4">
+                        <div className="relative">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 shadow-lg backdrop-blur-sm border border-white/20 flex items-center justify-center text-white">
+                            <MessageCircle className="h-4 w-4" />
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-bold">2</span>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* Material Design Preview */}
+                    <div className="bg-gray-50 p-4 rounded-lg relative min-h-32">
+                      <div className="absolute top-2 left-2 text-xs text-gray-600">Material Design</div>
+                      <div className="absolute bottom-4 right-4">
+                        <div className="w-8 h-8 rounded-full bg-white shadow-lg border flex items-center justify-center">
+                          <MessageCircle className="h-4 w-4 text-green-600" />
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-bold">2</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Gaming Preview */}
+                    <div className="bg-black p-4 rounded-lg relative min-h-32">
+                      <div className="absolute top-2 left-2 text-xs text-green-400">Gaming RGB</div>
+                      <div className="absolute bottom-4 right-4">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 shadow-lg shadow-purple-500/50 flex items-center justify-center text-white animate-pulse">
+                          <MessageCircle className="h-4 w-4" />
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-pink-500 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-bold">2</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Corporate Preview */}
+                    <div className="bg-slate-100 p-4 rounded-lg relative min-h-32">
+                      <div className="absolute top-2 left-2 text-xs text-gray-600">Corporate</div>
+                      <div className="absolute bottom-4 right-4">
+                        <div className="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center text-white">
+                          <MessageCircle className="h-4 w-4" />
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded flex items-center justify-center">
+                            <span className="text-xs font-bold">2</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Minimal Preview */}
+                    <div className="bg-white border p-4 rounded-lg relative min-h-32">
+                      <div className="absolute top-2 left-2 text-xs text-gray-600">Minimal</div>
+                      <div className="absolute bottom-4 right-4">
+                        <div className="w-8 h-8 rounded bg-gray-600 flex items-center justify-center text-white">
+                          <MessageCircle className="h-4 w-4" />
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded flex items-center justify-center">
+                            <span className="text-xs font-bold">2</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Retro Preview */}
+                    <div className="bg-yellow-100 border-2 border-yellow-600 p-4 rounded-lg relative min-h-32">
+                      <div className="absolute top-2 left-2 text-xs text-yellow-800 font-mono">retro_90s</div>
+                      <div className="absolute bottom-4 right-4">
+                        <div className="w-8 h-8 rounded border-2 border-yellow-600 bg-yellow-200 flex items-center justify-center">
+                          <MessageCircle className="h-4 w-4 text-yellow-800" />
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-600 border border-yellow-600 rounded flex items-center justify-center">
+                            <span className="text-xs font-bold">2</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Interactive Preview */}
+                  <div className="bg-gray-100 p-6 rounded-lg relative min-h-48">
+                    <div className="absolute top-4 left-4">
+                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span>Live Preview - Hover to interact</span>
+                      </div>
+                    </div>
                     
-                    <div className="absolute top-4 left-4 text-sm text-gray-600">
-                      <p>Hover over the widget to see expanded preview</p>
+                    <div className="absolute bottom-4 right-4">
+                      {/* Interactive Widget Preview */}
+                      <div className="relative group">
+                        {/* Closed state preview - Dynamic based on settings */}
+                        <div 
+                          className={`
+                            ${widgetSettings.size === 'compact' ? 'w-8 h-8' : 
+                              widgetSettings.size === 'large' ? 'w-16 h-16' : 'w-12 h-12'} 
+                            ${widgetSettings.borderRadius > 16 ? 'rounded-full' : `rounded-${Math.min(widgetSettings.borderRadius, 16)}px`}
+                            ${widgetSettings.enableShadows !== false ? 'shadow-lg' : 'shadow-sm'}
+                            ${widgetSettings.enableHoverEffects !== false ? 'hover:scale-110 transition-all duration-200' : 'transition-all duration-100'}
+                            ${widgetSettings.enableGlassmorphism ? 'backdrop-blur-sm border border-white/20' : ''}
+                            flex items-center justify-center text-white cursor-pointer
+                          `}
+                          style={{
+                            background: `linear-gradient(135deg, ${widgetSettings.primaryColor} 0%, ${widgetSettings.secondaryColor} 50%, ${widgetSettings.primaryColor} 100%)`,
+                            ...(widgetSettings.enableGlassmorphism ? {
+                              backdropFilter: 'blur(16px)',
+                              boxShadow: `0 8px 32px 0 ${widgetSettings.primaryColor}37, inset 0 1px 0 rgba(255, 255, 255, 0.3)`
+                            } : {})
+                          }}
+                        >
+                          <MessageCircle className={`
+                            ${widgetSettings.size === 'compact' ? 'h-4 w-4' : 
+                              widgetSettings.size === 'large' ? 'h-8 w-8' : 'h-6 w-6'}
+                          `} />
+                          <div 
+                            className={`absolute -top-1 -right-1 bg-red-500 rounded-full flex items-center justify-center
+                              ${widgetSettings.size === 'compact' ? 'w-3 h-3' : 'w-4 h-4'}
+                              ${widgetSettings.enablePulseAnimation ? 'animate-pulse' : ''}
+                            `}
+                          >
+                            <span className={`font-bold text-white
+                              ${widgetSettings.size === 'compact' ? 'text-xs' : 'text-xs'}
+                            `}>3</span>
+                          </div>
+                        </div>
+                        
+                        {/* Expanded state preview (shown on hover) */}
+                        <div className="absolute bottom-16 right-0 w-72 h-56 bg-white/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none scale-95 group-hover:scale-100">
+                          <div className="p-3 border-b border-white/20 bg-gradient-to-r from-blue-50/80 to-purple-50/80 rounded-t-xl">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-sm bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Chat</span>
+                              <div className="flex space-x-1">
+                                <div className="w-3 h-3 bg-gray-300 rounded hover:bg-gray-400 transition-colors"></div>
+                                <div className="w-3 h-3 bg-gray-300 rounded hover:bg-gray-400 transition-colors"></div>
+                                <div className="w-3 h-3 bg-gray-300 rounded hover:bg-gray-400 transition-colors"></div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="p-2 space-y-2 max-h-32 overflow-y-auto">
+                            <div className="flex items-center space-x-2 p-2 bg-blue-50 rounded hover:bg-blue-100 transition-colors">
+                              <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs">G</div>
+                              <div className="flex-1">
+                                <div className="text-xs font-medium">General</div>
+                                <div className="text-xs text-gray-500">Welcome to the chat!</div>
+                              </div>
+                              <div className="w-3 h-3 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">2</div>
+                            </div>
+                            <div className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded transition-colors">
+                              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">T</div>
+                              <div className="flex-1">
+                                <div className="text-xs font-medium">Team Alpha</div>
+                                <div className="text-xs text-gray-500">John: Ready for deployment!</div>
+                              </div>
+                              <div className="w-3 h-3 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">1</div>
+                            </div>
+                            <div className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded transition-colors">
+                              <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs">D</div>
+                              <div className="flex-1">
+                                <div className="text-xs font-medium">DM: Jane Smith</div>
+                                <div className="text-xs text-gray-500">Thanks for the help!</div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="p-2 border-t border-white/20 bg-gradient-to-r from-blue-50/50 to-purple-50/50 rounded-b-xl">
+                            <div className="flex space-x-2">
+                              <div className="flex-1 h-6 bg-white rounded-lg border flex items-center px-2">
+                                <span className="text-xs text-gray-400">Type a message...</span>
+                              </div>
+                              <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center">
+                                <Send className="h-3 w-3 text-white" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1612,7 +2399,13 @@ export function ChatManagementCard() {
                     <p className="font-medium">Auto-hide when inactive</p>
                     <p className="text-sm text-gray-500">Hide widget after 5 minutes of no activity</p>
                   </div>
-                  <Switch />
+                  <Switch 
+                    checked={widgetSettings.autoHide}
+                    onCheckedChange={(checked) => {
+                      const newSettings = { ...widgetSettings, autoHide: checked };
+                      saveWidgetSettings(newSettings);
+                    }}
+                  />
                 </div>
                 
                 <div className="flex items-center justify-between">
@@ -1620,7 +2413,13 @@ export function ChatManagementCard() {
                     <p className="font-medium">Sound notifications</p>
                     <p className="text-sm text-gray-500">Play sound when new messages arrive</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={widgetSettings.soundNotifications}
+                    onCheckedChange={(checked) => {
+                      const newSettings = { ...widgetSettings, soundNotifications: checked };
+                      saveWidgetSettings(newSettings);
+                    }}
+                  />
                 </div>
                 
                 <div className="flex items-center justify-between">
@@ -1628,18 +2427,80 @@ export function ChatManagementCard() {
                     <p className="font-medium">Desktop notifications</p>
                     <p className="text-sm text-gray-500">Show browser notifications for messages</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={widgetSettings.desktopNotifications}
+                    onCheckedChange={(checked) => {
+                      const newSettings = { ...widgetSettings, desktopNotifications: checked };
+                      saveWidgetSettings(newSettings);
+                    }}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Show unread badge</p>
+                    <p className="text-sm text-gray-500">Display red notification badge with count</p>
+                  </div>
+                  <Switch 
+                    checked={widgetSettings.showUnreadBadge !== false}
+                    onCheckedChange={(checked) => {
+                      const newSettings = { ...widgetSettings, showUnreadBadge: checked };
+                      saveWidgetSettings(newSettings);
+                    }}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Close on outside click</p>
+                    <p className="text-sm text-gray-500">Automatically close widget when clicking outside</p>
+                  </div>
+                  <Switch 
+                    checked={widgetSettings.closeOnOutsideClick !== false}
+                    onCheckedChange={(checked) => {
+                      const newSettings = { ...widgetSettings, closeOnOutsideClick: checked };
+                      saveWidgetSettings(newSettings);
+                    }}
+                  />
                 </div>
                 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Default widget state</label>
                   <FormControl fullWidth size="small">
-                    <Select defaultValue="closed">
+                    <Select 
+                      value={widgetSettings.defaultState}
+                      onChange={(e) => {
+                        const newSettings = { ...widgetSettings, defaultState: e.target.value };
+                        setWidgetSettings(newSettings);
+                        saveWidgetSettings(newSettings);
+                      }}
+                    >
                       <MenuItem value="closed">Always closed</MenuItem>
                       <MenuItem value="minimized">Minimized</MenuItem>
                       <MenuItem value="open">Always open</MenuItem>
+                      <MenuItem value="remember">Remember last state</MenuItem>
                     </Select>
                   </FormControl>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Auto-hide timeout</label>
+                  <div className="flex items-center space-x-2">
+                    <Input 
+                      type="number" 
+                      value={widgetSettings.autoHideTimeout || 5}
+                      onChange={(e) => {
+                        const newSettings = { ...widgetSettings, autoHideTimeout: parseInt(e.target.value) || 5 };
+                        setWidgetSettings(newSettings);
+                        saveWidgetSettings(newSettings);
+                      }}
+                      className="w-20 text-sm"
+                      min="1"
+                      max="60"
+                      disabled={!widgetSettings.autoHide}
+                    />
+                    <span className="text-sm text-gray-500">minutes</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1936,7 +2797,7 @@ export function ChatManagementCard() {
               <CardContent>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={messageVolumeData}>
+                    <LineChart data={analyticsData.messageVolumeData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="name" stroke="#64748b" />
                       <YAxis stroke="#64748b" />
@@ -1972,7 +2833,7 @@ export function ChatManagementCard() {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={fileTypeData}
+                          data={analyticsData.fileTypeData}
                           cx="50%"
                           cy="50%"
                           outerRadius={60}
@@ -1980,7 +2841,7 @@ export function ChatManagementCard() {
                           dataKey="value"
                           label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                         >
-                          {fileTypeData.map((entry, index) => {
+                          {analyticsData.fileTypeData.map((entry, index) => {
                             const colors = ['#3b82f6', '#10b981', '#f59e0b'];
                             return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
                           })}
@@ -2005,23 +2866,64 @@ export function ChatManagementCard() {
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Average Response Time</span>
-                    <span className="font-medium">142ms</span>
+                    <span className="font-medium">{analyticsData.systemMetrics.averageResponseTime}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Uptime</span>
-                    <span className="font-medium">99.8%</span>
+                    <span className="font-medium">{analyticsData.systemMetrics.uptime}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Error Rate</span>
-                    <span className="font-medium">0.2%</span>
+                    <span className="font-medium">{analyticsData.systemMetrics.errorRate}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Peak Concurrent Users</span>
-                    <span className="font-medium">28</span>
+                    <span className="font-medium">{analyticsData.systemMetrics.peakConcurrentUsers}</span>
                   </div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Channel Activity */}
+            {analyticsData.channelActivity && analyticsData.channelActivity.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Hash className="h-5 w-5" />
+                    <span>Channel Activity (Last 7 Days)</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {analyticsData.channelActivity.map((channel, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                            <Hash className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{channel.name}</p>
+                            <p className="text-xs text-gray-500">
+                              {channel.activeUsers} active users
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-lg">{channel.messages}</p>
+                          <p className="text-xs text-gray-500">messages</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {analyticsData.channelActivity.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <Hash className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                      <p>No channel activity data available</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
 

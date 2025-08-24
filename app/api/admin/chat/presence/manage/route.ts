@@ -111,14 +111,16 @@ export async function POST(request: NextRequest) {
     if (auditActions.length > 0) {
       await runAsync(`
         INSERT INTO system_settings_audit (
-          setting_key, old_value, new_value, changed_by, changed_at, change_reason
-        ) VALUES (?, ?, ?, ?, datetime('now'), ?)
+          setting_key, old_value, new_value, updated_by
+        ) VALUES (?, ?, ?, ?)
       `, [
         `user_presence_${username}`,
         'previous_settings',
-        JSON.stringify(settings),
-        authResult.user.username,
-        `Admin presence management: ${auditActions.join(', ')}`
+        JSON.stringify({
+          ...settings,
+          actionsApplied: auditActions.join(', ')
+        }),
+        authResult.user.username
       ]);
     }
 

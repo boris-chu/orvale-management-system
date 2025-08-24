@@ -48,14 +48,13 @@ export async function POST(request: NextRequest) {
     // Log audit trail
     await runAsync(`
       INSERT INTO system_settings_audit (
-        setting_key, old_value, new_value, changed_by, changed_at, change_reason
-      ) VALUES (?, ?, ?, ?, datetime('now'), ?)
+        setting_key, old_value, new_value, updated_by
+      ) VALUES (?, ?, ?, ?)
     `, [
       `user_disconnect_${username}`,
       'connected',
       'forced_disconnect',
-      authResult.user.username,
-      `Admin forced user disconnect`
+      authResult.user.username
     ]);
 
     // Send disconnect command to Socket.IO server

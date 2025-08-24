@@ -1,29 +1,24 @@
 "use client"
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
 import { 
   MessageCircle, 
   X, 
-  Maximize2, 
-  Minimize2,
+  Maximize2,
   Send,
-  Settings,
-  Users,
   Hash,
   ChevronDown,
-  ChevronUp,
   Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useRealTime } from '@/lib/realtime/RealTimeProvider'
 
 interface Conversation {
@@ -42,24 +37,23 @@ interface ChatWidgetProps {
   onToggle: () => void
   onOpenFullChat: () => void
   className?: string
-  initialState?: {
-    isExpanded?: boolean
-    isCollapsed?: boolean
-    selectedConversationId?: string | null
-  }
-  onStateChange?: (state: any) => void
 }
 
-export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initialState, onStateChange }: ChatWidgetProps) {
+export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: ChatWidgetProps) {
   const { user } = useAuth()
   const [conversations, setConversations] = useState<Conversation[]>([])
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
   const [loading, setLoading] = useState(false)
   const [totalUnread, setTotalUnread] = useState(0)
-  const [isExpanded, setIsExpanded] = useState(initialState?.isExpanded || false)
-  const [quickMessage, setQuickMessage] = useState('')
-  const [sending, setSending] = useState(false)
-  const [isCollapsed, setIsCollapsed] = useState(initialState?.isCollapsed || false)
+  
+  // Widget customization state
+  const [widgetSettings, setWidgetSettings] = useState({
+    primaryColor: '#3b82f6',
+    secondaryColor: '#9333ea',
+    size: 'normal',
+    position: 'bottom-right',
+    enableGlassmorphism: true,
+    enablePulseAnimation: true
+  })
 
   const widgetRef = useRef<HTMLDivElement>(null)
 
@@ -67,115 +61,38 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
   const { 
     connectionStatus, 
     connectionMode,
-    onMessage, 
-    sendMessage: realTimeSendMessage 
+    onMessage
   } = useRealTime()
 
-  // Load conversations when user is available
-  // IMPORTANT: Load conversations immediately when user is authenticated for notification counting
-  useEffect(() => {
-    if (user) {
-      console.log('👤 User authenticated, loading conversations for notifications')
-      loadConversations()
-    }
-  }, [user]) // Removed isOpen dependency
-
-  // Real-time message updates for conversation list
-  // IMPORTANT: Always listen for messages regardless of widget open/closed state
-  useEffect(() => {
+  // Load widget settings from API
+  const loadWidgetSettings = async () => {
     if (!user) return
-
-    console.log('🔌 ChatWidget: Setting up RealTimeProvider message listener (always active)')
     
-    const unsubscribe = onMessage((realTimeMessage) => {
-      console.log('🔔 ChatWidget received real-time message:', realTimeMessage)
-      
-      if (realTimeMessage.type === 'message') {
-        const messageData = realTimeMessage.content
-        console.log('📧 Processing message data:', {
-          messageData,
-          currentUser: user.username,
-          widgetOpen: isOpen
-        })
-        
-        // Update conversation list with new message information
-        if (messageData && messageData.channel_id) {
-          console.log('📊 Updating conversations for channel:', messageData.channel_id)
-          
-          setConversations(prev => {
-            console.log('📋 Current conversations before update:', prev.map(c => ({ id: c.id, unread: c.unread_count })))
-            
-            const updated = prev.map(conv => {
-              if (conv.id === messageData.channel_id) {
-                const isFromOther = messageData.user_id !== user.username
-                const newUnreadCount = isFromOther ? (conv.unread_count || 0) + 1 : conv.unread_count
-                
-                console.log(`💬 Channel ${conv.id} update:`, {
-                  from: messageData.user_id,
-                  currentUser: user.username,
-                  isFromOther,
-                  oldUnread: conv.unread_count,
-                  newUnread: newUnreadCount
-                })
-                
-                return {
-                  ...conv,
-                  last_message: messageData.message_text,
-                  last_message_at: new Date().toISOString(),
-                  last_message_by: messageData.display_name,
-                  unread_count: newUnreadCount
-                }
-              }
-              return conv
-            })
-            
-            console.log('📋 Conversations after update:', updated.map(c => ({ id: c.id, unread: c.unread_count })))
-            return updated
-          })
-        } else {
-          console.warn('⚠️ Message missing channel_id:', messageData)
+    try {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+      if (!token) return
+
+      console.log('🎨 ChatWidget: Loading widget settings from API...')
+      const response = await fetch('/api/admin/chat/widget', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.settings) {
+          console.log('🎨 ChatWidget: Loaded widget settings:', data.settings)
+          setWidgetSettings(prev => ({
+            ...prev,
+            ...data.settings
+          }))
         }
       }
-    })
-
-    return unsubscribe
-  }, [user, onMessage]) // Removed isOpen dependency
-
-  // Calculate total unread count
-  useEffect(() => {
-    const total = conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0)
-    console.log(`🔢 ChatWidget: Calculating total unread count: ${total}`, {
-      conversations: conversations.map(c => ({ id: c.id, unread: c.unread_count }))
-    })
-    setTotalUnread(total)
-  }, [conversations])
-
-  // Sync state changes with parent component - debounced to prevent infinite loops
-  const selectedConversationId = selectedConversation?.id || null
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (onStateChange) {
-        onStateChange({
-          isExpanded,
-          isCollapsed,
-          selectedConversationId
-        })
-      }
-    }, 100) // Small delay to batch updates
-
-    return () => clearTimeout(timeoutId)
-  }, [isExpanded, isCollapsed, selectedConversationId]) // Fixed dependency array size
-
-  // Auto-select conversation from initial state
-  useEffect(() => {
-    if (initialState?.selectedConversationId && conversations.length > 0) {
-      const conversation = conversations.find(c => c.id === initialState.selectedConversationId)
-      if (conversation) {
-        setSelectedConversation(conversation)
-      }
+    } catch (error) {
+      console.error('❌ ChatWidget: Failed to load widget settings:', error)
     }
-  }, [conversations, initialState?.selectedConversationId])
+  }
 
+  // Load conversations
   const loadConversations = async () => {
     if (!user) return
     
@@ -198,35 +115,16 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
       const channelsData = channelsResponse.ok ? await channelsResponse.json() : { channels: [] }
       const directData = directResponse.ok ? await directResponse.json() : { conversations: [] }
 
-      // Combine and deduplicate by ID, then sort by recent activity
-      const combinedConversations = [
+      const allConversations = [
         ...(channelsData.channels || []),
         ...(directData.conversations || [])
-      ]
-      
-      // Deduplicate by ID to prevent duplicate keys
-      const deduplicatedConversations = combinedConversations.reduce((acc, current) => {
-        const existingIndex = acc.findIndex(item => item.id === current.id)
-        if (existingIndex === -1) {
-          acc.push(current)
-        } else {
-          // Keep the one with more recent activity
-          const existingTime = new Date(acc[existingIndex].last_message_at || acc[existingIndex].updated_at || acc[existingIndex].created_at).getTime()
-          const currentTime = new Date(current.last_message_at || current.updated_at || current.created_at).getTime()
-          if (currentTime > existingTime) {
-            acc[existingIndex] = current
-          }
-        }
-        return acc
-      }, [] as Conversation[])
-      
-      const allConversations = deduplicatedConversations.sort((a, b) => {
+      ].sort((a, b) => {
         const aTime = new Date(a.last_message_at || a.updated_at || a.created_at).getTime()
         const bTime = new Date(b.last_message_at || b.updated_at || b.created_at).getTime()
         return bTime - aTime
       })
 
-      setConversations(allConversations.slice(0, 10)) // Show only recent 10
+      setConversations(allConversations.slice(0, 10))
     } catch (error) {
       console.error('Error loading conversations:', error)
     } finally {
@@ -234,67 +132,102 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
     }
   }
 
-  const sendQuickMessage = async () => {
-    if (!quickMessage.trim() || !selectedConversation || !user || sending) return
+  // Load conversations when user is available
+  useEffect(() => {
+    if (user) {
+      loadConversations()
+      loadWidgetSettings()
+    }
+  }, [user])
 
-    setSending(true)
-    console.log('📤 ChatWidget: Sending message via RealTimeProvider', {
-      conversationId: selectedConversation.id,
-      connectionMode,
-      connectionStatus
-    })
+  // Calculate total unread count
+  useEffect(() => {
+    const total = conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0)
+    setTotalUnread(total)
+  }, [conversations])
 
+  // Periodic settings refresh
+  useEffect(() => {
+    if (!user) return
+
+    const settingsRefreshInterval = setInterval(loadWidgetSettings, 30000)
+    return () => clearInterval(settingsRefreshInterval)
+  }, [user])
+
+  // State for full widget functionality
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
+  const [messages, setMessages] = useState<any[]>([])
+  const [loadingMessages, setLoadingMessages] = useState(false)
+  const [quickMessage, setQuickMessage] = useState('')
+  const [sending, setSending] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Load messages for selected conversation
+  const loadMessages = async (conversation: Conversation) => {
+    if (!user || !conversation) return
+    
+    setLoadingMessages(true)
     try {
-      // Use RealTimeProvider's sendMessage instead of direct API call
-      const realTimeMessage = {
-        type: 'message' as const,
-        channel: selectedConversation.id,
-        from: user.username,
-        content: {
-          message_text: quickMessage.trim(),
-          message_type: 'text',
-          user_id: user.username,
-          display_name: user.display_name || user.username,
-          channel_id: selectedConversation.id
-        }
-      }
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+      if (!token) return
 
-      const success = await realTimeSendMessage(realTimeMessage)
+      const endpoint = conversation.type === 'direct' 
+        ? `/api/chat/direct/${conversation.id}/messages`
+        : `/api/chat/channels/${conversation.id}/messages`
+      
+      const response = await fetch(endpoint, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
 
-      if (success) {
-        console.log('✅ ChatWidget: Message sent successfully via RealTimeProvider')
-        setQuickMessage('')
-        
-        // For immediate UI feedback in the widget, update the conversation's last message
-        setConversations(prev => prev.map(conv => 
-          conv.id === selectedConversation.id 
-            ? {
-                ...conv,
-                last_message: quickMessage.trim(),
-                last_message_at: new Date().toISOString(),
-                last_message_by: user.display_name || user.username
-              }
-            : conv
-        ))
-        
-        // If using polling mode, we might need API fallback for conversation refresh
-        if (connectionMode === 'polling') {
-          setTimeout(() => loadConversations(), 1000) // Refresh after a delay
-        }
-      } else {
-        console.error('❌ ChatWidget: Failed to send message via RealTimeProvider')
+      if (response.ok) {
+        const data = await response.json()
+        setMessages(data.messages || [])
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
       }
     } catch (error) {
-      console.error('❌ ChatWidget: Error sending message via RealTimeProvider:', error)
+      console.error('Error loading messages:', error)
     } finally {
-      setSending(false)
+      setLoadingMessages(false)
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendQuickMessage()
+  // Handle conversation selection
+  const handleSelectConversation = (conversation: Conversation) => {
+    setSelectedConversation(conversation)
+    loadMessages(conversation)
+  }
+
+  // Send message
+  const handleSendMessage = async () => {
+    if (!quickMessage.trim() || !selectedConversation || !user) return
+    
+    setSending(true)
+    try {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token')
+      if (!token) return
+
+      const endpoint = selectedConversation.type === 'direct'
+        ? `/api/chat/direct/${selectedConversation.id}/messages`
+        : `/api/chat/channels/${selectedConversation.id}/messages`
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message_text: quickMessage })
+      })
+
+      if (response.ok) {
+        setQuickMessage('')
+        // Reload messages to show the new one
+        loadMessages(selectedConversation)
+      }
+    } catch (error) {
+      console.error('Error sending message:', error)
+    } finally {
+      setSending(false)
     }
   }
 
@@ -303,23 +236,105 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
     return null
   }
 
+  // Dynamic positioning based on settings
+  const getPositionStyle = () => {
+    const distance = widgetSettings.edgeDistance || 16
+    switch (widgetSettings.position) {
+      case 'bottom-right': return { bottom: `${distance}px`, right: `${distance}px` }
+      case 'bottom-left': return { bottom: `${distance}px`, left: `${distance}px` }
+      case 'top-right': return { top: `${distance}px`, right: `${distance}px` }
+      case 'top-left': return { top: `${distance}px`, left: `${distance}px` }
+      default: return { bottom: '16px', right: '16px' }
+    }
+  }
+
+  // Size classes for button
+  const sizeClass = widgetSettings.size === 'compact' ? 'w-12 h-12' : 
+                    widgetSettings.size === 'large' ? 'w-20 h-20' : 'w-16 h-16'
+  
+  // Widget type specific styles
+  const getWidgetStyle = () => {
+    switch (widgetSettings.type) {
+      case 'minimal':
+        return {
+          button: 'bg-white border-2 shadow-lg',
+          buttonHover: 'hover:shadow-xl',
+          iconColor: widgetSettings.primaryColor,
+          panel: 'bg-white border shadow-lg',
+          header: 'bg-gray-50 border-b'
+        }
+      case 'gradient':
+        return {
+          button: `bg-gradient-to-br shadow-xl`,
+          buttonHover: 'hover:shadow-2xl hover:scale-110',
+          iconColor: 'white',
+          panel: 'bg-white border shadow-2xl',
+          header: `bg-gradient-to-r text-white`
+        }
+      case 'neumorphic':
+        return {
+          button: 'bg-gray-100 shadow-[9px_9px_16px_#bebebe,-9px_-9px_16px_#ffffff]',
+          buttonHover: 'hover:shadow-[6px_6px_12px_#bebebe,-6px_-6px_12px_#ffffff]',
+          iconColor: widgetSettings.primaryColor,
+          panel: 'bg-gray-100 shadow-[20px_20px_60px_#bebebe,-20px_-20px_60px_#ffffff]',
+          header: 'bg-gray-100 border-b border-gray-200'
+        }
+      case 'corporate':
+        return {
+          button: 'bg-indigo-600 shadow-lg',
+          buttonHover: 'hover:bg-indigo-700 hover:shadow-xl',
+          iconColor: 'white',
+          panel: 'bg-white border border-gray-200 shadow-xl',
+          header: 'bg-indigo-600 text-white'
+        }
+      case 'gaming':
+        return {
+          button: 'bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.5)] animate-pulse',
+          buttonHover: 'hover:shadow-[0_0_30px_rgba(168,85,247,0.7)]',
+          iconColor: 'white',
+          panel: 'bg-gray-900 border border-purple-500 shadow-[0_0_30px_rgba(168,85,247,0.3)]',
+          header: 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+        }
+      case 'retro':
+        return {
+          button: 'bg-yellow-300 border-4 border-yellow-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]',
+          buttonHover: 'hover:shadow-[2px_2px_0px_rgba(0,0,0,1)]',
+          iconColor: 'black',
+          panel: 'bg-yellow-100 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]',
+          header: 'bg-yellow-400 border-b-4 border-black text-black font-mono'
+        }
+      case 'glassmorphism':
+      default:
+        return {
+          button: 'backdrop-blur-xl bg-white/10 border border-white/20 shadow-xl',
+          buttonHover: 'hover:bg-white/20 hover:shadow-2xl',
+          iconColor: 'white',
+          panel: 'backdrop-blur-xl bg-white/95 border border-white/20 shadow-2xl',
+          header: 'backdrop-blur-xl bg-white/10 border-b border-white/20'
+        }
+    }
+  }
+
+  const widgetStyle = getWidgetStyle()
+
   return (
     <div 
       ref={widgetRef}
-      className={cn(
-        "fixed bottom-4 right-4 z-50 transition-all duration-300",
-        isOpen ? "w-80" : "w-16",
-        isOpen && isExpanded ? "h-96" : isOpen && !isCollapsed ? "h-64" : isOpen && isCollapsed ? "h-12" : "h-16",
-        className
-      )}
+      className={cn("fixed z-50 transition-all duration-300", className)}
+      style={getPositionStyle()}
     >
       {!isOpen ? (
-        // 🌟 COOL FLOATING BUTTON - Glassmorphism with pulse animation
+        // Floating Button with Dynamic Styling
         <div className="relative">
           {/* Pulse ring animation for notifications */}
-          {totalUnread > 0 && (
+          {totalUnread > 0 && widgetSettings.enablePulseAnimation && (
             <motion.div
-              className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 to-purple-500"
+              className="absolute inset-0 rounded-full"
+              style={{
+                background: widgetSettings.type === 'gradient' || widgetSettings.type === 'gaming' 
+                  ? `linear-gradient(to right, ${widgetSettings.primaryColor}, ${widgetSettings.secondaryColor})`
+                  : widgetSettings.primaryColor
+              }}
               animate={{
                 scale: [1, 1.4, 1],
                 opacity: [0.6, 0, 0.6],
@@ -332,306 +347,270 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className, initia
             />
           )}
           
-          {/* Main glassmorphism button */}
+          {/* Main button */}
           <motion.button
             onClick={onToggle}
-            className="relative w-16 h-16 rounded-full bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 shadow-2xl backdrop-blur-sm border border-white/20 text-white transition-all duration-300 group"
-            whileHover={{ 
-              scale: 1.1,
-              boxShadow: "0 20px 40px -12px rgba(59, 130, 246, 0.5)"
-            }}
+            className={cn(
+              "relative transition-all group",
+              sizeClass,
+              widgetStyle.button,
+              widgetStyle.buttonHover,
+              widgetSettings.borderRadius === 4 ? 'rounded' :
+              widgetSettings.borderRadius === 8 ? 'rounded-lg' :
+              widgetSettings.borderRadius === 12 ? 'rounded-xl' :
+              widgetSettings.borderRadius === 16 ? 'rounded-2xl' :
+              widgetSettings.borderRadius === 24 ? 'rounded-3xl' : 'rounded-full'
+            )}
+            whileHover={widgetSettings.enableHoverEffects ? { scale: 1.1 } : {}}
             whileTap={{ scale: 0.95 }}
             style={{
-              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(147, 51, 234, 0.9) 50%, rgba(59, 130, 246, 0.9) 100%)',
-              backdropFilter: 'blur(16px)',
-              boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.37), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
+              ...(widgetSettings.type === 'gradient' || widgetSettings.type === 'gaming' ? {
+                background: `linear-gradient(135deg, ${widgetSettings.primaryColor} 0%, ${widgetSettings.secondaryColor} 50%, ${widgetSettings.primaryColor} 100%)`
+              } : widgetSettings.type === 'minimal' || widgetSettings.type === 'neumorphic' ? {} : {
+                backgroundColor: widgetSettings.primaryColor
+              }),
+              borderColor: widgetSettings.type === 'minimal' ? widgetSettings.primaryColor : undefined
             }}
           >
-            <MessageCircle className="h-6 w-6 mx-auto group-hover:scale-110 transition-transform duration-200" />
+            <MessageCircle className="h-6 w-6 mx-auto" style={{ color: widgetStyle.iconColor }} />
             
-            {/* Notification badge with glow */}
+            {/* Notification badge */}
             {totalUnread > 0 && (
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 className="absolute -top-2 -right-2"
               >
-                <div className="relative">
-                  {/* Glow effect behind badge */}
-                  <div className="absolute inset-0 rounded-full bg-red-500 blur-sm animate-pulse" />
-                  <Badge 
-                    variant="destructive" 
-                    className="relative text-xs px-2 py-0.5 h-6 min-w-6 bg-red-500 border-2 border-white shadow-lg font-bold"
-                  >
-                    {totalUnread > 99 ? '99+' : totalUnread}
-                  </Badge>
-                </div>
+                <Badge variant="destructive" className="text-xs px-2 py-0.5 h-6 min-w-6 bg-red-500 border-2 border-white shadow-lg font-bold">
+                  {totalUnread > 99 ? '99+' : totalUnread}
+                </Badge>
               </motion.div>
             )}
           </motion.button>
         </div>
       ) : (
-        // Expanded widget with glassmorphism background
+        // Expanded widget with full functionality
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white/90 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl"
-          style={{
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(20px)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
-          }}
+          className={cn(
+            "w-96 h-[500px] flex flex-col",
+            widgetStyle.panel,
+            widgetSettings.borderRadius === 4 ? 'rounded' :
+            widgetSettings.borderRadius === 8 ? 'rounded-lg' :
+            widgetSettings.borderRadius === 12 ? 'rounded-xl' :
+            widgetSettings.borderRadius === 16 ? 'rounded-2xl' :
+            widgetSettings.borderRadius === 24 ? 'rounded-3xl' : 'rounded-2xl'
+          )}
         >
-          {/* Header with gradient */}
-          <div className="flex items-center justify-between p-3 border-b border-white/20 bg-gradient-to-r from-blue-50/80 to-purple-50/80 rounded-t-2xl backdrop-blur-sm">
+          {/* Header */}
+          <div className={cn(
+            "flex items-center justify-between p-3",
+            widgetStyle.header,
+            widgetSettings.borderRadius === 4 ? 'rounded-t' :
+            widgetSettings.borderRadius === 8 ? 'rounded-t-lg' :
+            widgetSettings.borderRadius === 12 ? 'rounded-t-xl' :
+            widgetSettings.borderRadius === 16 ? 'rounded-t-2xl' :
+            widgetSettings.borderRadius === 24 ? 'rounded-t-3xl' : 'rounded-t-2xl'
+          )}
+          style={{
+            ...(widgetSettings.type === 'gradient' || widgetSettings.type === 'gaming' ? {
+              background: `linear-gradient(to right, ${widgetSettings.primaryColor}, ${widgetSettings.secondaryColor})`
+            } : widgetSettings.type === 'corporate' ? {
+              backgroundColor: widgetSettings.primaryColor
+            } : {})
+          }}>
             <div className="flex items-center space-x-2">
-              <div className="relative">
-                <MessageCircle className="h-4 w-4 text-blue-600" />
-                {totalUnread > 0 && (
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                )}
-              </div>
-              <span className="font-medium text-sm bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Chat</span>
-              {totalUnread > 0 && (
-                <Badge variant="destructive" className="text-xs px-2 py-0 h-4 bg-red-500">
+              <MessageCircle className="h-5 w-5" />
+              <span className="font-medium">
+                {selectedConversation ? selectedConversation.name : 'Conversations'}
+              </span>
+              {totalUnread > 0 && !selectedConversation && (
+                <Badge variant="destructive" className="text-xs">
                   {totalUnread}
                 </Badge>
               )}
             </div>
             
             <div className="flex items-center space-x-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                className="h-6 w-6 p-0"
-                title={isCollapsed ? "Expand widget" : "Collapse widget"}
-              >
-                {isCollapsed ? <ChevronUp className="h-3 w-3" /> : <Minimize2 className="h-3 w-3" />}
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="h-6 w-6 p-0"
-                title={isExpanded ? "Normal size" : "Expand"}
-                disabled={isCollapsed}
-              >
-                {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
-              </Button>
-              
+              {selectedConversation && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedConversation(null)}
+                  className="h-8 w-8 p-0 hover:bg-white/20"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onOpenFullChat}
-                className="h-6 w-6 p-0"
-                title="Open full chat"
+                className="h-8 w-8 p-0 hover:bg-white/20"
               >
-                <Maximize2 className="h-3 w-3" />
+                <Maximize2 className="h-4 w-4" />
               </Button>
-              
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onToggle}
-                className="h-6 w-6 p-0"
-                title="Close chat"
+                className="h-8 w-8 p-0 hover:bg-white/20"
               >
-                <X className="h-3 w-3" />
+                <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
           {/* Content */}
-          {!isCollapsed && (
-            <div className="flex flex-col h-full">
-              {/* Conversations List */}
-              <div className="flex-1 min-h-0">
-                <ScrollArea className="h-full">
-                  {loading ? (
-                    <div className="p-4 text-center">
-                      <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2 text-blue-600" />
-                      <p className="text-xs text-gray-600">Loading...</p>
-                    </div>
-                  ) : conversations.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500">
-                      <MessageCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                      <p className="text-xs">No recent conversations</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={onOpenFullChat}
-                        className="mt-2 text-xs"
+          <div className="flex-1 overflow-hidden">
+            {!selectedConversation ? (
+              // Conversation list
+              <ScrollArea className="h-full">
+                {loading ? (
+                  <div className="flex items-center justify-center h-32">
+                    <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                  </div>
+                ) : conversations.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-32 text-center p-4">
+                    <MessageCircle className="h-8 w-8 text-gray-300 mb-2" />
+                    <p className="text-sm text-gray-500">No conversations yet</p>
+                    <Button
+                      size="sm"
+                      variant="link"
+                      onClick={onOpenFullChat}
+                      className="mt-2"
+                    >
+                      Start a new chat
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="p-2 space-y-1">
+                    {conversations.map((conv) => (
+                      <button
+                        key={conv.id}
+                        onClick={() => handleSelectConversation(conv)}
+                        className="w-full text-left p-3 rounded-lg hover:bg-gray-100 transition-colors"
                       >
-                        Start chatting
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="p-2 space-y-1">
-                      {conversations.map((conversation) => (
-                        <button
-                          key={conversation.id}
-                          onClick={() => setSelectedConversation(conversation)}
-                          className={cn(
-                            "w-full text-left p-2 rounded hover:bg-gray-50 transition-colors",
-                            selectedConversation?.id === conversation.id && "bg-blue-50",
-                            conversation.unread_count > 0 && "bg-blue-25"
-                          )}
-                        >
-                          <div className="flex items-center space-x-2">
-                            {/* Icon or Avatar */}
-                            {conversation.type === 'direct' && conversation.participants?.length > 0 ? (
-                              conversation.participants.length === 1 ? (
-                                <UserAvatar
-                                  user={conversation.participants[0]}
-                                  size="sm"
-                                  showPresenceStatus={true}
-                                  presenceStatus={conversation.participants[0].presence_status || 'offline'}
-                                />
-                              ) : (
-                                <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-blue-500 rounded flex items-center justify-center">
-                                  <Users className="h-3 w-3 text-white" />
-                                </div>
-                              )
+                        <div className="flex items-start space-x-3">
+                          <div className="relative">
+                            {conv.type === 'direct' ? (
+                              <UserAvatar 
+                                user={conv.participants?.[0]} 
+                                size="sm" 
+                              />
                             ) : (
-                              <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center">
-                                <Hash className="h-3 w-3 text-gray-500" />
+                              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                <Hash className="h-5 w-5 text-gray-500" />
                               </div>
                             )}
-
-                            {/* Content */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <span className={cn(
-                                  "text-xs font-medium truncate",
-                                  conversation.unread_count > 0 && "font-semibold"
-                                )}>
-                                  {conversation.type === 'direct' 
-                                    ? (conversation.participants?.length === 1 
-                                        ? conversation.participants[0]?.display_name 
-                                        : conversation.participants?.map(p => p.display_name).join(', ')) || conversation.name
-                                    : conversation.name
-                                  }
+                            {conv.unread_count > 0 && (
+                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <p className="font-medium text-sm truncate">
+                                {conv.name}
+                              </p>
+                              {conv.last_message_at && (
+                                <span className="text-xs text-gray-500">
+                                  {formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: true })}
                                 </span>
-                                {conversation.unread_count > 0 && (
-                                  <Badge variant="destructive" className="text-xs px-1 py-0 h-3 min-w-3">
-                                    {conversation.unread_count > 9 ? '9+' : conversation.unread_count}
-                                  </Badge>
-                                )}
-                              </div>
-                              
-                              {conversation.last_message && (
-                                <div className="flex items-center justify-between">
-                                  <p className="text-xs text-gray-500 truncate">
-                                    {conversation.last_message_by && conversation.last_message_by !== user.display_name && (
-                                      <span className="font-medium">{conversation.last_message_by}: </span>
-                                    )}
-                                    {conversation.last_message}
-                                  </p>
-                                  {conversation.last_message_at && (
-                                    <span className="text-xs text-gray-400 ml-1 flex-shrink-0">
-                                      {formatDistanceToNow(new Date(conversation.last_message_at), { addSuffix: false })}
-                                    </span>
-                                  )}
-                                </div>
                               )}
                             </div>
+                            {conv.last_message && (
+                              <p className="text-xs text-gray-600 truncate mt-1">
+                                {conv.last_message_by && (
+                                  <span className="font-medium">
+                                    {conv.last_message_by === user?.username ? 'You' : conv.last_message_by}:
+                                  </span>
+                                )}{' '}
+                                {conv.last_message}
+                              </p>
+                            )}
                           </div>
-                        </button>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            ) : (
+              // Message view
+              <div className="flex flex-col h-full">
+                <ScrollArea className="flex-1 p-4">
+                  {loadingMessages ? (
+                    <div className="flex items-center justify-center h-32">
+                      <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="text-center text-gray-500 text-sm">
+                      No messages yet. Start the conversation!
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {messages.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={cn(
+                            "flex",
+                            msg.user_id === user?.username ? "justify-end" : "justify-start"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "max-w-[70%] rounded-lg px-3 py-2",
+                              msg.user_id === user?.username
+                                ? "bg-blue-500 text-white"
+                                : "bg-gray-100 text-gray-900"
+                            )}
+                          >
+                            <p className="text-sm break-words">{msg.message_text}</p>
+                            <p className="text-xs opacity-70 mt-1">
+                              {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                            </p>
+                          </div>
+                        </div>
                       ))}
+                      <div ref={messagesEndRef} />
                     </div>
                   )}
                 </ScrollArea>
-              </div>
-
-          {/* Quick Message Input - Show when expanded AND conversation is selected */}
-          {isExpanded && selectedConversation && (
-            <>
-              <Separator />
-              <div className="p-2">
-                <div className="text-xs text-gray-600 mb-2 truncate">
-                  Message {selectedConversation.type === 'direct' 
-                    ? `${selectedConversation.participants?.map(p => p.display_name).join(', ')}` 
-                    : selectedConversation.name}
-                </div>
-                <div className="flex space-x-2">
-                  <Input
-                    value={quickMessage}
-                    onChange={(e) => setQuickMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Type a message..."
-                    className="text-xs h-8"
-                    disabled={sending}
-                  />
-                  <Button
-                    onClick={sendQuickMessage}
-                    disabled={!quickMessage.trim() || sending}
-                    size="sm"
-                    className="h-8 w-8 p-0"
+                
+                {/* Message input */}
+                <div className="p-3 border-t">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      handleSendMessage()
+                    }}
+                    className="flex space-x-2"
                   >
-                    {sending ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Send className="h-3 w-3" />
-                    )}
-                  </Button>
+                    <Input
+                      value={quickMessage}
+                      onChange={(e) => setQuickMessage(e.target.value)}
+                      placeholder="Type a message..."
+                      className="flex-1"
+                      disabled={sending}
+                    />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={!quickMessage.trim() || sending}
+                      style={{ backgroundColor: widgetSettings.primaryColor }}
+                    >
+                      {sending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </form>
                 </div>
               </div>
-            </>
-          )}
-
-          {/* Alternative Message Input - Show when normal size and conversation selected */}
-          {!isExpanded && !isCollapsed && selectedConversation && (
-            <>
-              <Separator />
-              <div className="p-2">
-                <div className="text-xs text-gray-600 mb-1 truncate">
-                  {selectedConversation.type === 'direct' 
-                    ? selectedConversation.participants?.map(p => p.display_name).join(', ') 
-                    : selectedConversation.name}
-                </div>
-                <div className="flex space-x-1">
-                  <Input
-                    value={quickMessage}
-                    onChange={(e) => setQuickMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Message..."
-                    className="text-xs h-6"
-                    disabled={sending}
-                  />
-                  <Button
-                    onClick={sendQuickMessage}
-                    disabled={!quickMessage.trim() || sending}
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                  >
-                    {sending ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Send className="h-2.5 w-2.5" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Footer with glassmorphism */}
-          <div className="p-2 border-t border-white/20 bg-gradient-to-r from-blue-50/50 to-purple-50/50 rounded-b-2xl backdrop-blur-sm">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onOpenFullChat}
-              className="w-full text-xs h-6 bg-gradient-to-r from-blue-600/10 to-purple-600/10 hover:from-blue-600/20 hover:to-purple-600/20 border border-white/30 rounded-xl backdrop-blur-sm transition-all duration-200"
-            >
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-medium">
-                Open full chat
-              </span>
-            </Button>
+            )}
           </div>
-            </div>
-          )}
         </motion.div>
       )}
     </div>
