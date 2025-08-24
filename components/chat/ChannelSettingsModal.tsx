@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogActions } from '@mui/material'
+import { Dialog, DialogContent, DialogTitle, DialogActions } from '@mui/material'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -212,12 +212,10 @@ export function ChannelSettingsModal({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogHeader>
-        <DialogTitle className="flex items-center space-x-2">
-          {getChannelIcon()}
-          <span>Channel Settings - {channel.name}</span>
-        </DialogTitle>
-      </DialogHeader>
+      <DialogTitle className="flex items-center space-x-2">
+        {getChannelIcon()}
+        <span>Channel Settings - {channel.name}</span>
+      </DialogTitle>
       
       <DialogContent className="p-0">
         {/* Tab Navigation */}
