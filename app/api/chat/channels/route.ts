@@ -25,12 +25,13 @@ export async function GET(request: NextRequest) {
         u.display_name as created_by_name,
         t.name as team_name,
         ccm.role as user_role,
-        ccm.last_read_at,
+        crr.last_read_at,
         (
           SELECT COUNT(*) 
           FROM chat_messages cm 
           WHERE cm.channel_id = c.id 
-          AND cm.created_at > COALESCE(ccm.last_read_at, '1970-01-01')
+          AND cm.user_id != ?
+          AND cm.created_at > COALESCE(crr.last_read_at, '1970-01-01')
         ) as unread_count,
         (
           SELECT COUNT(*) 
@@ -41,10 +42,11 @@ export async function GET(request: NextRequest) {
       LEFT JOIN users u ON c.created_by = u.username
       LEFT JOIN teams t ON c.team_id = t.id
       LEFT JOIN chat_channel_members ccm ON c.id = ccm.channel_id AND ccm.user_id = ?
+      LEFT JOIN chat_read_receipts crr ON c.id = crr.channel_id AND crr.user_id = ?
       WHERE c.active = 1
     `
 
-    const params: any[] = [authResult.user.username]
+    const params: any[] = [authResult.user.username, authResult.user.username, authResult.user.username]
 
     // Filter by type if specified
     if (type && ['public', 'private', 'direct'].includes(type)) {

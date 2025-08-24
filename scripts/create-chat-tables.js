@@ -124,6 +124,22 @@ CREATE TABLE IF NOT EXISTS call_participants (
 );
 `;
 
+// Read receipts table - tracks when users last read each channel
+const createReadReceiptsTable = `
+CREATE TABLE IF NOT EXISTS chat_read_receipts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    last_read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_message_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(channel_id, user_id),
+    FOREIGN KEY (channel_id) REFERENCES chat_channels(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(username) ON DELETE CASCADE
+);
+`;
+
 // Create indexes for performance
 const createIndexes = `
 -- Channel indexes
@@ -159,6 +175,10 @@ CREATE INDEX IF NOT EXISTS idx_call_sessions_started_at ON call_sessions(started
 -- Call participants indexes
 CREATE INDEX IF NOT EXISTS idx_call_participants_user_id ON call_participants(user_id);
 CREATE INDEX IF NOT EXISTS idx_call_participants_joined ON call_participants(joined_at);
+
+-- Read receipts indexes
+CREATE INDEX IF NOT EXISTS idx_chat_read_receipts_channel_user ON chat_read_receipts(channel_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_read_receipts_user_updated ON chat_read_receipts(user_id, updated_at);
 `;
 
 // Execute table creation
@@ -169,7 +189,8 @@ const tables = [
   { name: 'user_presence', sql: createPresenceTable },
   { name: 'message_reactions', sql: createReactionsTable },
   { name: 'call_sessions', sql: createCallSessionsTable },
-  { name: 'call_participants', sql: createCallParticipantsTable }
+  { name: 'call_participants', sql: createCallParticipantsTable },
+  { name: 'chat_read_receipts', sql: createReadReceiptsTable }
 ];
 
 async function createTables() {

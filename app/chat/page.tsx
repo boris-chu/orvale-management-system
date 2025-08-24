@@ -222,8 +222,46 @@ export default function ChatPage() {
     }
   }
 
-  const handleChannelSelect = (channel: Channel) => {
+  const handleChannelSelect = async (channel: Channel) => {
     setSelectedChannel(channel)
+    
+    // Mark channel as read if it has unread messages
+    if (channel.unread_count > 0) {
+      try {
+        const token = localStorage.getItem('authToken')
+        if (token) {
+          const response = await fetch(`/api/chat/channels/${channel.id}/mark-read`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+          
+          if (response.ok) {
+            // Update local state to reflect read status
+            if (channel.type === 'direct') {
+              setDirectMessages(prev => prev.map(dm => 
+                dm.id === channel.id 
+                  ? { ...dm, unread_count: 0 }
+                  : dm
+              ))
+            } else {
+              setChannels(prev => prev.map(ch => 
+                ch.id === channel.id 
+                  ? { ...ch, unread_count: 0 }
+                  : ch
+              ))
+            }
+            console.log(`✅ Marked channel ${channel.name} as read`)
+          } else {
+            console.warn(`⚠️ Failed to mark channel ${channel.name} as read:`, response.status)
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error marking channel as read:', error)
+      }
+    }
   }
 
   const handleChannelUpdate = () => {
