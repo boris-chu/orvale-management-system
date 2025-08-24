@@ -520,6 +520,68 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     name: 'Reset Defaults', 
     category: 'Tables Management', 
     description: 'Reset to system defaults\n• Restore original configs\n• Clear customizations\n• Admin override capability' 
+  },
+  
+  // Chat Permissions
+  { 
+    id: 'chat.access_channels', 
+    name: 'Access Chat Channels', 
+    category: 'Chat', 
+    description: 'Basic chat access\n• Join public channels\n• Send/receive messages\n• Essential for chat functionality' 
+  },
+  { 
+    id: 'chat.create_channels', 
+    name: 'Create Channels', 
+    category: 'Chat', 
+    description: 'Create new chat channels\n• Set up team channels\n• Configure channel settings\n• For team leads & administrators' 
+  },
+  { 
+    id: 'chat.manage_channels', 
+    name: 'Manage Channels', 
+    category: 'Chat', 
+    description: 'Edit/delete channels\n• Modify channel settings\n• Archive inactive channels\n• Administrative control' 
+  },
+  { 
+    id: 'chat.create_direct', 
+    name: 'Create Direct Messages', 
+    category: 'Chat', 
+    description: 'Start private conversations\n• Direct message other users\n• 1-on-1 communication\n• Standard user capability' 
+  },
+  { 
+    id: 'chat.send_files', 
+    name: 'Send Files', 
+    category: 'Chat', 
+    description: 'Upload and share files\n• Document sharing\n• Image attachments\n• File collaboration' 
+  },
+  { 
+    id: 'chat.initiate_calls', 
+    name: 'Initiate Calls', 
+    category: 'Chat', 
+    description: 'Start audio/video calls\n• Begin call sessions\n• Create group calls\n• Voice & video communication' 
+  },
+  { 
+    id: 'chat.join_calls', 
+    name: 'Join Calls', 
+    category: 'Chat', 
+    description: 'Answer and join calls\n• Participate in audio/video calls\n• Accept call invitations\n• Essential for call functionality' 
+  },
+  { 
+    id: 'chat.view_call_history', 
+    name: 'View Call History', 
+    category: 'Chat', 
+    description: 'View past call records\n• Call logs and duration\n• Participant history\n• Administrative oversight' 
+  },
+  { 
+    id: 'chat.manage_calls', 
+    name: 'Manage Calls', 
+    category: 'Chat', 
+    description: 'End calls for others\n• Administrative call control\n• Disconnect disruptive participants\n• Call moderation' 
+  },
+  { 
+    id: 'chat.admin_access', 
+    name: 'Chat Administration', 
+    category: 'Chat', 
+    description: 'Full chat system administration\n• User management\n• System settings\n• Complete administrative control' 
   }
 ];
 

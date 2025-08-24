@@ -127,7 +127,7 @@ export function CallInitiator({
         </Button>
 
         {showCallOptions && (
-          <div className="absolute bottom-full right-0 mb-2 bg-white border rounded-lg shadow-lg p-2 space-y-1 z-50">
+          <div className="absolute top-full right-0 mt-2 bg-white border rounded-lg shadow-lg p-2 space-y-1 z-50">
             <Button
               variant="ghost"
               size="sm"
