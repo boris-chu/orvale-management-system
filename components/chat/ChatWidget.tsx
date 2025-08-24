@@ -58,7 +58,14 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
     enableGlassmorphism: true,
     enablePulseAnimation: true,
     enableHoverEffects: true,
-    edgeDistance: 16
+    edgeDistance: 16,
+    // Time display settings
+    timeDisplay: 'relative',
+    timeFormat: '12h',
+    showTimeTooltip: true,
+    // Widget button controls
+    showFileUpload: true,
+    showEmojiPicker: true
   })
 
   const widgetRef = useRef<HTMLDivElement>(null)
@@ -323,6 +330,45 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
 
   const widgetStyle = getWidgetStyle()
 
+  // Time formatting functions
+  const formatMessageTime = (timestamp: string) => {
+    const date = new Date(timestamp)
+    
+    switch (widgetSettings.timeDisplay) {
+      case 'absolute':
+        return widgetSettings.timeFormat === '24h' 
+          ? date.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
+          : date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      
+      case 'both':
+      case 'relative':
+      default:
+        return formatDistanceToNow(date, { addSuffix: true })
+    }
+  }
+
+  const getTimeTooltip = (timestamp: string) => {
+    if (!widgetSettings.showTimeTooltip || widgetSettings.timeDisplay === 'absolute') {
+      return undefined
+    }
+    
+    const date = new Date(timestamp)
+    return widgetSettings.timeFormat === '24h'
+      ? date.toLocaleString('en-US', { 
+          hour12: false, 
+          month: 'short', 
+          day: 'numeric',
+          hour: '2-digit', 
+          minute: '2-digit' 
+        })
+      : date.toLocaleString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          hour: '2-digit', 
+          minute: '2-digit' 
+        })
+  }
+
   return (
     <div 
       ref={widgetRef}
@@ -530,8 +576,11 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
                                 {conv.name}
                               </p>
                               {conv.last_message_at && (
-                                <span className="text-xs text-gray-500">
-                                  {formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: true })}
+                                <span 
+                                  className="text-xs text-gray-500 cursor-pointer"
+                                  title={getTimeTooltip(conv.last_message_at)}
+                                >
+                                  {formatMessageTime(conv.last_message_at)}
                                 </span>
                               )}
                             </div>
@@ -583,8 +632,11 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
                             )}
                           >
                             <p className="text-sm break-words">{msg.message_text}</p>
-                            <p className="text-xs opacity-70 mt-1">
-                              {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                            <p 
+                              className="text-xs opacity-70 mt-1 cursor-pointer"
+                              title={getTimeTooltip(msg.created_at)}
+                            >
+                              {formatMessageTime(msg.created_at)}
                             </p>
                           </div>
                         </div>
@@ -601,8 +653,36 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
                       e.preventDefault()
                       handleSendMessage()
                     }}
-                    className="flex space-x-2"
+                    className="flex items-center space-x-2"
                   >
+                    {/* File Upload Button */}
+                    {widgetSettings.showFileUpload && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 flex-shrink-0"
+                        title="Upload file"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                      </Button>
+                    )}
+                    
+                    {/* Emoji Picker Button */}
+                    {widgetSettings.showEmojiPicker && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 flex-shrink-0"
+                        title="Add emoji"
+                      >
+                        <span className="text-lg">😊</span>
+                      </Button>
+                    )}
+                    
                     <Input
                       value={quickMessage}
                       onChange={(e) => setQuickMessage(e.target.value)}
@@ -610,11 +690,13 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
                       className="flex-1"
                       disabled={sending}
                     />
+                    
                     <Button
                       type="submit"
                       size="sm"
                       disabled={!quickMessage.trim() || sending}
                       style={{ backgroundColor: widgetSettings.primaryColor }}
+                      className="flex-shrink-0"
                     >
                       {sending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

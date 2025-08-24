@@ -167,7 +167,14 @@ export function ChatManagementCard() {
     autoHide: false,
     soundNotifications: true,
     desktopNotifications: true,
-    defaultState: 'closed'
+    defaultState: 'closed',
+    // Time display settings
+    timeDisplay: 'relative', // 'relative' or 'absolute'
+    timeFormat: '12h', // '12h' or '24h'
+    showTimeTooltip: true,
+    // Widget button controls
+    showFileUpload: true,
+    showEmojiPicker: true
   });
   const [testingWidget, setTestingWidget] = useState<string | null>(null);
   const [widgetTestResults, setWidgetTestResults] = useState<{[key: string]: any}>({});
@@ -2201,6 +2208,95 @@ export function ChatManagementCard() {
                           <MenuItem value="loose">Loose (2.0)</MenuItem>
                         </Select>
                       </FormControl>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Time Display & Widget Controls */}
+                <div className="space-y-4">
+                  <h4 className="font-medium">Message Display & Controls</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Time Display Format</label>
+                      <FormControl fullWidth size="small">
+                        <Select 
+                          value={widgetSettings.timeDisplay || 'relative'}
+                          onChange={(e) => {
+                            const newSettings = { ...widgetSettings, timeDisplay: e.target.value };
+                            saveWidgetSettings(newSettings);
+                          }}
+                        >
+                          <MenuItem value="relative">Relative (about 2 hours ago)</MenuItem>
+                          <MenuItem value="absolute">Absolute (2:30 PM)</MenuItem>
+                          <MenuItem value="both">Relative with tooltip</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <p className="text-xs text-gray-500">How message timestamps are displayed</p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Time Format</label>
+                      <FormControl fullWidth size="small">
+                        <Select 
+                          value={widgetSettings.timeFormat || '12h'}
+                          onChange={(e) => {
+                            const newSettings = { ...widgetSettings, timeFormat: e.target.value };
+                            saveWidgetSettings(newSettings);
+                          }}
+                        >
+                          <MenuItem value="12h">12-hour (2:30 PM)</MenuItem>
+                          <MenuItem value="24h">24-hour (14:30)</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <p className="text-xs text-gray-500">Clock format for absolute times</p>
+                    </div>
+                  </div>
+
+                  {/* Widget Button Controls */}
+                  <div className="space-y-3">
+                    <h5 className="font-medium">Widget Button Controls</h5>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Show File Upload Button</p>
+                        <p className="text-sm text-gray-500">Allow users to upload files in chat messages</p>
+                      </div>
+                      <Switch 
+                        checked={widgetSettings.showFileUpload !== false}
+                        onCheckedChange={(checked) => {
+                          const newSettings = { ...widgetSettings, showFileUpload: checked };
+                          saveWidgetSettings(newSettings);
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Show Emoji Picker</p>
+                        <p className="text-sm text-gray-500">Enable emoji picker button for reactions</p>
+                      </div>
+                      <Switch 
+                        checked={widgetSettings.showEmojiPicker !== false}
+                        onCheckedChange={(checked) => {
+                          const newSettings = { ...widgetSettings, showEmojiPicker: checked };
+                          saveWidgetSettings(newSettings);
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Show Time Tooltips</p>
+                        <p className="text-sm text-gray-500">Show exact time on hover when using relative time</p>
+                      </div>
+                      <Switch 
+                        checked={widgetSettings.showTimeTooltip !== false}
+                        onCheckedChange={(checked) => {
+                          const newSettings = { ...widgetSettings, showTimeTooltip: checked };
+                          saveWidgetSettings(newSettings);
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
