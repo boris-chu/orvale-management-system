@@ -837,20 +837,17 @@ export default function TablesManagementPage() {
           )}
           
           {hasCreatePermission && (
-            <Dialog open={createConfigOpen} onOpenChange={setCreateConfigOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Configuration
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create Table Configuration</DialogTitle>
-                  <DialogDescription>
+            <>
+              <Button onClick={() => setCreateConfigOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Configuration
+              </Button>
+              <Dialog open={createConfigOpen} onClose={() => setCreateConfigOpen(false)} maxWidth="md" fullWidth>
+                <DialogTitle>Create Table Configuration</DialogTitle>
+                <DialogContent>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     Create a new table layout configuration
-                  </DialogDescription>
-                </DialogHeader>
+                  </Typography>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="table-select">Table</Label>
@@ -890,16 +887,17 @@ export default function TablesManagementPage() {
                     />
                   </div>
                 </div>
-                <div className="flex justify-end gap-2">
+                </DialogContent>
+                <DialogActions>
                   <Button variant="outline" onClick={() => setCreateConfigOpen(false)}>
                     Cancel
                   </Button>
                   <Button onClick={handleCreateConfiguration}>
                     Create Configuration
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogActions>
+              </Dialog>
+            </>
           )}
 
           {/* User Profile Dropdown */}
@@ -915,7 +913,7 @@ export default function TablesManagementPage() {
                     className="flex items-center space-x-2 rounded-full p-1 hover:bg-gray-100 transition-colors duration-200"
                   >
                     <UserAvatar 
-                      user={user}
+                      user={user || { display_name: 'Unknown', username: 'unknown', email: 'unknown' }}
                       size="md"
                       showOnlineIndicator={true}
                       className="border-2 border-gray-200 hover:border-blue-400 transition-colors duration-200"
@@ -942,7 +940,7 @@ export default function TablesManagementPage() {
                     <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
                       <div className="flex items-center space-x-3">
                         <UserAvatar 
-                          user={user}
+                          user={user || { display_name: 'Unknown', username: 'unknown', email: 'unknown' }}
                           size="lg"
                         />
                         <div className="flex-1 min-w-0">
@@ -1872,14 +1870,12 @@ export default function TablesManagementPage() {
       </Tabs>
 
       {/* Preview Dialog */}
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Configuration Preview</DialogTitle>
-            <DialogDescription>
-              {selectedConfig?.configuration_name} - {getTableTypeLabel(selectedConfig?.table_identifier || '')}
-            </DialogDescription>
-          </DialogHeader>
+      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="lg" fullWidth>
+        <DialogTitle>Configuration Preview</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {selectedConfig?.configuration_name} - {getTableTypeLabel(selectedConfig?.table_identifier || '')}
+          </Typography>
           <div className="py-4">
             {selectedConfig && (
               <div className="space-y-4">
@@ -1906,6 +1902,11 @@ export default function TablesManagementPage() {
             )}
           </div>
         </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPreviewOpen(false)}>
+            Close
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Profile Edit Modal */}
@@ -1924,17 +1925,15 @@ export default function TablesManagementPage() {
       />
 
       {/* Column Manager Modal */}
-      <Dialog open={columnManagerOpen} onOpenChange={setColumnManagerOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Columns className="h-5 w-5" />
-              Column Manager
-            </DialogTitle>
-            <DialogDescription>
-              Configure column layout for {getTableTypeLabel(selectedTableForColumns)}
-            </DialogDescription>
-          </DialogHeader>
+      <Dialog open={columnManagerOpen} onClose={() => setColumnManagerOpen(false)} maxWidth="lg" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Columns className="h-5 w-5" />
+          Column Manager
+        </DialogTitle>
+        <DialogContent sx={{ maxHeight: '80vh', overflow: 'auto' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Configure column layout for {getTableTypeLabel(selectedTableForColumns)}
+          </Typography>
           
           {/* Table Selector */}
           <div className="mb-4">
@@ -2007,6 +2006,11 @@ export default function TablesManagementPage() {
             />
           </div>
         </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setColumnManagerOpen(false)}>
+            Close
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Column Editor Dialog */}
@@ -2026,61 +2030,57 @@ export default function TablesManagementPage() {
       {/* Delete Confirmation Dialog */}
       <Dialog 
         open={showDeleteConfirm.open} 
-        onOpenChange={(open) => setShowDeleteConfirm({ open, columnId: '', columnName: '' })}
+        onClose={() => setShowDeleteConfirm({ open: false, columnId: '', columnName: '' })}
       >
+        <DialogTitle>Delete Column</DialogTitle>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Column</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the column &quot;{showDeleteConfirm.columnName}&quot;? 
-              This action cannot be undone and may affect existing table configurations.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowDeleteConfirm({ open: false })}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={() => showDeleteConfirm.columnId && handleDeleteColumn(showDeleteConfirm.columnId)}
-            >
-              Delete Column
-            </Button>
-          </DialogFooter>
+          <Typography>
+            Are you sure you want to delete the column &quot;{showDeleteConfirm.columnName}&quot;? 
+            This action cannot be undone and may affect existing table configurations.
+          </Typography>
         </DialogContent>
+        <DialogActions>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowDeleteConfirm({ open: false, columnId: '', columnName: '' })}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={() => showDeleteConfirm.columnId && handleDeleteColumn(showDeleteConfirm.columnId)}
+          >
+            Delete Column
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Delete Row Confirmation Dialog */}
       <Dialog 
         open={showDeleteRowConfirm.open} 
-        onOpenChange={(open) => setShowDeleteRowConfirm({ open, rowId: '', rowLabel: '' })}
+        onClose={() => setShowDeleteRowConfirm({ open: false, rowId: '', rowLabel: '' })}
       >
+        <DialogTitle>Delete Row</DialogTitle>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Row</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete &quot;{showDeleteRowConfirm.rowLabel}&quot;? 
-              This action cannot be undone and will permanently remove the data from the database.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowDeleteRowConfirm({ open: false })}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={() => showDeleteRowConfirm.rowId && handleDeleteRow(showDeleteRowConfirm.rowId)}
-            >
-              Delete Row
-            </Button>
-          </DialogFooter>
+          <Typography>
+            Are you sure you want to delete &quot;{showDeleteRowConfirm.rowLabel}&quot;? 
+            This action cannot be undone and will permanently remove the data from the database.
+          </Typography>
         </DialogContent>
+        <DialogActions>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowDeleteRowConfirm({ open: false, rowId: '', rowLabel: '' })}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={() => showDeleteRowConfirm.rowId && handleDeleteRow(showDeleteRowConfirm.rowId)}
+          >
+            Delete Row
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Row Editor Dialog */}
