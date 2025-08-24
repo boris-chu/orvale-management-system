@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ File saved:', filePath)
 
     // Generate URLs for accessing the file
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost'
     const fileUrl = `${baseUrl}/api/chat/files/${safeFileName}`
     const downloadUrl = `${baseUrl}/api/chat/download/${safeFileName}`
 
