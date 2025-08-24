@@ -61,9 +61,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Only show channels user has access to
+    // Include group direct messages (3+ participants) in main channels list
     query += `
       AND (
-        c.type = 'public' 
+        (c.type = 'public' OR c.type = 'private')
+        OR (c.type = 'direct' AND (
+          SELECT COUNT(*)
+          FROM chat_channel_members ccm_group
+          WHERE ccm_group.channel_id = c.id AND ccm_group.active = 1
+        ) >= 3)
         OR ccm.user_id IS NOT NULL 
         OR c.created_by = ?
         OR EXISTS (

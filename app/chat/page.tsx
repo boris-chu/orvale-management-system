@@ -167,9 +167,12 @@ export default function ChatPage() {
         const data = await response.json()
         console.log('📋 Loaded all channels from API:', data.channels?.length || 0, data.channels)
         
-        // Filter out direct message channels - they should only appear in Direct Messages section
+        // Filter channels: 
+        // - Include public/private channels
+        // - Include group direct messages (3+ participants) 
+        // - Exclude 1-on-1 direct messages (they go to Direct Messages section)
         const actualChannels = (data.channels || []).filter((channel: Channel) => 
-          channel.type !== 'direct'
+          channel.type !== 'direct' || (channel.type === 'direct' && (channel.member_count || 0) >= 3)
         )
         console.log('📋 Filtered channels (excluding direct messages):', actualChannels.length, actualChannels)
         setChannels(actualChannels)

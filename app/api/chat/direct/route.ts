@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions for direct messages' }, { status: 403 })
     }
 
-    // Get direct message channels the user is part of with 3+ participants (group DMs only)
+    // Get 1-on-1 direct message conversations only (exactly 2 participants)
     const directChannels = await queryAsync(`
       SELECT 
         c.*,
@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
           SELECT COUNT(*) 
           FROM chat_messages cm 
           WHERE cm.channel_id = c.id 
+          AND cm.user_id != ?
           AND cm.created_at > COALESCE(ccm.last_read_at, '1970-01-01')
         ) as unread_count,
         (
@@ -57,10 +58,10 @@ export async function GET(request: NextRequest) {
           SELECT COUNT(*)
           FROM chat_channel_members ccm2
           WHERE ccm2.channel_id = c.id AND ccm2.active = 1
-        ) >= 3
+        ) = 2
       ORDER BY 
         CASE WHEN last_message_at IS NOT NULL THEN last_message_at ELSE c.created_at END DESC
-    `, [authResult.user.username])
+    `, [authResult.user.username, authResult.user.username])
 
     // For each direct channel, get the other participants
     const conversationsWithParticipants = await Promise.all(
