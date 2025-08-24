@@ -48,12 +48,17 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
   
   // Widget customization state
   const [widgetSettings, setWidgetSettings] = useState({
+    type: 'glassmorphism',
     primaryColor: '#3b82f6',
     secondaryColor: '#9333ea',
     size: 'normal',
     position: 'bottom-right',
+    shape: 'circle',
+    borderRadius: 16,
     enableGlassmorphism: true,
-    enablePulseAnimation: true
+    enablePulseAnimation: true,
+    enableHoverEffects: true,
+    edgeDistance: 16
   })
 
   const widgetRef = useRef<HTMLDivElement>(null)
@@ -356,11 +361,13 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
               sizeClass,
               widgetStyle.button,
               widgetStyle.buttonHover,
-              widgetSettings.borderRadius === 4 ? 'rounded' :
-              widgetSettings.borderRadius === 8 ? 'rounded-lg' :
-              widgetSettings.borderRadius === 12 ? 'rounded-xl' :
-              widgetSettings.borderRadius === 16 ? 'rounded-2xl' :
-              widgetSettings.borderRadius === 24 ? 'rounded-3xl' : 'rounded-full'
+              // Shape classes
+              widgetSettings.shape === 'circle' ? 'rounded-full' :
+              widgetSettings.shape === 'square' ? 'rounded-none' :
+              widgetSettings.shape === 'rounded-square' ? 'rounded-lg' :
+              widgetSettings.shape === 'rounded-lg' ? 'rounded-2xl' :
+              widgetSettings.shape === 'pill' ? 'rounded-full px-6' :
+              widgetSettings.shape === 'hexagon' ? 'rounded-full' : 'rounded-full'
             )}
             whileHover={widgetSettings.enableHoverEffects ? { scale: 1.1 } : {}}
             whileTap={{ scale: 0.95 }}
@@ -370,7 +377,11 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
               } : widgetSettings.type === 'minimal' || widgetSettings.type === 'neumorphic' ? {} : {
                 backgroundColor: widgetSettings.primaryColor
               }),
-              borderColor: widgetSettings.type === 'minimal' ? widgetSettings.primaryColor : undefined
+              borderColor: widgetSettings.type === 'minimal' ? widgetSettings.primaryColor : undefined,
+              // Hexagon shape using clip-path
+              ...(widgetSettings.shape === 'hexagon' ? {
+                clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)'
+              } : {})
             }}
           >
             <MessageCircle className="h-6 w-6 mx-auto" style={{ color: widgetStyle.iconColor }} />

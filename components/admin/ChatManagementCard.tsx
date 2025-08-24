@@ -156,6 +156,7 @@ export function ChatManagementCard() {
     secondaryColor: '#9333ea',
     size: 'normal',
     position: 'bottom-right',
+    shape: 'circle',
     borderRadius: 16,
     enableGlassmorphism: true,
     enablePulseAnimation: true,
@@ -1927,22 +1928,56 @@ export function ChatManagementCard() {
                     </div>
                     
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Border Radius</label>
-                      <div className="flex items-center space-x-2">
-                        <Input 
-                          type="number" 
-                          value={widgetSettings.borderRadius}
+                      <label className="text-sm font-medium">Widget Shape</label>
+                      <FormControl fullWidth size="small">
+                        <Select 
+                          value={widgetSettings.shape || 'circle'}
                           onChange={(e) => {
-                            const newSettings = { ...widgetSettings, borderRadius: parseInt(e.target.value) || 16 };
+                            const newSettings = { ...widgetSettings, shape: e.target.value };
                             saveWidgetSettings(newSettings);
                           }}
-                          className="w-16 text-sm"
-                          min="0"
-                          max="32"
-                        />
-                        <span className="text-sm text-gray-500">px</span>
+                        >
+                          <MenuItem value="circle">Circle</MenuItem>
+                          <MenuItem value="rounded-square">Rounded Square</MenuItem>
+                          <MenuItem value="square">Square</MenuItem>
+                          <MenuItem value="rounded-lg">Large Rounded</MenuItem>
+                          <MenuItem value="pill">Pill/Capsule</MenuItem>
+                          <MenuItem value="hexagon">Hexagon</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <p className="text-xs text-gray-500">Overall shape of the widget button</p>
+                      
+                      {/* Shape Preview */}
+                      <div className="mt-3">
+                        <p className="text-xs font-medium text-gray-600 mb-2">Shape Preview:</p>
+                        <div className="flex items-center space-x-3">
+                          {['circle', 'rounded-square', 'square', 'rounded-lg', 'pill', 'hexagon'].map((shape) => (
+                            <button
+                              key={shape}
+                              onClick={() => {
+                                const newSettings = { ...widgetSettings, shape };
+                                saveWidgetSettings(newSettings);
+                              }}
+                              className={cn(
+                                "w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 transition-all",
+                                shape === 'circle' ? 'rounded-full' :
+                                shape === 'square' ? 'rounded-none' :
+                                shape === 'rounded-square' ? 'rounded-lg' :
+                                shape === 'rounded-lg' ? 'rounded-2xl' :
+                                shape === 'pill' ? 'rounded-full px-4' :
+                                shape === 'hexagon' ? 'rounded-full' : '',
+                                widgetSettings.shape === shape ? 'ring-2 ring-blue-500 ring-offset-2' : 'opacity-60 hover:opacity-100'
+                              )}
+                              style={{
+                                ...(shape === 'hexagon' ? {
+                                  clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)'
+                                } : {})
+                              }}
+                              title={shape.charAt(0).toUpperCase() + shape.slice(1).replace('-', ' ')}
+                            />
+                          ))}
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-500">Roundness of widget corners</p>
                     </div>
                   </div>
                   
