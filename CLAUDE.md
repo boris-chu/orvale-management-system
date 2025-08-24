@@ -11,7 +11,8 @@ project management/
 │   ├── Available Resources and Materials.md     # UI libraries and components catalog
 │   ├── Dashboard & Achievements System.md        # Gamification and user dashboard design
 │   ├── Admin Dashboard Conceptual Design.md     # Admin control panel specifications
-│   └── RBAC_PERMISSIONS_DOCUMENTATION.md        # Complete RBAC permissions reference
+│   ├── RBAC_PERMISSIONS_DOCUMENTATION.md        # Complete RBAC permissions reference
+│   └── Chat_System_Implementation_Plan.md       # Complete chat + audio/video calling system
 ├── assets/                                      # Configuration data
 │   ├── main-categories.js                      # 9 main ticket categories
 │   ├── request-types.js                        # Request types for each category
@@ -83,7 +84,19 @@ tail -f logs/error.log
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 ```
 
-**Use shadcn:ui for other form elements**:
+**⚠️ CHAT SYSTEM EXCEPTION: Use Material-UI for ALL components**:
+```javascript
+// For chat system, use Material-UI exclusively (NO shadcn:ui)
+import { 
+  Dialog, TextField, Button, Select, MenuItem,
+  FormControl, InputLabel, Avatar, Badge, Chip
+} from '@mui/material';
+
+// Use evilcharts for analytics/dashboards
+import { GradientBarChart, AnimatedMetric } from '@/charts/...';
+```
+
+**Use shadcn:ui for other form elements** (non-chat pages):
 ```javascript
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -153,6 +166,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 - [ ] Advanced filtering
 - [ ] Resource planning views
 - [ ] Mobile responsive design
+
+### Phase 6: Chat System with Audio/Video
+- [ ] Implement Socket.io server (port 3001) for chat + WebRTC signaling
+- [ ] Create 8 database tables (7 chat + 1 call_logs)
+- [ ] Add 21 new RBAC permissions (16 chat + 5 call)
+- [ ] Build full-page chat application with Material-UI
+- [ ] Add minimized chat widget for all pages
+- [ ] Implement WebRTC audio/video calls with Safari support
+- [ ] Create admin chat management dashboard
+- [ ] **See `/docs/Chat_System_Implementation_Plan.md` for complete details**
 
 ## 🔧 Technical Guidelines
 
@@ -225,6 +248,32 @@ systemLogger.configUpdated(setting, updatedBy);
 | Analytics | evilcharts | All chart types |
 
 ## 🚨 Important Patterns
+
+### 🍎 Safari/iOS WebRTC & Socket.io Handling
+
+**CRITICAL for Chat System Implementation:**
+
+1. **WebRTC Requirements**:
+   - User gesture required before `getUserMedia()` on iOS
+   - Audio tracks must be added before video tracks
+   - H.264 codec must be explicitly preferred
+   - Use `unified-plan` SDP semantics
+
+2. **Socket.io Configuration**:
+   ```javascript
+   // Safari/iOS specific settings
+   const socket = io({
+     transports: ['websocket', 'polling'], // Order matters!
+     reconnection: true,
+     reconnectionDelay: 1000,
+     timeout: 20000 // iOS needs longer timeouts
+   });
+   ```
+
+3. **Testing Requirements**:
+   - Test on REAL iOS devices (simulators don't support WebRTC)
+   - Test background/foreground transitions
+   - Test with poor network conditions
 
 ### ⚠️ UI Library Mixing - CRITICAL LESSONS LEARNED
 
