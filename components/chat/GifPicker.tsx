@@ -144,6 +144,16 @@ export function GifPicker({ onSelectGif, onClose }: GifPickerProps) {
       const data = await response.json()
       const newGifs = data.data || []
       
+      // Debug: Log the first few GIF URLs
+      if (newGifs.length > 0) {
+        console.log('🎬 Sample GIF URLs:', newGifs.slice(0, 3).map(gif => ({
+          id: gif.id,
+          title: gif.title,
+          fixed_height_small_url: gif.images?.fixed_height_small?.url,
+          preview_gif_url: gif.images?.preview_gif?.url
+        })))
+      }
+      
       if (replace) {
         setGifs(newGifs)
         setOffset(20)
@@ -305,6 +315,14 @@ export function GifPicker({ onSelectGif, onClose }: GifPickerProps) {
                 alt={gif.title}
                 className="w-full h-full object-cover"
                 loading="lazy"
+                onError={(e) => {
+                  console.error('Failed to load GIF image:', gif.images.fixed_height_small.url)
+                  // Fallback to a placeholder
+                  e.currentTarget.src = `https://via.placeholder.com/150x100/4F46E5/white?text=GIF+Error`
+                }}
+                onLoad={() => {
+                  console.log('Successfully loaded GIF:', gif.images.fixed_height_small.url)
+                }}
               />
               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all" />
               

@@ -35,7 +35,17 @@ const nextConfig = {
   
   // Image optimization
   images: {
-    domains: ['localhost'],
+    domains: [
+      'localhost',
+      'media.giphy.com',
+      'media0.giphy.com', 
+      'media1.giphy.com',
+      'media2.giphy.com',
+      'media3.giphy.com',
+      'media4.giphy.com',
+      'i.giphy.com',
+      'via.placeholder.com' // For fallback placeholders
+    ],
     unoptimized: process.env.NODE_ENV === 'development',
   },
   
@@ -60,6 +70,10 @@ const nextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; img-src 'self' data: https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com https://i.giphy.com https://via.placeholder.com; connect-src 'self' https://api.giphy.com;",
           },
         ],
       },
