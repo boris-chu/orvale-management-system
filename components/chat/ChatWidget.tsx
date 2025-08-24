@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { FileUploadButton, EmojiPickerButton } from '@/components/chat/shared'
 import { 
   MessageCircle, 
   X, 
@@ -174,6 +175,7 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
   const [quickMessage, setQuickMessage] = useState('')
   const [sending, setSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const quickMessageInputRef = useRef<HTMLInputElement>(null)
 
   // Load messages for selected conversation
   const loadMessages = async (conversation: Conversation) => {
@@ -211,8 +213,15 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
   }
 
   // Send message
-  const handleSendMessage = async () => {
-    if (!quickMessage.trim() || !selectedConversation || !user) return
+  const handleSendMessage = async (messageData?: {
+    message_text?: string
+    message_type?: string
+    file_attachment?: any
+  }) => {
+    if (!selectedConversation || !user) return
+    
+    const messageText = messageData?.message_text || quickMessage.trim()
+    if (!messageText && !messageData?.file_attachment) return
     
     setSending(true)
     try {
@@ -223,17 +232,25 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
         ? `/api/chat/direct/${selectedConversation.id}/messages`
         : `/api/chat/channels/${selectedConversation.id}/messages`
 
+      const requestBody = {
+        message_text: messageText,
+        message_type: messageData?.message_type || 'text',
+        ...(messageData?.file_attachment && { file_attachment: messageData.file_attachment })
+      }
+
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ message_text: quickMessage })
+        body: JSON.stringify(requestBody)
       })
 
       if (response.ok) {
-        setQuickMessage('')
+        if (!messageData?.message_text) {
+          setQuickMessage('')
+        }
         // Reload messages to show the new one
         loadMessages(selectedConversation)
       }
@@ -242,6 +259,37 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
     } finally {
       setSending(false)
     }
+  }
+  
+  // Handle file upload (simple mode)
+  const handleFileSelect = async (file: File) => {
+    if (!file || !selectedConversation) return
+    
+    console.log('📎 Widget: File selected:', file.name, file.size, file.type)
+    
+    // For widget, we'll show a simple message about the file
+    const isImage = file.type.startsWith('image/')
+    const message = isImage ? `Shared an image: ${file.name}` : `Shared a file: ${file.name}`
+    
+    // In a real implementation, you might want to upload the file
+    // For now, just send a text message about the file
+    await handleSendMessage({
+      message_text: message,
+      message_type: 'text'
+    })
+  }
+  
+  // Handle emoji selection
+  const handleEmojiSelect = (emoji: string) => {
+    const cursorPosition = quickMessageInputRef.current?.selectionStart || quickMessage.length
+    const newMessage = quickMessage.slice(0, cursorPosition) + emoji + quickMessage.slice(cursorPosition)
+    setQuickMessage(newMessage)
+    
+    // Focus back to input and set cursor position
+    setTimeout(() => {
+      quickMessageInputRef.current?.focus()
+      quickMessageInputRef.current?.setSelectionRange(cursorPosition + emoji.length, cursorPosition + emoji.length)
+    }, 0)
   }
 
   // Don't render if user doesn't have chat permissions
@@ -657,38 +705,40 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
                   >
                     {/* File Upload Button */}
                     {widgetSettings.showFileUpload && (
-                      <Button
-                        type="button"
+                      <FileUploadButton
+                        onFileSelect={handleFileSelect}
+                        disabled={sending}
                         size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0 flex-shrink-0"
-                        title="Upload file"
-                      >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                        </svg>
-                      </Button>
+                        variant="simple"
+                        className="text-gray-600 hover:text-gray-800"
+                      />
                     )}
                     
                     {/* Emoji Picker Button */}
                     {widgetSettings.showEmojiPicker && (
-                      <Button
-                        type="button"
+                      <EmojiPickerButton
+                        onEmojiSelect={handleEmojiSelect}
+                        disabled={sending}
                         size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0 flex-shrink-0"
-                        title="Add emoji"
-                      >
-                        <span className="text-lg">😊</span>
-                      </Button>
+                        variant="simple"
+                        className="text-gray-600 hover:text-gray-800"
+                        inputRef={quickMessageInputRef}
+                      />
                     )}
                     
                     <Input
+                      ref={quickMessageInputRef}
                       value={quickMessage}
                       onChange={(e) => setQuickMessage(e.target.value)}
                       placeholder="Type a message..."
                       className="flex-1"
                       disabled={sending}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          handleSendMessage()
+                        }
+                      }}
                     />
                     
                     <Button

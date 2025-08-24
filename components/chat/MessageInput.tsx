@@ -3,14 +3,9 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { GifPicker } from './GifPicker'
+import { FileUploadButton, EmojiPickerButton, GifPickerButton } from './shared'
 import { 
   Send, 
-  Paperclip, 
-  Smile, 
-  Image,
-  AtSign,
-  Hash,
   Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -61,14 +56,13 @@ export function MessageInput({
   onCancelEdit
 }: MessageInputProps) {
   const [message, setMessage] = useState('')
-  const [showGifPicker, setShowGifPicker] = useState(false)
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  // Remove local state - now handled by shared components
   const [isTyping, setIsTyping] = useState(false)
   const [sending, setSending] = useState(false)
   
   const inputRef = useRef<HTMLInputElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout>()
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  // File input ref now handled by shared FileUploadButton
 
   useEffect(() => {
     // Focus input when component mounts
@@ -294,7 +288,7 @@ export function MessageInput({
     }, 0)
   }
 
-  const commonEmojis = ['😀', '😂', '😍', '🤔', '👍', '👎', '❤️', '🎉', '😎', '🔥', '💯', '✨']
+  // Emoji list now handled by shared EmojiPickerButton component
 
   return (
     <div className="space-y-2">
@@ -376,81 +370,34 @@ export function MessageInput({
           {/* Action Buttons */}
           <div className="flex space-x-1">
             {/* File Upload */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
+            <FileUploadButton
+              onFileUpload={handleFileUpload}
               disabled={disabled || sending}
-              className="h-10 w-10 p-0"
+              sending={sending}
+              size="default"
+              variant="full"
               title="Attach file"
-            >
-              <Paperclip className="h-4 w-4" />
-            </Button>
+            />
 
             {/* GIF Picker */}
-            <div className="relative">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowGifPicker(!showGifPicker)}
-                disabled={disabled || sending}
-                className={cn(
-                  "h-10 w-10 p-0",
-                  showGifPicker && "bg-blue-100 text-blue-600"
-                )}
-                title="Send GIF"
-              >
-                <Image className="h-4 w-4" />
-              </Button>
-              
-              {showGifPicker && (
-                <div className="absolute bottom-12 right-0 z-50">
-                  <GifPicker
-                    onSelectGif={handleGifSelect}
-                    onClose={() => setShowGifPicker(false)}
-                  />
-                </div>
-              )}
-            </div>
+            <GifPickerButton
+              onGifSelect={handleGifSelect}
+              disabled={disabled || sending}
+              sending={sending}
+              size="default"
+              variant="full"
+              title="Send GIF"
+            />
 
             {/* Emoji Picker */}
-            <div className="relative">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                disabled={disabled || sending}
-                className={cn(
-                  "h-10 w-10 p-0",
-                  showEmojiPicker && "bg-blue-100 text-blue-600"
-                )}
-                title="Add emoji"
-              >
-                <Smile className="h-4 w-4" />
-              </Button>
-              
-              {showEmojiPicker && (
-                <div className="absolute bottom-12 right-0 z-40 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-64">
-                  <div className="grid grid-cols-6 gap-2">
-                    {commonEmojis.map((emoji) => (
-                      <Button
-                        key={emoji}
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => addEmoji(emoji)}
-                        className="h-10 w-10 p-0 text-xl hover:bg-gray-100 flex items-center justify-center"
-                      >
-                        {emoji}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <EmojiPickerButton
+              onEmojiSelect={addEmoji}
+              disabled={disabled || sending}
+              size="default"
+              variant="full"
+              title="Add emoji"
+              inputRef={inputRef}
+            />
 
             {/* Send Button */}
             <Button
@@ -468,26 +415,10 @@ export function MessageInput({
           </div>
         </div>
 
-        {/* Hidden File Input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          onChange={handleFileUpload}
-          className="hidden"
-          accept="image/*,video/*,.pdf,.doc,.docx,.txt"
-        />
+        {/* File input now handled by shared FileUploadButton component */}
       </form>
 
-      {/* Click outside to close pickers */}
-      {(showGifPicker || showEmojiPicker) && (
-        <div
-          className="fixed inset-0 z-30"
-          onClick={() => {
-            setShowGifPicker(false)
-            setShowEmojiPicker(false)
-          }}
-        />
-      )}
+      {/* Click outside handlers now managed by individual shared components */}
     </div>
   )
 }
