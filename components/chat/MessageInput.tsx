@@ -371,12 +371,26 @@ export function MessageInput({
           <div className="flex space-x-1">
             {/* File Upload */}
             <FileUploadButton
-              onFileUpload={handleFileUpload}
+              onFileMessage={async (messageData) => {
+                setSending(true)
+                try {
+                  await onSendMessage({
+                    ...messageData,
+                    reply_to_id: replyingTo?.id
+                  })
+                  if (onCancelReply) onCancelReply()
+                } catch (error) {
+                  console.error('Error sending file message:', error)
+                } finally {
+                  setSending(false)
+                }
+              }}
               disabled={disabled || sending}
               sending={sending}
               size="default"
               variant="full"
               title="Attach file"
+              replyToId={replyingTo?.id}
             />
 
             {/* GIF Picker */}

@@ -8,6 +8,12 @@ import { cn } from '@/lib/utils'
 interface FileUploadButtonProps {
   onFileSelect?: (file: File) => void
   onFileUpload?: (event: React.ChangeEvent<HTMLInputElement>) => Promise<void>
+  onFileMessage?: (messageData: {
+    message_text: string
+    message_type: string
+    file_attachment: any
+    reply_to_id?: string
+  }) => Promise<void>
   disabled?: boolean
   sending?: boolean
   className?: string
@@ -15,18 +21,21 @@ interface FileUploadButtonProps {
   variant?: 'simple' | 'full'
   title?: string
   accept?: string
+  replyToId?: string
 }
 
 export function FileUploadButton({
   onFileSelect,
   onFileUpload,
+  onFileMessage,
   disabled = false,
   sending = false,
   className,
   size = 'default',
   variant = 'full',
   title = "Upload file",
-  accept = "image/*,video/*,.pdf,.doc,.docx,.txt"
+  accept = "image/*,video/*,.pdf,.doc,.docx,.txt",
+  replyToId
 }: FileUploadButtonProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -75,8 +84,75 @@ export function FileUploadButton({
       return
     }
 
-    if (onFileUpload) {
-      await onFileUpload(event)
+    // Use the working file upload logic from the original MessageInput
+    try {
+      console.log('📎 Uploading file:', file.name, file.size, file.type)
+      
+      // Create FormData for file upload
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('originalName', file.name)
+      formData.append('fileType', file.type)
+      formData.append('fileSize', file.size.toString())
+
+      // Upload file to server
+      const token = (localStorage.getItem('authToken') || localStorage.getItem('token'))?.trim().replace(/[\[\]"']/g, '')
+      
+      const uploadResponse = await fetch('/api/chat/upload-file', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      })
+
+      if (uploadResponse.ok) {
+        const uploadData = await uploadResponse.json()
+        console.log('✅ File uploaded:', uploadData)
+
+        // Create proper file attachment data structure (same as working version)
+        const isImage = file.type.startsWith('image/')
+        const fileMessageData = {
+          message_text: isImage ? `Shared an image: ${file.name}` : `Shared a file: ${file.name}`,
+          message_type: 'file',
+          file_attachment: {
+            type: isImage ? 'image' : 'file',
+            name: file.name,
+            title: file.name,
+            size: file.size,
+            mimeType: file.type,
+            url: uploadData.url,
+            downloadUrl: uploadData.downloadUrl || uploadData.url,
+            thumbnail: isImage ? uploadData.url : undefined
+          }
+        }
+
+        // Call the appropriate callback with the file message data
+        if (onFileMessage) {
+          // Use the new onFileMessage callback for proper message handling
+          await onFileMessage({
+            ...fileMessageData,
+            reply_to_id: replyToId
+          })
+        } else if (onFileUpload) {
+          // Fallback to the old onFileUpload callback
+          const syntheticEvent = event
+          ;(syntheticEvent as any).fileMessageData = fileMessageData
+          await onFileUpload(syntheticEvent)
+        }
+
+        console.log('✅ File message sent successfully')
+      } else {
+        const errorData = await uploadResponse.json()
+        console.error('❌ File upload failed:', errorData)
+        alert(`File upload failed: ${errorData.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('❌ Error uploading file:', error)
+      alert('Failed to upload file. Please try again.')
+    } finally {
+      // Reset the input
+      event.target.value = ''
     }
   }
 

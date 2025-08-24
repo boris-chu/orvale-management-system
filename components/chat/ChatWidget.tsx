@@ -261,22 +261,19 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
     }
   }
   
-  // Handle file upload (simple mode)
-  const handleFileSelect = async (file: File) => {
-    if (!file || !selectedConversation) return
+  // Handle file upload (simple mode) - now using proper file upload
+  const handleFileMessage = async (messageData: {
+    message_text: string
+    message_type: string
+    file_attachment: any
+    reply_to_id?: string
+  }) => {
+    if (!selectedConversation) return
     
-    console.log('📎 Widget: File selected:', file.name, file.size, file.type)
+    console.log('📎 Widget: Sending file message:', messageData)
     
-    // For widget, we'll show a simple message about the file
-    const isImage = file.type.startsWith('image/')
-    const message = isImage ? `Shared an image: ${file.name}` : `Shared a file: ${file.name}`
-    
-    // In a real implementation, you might want to upload the file
-    // For now, just send a text message about the file
-    await handleSendMessage({
-      message_text: message,
-      message_type: 'text'
-    })
+    // Use the existing handleSendMessage function
+    await handleSendMessage(messageData)
   }
   
   // Handle emoji selection
@@ -706,10 +703,11 @@ export function ChatWidget({ isOpen, onToggle, onOpenFullChat, className }: Chat
                     {/* File Upload Button */}
                     {widgetSettings.showFileUpload && (
                       <FileUploadButton
-                        onFileSelect={handleFileSelect}
+                        onFileMessage={handleFileMessage}
                         disabled={sending}
+                        sending={sending}
                         size="sm"
-                        variant="simple"
+                        variant="full"
                         className="text-gray-600 hover:text-gray-800"
                       />
                     )}
