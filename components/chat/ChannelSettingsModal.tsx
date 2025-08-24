@@ -312,8 +312,8 @@ export function ChannelSettingsModal({
               <h3 className="text-lg font-medium text-gray-900">Channel Members</h3>
               <ScrollArea className="h-64">
                 <div className="space-y-2">
-                  {channelMembers.map((member) => (
-                    <div key={member.username} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50">
+                  {channelMembers.map((member, index) => (
+                    <div key={`member-${member.username}-${index}`} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50">
                       <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
                         {member.display_name.charAt(0).toUpperCase()}
                       </div>
@@ -372,8 +372,8 @@ export function ChannelSettingsModal({
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Selected ({selectedUsers.length})</h4>
                   <div className="flex flex-wrap gap-2">
-                    {selectedUsers.map((user) => (
-                      <Badge key={user.username} variant="secondary" className="flex items-center space-x-1">
+                    {selectedUsers.map((user, index) => (
+                      <Badge key={`selected-${user.username}-${index}`} variant="secondary" className="flex items-center space-x-1">
                         <span>{user.display_name}</span>
                         <X
                           className="h-3 w-3 cursor-pointer"
@@ -395,11 +395,11 @@ export function ChannelSettingsModal({
                 ) : (
                   <ScrollArea className="h-48">
                     <div className="space-y-1">
-                      {filteredUsers.map((user) => {
+                      {filteredUsers.map((user, index) => {
                         const isSelected = selectedUsers.some(u => u.username === user.username)
                         return (
                           <div
-                            key={user.username}
+                            key={`available-${user.username}-${index}`}
                             className={cn(
                               "flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-colors",
                               isSelected 
