@@ -193,7 +193,7 @@ export function MessageBubble({
                         title="Click to view full size"
                       />
                       {/* Image overlay with filename and actions */}
-                      <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all rounded-lg flex items-end p-2 opacity-0 group-hover:opacity-100">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent transition-all rounded-lg flex items-end p-2 opacity-0 group-hover:opacity-100">
                         <div className="flex items-center justify-between w-full">
                           <div className="text-white text-xs bg-black bg-opacity-50 px-2 py-1 rounded">
                             {message.file_attachment.name || message.file_attachment.title}
