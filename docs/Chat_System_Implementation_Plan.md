@@ -7,24 +7,29 @@ Create a comprehensive real-time chat system integrated with the Orvale Manageme
 
 ### **Key Features**
 - **Full-page chat app** (similar to Slack/Teams)
-- **Customizable chat widget** (shapes, colors, themes) from day one
+- **Customizable chat widget** (shapes, colors, themes, animations) from day one
 - **Real-time messaging** with Socket.io only (no SSE fallback)
 - **Admin chat management system** with comprehensive dashboard
 - **Three chat sections**: Direct Messages, Channels, Groups
+- **Public Portal Live Chat** with guest support and session recovery
 - **Smart naming logic** for conversations
 - **File sharing** with image viewing and download capabilities
 - **Shared components** for system-wide integration
 - **3-minute message edit/delete window**
+- **Typing indicators** for both internal and public portal users
+- **Widget animations** with customizable triggers and effects
+- **Session recovery system** for public portal disconnections
 
 ### **🏗️ Architecture Overview**
 - **Two-Server Architecture**:
   - **Server 1**: Next.js (Port 80) - Serves web pages, REST APIs, handles authentication
-  - **Server 2**: Socket.io (Port 3001) - Handles ALL real-time: chat messages + WebRTC signaling
+  - **Server 2**: Socket.io (Port 3001) - Handles ALL real-time: chat messages + WebRTC signaling + public portal chats
 - **No Third Server Needed**: WebRTC is peer-to-peer; Socket.io only handles signaling
 - **Socket.io Only**: No SSE fallback - simplified real-time approach
 - **Concurrent Development**: Single `npm run dev:all` command runs both servers
-- **JWT Authentication**: Secure WebSocket connections with existing auth system
+- **Dual Authentication**: JWT for internal users, session-based for public portal guests
 - **RBAC Integration**: Fine-grained permissions for chat and calling features
+- **Public Portal Integration**: Guest chat sessions with queue management and session recovery
 
 ---
 
@@ -96,7 +101,7 @@ CREATE TABLE user_presence (
     away_message TEXT, -- Custom away message
     custom_status TEXT, -- Persistent custom status message
     last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    socket_connections TEXT DEFAULT '[]', -- JSON array of socket IDs (max 3 tabs)
+    socket_connections TEXT DEFAULT '[]', -- JSON array of socket IDs
     connection_count INTEGER DEFAULT 0,
     is_chat_blocked BOOLEAN DEFAULT FALSE, -- Admin can block from chat
     blocked_by TEXT, -- Admin who blocked the user
@@ -444,6 +449,124 @@ const AdminUsersTab = () => {
 │ Socket.io Connections: 24 active, 156 total today          │
 │ Database Queries: Avg 12ms response time                   │
 │                                                             │
+│ Public Portal Support Ratings:                             │
+│ Overall Rating: ⭐⭐⭐⭐⭐ 4.6/5.0 (89 ratings this week)    │
+│ Rating Distribution: 5★(45) 4★(28) 3★(12) 2★(3) 1★(1)     │
+│ Comments Received: 67/89 sessions (75% feedback rate)      │
+│                                                             │
+│ Staff Performance:                                          │
+│ John Doe: ⭐⭐⭐⭐⭐ 4.8/5.0 (23 ratings)                    │
+│ Jane Smith: ⭐⭐⭐⭐⭐ 4.5/5.0 (31 ratings)                  │
+│ Bob Wilson: ⭐⭐⭐⭐⭐ 4.4/5.0 (19 ratings)                  │
+│ Alice Johnson: ⭐⭐⭐⭐⭐ 4.7/5.0 (16 ratings)                │
+│                                                             │
+│ Recent Feedback Highlights:                                 │
+│ "Excellent service, solved my issue quickly!" - 5⭐        │
+│ "Very helpful staff, thank you!" - 5⭐                     │
+│ "Could improve response time during peak hours" - 3⭐      │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### **Settings & Control Tab**
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Chat System Settings                              [Save]     │
+├─────────────────────────────────────────────────────────────┤
+│ System Status:                                              │
+│ [🟢] Chat System Enabled                                    │
+│ [⚪] Chat System Disabled (Emergency Toggle)                │
+│                                                             │
+│ When disabled:                                              │
+│ • All chat widgets will be hidden                          │
+│ • Socket.io connections will be rejected                   │
+│ • Public portal chat unavailable                           │
+│ • Internal chat inaccessible                               │
+│ • Show maintenance message to users                        │
+│                                                             │
+│ Maintenance Message:                                        │
+│ [Chat system is temporarily unavailable for maintenance.   ]│
+│ [Please submit a ticket for assistance.                    ]│
+│                                                             │
+│ Emergency Controls:                                         │
+│ [Force Disconnect All Users]  [Clear All Sessions]         │
+│ [Backup Chat Database]        [Export Chat Logs]           │
+│                                                             │
+│ Danger Zone:                                                │
+│ [🗑️ Purge All Chat Data] (Requires confirmation)           │
+│                                                             │
+│ Last Status Change: Never                                   │
+│ Changed By: N/A                                             │
+│                                                             │
+│ Public Portal Widget Settings:                              │
+│ [📝 Configure Widget]  [🎨 Animation Settings]              │
+│ [📊 Session Recovery]  [🎯 Auto-Ticket Rules]               │
+│ [⭐ Rating System]     [💬 Comment Settings]                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### **Rating System Configuration Modal**
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Public Portal Rating System Settings            [Save]      │
+├─────────────────────────────────────────────────────────────┤
+│ Session Rating System:                                      │
+│ [●] Enable session ratings at end of chat                   │
+│ [ ] Disable session ratings                                 │
+│                                                             │
+│ Rating Prompt Message:                                      │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ How would you rate your support experience?             │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ Rating Display Style:                                       │
+│ [●] 5-star rating (⭐⭐⭐⭐⭐)                                   │
+│ [ ] Number scale (1-5)                                     │
+│ [ ] Thumbs up/down                                         │
+│                                                             │
+│ Comment System:                                             │
+│ [●] Enable optional comments                               │
+│ [ ] Disable comments                                       │
+│                                                             │
+│ Comment Prompt Message:                                     │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Would you like to leave a comment about your experience?│ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ Comment Placeholder Text:                                   │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Tell us how we can improve...                           │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ Comment Requirements:                                       │
+│ [ ] Comments required for ratings 1-3 (low ratings)       │
+│ [●] Comments always optional                               │
+│ [ ] Comments always required                               │
+│                                                             │
+│ Fraud Prevention:                                           │
+│ [●] Enable browser fingerprinting                          │
+│ [●] Track IP addresses                                     │
+│ [●] One rating per session (enforced)                     │
+│                                                             │
+│ Data Retention:                                            │
+│ Rating Data: [Keep forever ▼]                             │
+│ Comment Data: [Keep forever ▼]                            │
+│                                                             │
+│ Preview:                                                    │
+│ ┌───────────────────────────────────────────────────────┐   │
+│ │ 🎉 Chat ended - Thank you for contacting support!    │   │
+│ │                                                       │   │
+│ │ How would you rate your support experience?           │   │
+│ │ ⭐ ⭐ ⭐ ⭐ ⭐                                             │   │
+│ │                                                       │   │
+│ │ Would you like to leave a comment about your          │   │
+│ │ experience?                                           │   │
+│ │ ┌─────────────────────────────────────────────────┐   │   │
+│ │ │ Tell us how we can improve...                   │   │   │
+│ │ └─────────────────────────────────────────────────┘   │   │
+│ │                                                       │   │
+│ │ [Skip] [Submit Feedback]                              │   │
+│ └───────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -2422,22 +2545,126 @@ export const updateTabInfo = (socket) => {
 
 #### **8.2 Call Database Schema**
 ```sql
--- Call sessions tracking
-CREATE TABLE call_sessions (
+-- Call sessions tracking (updated with call_logs schema)
+CREATE TABLE call_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    channel_id INTEGER,
-    initiator_user_id TEXT NOT NULL,
-    call_type TEXT CHECK(call_type IN ('audio', 'video', 'screen_share')) NOT NULL,
-    participants TEXT NOT NULL, -- JSON array of user IDs
-    status TEXT CHECK(status IN ('ringing', 'active', 'ended', 'missed')) DEFAULT 'ringing',
+    call_id TEXT UNIQUE NOT NULL, -- UUID for this call session
+    caller_id TEXT NOT NULL,
+    receiver_id TEXT NOT NULL,
+    call_type TEXT CHECK(call_type IN ('audio', 'video')) NOT NULL,
+    status TEXT CHECK(status IN ('initiated', 'ringing', 'accepted', 'rejected', 'missed', 'ended', 'failed')) NOT NULL,
     started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     answered_at TIMESTAMP,
     ended_at TIMESTAMP,
-    duration_seconds INTEGER,
-    recording_path TEXT,
-    end_reason TEXT, -- 'completed', 'declined', 'timeout', 'error'
-    FOREIGN KEY (channel_id) REFERENCES chat_channels(id),
-    FOREIGN KEY (initiator_user_id) REFERENCES users(username)
+    duration_seconds INTEGER, -- Calculated when call ends
+    end_reason TEXT, -- 'normal', 'busy', 'timeout', 'network_error', etc.
+    quality_rating INTEGER, -- 1-5 user rating (optional)
+    FOREIGN KEY (caller_id) REFERENCES users(username),
+    FOREIGN KEY (receiver_id) REFERENCES users(username)
+);
+
+-- Public portal chat sessions
+CREATE TABLE public_chat_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT UNIQUE NOT NULL,
+    visitor_name TEXT,
+    visitor_email TEXT,
+    session_data TEXT, -- JSON: pre-chat answers, browser info
+    status TEXT CHECK(status IN ('waiting', 'active', 'ended', 'abandoned')) DEFAULT 'waiting',
+    assigned_to TEXT, -- Staff member handling the chat
+    queue_position INTEGER,
+    recovery_token TEXT, -- For session recovery within time window
+    recovery_expires_at TIMESTAMP,
+    ticket_created TEXT, -- Link to auto-created ticket if applicable
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ended_at TIMESTAMP,
+    FOREIGN KEY (assigned_to) REFERENCES users(username)
+);
+
+-- Public portal messages
+CREATE TABLE public_chat_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    sender_type TEXT CHECK(sender_type IN ('guest', 'staff', 'system')) NOT NULL,
+    sender_id TEXT, -- user_id for staff, null for guest
+    sender_name TEXT NOT NULL, -- Display name
+    message_text TEXT NOT NULL,
+    message_type TEXT CHECK(message_type IN ('text', 'file', 'system', 'ticket_link')) DEFAULT 'text',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES public_chat_sessions(session_id),
+    FOREIGN KEY (sender_id) REFERENCES users(username)
+);
+
+-- Widget animation settings
+CREATE TABLE widget_animations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    widget_type TEXT CHECK(widget_type IN ('internal', 'public_portal')) NOT NULL,
+    animation_name TEXT NOT NULL, -- bounce, pulse, shake, glow, slideIn
+    animation_trigger TEXT NOT NULL, -- on_message, on_hover, on_connect, idle
+    duration_ms INTEGER DEFAULT 500,
+    timing_function TEXT DEFAULT 'ease-in-out',
+    intensity INTEGER DEFAULT 1, -- 1-5 scale
+    enabled BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Public portal widget settings
+CREATE TABLE public_portal_widget_settings (
+    id INTEGER PRIMARY KEY,
+    enabled_pages TEXT DEFAULT '[]', -- JSON array of page paths
+    widget_shape TEXT DEFAULT 'circle',
+    widget_color TEXT DEFAULT '#1976d2',
+    widget_image TEXT, -- Optional mini image/logo
+    position TEXT DEFAULT 'bottom-right',
+    welcome_message TEXT DEFAULT 'Hi! How can we help you today?',
+    offline_message TEXT DEFAULT 'We are currently offline. Please submit a ticket.',
+    pre_chat_questions TEXT DEFAULT '[]', -- JSON array of questions
+    session_recovery_enabled BOOLEAN DEFAULT TRUE,
+    session_recovery_minutes INTEGER DEFAULT 5,
+    auto_ticket_creation BOOLEAN DEFAULT TRUE,
+    -- Rating System Settings
+    session_rating_enabled BOOLEAN DEFAULT TRUE,
+    rating_prompt_message TEXT DEFAULT 'How would you rate your support experience?',
+    comment_enabled BOOLEAN DEFAULT TRUE,
+    comment_prompt_message TEXT DEFAULT 'Would you like to leave a comment about your experience?',
+    comment_placeholder TEXT DEFAULT 'Tell us how we can improve...',
+    comment_required BOOLEAN DEFAULT FALSE,
+    updated_by TEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (updated_by) REFERENCES users(username)
+);
+
+-- Public portal session ratings
+CREATE TABLE public_chat_session_ratings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    rating INTEGER CHECK(rating BETWEEN 1 AND 5) NOT NULL,
+    comment TEXT, -- Optional feedback comment
+    browser_fingerprint TEXT, -- Fraud prevention
+    ip_address TEXT, -- Additional fraud prevention
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES public_chat_sessions(session_id),
+    UNIQUE(session_id) -- One rating per session for fraud prevention
+);
+
+-- Staff rating analytics summaries
+CREATE TABLE staff_rating_summaries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    staff_username TEXT NOT NULL,
+    rating_period TEXT CHECK(rating_period IN ('daily', 'weekly', 'monthly')) NOT NULL,
+    period_date TEXT NOT NULL, -- YYYY-MM-DD format
+    total_ratings INTEGER DEFAULT 0,
+    average_rating DECIMAL(3,2) DEFAULT 0.00,
+    rating_1_count INTEGER DEFAULT 0,
+    rating_2_count INTEGER DEFAULT 0,
+    rating_3_count INTEGER DEFAULT 0,
+    rating_4_count INTEGER DEFAULT 0,
+    rating_5_count INTEGER DEFAULT 0,
+    total_comments INTEGER DEFAULT 0,
+    last_calculated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (staff_username) REFERENCES users(username),
+    UNIQUE(staff_username, rating_period, period_date)
 );
 
 -- Call participants details
@@ -2811,4 +3038,77 @@ peerConnection.getStats().then(stats => {
 
 ---
 
-*This comprehensive implementation plan now includes professional-grade audio/video calling capabilities that will transform the Orvale Management System into a complete collaboration platform similar to Slack and Microsoft Teams, with the added benefit of seamless IT support workflows.*
+---
+
+## 🌐 **Public Portal Live Chat Integration**
+
+### **Enhanced Features Added**
+
+#### **Public Portal Live Chat System** 🎆 (NEW)
+- ✨ **Guest support chat** without account creation
+- ✨ **Customizable widget animations** (bounce, pulse, shake, glow, slide-in, rotation)
+- ✨ **Session recovery system** for connection issues (5-minute customizable window)
+- ✨ **Queue management** for staff to handle multiple public chats
+- ✨ **Auto-ticket creation** from chat conversations
+- ✨ **Pre-chat form builder** with customizable questions tied to ticket categories
+- ✨ **Page visibility controls** for widget placement
+- ✨ **Typing indicators** for both internal and public portal users
+
+#### **Component-Based Architecture** 🔧 (NEW)
+- ✨ **Modular design** with 20+ reusable components
+- ✨ **Maintainable structure** for easy updates and debugging
+- ✨ **Shared components** between internal and public chat
+- ✨ **Independent development and testing** of components
+
+#### **Advanced Widget System** 🎨 (NEW)
+- ✨ **Animation library** with 6 different effects and customizable triggers
+- ✨ **Dual widget support** (internal system + public portal)
+- ✨ **Real-time preview** of animation settings in admin interface
+- ✨ **Mini image/branding support** for both widget types
+
+#### **Master System Control** 🔒 (NEW)
+- ✨ **Emergency disable toggle** for system-wide chat shutdown
+- ✨ **Graceful user notifications** when system is disabled
+- ✨ **Customizable maintenance messages** 
+- ✨ **Emergency controls** (force disconnect, backup, export)
+- ✨ **Complete audit trail** of system status changes
+
+### **Updated Implementation Timeline**
+
+| Phase | Duration | Focus Area | New Features Added |
+|-------|----------|------------|-----------------|
+| **Phase 1** | 3-4 days | Database & Socket.io | + Public portal tables, system status, animations |
+| **Phase 2** | 4-5 days | Core APIs & Events | + Guest authentication, typing indicators |
+| **Phase 3** | 5-6 days | Component Architecture | + Modular design, public widget system |
+| **Phase 4** | 3-4 days | Public Portal Integration | + Session recovery, queue management |
+| **Phase 5** | 3-4 days | Advanced Features | + Animation system, auto-ticketing |
+| **Phase 6** | 2-3 days | Enhanced Management | + System toggle, enhanced admin interface |
+| **Phase 7** | 2-3 days | Audio/Video Calls | WebRTC integration (concurrent) |
+| **Phase 8** | 2-3 days | Testing & Polish | Cross-platform testing, optimization |
+
+**Total Development Time**: 24-32 days (4.8-6.4 weeks)
+
+### **Enhanced Success Metrics**
+
+#### **Public Portal Chat Success Criteria**
+- ✅ **Session Recovery**: 95%+ successful session restoration within configured window
+- ✅ **Animation Performance**: Smooth 60fps animations across all browsers
+- ✅ **Queue Efficiency**: Staff can handle 3+ concurrent public chats effectively
+- ✅ **Auto-Ticketing**: 100% of ended chats create proper ticket records
+- ✅ **Mobile Compatibility**: Full functionality on iOS Safari and Android Chrome
+
+#### **Component Architecture Success Criteria**
+- ✅ **Modularity**: Each component can be developed/tested independently
+- ✅ **Reusability**: Shared components work seamlessly in both contexts
+- ✅ **Maintainability**: Clear separation of concerns enables easy updates
+- ✅ **Performance**: Lazy loading reduces initial bundle size by 40%+
+
+#### **System Control Success Criteria**
+- ✅ **Instant Response**: System disable takes effect within 5 seconds
+- ✅ **Graceful Shutdown**: All users receive proper notifications
+- ✅ **Clean Recovery**: Re-enabling restores full functionality
+- ✅ **Admin Visibility**: Complete status tracking and change history
+
+---
+
+*This comprehensive implementation plan now includes professional-grade audio/video calling capabilities, a complete public portal live chat system with session recovery, a component-based architecture for long-term maintainability, customizable widget animations, typing indicators throughout, and emergency system controls that will transform the Orvale Management System into a complete collaboration and customer support platform similar to Slack and Microsoft Teams, with the added benefits of seamless IT support workflows, guest support capabilities, and enterprise-grade administrative controls.*
