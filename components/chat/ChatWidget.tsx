@@ -166,6 +166,8 @@ export default function ChatWidget({
         setConversations(realConversations);
         setTotalUnreadCount(realConversations.reduce((sum: number, conv: any) => sum + conv.unreadCount, 0));
         setChatSystemError(null);
+        
+        console.log('🔄 ChatWidget: Loaded conversations with unread counts:', realConversations.map(c => ({ id: c.id, name: c.displayName, unreadCount: c.unreadCount })));
       } else if (response.status === 401) {
         setChatSystemError('Chat authentication failed - please log in again');
       } else if (response.status === 403) {
@@ -182,6 +184,18 @@ export default function ChatWidget({
       setIsLoading(false);
     }
   }, [currentUser?.username]);
+
+  // Sync unread counts periodically to stay updated with ChatSidebar
+  useEffect(() => {
+    if (!currentUser?.username || isLoading) return;
+
+    const syncInterval = setInterval(() => {
+      console.log('🔄 ChatWidget: Syncing unread counts from API...');
+      loadConversations();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(syncInterval);
+  }, [currentUser?.username, isLoading, loadConversations]);
 
   // Initialize Socket.io connection
   useEffect(() => {
@@ -256,44 +270,31 @@ export default function ChatWidget({
       }
     });
 
-    // Listen for global message notifications for unread count updates
+    // Listen for global message notifications for last message updates (but not unread count increments)
     socketClient.addEventListener(componentId, 'message_notification', (data: any) => {
       const { message, channel } = data;
       const channelId = channel.id.toString();
       
       console.log('📬 ChatWidget received message notification for channel:', channelId, 'from:', message.userDisplayName);
       
-      // Only increment unread count if:
-      // 1. This channel is not currently selected, AND 
-      // 2. The message is not from the current user (avoid self-notifications)
-      if (channelId !== selectedChatRef.current?.id && message.userId !== currentUser?.username) {
-        console.log('📊 ChatWidget: Incrementing unread count for channel:', channelId);
-        
-        // Update conversation unread count
-        setConversations(prev => prev.map(conv => 
-          conv.id === channelId ? { 
-            ...conv, 
-            unreadCount: (conv.unreadCount || 0) + 1,
-            lastMessage: {
-              content: message.message,
-              timestamp: message.timestamp,
-              sender: {
-                username: message.userId,
-                display_name: message.userDisplayName,
-                role_id: 'user'
-              }
+      // Update last message info (but don't increment unread count - that's handled by ChatSidebar)
+      setConversations(prev => prev.map(conv => 
+        conv.id === channelId ? { 
+          ...conv,
+          lastMessage: {
+            content: message.message,
+            timestamp: message.timestamp,
+            sender: {
+              username: message.userId,
+              display_name: message.userDisplayName,
+              role_id: 'user'
             }
-          } : conv
-        ));
-        
-        // Update total unread count
-        setTotalUnreadCount(prev => prev + 1);
-      } else {
-        console.log('📊 ChatWidget: Skipping unread increment - channel selected or own message:', {
-          isSelected: channelId === selectedChatRef.current?.id,
-          isOwnMessage: message.userId === currentUser?.username
-        });
-      }
+          }
+          // Don't modify unreadCount here - ChatSidebar handles that
+        } : conv
+      ));
+      
+      console.log('📊 ChatWidget: Updated last message for channel (unread count managed by ChatSidebar):', channelId);
     });
 
     // Listen for new messages
