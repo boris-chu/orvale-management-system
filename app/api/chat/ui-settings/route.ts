@@ -3,10 +3,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import Database from 'better-sqlite3';
+import sqlite3 from 'sqlite3';
+import { promisify } from 'util';
 import path from 'path';
 
-const db = new Database(path.join(process.cwd(), 'orvale_tickets.db'));
+const db = new sqlite3.Database(path.join(process.cwd(), 'orvale_tickets.db'));
+const dbAll = promisify(db.all.bind(db));
 
 // Default UI settings
 const defaultSettings = {
@@ -22,7 +24,7 @@ const defaultSettings = {
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     // Get all UI-related settings from database
-    const settings = db.prepare(`
+    const settings = await dbAll(`
       SELECT setting_key, setting_value 
       FROM chat_system_settings 
       WHERE setting_key IN (
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         'message_grouping_enabled',
         'timestamp_format'
       )
-    `).all() as Array<{ setting_key: string; setting_value: string }>;
+    `) as Array<{ setting_key: string; setting_value: string }>;
 
     // Convert to object format
     const settingsObj = settings.reduce((acc, setting) => {
