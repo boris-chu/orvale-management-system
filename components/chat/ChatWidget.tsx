@@ -32,6 +32,7 @@ import { UserAvatar } from '@/components/UserAvatar';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { socketClient } from '@/lib/socket-client';
+import { useChatSettings } from '@/hooks/useChatSettings';
 
 // Helper function to safely format timestamps
 const safeFormatDistanceToNow = (timestamp: string | null | undefined, options: { addSuffix?: boolean } = {}) => {
@@ -100,6 +101,20 @@ export default function ChatWidget({
   const [isLoading, setIsLoading] = useState(true);
   const [chatSystemError, setChatSystemError] = useState<string | null>(null);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
+
+  // Get chat UI settings from admin
+  const { settings: chatUISettings, loading: settingsLoading } = useChatSettings();
+  
+  // Debug logging for badge settings
+  useEffect(() => {
+    console.log('🔧 ChatWidget Settings Debug:', {
+      show_unread_badges: chatUISettings.show_unread_badges,
+      show_zero_counts: chatUISettings.show_zero_counts,
+      settingsLoading,
+      totalUnreadCount,
+      conversations: conversations.map(c => ({ id: c.id, name: c.displayName, unreadCount: c.unreadCount }))
+    });
+  }, [chatUISettings, settingsLoading, totalUnreadCount, conversations]);
 
   const componentId = useRef(`ChatWidget_${Date.now()}`).current;
   const widgetRef = useRef<HTMLDivElement>(null);
@@ -552,13 +567,28 @@ export default function ChatWidget({
             <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center">
               !
             </Badge>
-          ) : totalUnreadCount > 0 ? (
-            <Badge 
-              className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center"
-            >
-              {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
-            </Badge>
-          ) : null}
+          ) : (() => {
+            if (settingsLoading) return null;
+            if (!chatUISettings.show_unread_badges) return null;
+            if (totalUnreadCount === 0 && !chatUISettings.show_zero_counts) return null;
+            
+            return (
+              <Badge 
+                className={cn(
+                  "absolute -top-2 -right-2 h-6 w-6 text-xs flex items-center justify-center",
+                  chatUISettings.unread_badge_style === 'rounded' && "rounded-md",
+                  chatUISettings.unread_badge_style === 'square' && "rounded-none",
+                  chatUISettings.unread_badge_style === 'pill' && "rounded-full"
+                )}
+                style={{ 
+                  backgroundColor: chatUISettings.unread_badge_color, 
+                  color: chatUISettings.unread_badge_text_color 
+                }}
+              >
+                {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
+              </Badge>
+            );
+          })()}
         </motion.div>
       </div>
     );
@@ -584,11 +614,28 @@ export default function ChatWidget({
                   <MessageCircle className="h-5 w-5 text-blue-600" />
                   <h3 className="font-semibold text-sm">
                     Chat 
-                    {totalUnreadCount > 0 && (
-                      <Badge className="ml-2 h-5 bg-red-500 text-xs">
-                        {totalUnreadCount}
-                      </Badge>
-                    )}
+                    {(() => {
+                      if (settingsLoading) return null;
+                      if (!chatUISettings.show_unread_badges) return null;
+                      if (totalUnreadCount === 0 && !chatUISettings.show_zero_counts) return null;
+                      
+                      return (
+                        <Badge 
+                          className={cn(
+                            "ml-2 h-5 text-xs px-2 py-0.5 min-w-[20px] flex items-center justify-center",
+                            chatUISettings.unread_badge_style === 'rounded' && "rounded-md",
+                            chatUISettings.unread_badge_style === 'square' && "rounded-none",
+                            chatUISettings.unread_badge_style === 'pill' && "rounded-full"
+                          )}
+                          style={{ 
+                            backgroundColor: chatUISettings.unread_badge_color, 
+                            color: chatUISettings.unread_badge_text_color 
+                          }}
+                        >
+                          {totalUnreadCount}
+                        </Badge>
+                      );
+                    })()}
                   </h3>
                 </div>
                 
@@ -670,11 +717,28 @@ export default function ChatWidget({
                             size="sm"
                             showOnlineIndicator={chat.type === 'dm'}
                           />
-                          {chat.unreadCount > 0 && (
-                            <Badge className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-xs rounded-full flex items-center justify-center">
-                              {chat.unreadCount}
-                            </Badge>
-                          )}
+                          {(() => {
+                            if (settingsLoading) return null;
+                            if (!chatUISettings.show_unread_badges) return null;
+                            if (chat.unreadCount === 0 && !chatUISettings.show_zero_counts) return null;
+                            
+                            return (
+                              <Badge 
+                                className={cn(
+                                  "absolute -top-1 -right-1 h-4 w-4 text-xs flex items-center justify-center",
+                                  chatUISettings.unread_badge_style === 'rounded' && "rounded-md",
+                                  chatUISettings.unread_badge_style === 'square' && "rounded-none",
+                                  chatUISettings.unread_badge_style === 'pill' && "rounded-full"
+                                )}
+                                style={{ 
+                                  backgroundColor: chatUISettings.unread_badge_color, 
+                                  color: chatUISettings.unread_badge_text_color 
+                                }}
+                              >
+                                {chat.unreadCount}
+                              </Badge>
+                            );
+                          })()}
                         </div>
                         
                         <div className="flex-1 min-w-0">
