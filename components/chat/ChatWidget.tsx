@@ -33,6 +33,22 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { socketClient } from '@/lib/socket-client';
 
+// Helper function to safely format timestamps
+const safeFormatDistanceToNow = (timestamp: string | null | undefined, options: { addSuffix?: boolean } = {}) => {
+  if (!timestamp) return '';
+  
+  try {
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) {
+      return '';
+    }
+    return formatDistanceToNow(date, options);
+  } catch (error) {
+    console.warn('Invalid timestamp in ChatWidget:', timestamp, error);
+    return '';
+  }
+};
+
 interface User {
   username: string;
   display_name: string;
@@ -489,7 +505,7 @@ export default function ChatWidget({
                               {chat.displayName}
                             </p>
                             <span className="text-xs text-gray-500">
-                              {chat.lastMessage ? formatDistanceToNow(new Date(chat.lastMessage.timestamp), { addSuffix: false }) : ''}
+                              {chat.lastMessage ? safeFormatDistanceToNow(chat.lastMessage.timestamp, { addSuffix: false }) : ''}
                             </span>
                           </div>
                           {chat.lastMessage && (
@@ -555,7 +571,7 @@ export default function ChatWidget({
                                 {message.user_display_name || message.userId}
                               </span>
                               <span className="text-xs text-gray-400">
-                                {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
+                                {safeFormatDistanceToNow(message.timestamp, { addSuffix: true })}
                               </span>
                             </div>
                             <div className="text-sm text-gray-800 bg-gray-50 rounded-lg p-2 ml-2">

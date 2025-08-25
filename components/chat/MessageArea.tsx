@@ -365,22 +365,37 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Format message timestamp
+  // Format message timestamp safely
   const formatMessageTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    
-    if (isToday(date)) {
-      return format(date, 'HH:mm');
-    } else if (isYesterday(date)) {
-      return `Yesterday ${format(date, 'HH:mm')}`;
-    } else {
-      return format(date, 'MMM dd, HH:mm');
+    try {
+      if (!timestamp) return '';
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) return 'Invalid time';
+      
+      if (isToday(date)) {
+        return format(date, 'HH:mm');
+      } else if (isYesterday(date)) {
+        return `Yesterday ${format(date, 'HH:mm')}`;
+      } else {
+        return format(date, 'MMM dd, HH:mm');
+      }
+    } catch (error) {
+      console.warn('Invalid timestamp in MessageArea:', timestamp, error);
+      return 'Invalid time';
     }
   };
 
-  // Format relative time for hover
+  // Format relative time for hover safely
   const formatRelativeTime = (timestamp: string) => {
-    return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
+    try {
+      if (!timestamp) return '';
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) return 'Invalid time';
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch (error) {
+      console.warn('Invalid timestamp in MessageArea relative time:', timestamp, error);
+      return 'Invalid time';
+    }
   };
 
   // Handle message send
@@ -449,17 +464,39 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
   const shouldGroupMessage = (current: Message, previous?: Message) => {
     if (!previous) return false;
     
-    const timeDiff = new Date(current.timestamp).getTime() - new Date(previous.timestamp).getTime();
-    const sameUser = current.sender.username === previous.sender.username;
-    const within5Minutes = timeDiff < 5 * 60 * 1000; // 5 minutes
-    
-    return sameUser && within5Minutes && !current.reply_to;
+    try {
+      const currentDate = new Date(current.timestamp);
+      const previousDate = new Date(previous.timestamp);
+      
+      if (isNaN(currentDate.getTime()) || isNaN(previousDate.getTime())) {
+        return false;
+      }
+      
+      const timeDiff = currentDate.getTime() - previousDate.getTime();
+      const sameUser = current.sender.username === previous.sender.username;
+      const within5Minutes = timeDiff < 5 * 60 * 1000; // 5 minutes
+      
+      return sameUser && within5Minutes && !current.reply_to;
+    } catch (error) {
+      console.warn('Invalid timestamps in message grouping:', current.timestamp, previous.timestamp, error);
+      return false;
+    }
   };
 
   // Render message actions (reply, edit, delete, etc.)
   const MessageActions = ({ message }: { message: Message }) => {
     const isOwn = message.sender.username === currentUser?.username;
-    const canEdit = isOwn && new Date().getTime() - new Date(message.timestamp).getTime() < 3 * 60 * 1000; // 3 minutes
+    
+    const canEdit = isOwn && (() => {
+      try {
+        const messageDate = new Date(message.timestamp);
+        if (isNaN(messageDate.getTime())) return false;
+        return new Date().getTime() - messageDate.getTime() < 3 * 60 * 1000; // 3 minutes
+      } catch (error) {
+        console.warn('Invalid timestamp for edit check:', message.timestamp, error);
+        return false;
+      }
+    })();
     
     return (
       <div className={cn(

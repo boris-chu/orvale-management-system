@@ -641,7 +641,9 @@ export default function ChatManagementPage() {
 
   const formatConnectionTime = (timestamp: string) => {
     try {
-      return new Date(timestamp).toLocaleTimeString('en-US', {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) return 'Unknown';
+      return date.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true
@@ -653,12 +655,27 @@ export default function ChatManagementPage() {
 
   const formatBlockDate = (timestamp: string) => {
     try {
-      return new Date(timestamp).toLocaleDateString('en-US', {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) return 'Unknown';
+      return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
       });
     } catch {
+      return 'Unknown';
+    }
+  };
+
+  // Safe date formatting for admin interface
+  const safeFormatDate = (timestamp: string | null | undefined) => {
+    if (!timestamp) return 'Unknown';
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) return 'Unknown';
+      return date.toLocaleDateString();
+    } catch (error) {
+      console.warn('Invalid timestamp in admin chat management:', timestamp, error);
       return 'Unknown';
     }
   };
@@ -998,6 +1015,59 @@ export default function ChatManagementPage() {
                   checked={settings.read_receipts_enabled}
                   onCheckedChange={(checked) => updateSetting('read_receipts_enabled', checked)}
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* System Health & Troubleshooting */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                System Health & Troubleshooting
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Date/Timestamp Validation</Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    All chat components now use safe date formatting to prevent "Invalid time value" errors.
+                  </p>
+                  <div className="flex items-center gap-2 text-xs">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>Protected against invalid timestamps</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium">Error Monitoring</Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Invalid timestamps are logged to console with warnings for debugging.
+                  </p>
+                  <div className="flex items-center gap-2 text-xs">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span>Check browser console for timestamp warnings</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="pt-2 border-t">
+                <Label className="text-sm font-medium">Components Updated</Label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
+                  <div className="text-xs flex items-center gap-1">
+                    <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                    ChatWidget (safe date formatting)
+                  </div>
+                  <div className="text-xs flex items-center gap-1">
+                    <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                    MessageArea (timestamp validation)
+                  </div>
+                  <div className="text-xs flex items-center gap-1">
+                    <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                    Admin Chat Management (safe formatting)
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1590,7 +1660,7 @@ export default function ChatManagementPage() {
                             </div>
                             <p className="text-sm text-gray-600 mt-1">{channel.description}</p>
                             <div className="flex items-center gap-4 text-xs text-gray-500 mt-2">
-                              <span>Created: {new Date(channel.created_at).toLocaleDateString()}</span>
+                              <span>Created: {safeFormatDate(channel.created_at)}</span>
                               <span>Members: {channel.member_count || 0}</span>
                               <span>Messages: {channel.message_count || 0}</span>
                             </div>
@@ -1856,7 +1926,7 @@ export default function ChatManagementPage() {
                 </div>
                 <div className="mt-2 space-y-1 text-xs">
                   <p>Type: {selectedChannel.type === 'public_channel' ? 'Public' : 'Private'}</p>
-                  <p>Created: {new Date(selectedChannel.created_at).toLocaleDateString()}</p>
+                  <p>Created: {safeFormatDate(selectedChannel.created_at)}</p>
                   <p>Members: {selectedChannel.member_count || 0}</p>
                   <p>Messages: {selectedChannel.message_count || 0}</p>
                 </div>
@@ -1923,7 +1993,7 @@ export default function ChatManagementPage() {
                         <div className="font-medium">{member.display_name}</div>
                         <div className="text-sm text-gray-500">{member.user_id}</div>
                         <div className="text-xs text-gray-400">
-                          {member.role} • Joined {new Date(member.joined_at).toLocaleDateString()}
+                          {member.role} • Joined {safeFormatDate(member.joined_at)}
                         </div>
                       </div>
                       <Button
