@@ -94,10 +94,16 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
   useEffect(() => {
     if (!currentUser?.username) return;
 
-    const token = localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
-    if (!token) return;
+    const token = localStorage.getItem('authToken') || localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
+    if (!token) {
+      console.error('❌ No authentication token found for chat');
+      return;
+    }
 
     // Initialize socket connection
+    console.log('🔌 Initializing Socket.io connection to http://localhost:3001');
+    console.log('🔌 Using token:', token ? token.substring(0, 20) + '...' : 'NO TOKEN');
+    
     const socket = io('http://localhost:3001', {
       transports: ['websocket', 'polling'],
       auth: { token }
@@ -105,10 +111,34 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
 
     socketRef.current = socket;
 
+    // Connection event listeners
+    socket.on('connect', () => {
+      console.log('✅ Socket.io connected successfully:', socket.id);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('❌ Socket.io connection error:', error);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.warn('⚠️ Socket.io disconnected:', reason);
+    });
+
     // Authentication
+    console.log('🔌 Authenticating with Socket.io server...');
     socket.emit('authenticate', token);
 
+    // Listen for authentication result
+    socket.on('authenticated', (data) => {
+      console.log('✅ Socket.io authenticated:', data);
+    });
+
+    socket.on('auth:error', (error) => {
+      console.error('❌ Socket.io auth error:', error);
+    });
+
     // Join current chat channel
+    console.log('🔌 Joining channel:', chat.id);
     socket.emit('join_channel', { channelId: chat.id });
 
     // Listen for new messages
@@ -209,55 +239,65 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
     }
   }, [handleTypingStart, handleTypingStop]);
 
-  // Mock messages for development - using useMemo to prevent recreation
-  const mockMessages = useMemo(() => {
-    const baseTime = Date.now();
-    return [
-      {
-        id: '1',
-        content: 'Hey there! How are you doing today?',
-        sender: { username: 'jane.smith', display_name: 'Jane Smith', role_id: 'support' },
-        timestamp: new Date(baseTime - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-        message_type: 'text' as const
-      },
-      {
-        id: '2',
-        content: 'I\'m doing great! Just working on the chat system implementation. It\'s coming along nicely.',
-        sender: { username: 'boris.chu', display_name: 'Boris Chu', role_id: 'admin' },
-        timestamp: new Date(baseTime - 1000 * 60 * 60).toISOString(), // 1 hour ago
-        message_type: 'text' as const
-      },
-      {
-        id: '3',
-        content: 'That sounds awesome! Can you share some screenshots when you have a chance?',
-        sender: { username: 'jane.smith', display_name: 'Jane Smith', role_id: 'support' },
-        timestamp: new Date(baseTime - 1000 * 60 * 30).toISOString(), // 30 min ago
-        message_type: 'text' as const
-      },
-      {
-        id: '4',
-        content: 'Sure thing! I\'ll upload some mockups shortly. The mobile-first approach is working really well.',
-        sender: { username: 'boris.chu', display_name: 'Boris Chu', role_id: 'admin' },
-        timestamp: new Date(baseTime - 1000 * 60 * 15).toISOString(), // 15 min ago
-        message_type: 'text' as const,
-        reactions: [
-          { emoji: '👍', users: ['jane.smith'], count: 1 },
-          { emoji: '🚀', users: ['jane.smith', 'john.doe'], count: 2 }
-        ]
-      },
-      {
-        id: '5',
-        content: 'Looking forward to seeing it! The team will love the new chat system.',
-        sender: { username: 'jane.smith', display_name: 'Jane Smith', role_id: 'support' },
-        timestamp: new Date(baseTime - 1000 * 60 * 5).toISOString(), // 5 min ago
-        message_type: 'text' as const
-      }
-    ];
-  }, [chat.id]);
+  // Load messages from API
+  const loadMessages = useCallback(async () => {
+    if (!chat.id || !currentUser) return;
+    
+    try {
+      setIsLoading(true);
+      console.log('📥 Loading messages for channel:', chat.id);
+      
+      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
+      const response = await fetch(`/api/chat/messages?channelId=${chat.id}&limit=50`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📥 Loaded messages:', data.messages?.length || 0);
+        
+        // Convert API messages to component format
+        const formattedMessages: Message[] = (data.messages || []).map((msg: any) => ({
+          id: msg.id.toString(),
+          content: msg.message_text,
+          sender: {
+            username: msg.user_id,
+            display_name: msg.user_display_name || msg.user_id,
+            role_id: 'user'
+          },
+          timestamp: msg.created_at,
+          message_type: msg.message_type || 'text',
+          reply_to: msg.reply_to_id ? {
+            id: msg.reply_to_id.toString(),
+            content: msg.reply_to_text || '',
+            sender: {
+              username: msg.reply_to_user || '',
+              display_name: msg.reply_to_user || '',
+              role_id: 'user'
+            },
+            timestamp: '',
+            message_type: 'text'
+          } : undefined
+        }));
+
+        setMessages(formattedMessages);
+      } else {
+        console.error('❌ Failed to load messages:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('❌ Error loading messages:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [chat.id, currentUser]);
+
+  // Load messages when component mounts or chat changes
   useEffect(() => {
-    setMessages(mockMessages);
-  }, [mockMessages]);
+    loadMessages();
+  }, [loadMessages]);
 
   // Auto-scroll to bottom on new messages
   const scrollToBottom = useCallback(() => {
@@ -310,12 +350,22 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
     // Send via Socket.io
     try {
       if (socketRef.current?.connected) {
+        console.log('📤 Sending message via Socket.io:', {
+          channelId: chat.id,
+          message: messageContent,
+          type: 'text',
+          replyToId: replyingTo?.id || null
+        });
         socketRef.current.emit('send_message', {
           channelId: chat.id,
           message: messageContent,
           type: 'text',
           replyToId: replyingTo?.id || null
         });
+      } else {
+        console.error('❌ Socket.io not connected, cannot send message');
+        // Remove optimistic message on failure
+        setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
       }
     } catch (error) {
       console.error('Failed to send message:', error);

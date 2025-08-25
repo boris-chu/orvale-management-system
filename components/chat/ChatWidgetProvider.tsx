@@ -8,6 +8,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import ChatWidget from './ChatWidget';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface User {
   username: string;
@@ -51,6 +52,7 @@ interface ChatWidgetProviderProps {
 
 export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps) {
   const pathname = usePathname();
+  const { user: authUser, loading: authLoading, isAuthenticated } = useAuth();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [settings, setSettings] = useState<ChatWidgetSettings>({
@@ -63,9 +65,9 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
     hideOnPages: ['/chat', '/chat/*'] // Hide on chat pages
   });
 
-  // Load user and settings on mount
+  // Load settings on mount
   useEffect(() => {
-    loadUserAndSettings();
+    loadWidgetSettings();
 
     // Listen for settings updates from admin dashboard
     const handleSettingsUpdate = (event: CustomEvent) => {
@@ -87,87 +89,72 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
     };
   }, []);
 
+  // Update user when AuthContext user changes
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && authUser) {
+      // Check if user has chat access
+      const hasBasicChatPermission = authUser.permissions?.includes('chat.access') ||
+                                    authUser.permissions?.includes('chat.send_messages') ||
+                                    authUser.role === 'admin';
+
+      console.log('🔍 Widget using AuthContext user:', {
+        username: authUser.username,
+        role: authUser.role,
+        hasBasicChatPermission,
+        permissions: authUser.permissions?.filter(p => p.includes('chat')) || []
+      });
+
+      if (hasBasicChatPermission) {
+        setCurrentUser({
+          username: authUser.username,
+          display_name: authUser.display_name,
+          profile_picture: authUser.profile_picture,
+          role_id: authUser.role,
+          permissions: authUser.permissions || []
+        });
+        console.log('✅ Widget user set from AuthContext');
+      } else {
+        console.log('❌ Widget user lacks chat permissions');
+        setCurrentUser(null);
+      }
+    } else if (!authLoading && !isAuthenticated) {
+      console.log('🔍 Widget: No authenticated user');
+      setCurrentUser(null);
+    }
+  }, [authUser, authLoading, isAuthenticated]);
+
   // Update visibility based on pathname
   useEffect(() => {
     updateVisibility();
   }, [pathname, settings, currentUser]);
 
-  const loadUserAndSettings = async () => {
+  const loadWidgetSettings = async () => {
     try {
-      // Load current user
-      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
-      if (!token) {
-        console.log('🔍 No auth token found for widget');
-        return;
-      }
-      console.log('🔍 Widget loading user with token');
-
-      const userResponse = await fetch('/api/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        
-        // Check if user has chat access
-        const hasBasicChatPermission = userData.permissions?.includes('chat.access') ||
-                                      userData.permissions?.includes('chat.send_messages') ||
-                                      userData.role === 'admin';
-
-        console.log('🔍 Widget user permission check:', {
-          username: userData.username,
-          role: userData.role,
-          hasBasicChatPermission,
-          permissions: userData.permissions?.filter(p => p.includes('chat')) || []
-        });
-
-        if (hasBasicChatPermission) {
-          setCurrentUser({
-            username: userData.username,
-            display_name: userData.display_name,
-            profile_picture: userData.profile_picture,
-            role_id: userData.role,
-            permissions: userData.permissions || []
-          });
-          console.log('✅ Widget user loaded successfully');
-        } else {
-          console.log('❌ Widget user lacks chat permissions');
-        }
-      }
-
       // Load widget settings from public API (no auth required)
-      try {
-        console.log('🔧 Fetching widget settings from: /api/chat/widget-settings');
-        const settingsResponse = await fetch('/api/chat/widget-settings');
-        if (settingsResponse.ok) {
-          const widgetSettings = await settingsResponse.json();
-          console.log('🔧 Loaded widget settings:', widgetSettings);
-          
-          const newSettings = {
-            ...prev,
-            enabled: widgetSettings.enabled || false,
-            position: widgetSettings.position || 'bottom-right',
-            theme: widgetSettings.theme || 'light',
-            shape: widgetSettings.shape || 'rounded-square',
-            primaryColor: widgetSettings.primaryColor || '#1976d2',
-            showOnPages: ['*'], // Show on all pages
-            hideOnPages: ['/chat', '/chat/*'] // Hide on chat pages
-          };
-          
-          console.log('🔧 Widget settings updated:', newSettings);
-          setSettings(newSettings);
-        } else {
-          console.warn('❌ Failed to load widget settings from /api/chat/widget-settings:', settingsResponse.status);
-        }
-      } catch (error) {
-        console.log('❌ Error loading widget settings:', error);
-        console.log('🔧 Using default widget settings');
+      console.log('🔧 Fetching widget settings from: /api/chat/widget-settings');
+      const settingsResponse = await fetch('/api/chat/widget-settings');
+      if (settingsResponse.ok) {
+        const widgetSettings = await settingsResponse.json();
+        console.log('🔧 Loaded widget settings:', widgetSettings);
+        
+        setSettings(prev => ({
+          ...prev,
+          enabled: widgetSettings.enabled || false,
+          position: widgetSettings.position || 'bottom-right',
+          theme: widgetSettings.theme || 'light',
+          shape: widgetSettings.shape || 'rounded-square',
+          primaryColor: widgetSettings.primaryColor || '#1976d2',
+          showOnPages: ['*'], // Show on all pages
+          hideOnPages: ['/chat', '/chat/*'] // Hide on chat pages
+        }));
+        
+        console.log('🔧 Widget settings updated');
+      } else {
+        console.warn('❌ Failed to load widget settings from /api/chat/widget-settings:', settingsResponse.status);
       }
     } catch (error) {
-      console.error('Failed to load chat widget data:', error);
+      console.log('❌ Error loading widget settings:', error);
+      console.log('🔧 Using default widget settings');
     }
   };
 

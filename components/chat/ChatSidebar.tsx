@@ -112,7 +112,7 @@ export default function ChatSidebar({
       ],
       channels: [
         {
-          id: 'channel_1',
+          id: '1',
           type: 'channel' as const,
           name: 'general',
           displayName: '#general', // Channel naming: # prefix + name
@@ -122,7 +122,7 @@ export default function ChatSidebar({
           isPinned: true
         },
         {
-          id: 'channel_2',
+          id: '2',
           type: 'channel' as const,
           name: 'it-support',
           displayName: '#it-support',
@@ -131,7 +131,7 @@ export default function ChatSidebar({
           lastMessageTime: '30 min ago'
         },
         {
-          id: 'channel_3',
+          id: '3',
           type: 'channel' as const,
           name: 'announcements',
           displayName: '#announcements',

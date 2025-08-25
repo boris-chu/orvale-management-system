@@ -112,6 +112,11 @@ export default function ChatManagementPage() {
   });
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Users tab state
+  const [users, setUsers] = useState<any[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Load settings on mount
   useEffect(() => {
@@ -265,6 +270,145 @@ export default function ChatManagementPage() {
       setIsSaving(false);
     }
   };
+
+  // Users tab functions and computed values
+  const refreshUserData = async () => {
+    try {
+      setIsProcessing(true);
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/users', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUsers(userData.users || []);
+      } else {
+        console.error('Failed to fetch user data:', response.status);
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const forceUserLogout = async (username: string) => {
+    if (!confirm(`Force logout all sessions for ${username}?`)) return;
+    
+    try {
+      setIsProcessing(true);
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/users/force-logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username })
+      });
+
+      if (response.ok) {
+        await refreshUserData();
+        alert(`${username} has been logged out of all sessions.`);
+      } else {
+        alert('Failed to force logout user.');
+      }
+    } catch (error) {
+      console.error('Error forcing user logout:', error);
+      alert('Error occurred while forcing logout.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const toggleUserBlock = async (username: string, isCurrentlyBlocked: boolean) => {
+    const action = isCurrentlyBlocked ? 'unblock' : 'block';
+    if (!confirm(`${action} ${username} from chat system?`)) return;
+    
+    try {
+      setIsProcessing(true);
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/users/block', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          username, 
+          blocked: !isCurrentlyBlocked 
+        })
+      });
+
+      if (response.ok) {
+        await refreshUserData();
+        alert(`${username} has been ${action}ed.`);
+      } else {
+        alert(`Failed to ${action} user.`);
+      }
+    } catch (error) {
+      console.error(`Error ${action}ing user:`, error);
+      alert(`Error occurred while ${action}ing user.`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Helper functions for UI
+  const getBrowserFromUserAgent = (userAgent: string) => {
+    if (userAgent?.includes('Chrome')) return 'chrome';
+    if (userAgent?.includes('Firefox')) return 'firefox';
+    if (userAgent?.includes('Safari')) return 'safari';
+    if (userAgent?.includes('Edge')) return 'edge';
+    return 'unknown';
+  };
+
+  const formatConnectionTime = (timestamp: string) => {
+    try {
+      return new Date(timestamp).toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch {
+      return 'Unknown';
+    }
+  };
+
+  const formatBlockDate = (timestamp: string) => {
+    try {
+      return new Date(timestamp).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return 'Unknown';
+    }
+  };
+
+  // Computed values for Users tab
+  const filteredUsers = users.filter(user =>
+    user.display_name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+    user.username?.toLowerCase().includes(userSearchQuery.toLowerCase())
+  );
+
+  const multiTabUsers = users.filter(user => 
+    user.connection_count > 1 && user.presence_status !== 'offline'
+  );
+
+  const blockedUsers = users.filter(user => user.is_chat_blocked);
+
+  // Load user data when Users tab is selected
+  useEffect(() => {
+    if (activeTab === 'users' && users.length === 0) {
+      refreshUserData();
+    }
+  }, [activeTab]);
 
   if (loading) {
     return (
@@ -728,13 +872,167 @@ export default function ChatManagementPage() {
         </TabsContent>
 
         {/* Users Tab */}
-        <TabsContent value="users">
+        <TabsContent value="users" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>User Management</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Chat Users Management
+              </CardTitle>
+              <div className="flex items-center gap-4">
+                <Input
+                  placeholder="Search users..."
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                  className="max-w-sm"
+                />
+                <Button onClick={refreshUserData} variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">User management features will be implemented here.</p>
+            <CardContent className="space-y-4">
+              {/* User List */}
+              <div className="space-y-3">
+                {filteredUsers.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <div className="flex items-center gap-3">
+                      <UserAvatar 
+                        user={user}
+                        size="md"
+                        enableRealTimePresence={true}
+                      />
+                      <div>
+                        <div className="font-medium">{user.display_name}</div>
+                        <div className="text-sm text-muted-foreground">@{user.username}</div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                          {user.presence_status === 'online' && (
+                            <>
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span>Online ({user.connection_count} tabs)</span>
+                            </>
+                          )}
+                          {user.presence_status === 'away' && (
+                            <>
+                              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                              <span>Away ({user.connection_count} tabs)</span>
+                            </>
+                          )}
+                          {user.presence_status === 'busy' && (
+                            <>
+                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                              <span>Busy ({user.connection_count} tabs)</span>
+                            </>
+                          )}
+                          {user.presence_status === 'offline' && (
+                            <>
+                              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                              <span>Offline</span>
+                            </>
+                          )}
+                          {user.is_chat_blocked && (
+                            <Badge variant="destructive" className="text-xs">Blocked</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      {user.presence_status !== 'offline' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => forceUserLogout(user.username)}
+                                disabled={isProcessing}
+                              >
+                                <LogOut className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Force Logout ({user.connection_count} sessions)</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant={user.is_chat_blocked ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => toggleUserBlock(user.username, user.is_chat_blocked)}
+                              disabled={isProcessing}
+                            >
+                              {user.is_chat_blocked ? 'Unblock' : 'Block'}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{user.is_chat_blocked ? 'Allow chat access' : 'Block from chat system'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Multiple Connections Section */}
+              {multiTabUsers.length > 0 && (
+                <div className="mt-8 space-y-4">
+                  <h3 className="text-lg font-semibold">Multiple Connections:</h3>
+                  {multiTabUsers.map((user) => (
+                    <div key={user.id} className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border">
+                      <div className="font-medium mb-2">
+                        {user.display_name} - {user.connection_count} tabs:
+                      </div>
+                      <div className="space-y-1 text-sm text-muted-foreground ml-4">
+                        {user.socket_connections && JSON.parse(user.socket_connections).map((conn: any, index: number) => (
+                          <div key={index} className="flex items-center gap-2">
+                            • {conn.tabInfo} ({getBrowserFromUserAgent(conn.userAgent)}, {formatConnectionTime(conn.connectedAt)})
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Blocked Users Section */}
+              {blockedUsers.length > 0 && (
+                <div className="mt-8 space-y-4">
+                  <h3 className="text-lg font-semibold">Blocked Users:</h3>
+                  {blockedUsers.map((user) => (
+                    <div key={user.id} className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium">{user.display_name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Blocked by {user.blocked_by} on {formatBlockDate(user.blocked_at)}
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleUserBlock(user.username, true)}
+                        >
+                          Unblock
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {filteredUsers.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  {userSearchQuery ? 'No users found matching your search.' : 'No users found.'}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

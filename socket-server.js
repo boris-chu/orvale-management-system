@@ -20,7 +20,7 @@ const path = require('path');
 
 // Configuration
 const PORT = process.env.SOCKET_PORT || 3001;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'orvale-management-system-secret-key-2025';
 const DB_PATH = path.join(__dirname, 'orvale_tickets.db');
 
 // Create HTTP server and Socket.io instance
