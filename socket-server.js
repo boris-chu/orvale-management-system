@@ -214,6 +214,144 @@ io.on('connection', async (socket) => {
     });
   });
 
+  // === STANDARDIZED 11 WEBSOCKET EVENTS (per Chat Implementation Plan) ===
+  
+  // 1. JOIN_CHANNEL - Client -> Server
+  socket.on('join_channel', (data) => {
+    if (!socket.userId) return;
+    
+    const { channelId } = data;
+    socket.join(`channel_${channelId}`);
+    
+    // Track room membership
+    if (!roomUsers.has(`channel_${channelId}`)) {
+      roomUsers.set(`channel_${channelId}`, new Set());
+    }
+    roomUsers.get(`channel_${channelId}`).add(socket.userId);
+    
+    // Emit USER_JOINED to other channel members
+    socket.to(`channel_${channelId}`).emit('user_joined', {
+      userId: socket.userId,
+      displayName: socket.userDisplayName,
+      role: socket.userRole,
+      channelId,
+      timestamp: new Date().toISOString()
+    });
+    
+    console.log(`${socket.userDisplayName} joined channel ${channelId}`);
+  });
+
+  // 2. LEAVE_CHANNEL - Client -> Server
+  socket.on('leave_channel', (data) => {
+    if (!socket.userId) return;
+    
+    const { channelId } = data;
+    socket.leave(`channel_${channelId}`);
+    roomUsers.get(`channel_${channelId}`)?.delete(socket.userId);
+    
+    // Emit USER_LEFT to other channel members
+    socket.to(`channel_${channelId}`).emit('user_left', {
+      userId: socket.userId,
+      displayName: socket.userDisplayName,
+      channelId,
+      timestamp: new Date().toISOString()
+    });
+    
+    console.log(`${socket.userDisplayName} left channel ${channelId}`);
+  });
+
+  // 3. SEND_MESSAGE - Client -> Server
+  socket.on('send_message', (data) => {
+    if (!socket.userId) return;
+    
+    const { channelId, message, type = 'text', replyToId = null } = data;
+    
+    // Save message to database
+    db.run(
+      `INSERT INTO chat_messages (channel_id, user_id, message_text, message_type, reply_to_id) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [channelId, socket.userId, message, type, replyToId],
+      function(err) {
+        if (err) {
+          socket.emit('error', { type: 'message_send_failed', message: 'Failed to send message' });
+          return;
+        }
+        
+        const messageData = {
+          id: this.lastID,
+          channelId,
+          userId: socket.userId,
+          userDisplayName: socket.userDisplayName,
+          message,
+          messageType: type,
+          replyToId,
+          timestamp: new Date().toISOString()
+        };
+        
+        // Emit MESSAGE_RECEIVED to all users in the channel
+        io.to(`channel_${channelId}`).emit('message_received', {
+          message: messageData,
+          channel: { id: channelId }
+        });
+        
+        console.log(`Message sent to channel ${channelId} by ${socket.userDisplayName}`);
+      }
+    );
+  });
+
+  // 4. TYPING_START - Client -> Server
+  socket.on('typing_start', (data) => {
+    if (!socket.userId) return;
+    
+    const { channelId } = data;
+    // Emit USER_TYPING to other channel members
+    socket.to(`channel_${channelId}`).emit('user_typing', {
+      userId: socket.userId,
+      userDisplayName: socket.userDisplayName,
+      channelId,
+      isTyping: true
+    });
+  });
+
+  // 5. TYPING_STOP - Client -> Server  
+  socket.on('typing_stop', (data) => {
+    if (!socket.userId) return;
+    
+    const { channelId } = data;
+    // Emit USER_TYPING (false) to other channel members
+    socket.to(`channel_${channelId}`).emit('user_typing', {
+      userId: socket.userId,
+      userDisplayName: socket.userDisplayName,
+      channelId,
+      isTyping: false
+    });
+  });
+
+  // 6. UPDATE_PRESENCE - Client -> Server (already exists, keeping as-is)
+  // Note: Emits PRESENCE_UPDATED (server->client) in existing handler
+  
+  /*
+  === SUMMARY: 11 STANDARDIZED WEBSOCKET EVENTS ===
+  
+  Client -> Server Events:
+  1. ✅ join_channel      - User joins a chat channel
+  2. ✅ leave_channel     - User leaves a chat channel  
+  3. ✅ send_message      - Send chat message to channel
+  4. ✅ typing_start      - User starts typing indicator
+  5. ✅ typing_stop       - User stops typing indicator
+  6. ✅ update_presence   - Update user status (online/away/busy/offline)
+  
+  Server -> Client Events:
+  7. ✅ message_received  - New message broadcast to channel members
+  8. ✅ user_joined       - User joined channel notification
+  9. ✅ user_left         - User left channel notification
+  10. ✅ user_typing      - Typing indicator from other users
+  11. ✅ presence_updated - User presence status changed
+  
+  Additional Events:
+  - ✅ channel_updated    - Channel settings/info updated (used in admin functions)
+  */
+
   // === NEW WEBSOCKET EVENTS ===
 
   // Update user presence status
