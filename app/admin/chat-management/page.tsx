@@ -2,7 +2,7 @@
  * Chat Management System - Admin Dashboard
  * Features:
  * - Dashboard Tab: System health, Socket.io status, user presence  
- * - Widget Customization Tab: Shapes, colors, themes, live preview
+ * - UI Customization Tab: Chat interface styling, badge settings, widget configuration
  * - Users Management Tab: Online status, force logout, blocking
  * - Monitor Tab: Message monitoring with download capabilities
  */
@@ -60,7 +60,7 @@ import { ProfileEditModal } from '@/components/ProfileEditModal';
 import { cn } from '@/lib/utils';
 
 interface ChatSettings {
-  // Widget Settings
+  // Chat UI Settings
   widget_enabled: boolean;
   widget_position: 'bottom-right' | 'bottom-left';
   widget_shape: 'round' | 'square' | 'rounded-square';
@@ -854,7 +854,7 @@ export default function ChatManagementPage() {
           </TabsTrigger>
           <TabsTrigger value="widget">
             <Palette className="h-4 w-4 mr-2" />
-            Widget
+            UI Customization
           </TabsTrigger>
           <TabsTrigger value="users">
             <Users className="h-4 w-4 mr-2" />
@@ -1073,13 +1073,14 @@ export default function ChatManagementPage() {
           </Card>
         </TabsContent>
 
-        {/* Widget Customization Tab */}
+        {/* UI Customization Tab */}
         <TabsContent value="widget" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Widget Configuration */}
             <Card>
               <CardHeader>
-                <CardTitle>Widget Configuration</CardTitle>
+                <CardTitle>Chat Widget Settings</CardTitle>
+                <CardDescription>Configure the floating chat widget behavior</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Master Toggle */}
@@ -1214,6 +1215,10 @@ export default function ChatManagementPage() {
                   <div className="absolute top-4 left-4 text-sm text-gray-600 dark:text-gray-400">
                     Widget Preview
                   </div>
+                  
+                  <div className="absolute bottom-16 left-4 right-4 text-xs text-gray-500 text-center">
+                    Badge styles apply to both widget and main chat sidebar
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1222,17 +1227,35 @@ export default function ChatManagementPage() {
           {/* UI Customization Settings */}
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>UI Customization</CardTitle>
-              <CardDescription>Configure chat interface appearance and behavior</CardDescription>
+              <CardTitle>Chat Interface Settings</CardTitle>
+              <CardDescription>Configure appearance and behavior for all chat components (widget, sidebar, main chat)</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Global Settings Notice */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Palette className="w-4 h-4 text-blue-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-blue-900 mb-1">System-wide Settings</h4>
+                    <p className="text-sm text-blue-700">
+                      These UI settings apply to all chat components: the floating widget, main chat sidebar, and message interface. 
+                      Changes will be reflected immediately across the entire chat system.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Unread Badges */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <Label className="text-sm font-medium">Show Unread Badges</Label>
-                      <p className="text-xs text-muted-foreground">Display unread message count badges</p>
+                      <p className="text-xs text-muted-foreground">Display unread message count badges (applies to both widget and sidebar)</p>
                     </div>
                     <Switch
                       checked={settings.show_unread_badges}
