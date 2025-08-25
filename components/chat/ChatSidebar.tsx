@@ -79,7 +79,17 @@ export default function ChatSidebar({
   });
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const componentId = useRef(`ChatSidebar_${Date.now()}`).current;
-  const { settings: chatUISettings } = useChatSettings();
+  const { settings: chatUISettings, loading: settingsLoading } = useChatSettings();
+  
+  // Debug logging for badge settings
+  useEffect(() => {
+    console.log('🔧 ChatSidebar Settings Debug:', {
+      show_unread_badges: chatUISettings.show_unread_badges,
+      show_zero_counts: chatUISettings.show_zero_counts,
+      settingsLoading,
+      unreadCounts
+    });
+  }, [chatUISettings, settingsLoading, unreadCounts]);
 
   // Load real channels from API
   useEffect(() => {
@@ -313,10 +323,24 @@ export default function ChatSidebar({
                 <span className="text-xs text-gray-500">
                   {formatTime(chat.lastMessageTime)}
                 </span>
-                {chatUISettings.show_unread_badges && (
-                  (chat.unreadCount && chat.unreadCount > 0) || 
-                  (chatUISettings.show_zero_counts && chat.unreadCount === 0)
-                ) && (
+                {(() => {
+                  const shouldShowBadge = chatUISettings.show_unread_badges && (
+                    (chat.unreadCount > 0) || 
+                    (chatUISettings.show_zero_counts && chat.unreadCount === 0)
+                  );
+                  
+                  // Debug logging for each chat item
+                  if (chat.name.includes('general') || chat.name.includes('it-support')) {
+                    console.log('🏷️ Badge Debug for', chat.name, {
+                      unreadCount: chat.unreadCount,
+                      show_unread_badges: chatUISettings.show_unread_badges,
+                      show_zero_counts: chatUISettings.show_zero_counts,
+                      shouldShowBadge
+                    });
+                  }
+                  
+                  return shouldShowBadge;
+                })() && (
                   <Badge 
                     className={cn(
                       "text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center font-medium",
