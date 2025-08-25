@@ -355,6 +355,12 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     category: 'Administration', 
     description: 'Bypass maintenance mode\n• Access during maintenance\n• Emergency administrative access\n• Override system downtime' 
   },
+  { 
+    id: 'admin.manage_chat_channels', 
+    name: 'Manage Chat Channels', 
+    category: 'Administration', 
+    description: 'Full chat channels management\n• Create/edit/delete channels\n• Channel permissions\n• Read-only settings\n• ⚠️ Chat system control' 
+  },
   
   // Portal Management Permissions
   { 

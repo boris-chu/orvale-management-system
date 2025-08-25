@@ -29,13 +29,24 @@ import {
   Square,
   RotateCcw,
   MessageCircle,
+  MessageSquare,
   Wifi,
   WifiOff,
   User,
   Clock,
   ArrowLeft,
   LogOut,
-  RefreshCw
+  RefreshCw,
+  Plus,
+  Edit,
+  Trash2,
+  Lock,
+  Unlock,
+  Eye,
+  EyeOff,
+  UserPlus,
+  UserMinus,
+  Hash
 } from 'lucide-react';
 import {
   Select as MuiSelect,
@@ -144,11 +155,27 @@ export default function ChatManagementPage() {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Channels tab state
+  const [channels, setChannels] = useState<any[]>([]);
+  const [channelSearchQuery, setChannelSearchQuery] = useState('');
+  const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
+  const [showEditChannelModal, setShowEditChannelModal] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState<any>(null);
+  const [newChannelData, setNewChannelData] = useState({
+    name: '',
+    description: '',
+    type: 'public_channel',
+    is_read_only: false,
+    members: [] as string[],
+    broadcast_permissions: [] as string[]
+  });
+
   // Load settings on mount
   useEffect(() => {
     checkAdminAccess();
     loadChatSettings();
     loadSystemStats();
+    loadChannels();
   }, []);
 
   // Close user menu when clicking outside
@@ -185,6 +212,7 @@ export default function ChatManagementPage() {
         // Check if user has chat management permissions
         const hasPermission = user.permissions?.includes('chat.manage_system') || 
                              user.permissions?.includes('admin.system_settings') ||
+                             user.permissions?.includes('admin.manage_chat_channels') ||
                              user.role === 'admin';
 
         if (!hasPermission) {
@@ -379,6 +407,127 @@ export default function ChatManagementPage() {
     } catch (error) {
       console.error(`Error ${action}ing user:`, error);
       alert(`Error occurred while ${action}ing user.`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Channel management functions
+  const loadChannels = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/channels', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setChannels(data.channels || []);
+      }
+    } catch (error) {
+      console.error('Error loading channels:', error);
+    }
+  };
+
+  const createChannel = async () => {
+    try {
+      setIsProcessing(true);
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/chat/channels', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: newChannelData.name.toLowerCase().replace(/\s+/g, '-'),
+          description: newChannelData.description,
+          type: newChannelData.type,
+          is_read_only: newChannelData.is_read_only
+        })
+      });
+
+      if (response.ok) {
+        await loadChannels();
+        setShowCreateChannelModal(false);
+        setNewChannelData({
+          name: '',
+          description: '',
+          type: 'public_channel',
+          is_read_only: false,
+          members: [],
+          broadcast_permissions: []
+        });
+        alert('Channel created successfully!');
+      } else {
+        const error = await response.json();
+        alert(`Failed to create channel: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error creating channel:', error);
+      alert('Error occurred while creating channel.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const updateChannel = async () => {
+    if (!selectedChannel) return;
+    
+    try {
+      setIsProcessing(true);
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/chat/channels/${selectedChannel.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: selectedChannel.name.toLowerCase().replace(/\s+/g, '-'),
+          description: selectedChannel.description,
+          is_read_only: selectedChannel.is_read_only
+        })
+      });
+
+      if (response.ok) {
+        await loadChannels();
+        setShowEditChannelModal(false);
+        setSelectedChannel(null);
+        alert('Channel updated successfully!');
+      } else {
+        const error = await response.json();
+        alert(`Failed to update channel: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error updating channel:', error);
+      alert('Error occurred while updating channel.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const deleteChannel = async (channelId: string, channelName: string) => {
+    if (!confirm(`Delete channel #${channelName}? This action cannot be undone.`)) return;
+    
+    try {
+      setIsProcessing(true);
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/chat/channels/${channelId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        await loadChannels();
+        alert(`Channel #${channelName} deleted successfully!`);
+      } else {
+        const error = await response.json();
+        alert(`Failed to delete channel: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting channel:', error);
+      alert('Error occurred while deleting channel.');
     } finally {
       setIsProcessing(false);
     }
@@ -584,7 +733,7 @@ export default function ChatManagementPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className={`grid w-full ${currentUser?.permissions?.includes('admin.manage_chat_channels') ? 'grid-cols-5' : 'grid-cols-4'}`}>
           <TabsTrigger value="dashboard">
             <Activity className="h-4 w-4 mr-2" />
             Dashboard
@@ -597,6 +746,12 @@ export default function ChatManagementPage() {
             <Users className="h-4 w-4 mr-2" />
             Users
           </TabsTrigger>
+          {currentUser?.permissions?.includes('admin.manage_chat_channels') && (
+            <TabsTrigger value="channels">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Channels
+            </TabsTrigger>
+          )}
           <TabsTrigger value="monitor">
             <Monitor className="h-4 w-4 mr-2" />
             Monitor
@@ -1282,6 +1437,136 @@ export default function ChatManagementPage() {
           </Card>
         </TabsContent>
 
+        {/* Channels Management Tab */}
+        {currentUser?.permissions?.includes('admin.manage_chat_channels') && (
+          <TabsContent value="channels" className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Channels Management
+              </CardTitle>
+              <Button 
+                onClick={() => setShowCreateChannelModal(true)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Channel
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {/* Search Bar */}
+              <div className="mb-4">
+                <Input
+                  placeholder="Search channels..."
+                  value={channelSearchQuery}
+                  onChange={(e) => setChannelSearchQuery(e.target.value)}
+                  className="max-w-md"
+                />
+              </div>
+
+              {/* Channels List */}
+              <div className="space-y-2">
+                {channels
+                  .filter(channel => 
+                    channel.name.toLowerCase().includes(channelSearchQuery.toLowerCase()) ||
+                    channel.description?.toLowerCase().includes(channelSearchQuery.toLowerCase())
+                  )
+                  .map(channel => (
+                    <div key={channel.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <Hash className="h-4 w-4 text-gray-500" />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium">#{channel.name}</h3>
+                              <Badge variant={channel.type === 'public_channel' ? 'default' : 'secondary'}>
+                                {channel.type === 'public_channel' ? 'Public' : 'Private'}
+                              </Badge>
+                              {channel.is_read_only && (
+                                <Badge variant="outline" className="text-orange-600 border-orange-600">
+                                  <Lock className="h-3 w-3 mr-1" />
+                                  Read-Only
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">{channel.description}</p>
+                            <div className="flex items-center gap-4 text-xs text-gray-500 mt-2">
+                              <span>Created: {new Date(channel.created_at).toLocaleDateString()}</span>
+                              <span>Members: {channel.member_count || 0}</span>
+                              <span>Messages: {channel.message_count || 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedChannel(channel);
+                            setShowEditChannelModal(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => deleteChannel(channel.id, channel.name)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                
+                {channels.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No channels found. Create your first channel to get started.</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Channel Statistics */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Channel Statistics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{channels.length}</div>
+                  <div className="text-sm text-gray-600">Total Channels</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {channels.filter(c => c.type === 'public_channel').length}
+                  </div>
+                  <div className="text-sm text-gray-600">Public Channels</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {channels.filter(c => c.type === 'private_channel').length}
+                  </div>
+                  <div className="text-sm text-gray-600">Private Channels</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {channels.filter(c => c.is_read_only).length}
+                  </div>
+                  <div className="text-sm text-gray-600">Read-Only</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        )}
+
         {/* Monitor Tab */}
         <TabsContent value="monitor">
           <Card>
@@ -1319,6 +1604,177 @@ export default function ChatManagementPage() {
         user={currentUser}
         onProfileUpdate={handleProfileUpdate}
       />
+
+      {/* Create Channel Modal */}
+      {showCreateChannelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Create New Channel
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="channel-name">Channel Name</Label>
+                <Input
+                  id="channel-name"
+                  value={newChannelData.name}
+                  onChange={(e) => setNewChannelData({...newChannelData, name: e.target.value})}
+                  placeholder="e.g., project-alpha"
+                  className="mt-1"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Channel names will be converted to lowercase with dashes
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="channel-description">Description</Label>
+                <Input
+                  id="channel-description"
+                  value={newChannelData.description}
+                  onChange={(e) => setNewChannelData({...newChannelData, description: e.target.value})}
+                  placeholder="Brief description of the channel purpose"
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="channel-type">Channel Type</Label>
+                <FormControl fullWidth size="small" className="mt-1">
+                  <MuiSelect
+                    value={newChannelData.type}
+                    onChange={(e) => setNewChannelData({...newChannelData, type: e.target.value as any})}
+                  >
+                    <MenuItem value="public_channel">Public Channel - Everyone can join</MenuItem>
+                    <MenuItem value="private_channel">Private Channel - Invite only</MenuItem>
+                  </MuiSelect>
+                </FormControl>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="read-only"
+                  checked={newChannelData.is_read_only}
+                  onCheckedChange={(checked) => setNewChannelData({...newChannelData, is_read_only: checked})}
+                />
+                <Label htmlFor="read-only" className="flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
+                  Read-Only Channel
+                </Label>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCreateChannelModal(false);
+                  setNewChannelData({
+                    name: '',
+                    description: '',
+                    type: 'public_channel',
+                    is_read_only: false,
+                    members: [],
+                    broadcast_permissions: []
+                  });
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={createChannel}
+                disabled={!newChannelData.name.trim() || isProcessing}
+                className="flex-1"
+              >
+                {isProcessing ? 'Creating...' : 'Create Channel'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Channel Modal */}
+      {showEditChannelModal && selectedChannel && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              Edit Channel: #{selectedChannel.name}
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-channel-name">Channel Name</Label>
+                <Input
+                  id="edit-channel-name"
+                  value={selectedChannel.name}
+                  onChange={(e) => setSelectedChannel({...selectedChannel, name: e.target.value})}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-channel-description">Description</Label>
+                <Input
+                  id="edit-channel-description"
+                  value={selectedChannel.description || ''}
+                  onChange={(e) => setSelectedChannel({...selectedChannel, description: e.target.value})}
+                  className="mt-1"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="edit-read-only"
+                  checked={selectedChannel.is_read_only}
+                  onCheckedChange={(checked) => setSelectedChannel({...selectedChannel, is_read_only: checked})}
+                />
+                <Label htmlFor="edit-read-only" className="flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
+                  Read-Only Channel
+                </Label>
+              </div>
+
+              <div className="bg-gray-50 p-3 rounded text-sm">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <MessageSquare className="h-4 w-4" />
+                  Channel Info
+                </div>
+                <div className="mt-2 space-y-1 text-xs">
+                  <p>Type: {selectedChannel.type === 'public_channel' ? 'Public' : 'Private'}</p>
+                  <p>Created: {new Date(selectedChannel.created_at).toLocaleDateString()}</p>
+                  <p>Members: {selectedChannel.member_count || 0}</p>
+                  <p>Messages: {selectedChannel.message_count || 0}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowEditChannelModal(false);
+                  setSelectedChannel(null);
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={updateChannel}
+                disabled={isProcessing}
+                className="flex-1"
+              >
+                {isProcessing ? 'Updating...' : 'Update Channel'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       </div>
     </TooltipProvider>
   );

@@ -14,6 +14,10 @@ const dbAll = promisify(db.all.bind(db));
 const defaultSettings = {
   show_unread_badges: true,
   unread_badge_color: '#dc3545',
+  unread_badge_text_color: '#ffffff',
+  unread_badge_style: 'rounded',
+  unread_badge_position: 'right',
+  show_zero_counts: false, // IMPORTANT: Default to false to hide "0" badges
   show_channel_member_count: false,
   show_typing_indicators: true,
   show_online_status: true,
@@ -29,7 +33,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       FROM chat_system_settings 
       WHERE setting_key IN (
         'show_unread_badges',
-        'unread_badge_color', 
+        'unread_badge_color',
+        'unread_badge_text_color',
+        'unread_badge_style', 
+        'unread_badge_position',
+        'show_zero_counts',
         'show_channel_member_count',
         'show_typing_indicators',
         'show_online_status',
@@ -44,7 +52,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       let value: any = setting.setting_value;
       
       // Parse boolean values
-      if (['show_unread_badges', 'show_channel_member_count', 'show_typing_indicators', 
+      if (['show_unread_badges', 'show_zero_counts', 'show_channel_member_count', 'show_typing_indicators', 
            'show_online_status', 'message_grouping_enabled'].includes(key)) {
         value = value === 'true';
       }

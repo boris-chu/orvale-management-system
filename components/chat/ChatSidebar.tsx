@@ -201,8 +201,8 @@ export default function ChatSidebar({
         return chat.displayName;
 
       case 'channel':
-        // Channel naming: # prefix + channel name
-        return `#${chat.name}`;
+        // Channel naming: use the pre-computed displayName with # prefix
+        return chat.displayName;
 
       case 'group':
         // Group naming rules:
@@ -302,8 +302,8 @@ export default function ChatSidebar({
 
           {/* Chat Info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between min-w-0">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span className={`font-medium text-sm truncate ${
                   isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-gray-100'
                 }`}>
@@ -312,50 +312,40 @@ export default function ChatSidebar({
                 
                 {/* Status indicators */}
                 {chat.isPinned && (
-                  <div className="w-1 h-1 bg-blue-500 rounded-full"></div>
+                  <div className="w-1 h-1 bg-blue-500 rounded-full flex-shrink-0"></div>
                 )}
                 {chat.isMuted && (
-                  <div className="w-3 h-3 text-gray-400">🔇</div>
+                  <div className="w-3 h-3 text-gray-400 flex-shrink-0">🔇</div>
                 )}
               </div>
               
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                 <span className="text-xs text-gray-500">
                   {formatTime(chat.lastMessageTime)}
                 </span>
+                {/* Unread Badge - Fixed Conditional Rendering */}
                 {(() => {
-                  const shouldShowBadge = chatUISettings.show_unread_badges && (
-                    (chat.unreadCount > 0) || 
-                    (chatUISettings.show_zero_counts && chat.unreadCount === 0)
+                  if (settingsLoading) return null;
+                  if (!chatUISettings.show_unread_badges) return null;
+                  if (chat.unreadCount === 0 && !chatUISettings.show_zero_counts) return null;
+                  
+                  return (
+                    <Badge 
+                      className={cn(
+                        "text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center font-medium flex-shrink-0",
+                        chatUISettings.unread_badge_style === 'rounded' && "rounded-md",
+                        chatUISettings.unread_badge_style === 'square' && "rounded-none",
+                        chatUISettings.unread_badge_style === 'pill' && "rounded-full"
+                      )}
+                      style={{ 
+                        backgroundColor: chatUISettings.unread_badge_color, 
+                        color: chatUISettings.unread_badge_text_color 
+                      }}
+                    >
+                      {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                    </Badge>
                   );
-                  
-                  // Debug logging for each chat item
-                  if (chat.name.includes('general') || chat.name.includes('it-support')) {
-                    console.log('🏷️ Badge Debug for', chat.name, {
-                      unreadCount: chat.unreadCount,
-                      show_unread_badges: chatUISettings.show_unread_badges,
-                      show_zero_counts: chatUISettings.show_zero_counts,
-                      shouldShowBadge
-                    });
-                  }
-                  
-                  return shouldShowBadge;
-                })() && (
-                  <Badge 
-                    className={cn(
-                      "text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center font-medium",
-                      chatUISettings.unread_badge_style === 'rounded' && "rounded-md",
-                      chatUISettings.unread_badge_style === 'square' && "rounded-none",
-                      chatUISettings.unread_badge_style === 'pill' && "rounded-full"
-                    )}
-                    style={{ 
-                      backgroundColor: chatUISettings.unread_badge_color, 
-                      color: chatUISettings.unread_badge_text_color 
-                    }}
-                  >
-                    {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
-                  </Badge>
-                )}
+                })()}
               </div>
             </div>
             
@@ -403,37 +393,30 @@ export default function ChatSidebar({
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
               {title}
             </span>
+            {/* Section Unread Badge - Fixed Conditional Rendering */}
             {(() => {
-              const shouldShowSectionBadge = chatUISettings.show_unread_badges && (
-                (unreadCount > 0) || 
-                (chatUISettings.show_zero_counts && unreadCount === 0)
+              if (settingsLoading) return null;
+              if (!chatUISettings.show_unread_badges) return null;
+              if (unreadCount === 0 && !chatUISettings.show_zero_counts) return null;
+              
+              return (
+                <Badge 
+                  variant="secondary" 
+                  className={cn(
+                    "text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center font-medium",
+                    chatUISettings.unread_badge_style === 'rounded' && "rounded-md",
+                    chatUISettings.unread_badge_style === 'square' && "rounded-none",
+                    chatUISettings.unread_badge_style === 'pill' && "rounded-full"
+                  )}
+                  style={{ 
+                    backgroundColor: chatUISettings.unread_badge_color, 
+                    color: chatUISettings.unread_badge_text_color 
+                  }}
+                >
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Badge>
               );
-              
-              console.log('🏷️ Section Badge Debug for', title, {
-                unreadCount,
-                show_unread_badges: chatUISettings.show_unread_badges,
-                show_zero_counts: chatUISettings.show_zero_counts,
-                shouldShowSectionBadge
-              });
-              
-              return shouldShowSectionBadge;
-            })() && (
-              <Badge 
-                variant="secondary" 
-                className={cn(
-                  "text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center font-medium",
-                  chatUISettings.unread_badge_style === 'rounded' && "rounded-md",
-                  chatUISettings.unread_badge_style === 'square' && "rounded-none",
-                  chatUISettings.unread_badge_style === 'pill' && "rounded-full"
-                )}
-                style={{ 
-                  backgroundColor: chatUISettings.unread_badge_color, 
-                  color: chatUISettings.unread_badge_text_color 
-                }}
-              >
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </Badge>
-            )}
+            })()}
           </div>
           
           <div className="flex items-center gap-1">
