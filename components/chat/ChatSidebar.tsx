@@ -139,29 +139,33 @@ export default function ChatSidebar({
     // Authenticate
     socket.emit('authenticate', token);
 
-    // Wait for authentication before joining channels
+    // Wait for authentication 
     socket.on('authenticated', (data) => {
       console.log('🔐 ChatSidebar authenticated:', data);
-      
-      // Join all channels to receive notifications
-      chatData.channels.forEach(channel => {
-        socket.emit('join_channel', { channelId: channel.id });
-      });
+      // Note: Channels will be joined separately when they're loaded
     });
 
-    // Listen for new messages to update unread counts
-    socket.on('message_received', (data) => {
+    // Listen for new message notifications to update unread counts
+    socket.on('message_notification', (data) => {
       const { message, channel } = data;
       const channelId = channel.id.toString();
       
-      console.log('📬 ChatSidebar received message for channel:', channelId);
+      console.log('📬 ChatSidebar received message notification for channel:', channelId, 'from:', message.userDisplayName);
       
-      // Only increment unread count if this channel is not currently selected
-      if (channelId !== selectedChatId) {
+      // Only increment unread count if:
+      // 1. This channel is not currently selected, AND
+      // 2. The message is not from the current user (avoid self-notifications)
+      if (channelId !== selectedChatId && message.userId !== currentUser?.username) {
+        console.log('📊 Incrementing unread count for channel:', channelId);
         setUnreadCounts(prev => ({
           ...prev,
           [channelId]: (prev[channelId] || 0) + 1
         }));
+      } else {
+        console.log('📊 Skipping unread increment - channel selected or own message:', {
+          isSelected: channelId === selectedChatId,
+          isOwnMessage: message.userId === currentUser?.username
+        });
       }
     });
 
@@ -169,7 +173,18 @@ export default function ChatSidebar({
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [currentUser, selectedChatId, chatData.channels]);
+  }, [currentUser, selectedChatId]);
+  
+  // Separate effect to join channels when they're loaded
+  useEffect(() => {
+    if (socketRef.current?.connected && chatData.channels.length > 0) {
+      console.log('📡 Joining channels for notifications after load:', chatData.channels.length);
+      chatData.channels.forEach(channel => {
+        console.log('📡 Joining channel:', channel.id, channel.name);
+        socketRef.current?.emit('join_channel', { channelId: channel.id });
+      });
+    }
+  }, [chatData.channels]);
 
   // Clear unread count when selecting a chat
   useEffect(() => {

@@ -137,7 +137,7 @@ io.on('connection', async (socket) => {
         role: socket.userRole
       });
       
-      console.log(`User authenticated: ${socket.userDisplayName} (${socket.userId})`);
+      console.log(`✅ User authenticated: ${socket.userDisplayName} (${socket.userId}) on socket ${socket.id}`);
     } catch (error) {
       socket.emit('auth:error', error.message);
       socket.disconnect();
@@ -154,26 +154,66 @@ io.on('connection', async (socket) => {
     
     const { channelId } = data;
     const roomName = `channel_${channelId}`;
-    socket.join(roomName);
     
-    // Track room membership
-    if (!roomUsers.has(roomName)) {
-      roomUsers.set(roomName, new Set());
-    }
-    roomUsers.get(roomName).add(socket.userId);
-    
-    // Log room members for debugging
-    console.log(`${socket.userDisplayName} (${socket.userId}) joined channel ${channelId}`);
-    console.log(`Room ${roomName} now has ${roomUsers.get(roomName).size} members:`, Array.from(roomUsers.get(roomName)));
-    
-    // Emit USER_JOINED to other channel members
-    socket.to(roomName).emit('user_joined', {
-      userId: socket.userId,
-      displayName: socket.userDisplayName,
-      role: socket.userRole,
-      channelId,
-      timestamp: new Date().toISOString()
-    });
+    // First check if user has access to this channel or auto-join public channels
+    db.get(
+      `SELECT c.*, cm.role as user_role 
+       FROM chat_channels c
+       LEFT JOIN chat_channel_members cm ON c.id = cm.channel_id AND cm.user_id = ?
+       WHERE c.id = ? AND c.active = 1`,
+      [socket.userId, channelId],
+      (err, channel) => {
+        if (err || !channel) {
+          socket.emit('join_channel_error', { message: 'Channel not found or access denied' });
+          return;
+        }
+        
+        // Auto-join public channels if not already a member
+        if (channel.type === 'public_channel' && !channel.user_role) {
+          db.run(
+            `INSERT OR IGNORE INTO chat_channel_members (channel_id, user_id, role, joined_at)
+             VALUES (?, ?, 'member', CURRENT_TIMESTAMP)`,
+            [channelId, socket.userId],
+            (insertErr) => {
+              if (insertErr) {
+                console.error('Error auto-joining public channel:', insertErr);
+              } else {
+                console.log(`Auto-joined ${socket.userId} to public channel ${channelId}`);
+              }
+            }
+          );
+        }
+        
+        // Join the Socket.io room
+        socket.join(roomName);
+        
+        // Track room membership
+        if (!roomUsers.has(roomName)) {
+          roomUsers.set(roomName, new Set());
+        }
+        roomUsers.get(roomName).add(socket.userId);
+        
+        // Log room members for debugging
+        console.log(`${socket.userDisplayName} (${socket.userId}) joined channel ${channelId}`);
+        console.log(`Room ${roomName} now has ${roomUsers.get(roomName).size} members:`, Array.from(roomUsers.get(roomName)));
+        
+        // Emit USER_JOINED to other channel members
+        socket.to(roomName).emit('user_joined', {
+          userId: socket.userId,
+          displayName: socket.userDisplayName,
+          role: socket.userRole,
+          channelId,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Confirm successful join to the user
+        socket.emit('channel_joined', {
+          channelId,
+          channelName: channel.name,
+          roomMembers: Array.from(roomUsers.get(roomName))
+        });
+      }
+    );
   });
 
   // 2. LEAVE_CHANNEL - Client -> Server
@@ -223,12 +263,28 @@ io.on('connection', async (socket) => {
           timestamp: new Date().toISOString()
         };
         
-        // Emit MESSAGE_RECEIVED to all users in the channel
+        // Emit MESSAGE_RECEIVED to ALL users in the channel (including sender)
         const roomName = `channel_${channelId}`;
         const roomMembers = roomUsers.get(roomName) || new Set();
         console.log(`Broadcasting message to room ${roomName} with ${roomMembers.size} members:`, Array.from(roomMembers));
         
+        // Broadcast to ALL users in the room (including sender for real-time updates)
+        console.log(`Broadcasting message_received to ALL users in room ${roomName}`);
         io.to(roomName).emit('message_received', {
+          message: messageData,
+          channel: { id: channelId }
+        });
+        
+        console.log(`Message successfully broadcast to ${roomMembers.size} users in ${roomName}`);
+        socket.emit('message_sent', {
+          message: messageData,
+          channel: { id: channelId }
+        });
+        
+        // IMPORTANT: Also broadcast to ALL users in the room for sidebar notifications
+        // This ensures unread counts are updated for all users including the sender
+        console.log(`Broadcasting message_notification to room ${roomName} for sidebar updates`);
+        io.to(roomName).emit('message_notification', {
           message: messageData,
           channel: { id: channelId }
         });

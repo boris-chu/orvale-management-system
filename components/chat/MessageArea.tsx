@@ -148,48 +148,48 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
     console.log('🔌 Joining channel:', chat.id);
     socket.emit('join_channel', { channelId: chat.id });
 
-    // Listen for new messages
+    // Listen for new messages from OTHER users
     socket.on('message_received', (data) => {
       const { message } = data;
-      console.log('📨 Received message from Socket.io:', message);
+      console.log('📨 Received message from Socket.io (other user):', message);
       
+      // Add all messages (prevent duplicates by checking if already exists)
       setMessages(prev => {
-        // Check if this is our own message (replace optimistic update)
-        if (message.userId === currentUser?.username) {
-          console.log('🔄 Replacing optimistic message with server version');
-          // Find and replace the temporary message with the real one
-          const tempIndex = prev.findIndex(msg => 
-            msg.id.startsWith('temp_') && 
-            msg.content === message.message &&
-            msg.sender.username === message.userId
-          );
-          
-          if (tempIndex !== -1) {
-            const newMessages = [...prev];
-            newMessages[tempIndex] = {
-              id: message.id.toString(),
-              content: message.message,
-              sender: {
-                username: message.userId,
-                display_name: message.userDisplayName,
-                role_id: 'user'
-              },
-              timestamp: message.timestamp,
-              message_type: message.messageType || 'text',
-              reply_to: message.replyToId ? { 
-                id: message.replyToId.toString(), 
-                content: '', 
-                sender: { username: '', display_name: '', role_id: '' }, 
-                timestamp: '', 
-                message_type: 'text' 
-              } : undefined
-            };
-            return newMessages;
+        // Check if message already exists
+        const exists = prev.find(msg => 
+          msg.id === message.id.toString() ||
+          (msg.id.startsWith('temp_') && msg.content === message.message && msg.sender.username === message.userId)
+        );
+        
+        if (exists) {
+          // If it's a temp message, replace with server version
+          if (exists.id.startsWith('temp_')) {
+            console.log('🔄 Replacing temp message with server version');
+            return prev.map(msg => 
+              msg.id === exists.id ? {
+                id: message.id.toString(),
+                content: message.message,
+                sender: {
+                  username: message.userId,
+                  display_name: message.userDisplayName,
+                  role_id: 'user'
+                },
+                timestamp: message.timestamp,
+                message_type: message.messageType || 'text',
+                reply_to: message.replyToId ? { 
+                  id: message.replyToId.toString(), 
+                  content: '', 
+                  sender: { username: '', display_name: '', role_id: '' }, 
+                  timestamp: '', 
+                  message_type: 'text' 
+                } : undefined
+              } : msg
+            );
           }
+          return prev; // Already exists, skip
         }
         
-        // Add new message from other users
-        console.log('➕ Adding new message from', message.userDisplayName);
+        // Add new message
         return [...prev, {
           id: message.id.toString(),
           content: message.message,
@@ -211,6 +211,45 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
       });
     });
 
+    // Listen for confirmation of our own messages
+    socket.on('message_sent', (data) => {
+      const { message } = data;
+      console.log('✅ Message sent confirmation from Socket.io:', message);
+      
+      // Replace the temporary optimistic message with server version
+      setMessages(prev => {
+        const tempIndex = prev.findIndex(msg => 
+          msg.id.startsWith('temp_') && 
+          msg.content === message.message &&
+          msg.sender.username === message.userId
+        );
+        
+        if (tempIndex !== -1) {
+          const newMessages = [...prev];
+          newMessages[tempIndex] = {
+            id: message.id.toString(),
+            content: message.message,
+            sender: {
+              username: message.userId,
+              display_name: message.userDisplayName,
+              role_id: 'user'
+            },
+            timestamp: message.timestamp,
+            message_type: message.messageType || 'text',
+            reply_to: message.replyToId ? { 
+              id: message.replyToId.toString(), 
+              content: '', 
+              sender: { username: '', display_name: '', role_id: '' }, 
+              timestamp: '', 
+              message_type: 'text' 
+            } : undefined
+          };
+          return newMessages;
+        }
+        return prev;
+      });
+    });
+
     // Listen for typing indicators
     socket.on('user_typing', (data) => {
       const { userId, userDisplayName, isTyping } = data;
@@ -223,6 +262,15 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
           }
         });
       }
+    });
+
+    // Listen for channel join confirmation
+    socket.on('channel_joined', (data) => {
+      console.log('✅ Successfully joined channel:', data.channelId, 'with', data.roomMembers.length, 'members');
+    });
+
+    socket.on('join_channel_error', (data) => {
+      console.error('❌ Failed to join channel:', data.message);
     });
 
     // Listen for user join/leave
