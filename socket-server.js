@@ -153,24 +153,27 @@ io.on('connection', async (socket) => {
     if (!socket.userId) return;
     
     const { channelId } = data;
-    socket.join(`channel_${channelId}`);
+    const roomName = `channel_${channelId}`;
+    socket.join(roomName);
     
     // Track room membership
-    if (!roomUsers.has(`channel_${channelId}`)) {
-      roomUsers.set(`channel_${channelId}`, new Set());
+    if (!roomUsers.has(roomName)) {
+      roomUsers.set(roomName, new Set());
     }
-    roomUsers.get(`channel_${channelId}`).add(socket.userId);
+    roomUsers.get(roomName).add(socket.userId);
+    
+    // Log room members for debugging
+    console.log(`${socket.userDisplayName} (${socket.userId}) joined channel ${channelId}`);
+    console.log(`Room ${roomName} now has ${roomUsers.get(roomName).size} members:`, Array.from(roomUsers.get(roomName)));
     
     // Emit USER_JOINED to other channel members
-    socket.to(`channel_${channelId}`).emit('user_joined', {
+    socket.to(roomName).emit('user_joined', {
       userId: socket.userId,
       displayName: socket.userDisplayName,
       role: socket.userRole,
       channelId,
       timestamp: new Date().toISOString()
     });
-    
-    console.log(`${socket.userDisplayName} joined channel ${channelId}`);
   });
 
   // 2. LEAVE_CHANNEL - Client -> Server
@@ -221,7 +224,11 @@ io.on('connection', async (socket) => {
         };
         
         // Emit MESSAGE_RECEIVED to all users in the channel
-        io.to(`channel_${channelId}`).emit('message_received', {
+        const roomName = `channel_${channelId}`;
+        const roomMembers = roomUsers.get(roomName) || new Set();
+        console.log(`Broadcasting message to room ${roomName} with ${roomMembers.size} members:`, Array.from(roomMembers));
+        
+        io.to(roomName).emit('message_received', {
           message: messageData,
           channel: { id: channelId }
         });

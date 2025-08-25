@@ -153,30 +153,62 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
       const { message } = data;
       console.log('📨 Received message from Socket.io:', message);
       
-      // Don't add messages from yourself (optimistic updates already handle this)
-      if (message.userId === currentUser?.username) {
-        console.log('🔄 Ignoring own message (optimistic update already added)');
-        return;
-      }
-      
-      setMessages(prev => [...prev, {
-        id: message.id.toString(),
-        content: message.message,
-        sender: {
-          username: message.userId,
-          display_name: message.userDisplayName,
-          role_id: 'user'
-        },
-        timestamp: message.timestamp,
-        message_type: message.messageType || 'text',
-        reply_to: message.replyToId ? { 
-          id: message.replyToId.toString(), 
-          content: '', 
-          sender: { username: '', display_name: '', role_id: '' }, 
-          timestamp: '', 
-          message_type: 'text' 
-        } : undefined
-      }]);
+      setMessages(prev => {
+        // Check if this is our own message (replace optimistic update)
+        if (message.userId === currentUser?.username) {
+          console.log('🔄 Replacing optimistic message with server version');
+          // Find and replace the temporary message with the real one
+          const tempIndex = prev.findIndex(msg => 
+            msg.id.startsWith('temp_') && 
+            msg.content === message.message &&
+            msg.sender.username === message.userId
+          );
+          
+          if (tempIndex !== -1) {
+            const newMessages = [...prev];
+            newMessages[tempIndex] = {
+              id: message.id.toString(),
+              content: message.message,
+              sender: {
+                username: message.userId,
+                display_name: message.userDisplayName,
+                role_id: 'user'
+              },
+              timestamp: message.timestamp,
+              message_type: message.messageType || 'text',
+              reply_to: message.replyToId ? { 
+                id: message.replyToId.toString(), 
+                content: '', 
+                sender: { username: '', display_name: '', role_id: '' }, 
+                timestamp: '', 
+                message_type: 'text' 
+              } : undefined
+            };
+            return newMessages;
+          }
+        }
+        
+        // Add new message from other users
+        console.log('➕ Adding new message from', message.userDisplayName);
+        return [...prev, {
+          id: message.id.toString(),
+          content: message.message,
+          sender: {
+            username: message.userId,
+            display_name: message.userDisplayName,
+            role_id: 'user'
+          },
+          timestamp: message.timestamp,
+          message_type: message.messageType || 'text',
+          reply_to: message.replyToId ? { 
+            id: message.replyToId.toString(), 
+            content: '', 
+            sender: { username: '', display_name: '', role_id: '' }, 
+            timestamp: '', 
+            message_type: 'text' 
+          } : undefined
+        }];
+      });
     });
 
     // Listen for typing indicators
