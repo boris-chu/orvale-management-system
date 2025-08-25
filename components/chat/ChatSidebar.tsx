@@ -75,107 +75,46 @@ export default function ChatSidebar({
     groups: []
   });
 
-  // Mock data for development - replace with API calls
+  // Load real channels from API
   useEffect(() => {
-    const mockData = {
-      directMessages: [
-        {
-          id: 'dm_1',
-          type: 'dm' as const,
-          name: 'dm_boris_jane',
-          displayName: 'Jane Smith', // DM naming: show only other participant
-          participants: [
-            { username: 'boris.chu', display_name: 'Boris Chu', role_id: 'admin' },
-            { username: 'jane.smith', display_name: 'Jane Smith', role_id: 'support' }
-          ],
-          unreadCount: 3,
-          lastMessage: 'Can you help with the server issue?',
-          lastMessageTime: '2 min ago',
-          isOnline: true,
-          status: 'online' as const
-        },
-        {
-          id: 'dm_2',
-          type: 'dm' as const,
-          name: 'dm_boris_john',
-          displayName: 'John Doe',
-          participants: [
-            { username: 'boris.chu', display_name: 'Boris Chu', role_id: 'admin' },
-            { username: 'john.doe', display_name: 'John Doe', role_id: 'it_user' }
-          ],
-          unreadCount: 0,
-          lastMessage: 'Thanks for the update',
-          lastMessageTime: '1 hour ago',
-          isOnline: false,
-          status: 'away' as const
+    const loadChannels = async () => {
+      try {
+        const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
+        if (!token) return;
+
+        const response = await fetch('/api/chat/channels', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Transform API data to component format
+          const channels = data.channels.map((ch: any) => ({
+            id: ch.id.toString(),
+            type: 'channel' as const,
+            name: ch.name.toLowerCase().replace(/\s+/g, '-'),
+            displayName: `#${ch.name.toLowerCase().replace(/\s+/g, '-')}`,
+            unreadCount: 0,
+            lastMessage: ch.description || '',
+            lastMessageTime: '',
+            isPinned: ch.name === 'General',
+            isMuted: ch.is_read_only
+          }));
+
+          setChatData({
+            directMessages: [],
+            channels,
+            groups: []
+          });
         }
-      ],
-      channels: [
-        {
-          id: '1',
-          type: 'channel' as const,
-          name: 'general',
-          displayName: '#general', // Channel naming: # prefix + name
-          unreadCount: 12,
-          lastMessage: 'Welcome to the team chat!',
-          lastMessageTime: '5 min ago',
-          isPinned: true
-        },
-        {
-          id: '2',
-          type: 'channel' as const,
-          name: 'it-support',
-          displayName: '#it-support',
-          unreadCount: 0,
-          lastMessage: 'Server maintenance completed',
-          lastMessageTime: '30 min ago'
-        },
-        {
-          id: '3',
-          type: 'channel' as const,
-          name: 'announcements',
-          displayName: '#announcements',
-          unreadCount: 1,
-          lastMessage: 'New policy update available',
-          lastMessageTime: '2 hours ago',
-          isMuted: true
-        }
-      ],
-      groups: [
-        {
-          id: 'group_1',
-          type: 'group' as const,
-          name: 'project_alpha_team',
-          displayName: 'John Doe & Jane Smith', // Group naming: 2-3 people format
-          participants: [
-            { username: 'john.doe', display_name: 'John Doe', role_id: 'it_user' },
-            { username: 'jane.smith', display_name: 'Jane Smith', role_id: 'support' },
-            { username: 'boris.chu', display_name: 'Boris Chu', role_id: 'admin' }
-          ],
-          unreadCount: 5,
-          lastMessage: 'Project deadline moved to next week',
-          lastMessageTime: '15 min ago'
-        },
-        {
-          id: 'group_2',
-          type: 'group' as const,
-          name: 'helpdesk_leads',
-          displayName: 'Alice, Bob, Carol & 2 others', // Group naming: 3+ people format
-          participants: [
-            { username: 'alice.johnson', display_name: 'Alice Johnson', role_id: 'manager' },
-            { username: 'bob.wilson', display_name: 'Bob Wilson', role_id: 'support' },
-            { username: 'carol.davis', display_name: 'Carol Davis', role_id: 'support' },
-            { username: 'david.brown', display_name: 'David Brown', role_id: 'support' },
-            { username: 'eve.miller', display_name: 'Eve Miller', role_id: 'support' }
-          ],
-          unreadCount: 0,
-          lastMessage: 'Weekly meeting scheduled',
-          lastMessageTime: '1 day ago'
-        }
-      ]
+      } catch (error) {
+        console.error('Failed to load channels:', error);
+      }
     };
-    setChatData(mockData);
-  }, []);
+
+    loadChannels();
+  }, [currentUser]);
 
   // Compute display names based on chat type and naming rules
   const computeDisplayName = (chat: ChatItem): string => {

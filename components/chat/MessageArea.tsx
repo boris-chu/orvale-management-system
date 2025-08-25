@@ -100,13 +100,20 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
       return;
     }
 
+    // Skip if already connected (React StrictMode)
+    if (socketRef.current?.connected) {
+      console.log('🔌 Socket.io already connected, skipping initialization');
+      return;
+    }
+
     // Initialize socket connection
     console.log('🔌 Initializing Socket.io connection to http://localhost:3001');
     console.log('🔌 Using token:', token ? token.substring(0, 20) + '...' : 'NO TOKEN');
     
     const socket = io('http://localhost:3001', {
       transports: ['websocket', 'polling'],
-      auth: { token }
+      auth: { token },
+      autoConnect: true
     });
 
     socketRef.current = socket;
@@ -197,8 +204,10 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
 
     // Cleanup on unmount
     return () => {
-      socket.emit('leave_channel', { channelId: chat.id });
-      socket.disconnect();
+      if (socket.connected) {
+        socket.emit('leave_channel', { channelId: chat.id });
+        socket.disconnect();
+      }
       socketRef.current = null;
     };
   }, [chat.id, currentUser?.username]);
