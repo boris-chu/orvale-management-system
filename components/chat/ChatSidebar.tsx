@@ -94,13 +94,13 @@ export default function ChatSidebar({
         if (response.ok) {
           const data = await response.json();
           
-          // Transform API data to component format
+          // Transform API data to component format (unread counts applied dynamically in getFilteredChats)
           const channels = data.channels.map((ch: any) => ({
             id: ch.id.toString(),
             type: 'channel' as const,
             name: ch.name.toLowerCase().replace(/\s+/g, '-'),
             displayName: `#${ch.name.toLowerCase().replace(/\s+/g, '-')}`,
-            unreadCount: unreadCounts[ch.id.toString()] || 0,
+            unreadCount: 0, // Will be updated dynamically in getFilteredChats
             lastMessage: ch.description || '',
             lastMessageTime: '',
             isPinned: ch.name === 'General',
@@ -119,7 +119,7 @@ export default function ChatSidebar({
     };
 
     loadChannels();
-  }, [currentUser, unreadCounts]);
+  }, [currentUser]); // Remove unreadCounts dependency to prevent reload loops
 
   // Socket.io connection for real-time updates using singleton
   useEffect(() => {
@@ -133,12 +133,13 @@ export default function ChatSidebar({
     // Connect using singleton client
     const socket = socketClient.connect(token);
 
-    // Listen for new message notifications to update unread counts
+    // Listen for new message notifications to update unread counts  
     socketClient.addEventListener(componentId, 'message_notification', (data: any) => {
       const { message, channel } = data;
       const channelId = channel.id.toString();
       
       console.log('📬 ChatSidebar received message notification for channel:', channelId, 'from:', message.userDisplayName);
+      console.log('📬 Current selectedChatId:', selectedChatId, 'Current user:', currentUser?.username);
       
       // Only increment unread count if:
       // 1. This channel is not currently selected, AND
@@ -311,10 +312,21 @@ export default function ChatSidebar({
                 <span className="text-xs text-gray-500">
                   {formatTime(chat.lastMessageTime)}
                 </span>
-                {chatUISettings.show_unread_badges && chat.unreadCount && chat.unreadCount > 0 && (
+                {chatUISettings.show_unread_badges && (
+                  (chat.unreadCount && chat.unreadCount > 0) || 
+                  (chatUISettings.show_zero_counts && chat.unreadCount === 0)
+                ) && (
                   <Badge 
-                    className="text-xs px-1.5 py-0.5 min-w-[18px] h-4 flex items-center justify-center"
-                    style={{ backgroundColor: chatUISettings.unread_badge_color, color: 'white' }}
+                    className={cn(
+                      "text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center font-medium",
+                      chatUISettings.unread_badge_style === 'rounded' && "rounded-md",
+                      chatUISettings.unread_badge_style === 'square' && "rounded-none",
+                      chatUISettings.unread_badge_style === 'pill' && "rounded-full"
+                    )}
+                    style={{ 
+                      backgroundColor: chatUISettings.unread_badge_color, 
+                      color: chatUISettings.unread_badge_text_color 
+                    }}
                   >
                     {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                   </Badge>
@@ -366,9 +378,23 @@ export default function ChatSidebar({
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
               {title}
             </span>
-            {chatUISettings.show_unread_badges && unreadCount > 0 && (
-              <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
-                {unreadCount}
+            {chatUISettings.show_unread_badges && (
+              (unreadCount > 0) || (chatUISettings.show_zero_counts && unreadCount === 0)
+            ) && (
+              <Badge 
+                variant="secondary" 
+                className={cn(
+                  "text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center font-medium",
+                  chatUISettings.unread_badge_style === 'rounded' && "rounded-md",
+                  chatUISettings.unread_badge_style === 'square' && "rounded-none",
+                  chatUISettings.unread_badge_style === 'pill' && "rounded-full"
+                )}
+                style={{ 
+                  backgroundColor: chatUISettings.unread_badge_color, 
+                  color: chatUISettings.unread_badge_text_color 
+                }}
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
               </Badge>
             )}
           </div>

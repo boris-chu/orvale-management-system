@@ -281,10 +281,10 @@ io.on('connection', async (socket) => {
           channel: { id: channelId }
         });
         
-        // IMPORTANT: Also broadcast to ALL users in the room for sidebar notifications
-        // This ensures unread counts are updated for all users including the sender
-        console.log(`Broadcasting message_notification to room ${roomName} for sidebar updates`);
-        io.to(roomName).emit('message_notification', {
+        // IMPORTANT: Broadcast message_notification GLOBALLY for sidebar updates
+        // This ensures unread counts are updated for ALL connected users (not just room members)
+        console.log(`Broadcasting message_notification globally for sidebar updates`);
+        io.emit('message_notification', {
           message: messageData,
           channel: { id: channelId }
         });

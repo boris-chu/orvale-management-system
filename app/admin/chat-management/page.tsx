@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { MenuItem } from '@mui/material';
 import { 
   Settings,
   Activity, 
@@ -46,6 +47,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserAvatar } from '@/components/UserAvatar';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
+import { cn } from '@/lib/utils';
 
 interface ChatSettings {
   // Widget Settings
@@ -66,6 +68,10 @@ interface ChatSettings {
   // UI Settings
   show_unread_badges: boolean;
   unread_badge_color: string;
+  unread_badge_text_color: string;
+  unread_badge_style: 'rounded' | 'square' | 'pill';
+  unread_badge_position: 'right' | 'left' | 'top-right';
+  show_zero_counts: boolean;
   show_channel_member_count: boolean;
   show_typing_indicators: boolean;
   show_online_status: boolean;
@@ -107,6 +113,10 @@ export default function ChatManagementPage() {
     gif_picker_enabled: true,
     show_unread_badges: true,
     unread_badge_color: '#dc3545',
+    unread_badge_text_color: '#ffffff',
+    unread_badge_style: 'rounded',
+    unread_badge_position: 'right',
+    show_zero_counts: false,
     show_channel_member_count: false,
     show_typing_indicators: true,
     show_online_status: true,
@@ -908,21 +918,131 @@ export default function ChatManagementPage() {
                   </div>
                   
                   {settings.show_unread_badges && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Unread Badge Color</Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="color"
-                          value={settings.unread_badge_color}
-                          onChange={(e) => updateSetting('unread_badge_color', e.target.value)}
-                          className="w-20 h-10"
+                    <div className="space-y-4">
+                      {/* Badge Colors */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Background Color</Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="color"
+                              value={settings.unread_badge_color}
+                              onChange={(e) => updateSetting('unread_badge_color', e.target.value)}
+                              className="w-16 h-8"
+                            />
+                            <Input
+                              type="text"
+                              value={settings.unread_badge_color}
+                              onChange={(e) => updateSetting('unread_badge_color', e.target.value)}
+                              className="flex-1 text-xs"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Text Color</Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="color"
+                              value={settings.unread_badge_text_color}
+                              onChange={(e) => updateSetting('unread_badge_text_color', e.target.value)}
+                              className="w-16 h-8"
+                            />
+                            <Input
+                              type="text"
+                              value={settings.unread_badge_text_color}
+                              onChange={(e) => updateSetting('unread_badge_text_color', e.target.value)}
+                              className="flex-1 text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Badge Style */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Badge Style</Label>
+                        <MuiSelect
+                          size="small"
+                          value={settings.unread_badge_style}
+                          onChange={(e) => updateSetting('unread_badge_style', e.target.value as 'rounded' | 'square' | 'pill')}
+                          className="w-full"
+                        >
+                          <MenuItem value="rounded">Rounded Corners</MenuItem>
+                          <MenuItem value="square">Square</MenuItem>
+                          <MenuItem value="pill">Pill Shape</MenuItem>
+                        </MuiSelect>
+                      </div>
+
+                      {/* Badge Position */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Badge Position</Label>
+                        <MuiSelect
+                          size="small"
+                          value={settings.unread_badge_position}
+                          onChange={(e) => updateSetting('unread_badge_position', e.target.value as 'right' | 'left' | 'top-right')}
+                          className="w-full"
+                        >
+                          <MenuItem value="right">Right Side</MenuItem>
+                          <MenuItem value="left">Left Side</MenuItem>
+                          <MenuItem value="top-right">Top Right Corner</MenuItem>
+                        </MuiSelect>
+                      </div>
+
+                      {/* Show Zero Counts */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm font-medium">Show Zero Counts</Label>
+                          <p className="text-xs text-muted-foreground">Display "0" when no unread messages</p>
+                        </div>
+                        <Switch
+                          checked={settings.show_zero_counts}
+                          onCheckedChange={(checked) => updateSetting('show_zero_counts', checked)}
                         />
-                        <Input
-                          type="text"
-                          value={settings.unread_badge_color}
-                          onChange={(e) => updateSetting('unread_badge_color', e.target.value)}
-                          className="flex-1"
-                        />
+                      </div>
+
+                      {/* Badge Preview */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Preview</Label>
+                        <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <Hash className="w-4 h-4 text-green-500" />
+                            <span className="text-sm">general</span>
+                            <div 
+                              className={cn(
+                                "text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center font-medium",
+                                settings.unread_badge_style === 'rounded' && "rounded-md",
+                                settings.unread_badge_style === 'square' && "rounded-none", 
+                                settings.unread_badge_style === 'pill' && "rounded-full"
+                              )}
+                              style={{ 
+                                backgroundColor: settings.unread_badge_color, 
+                                color: settings.unread_badge_text_color 
+                              }}
+                            >
+                              3
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MessageCircle className="w-4 h-4 text-blue-500" />
+                            <span className="text-sm">John Doe</span>
+                            {settings.show_zero_counts && (
+                              <div 
+                                className={cn(
+                                  "text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center font-medium",
+                                  settings.unread_badge_style === 'rounded' && "rounded-md",
+                                  settings.unread_badge_style === 'square' && "rounded-none", 
+                                  settings.unread_badge_style === 'pill' && "rounded-full"
+                                )}
+                                style={{ 
+                                  backgroundColor: settings.unread_badge_color, 
+                                  color: settings.unread_badge_text_color 
+                                }}
+                              >
+                                0
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
