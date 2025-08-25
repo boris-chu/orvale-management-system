@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserAvatar } from '@/components/UserAvatar';
 import OnlinePresenceTracker from '@/components/shared/OnlinePresenceTracker';
+import io, { Socket } from 'socket.io-client';
 
 interface User {
   username: string;
@@ -74,6 +75,8 @@ export default function ChatSidebar({
     channels: [],
     groups: []
   });
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const socketRef = useRef<Socket | null>(null);
 
   // Load real channels from API
   useEffect(() => {
@@ -95,7 +98,7 @@ export default function ChatSidebar({
             type: 'channel' as const,
             name: ch.name.toLowerCase().replace(/\s+/g, '-'),
             displayName: `#${ch.name.toLowerCase().replace(/\s+/g, '-')}`,
-            unreadCount: 0,
+            unreadCount: unreadCounts[ch.id.toString()] || 0,
             lastMessage: ch.description || '',
             lastMessageTime: '',
             isPinned: ch.name === 'General',
@@ -114,7 +117,67 @@ export default function ChatSidebar({
     };
 
     loadChannels();
-  }, [currentUser]);
+  }, [currentUser, unreadCounts]);
+
+  // Socket.io connection for real-time updates
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
+    if (!token) return;
+
+    // Connect to Socket.io
+    const socket = io('http://localhost:3001', {
+      transports: ['websocket', 'polling'],
+      auth: { token }
+    });
+
+    socketRef.current = socket;
+
+    // Authenticate
+    socket.emit('authenticate', token);
+
+    // Wait for authentication before joining channels
+    socket.on('authenticated', (data) => {
+      console.log('🔐 ChatSidebar authenticated:', data);
+      
+      // Join all channels to receive notifications
+      chatData.channels.forEach(channel => {
+        socket.emit('join_channel', { channelId: channel.id });
+      });
+    });
+
+    // Listen for new messages to update unread counts
+    socket.on('message_received', (data) => {
+      const { message, channel } = data;
+      const channelId = channel.id.toString();
+      
+      console.log('📬 ChatSidebar received message for channel:', channelId);
+      
+      // Only increment unread count if this channel is not currently selected
+      if (channelId !== selectedChatId) {
+        setUnreadCounts(prev => ({
+          ...prev,
+          [channelId]: (prev[channelId] || 0) + 1
+        }));
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [currentUser, selectedChatId, chatData.channels]);
+
+  // Clear unread count when selecting a chat
+  useEffect(() => {
+    if (selectedChatId) {
+      setUnreadCounts(prev => ({
+        ...prev,
+        [selectedChatId]: 0
+      }));
+    }
+  }, [selectedChatId]);
 
   // Compute display names based on chat type and naming rules
   const computeDisplayName = (chat: ChatItem): string => {
@@ -165,7 +228,10 @@ export default function ChatSidebar({
       const matchesSearch = displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            chat.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesSearch;
-    });
+    }).map(chat => ({
+      ...chat,
+      unreadCount: unreadCounts[chat.id] || 0
+    }));
   };
 
   // Get total unread count for a section
@@ -307,9 +373,6 @@ export default function ChatSidebar({
           </div>
           
           <div className="flex items-center gap-1">
-            <span className="text-xs text-gray-500">
-              {filteredChats.length}
-            </span>
             {type === 'groups' && (
               <Button 
                 variant="ghost" 
