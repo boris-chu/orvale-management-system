@@ -28,7 +28,8 @@ import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { UserAvatar } from '@/components/UserAvatar';
 import { cn } from '@/lib/utils';
 import { useIsMobile, useIsTouchDevice } from '@/hooks/useMediaQuery';
-import io, { Socket } from 'socket.io-client';
+import { socketClient } from '@/lib/socket-client';
+import { Socket } from 'socket.io-client';
 
 interface User {
   username: string;
@@ -86,11 +87,11 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const socketRef = useRef<Socket | null>(null);
+  const componentId = useRef(`MessageArea_${chat.id}_${Date.now()}`).current;
   const isMobile = useIsMobile();
   const isTouchDevice = useIsTouchDevice();
 
-  // Socket.io connection setup
+  // Socket.io connection setup with singleton
   useEffect(() => {
     if (!currentUser?.username) return;
 
@@ -100,56 +101,17 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
       return;
     }
 
-    // Skip if already connected (React StrictMode)
-    if (socketRef.current?.connected) {
-      console.log('🔌 Socket.io already connected, skipping initialization');
-      return;
-    }
-
-    // Initialize socket connection
-    console.log('🔌 Initializing Socket.io connection to http://localhost:3001');
-    console.log('🔌 Using token:', token ? token.substring(0, 20) + '...' : 'NO TOKEN');
+    console.log('🔌 Connecting to Socket.io via singleton client for MessageArea');
     
-    const socket = io('http://localhost:3001', {
-      transports: ['websocket', 'polling'],
-      auth: { token },
-      autoConnect: true
-    });
-
-    socketRef.current = socket;
-
-    // Connection event listeners
-    socket.on('connect', () => {
-      console.log('✅ Socket.io connected successfully:', socket.id);
-    });
-
-    socket.on('connect_error', (error) => {
-      console.error('❌ Socket.io connection error:', error);
-    });
-
-    socket.on('disconnect', (reason) => {
-      console.warn('⚠️ Socket.io disconnected:', reason);
-    });
-
-    // Authentication
-    console.log('🔌 Authenticating with Socket.io server...');
-    socket.emit('authenticate', token);
-
-    // Listen for authentication result
-    socket.on('authenticated', (data) => {
-      console.log('✅ Socket.io authenticated:', data);
-    });
-
-    socket.on('auth:error', (error) => {
-      console.error('❌ Socket.io auth error:', error);
-    });
-
+    // Connect using singleton client
+    const socket = socketClient.connect(token);
+    
     // Join current chat channel
-    console.log('🔌 Joining channel:', chat.id);
-    socket.emit('join_channel', { channelId: chat.id });
+    console.log('🔌 Joining channel via singleton:', chat.id);
+    socketClient.joinChannel(chat.id);
 
     // Listen for new messages from OTHER users
-    socket.on('message_received', (data) => {
+    socketClient.addEventListener(componentId, 'message_received', (data: any) => {
       const { message } = data;
       console.log('📨 Received message from Socket.io (other user):', message);
       
@@ -212,7 +174,7 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
     });
 
     // Listen for confirmation of our own messages
-    socket.on('message_sent', (data) => {
+    socketClient.addEventListener(componentId, 'message_sent', (data: any) => {
       const { message } = data;
       console.log('✅ Message sent confirmation from Socket.io:', message);
       
@@ -251,7 +213,7 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
     });
 
     // Listen for typing indicators
-    socket.on('user_typing', (data) => {
+    socketClient.addEventListener(componentId, 'user_typing', (data: any) => {
       const { userId, userDisplayName, isTyping } = data;
       if (userId !== currentUser.username) {
         setTypingUsers(prev => {
@@ -265,41 +227,39 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
     });
 
     // Listen for channel join confirmation
-    socket.on('channel_joined', (data) => {
+    socketClient.addEventListener(componentId, 'channel_joined', (data: any) => {
       console.log('✅ Successfully joined channel:', data.channelId, 'with', data.roomMembers.length, 'members');
     });
 
-    socket.on('join_channel_error', (data) => {
+    socketClient.addEventListener(componentId, 'join_channel_error', (data: any) => {
       console.error('❌ Failed to join channel:', data.message);
     });
 
     // Listen for user join/leave
-    socket.on('user_joined', (data) => {
+    socketClient.addEventListener(componentId, 'user_joined', (data: any) => {
       console.log(`${data.displayName} joined the channel`);
     });
 
-    socket.on('user_left', (data) => {
+    socketClient.addEventListener(componentId, 'user_left', (data: any) => {
       console.log(`${data.displayName} left the channel`);
     });
 
     // Cleanup on unmount
     return () => {
-      if (socket.connected) {
-        socket.emit('leave_channel', { channelId: chat.id });
-        socket.disconnect();
-      }
-      socketRef.current = null;
+      console.log('🧹 Cleaning up MessageArea event listeners for component:', componentId);
+      socketClient.removeEventListeners(componentId);
+      socketClient.leaveChannel(chat.id);
     };
-  }, [chat.id, currentUser?.username]);
+  }, [chat.id, currentUser?.username, componentId]);
 
   // Typing indicator management
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleTypingStart = useCallback(() => {
-    if (!socketRef.current?.connected || isTyping) return;
+    if (!socketClient.isConnected() || isTyping) return;
     
     setIsTyping(true);
-    socketRef.current.emit('typing_start', { channelId: chat.id });
+    socketClient.emit('typing_start', { channelId: chat.id });
     
     // Clear existing timeout
     if (typingTimeoutRef.current) {
@@ -313,10 +273,10 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
   }, [chat.id, isTyping]);
 
   const handleTypingStop = useCallback(() => {
-    if (!socketRef.current?.connected || !isTyping) return;
+    if (!socketClient.isConnected() || !isTyping) return;
     
     setIsTyping(false);
-    socketRef.current.emit('typing_stop', { channelId: chat.id });
+    socketClient.emit('typing_stop', { channelId: chat.id });
     
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -444,21 +404,27 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
     setMessages(prev => [...prev, optimisticMessage]);
     setReplyingTo(null);
 
-    // Send via Socket.io
+    // Send via Socket.io singleton
     try {
-      if (socketRef.current?.connected) {
-        console.log('📤 Sending message via Socket.io:', {
+      if (socketClient.isConnected()) {
+        console.log('📤 Sending message via Socket.io singleton:', {
           channelId: chat.id,
           message: messageContent,
           type: 'text',
           replyToId: replyingTo?.id || null
         });
-        socketRef.current.emit('send_message', {
-          channelId: chat.id,
-          message: messageContent,
-          type: 'text',
-          replyToId: replyingTo?.id || null
-        });
+        const success = socketClient.sendMessage(
+          chat.id,
+          messageContent,
+          'text',
+          replyingTo?.id || undefined
+        );
+        
+        if (!success) {
+          console.error('❌ Failed to send message via singleton');
+          // Remove optimistic message on failure
+          setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+        }
       } else {
         console.error('❌ Socket.io not connected, cannot send message');
         // Remove optimistic message on failure
