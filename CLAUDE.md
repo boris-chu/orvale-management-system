@@ -275,6 +275,101 @@ systemLogger.configUpdated(setting, updatedBy);
    - Test background/foreground transitions
    - Test with poor network conditions
 
+### 🔌 Socket.io Singleton Pattern - CRITICAL FOR REAL-TIME FEATURES
+
+**IMPORTANT: All Socket.io connections must use the singleton client pattern to prevent connection issues and enable WebRTC signaling for audio/video calls.**
+
+#### 🎯 **Why Singleton is Required**
+
+1. **Single Persistent Connection**: Prevents multiple Socket.io connections from different components
+2. **Real-time Message Delivery**: Ensures messages appear instantly without navigation refresh
+3. **WebRTC Signaling**: Required for audio/video call signaling (future implementation)
+4. **Resource Efficiency**: Reduces server load and client-side connection overhead
+5. **React StrictMode Safe**: Prevents double-connection issues in development
+
+#### ✅ **Socket.io Singleton Implementation**
+
+**Location**: `/lib/socket-client.ts`
+
+```javascript
+import { socketClient } from '@/lib/socket-client';
+
+// ✅ CORRECT: Use singleton in all chat components
+const componentId = useRef(`ComponentName_${chat.id}_${Date.now()}`).current;
+
+// Connect (shared connection)
+const socket = socketClient.connect(token);
+
+// Add event listeners (component-scoped)
+socketClient.addEventListener(componentId, 'message_received', (data) => {
+  // Handle message
+});
+
+// Emit events
+socketClient.emit('send_message', { channelId, message });
+socketClient.sendMessage(channelId, message, 'text'); // Helper method
+
+// Join/leave channels
+socketClient.joinChannel(channelId);
+socketClient.leaveChannel(channelId);
+
+// Cleanup (only removes this component's listeners)
+return () => {
+  socketClient.removeEventListeners(componentId);
+};
+```
+
+#### ❌ **What NOT to do:**
+
+```javascript
+// DON'T: Create direct Socket.io connections
+const socket = io('http://localhost:3001', { auth: { token } });
+
+// DON'T: Disconnect shared socket in cleanup
+socket.disconnect(); // Breaks other components!
+```
+
+#### 🏗️ **Component Usage Pattern**
+
+1. **MessageArea.tsx**: Joins active channel for messaging + listens to all events
+2. **ChatSidebar.tsx**: Listens to `message_notification` only for unread counts (NO channel joins)
+3. **ChatWidget.tsx**: Listens to `message_received` for conversation updates
+4. **Future Audio/Video**: Will use same singleton for WebRTC signaling events
+
+#### 🔄 **Event Flow**
+
+```
+User sends message in MessageArea
+    ↓
+socketClient.sendMessage() → Server
+    ↓
+Server broadcasts message_received → All connected clients
+    ↓
+All components receive via their addEventListener handlers:
+- MessageArea: Updates message list in real-time
+- ChatSidebar: Updates unread count badge
+- ChatWidget: Updates conversation preview
+```
+
+#### 🚀 **Future WebRTC Integration**
+
+The singleton pattern is **REQUIRED** for audio/video calls:
+
+```javascript
+// Future WebRTC implementation will use same singleton
+socketClient.addEventListener(componentId, 'call:incoming', (data) => {
+  // Handle incoming call
+});
+
+socketClient.addEventListener(componentId, 'call:ice_candidate', (data) => {
+  // Handle WebRTC ICE candidate
+});
+
+socketClient.emit('call:invite', { targetUserId, callType: 'video', offer });
+```
+
+**This ensures all real-time features (chat + audio/video) share the same reliable connection.**
+
 ### ⚠️ UI Library Mixing - CRITICAL LESSONS LEARNED
 
 **NEVER mix different UI libraries for the same component type**. This causes focus management conflicts and infinite recursion errors, especially with React 19.
