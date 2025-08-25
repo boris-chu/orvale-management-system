@@ -403,9 +403,21 @@ export default function ChatSidebar({
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
               {title}
             </span>
-            {chatUISettings.show_unread_badges && (
-              (unreadCount > 0) || (chatUISettings.show_zero_counts && unreadCount === 0)
-            ) && (
+            {(() => {
+              const shouldShowSectionBadge = chatUISettings.show_unread_badges && (
+                (unreadCount > 0) || 
+                (chatUISettings.show_zero_counts && unreadCount === 0)
+              );
+              
+              console.log('🏷️ Section Badge Debug for', title, {
+                unreadCount,
+                show_unread_badges: chatUISettings.show_unread_badges,
+                show_zero_counts: chatUISettings.show_zero_counts,
+                shouldShowSectionBadge
+              });
+              
+              return shouldShowSectionBadge;
+            })() && (
               <Badge 
                 variant="secondary" 
                 className={cn(
