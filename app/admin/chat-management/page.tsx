@@ -10,14 +10,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { MenuItem } from '@mui/material';
 import { 
   Settings,
   Activity, 
@@ -169,6 +168,12 @@ export default function ChatManagementPage() {
     members: [] as string[],
     broadcast_permissions: [] as string[]
   });
+  
+  // Member management state
+  const [channelMembers, setChannelMembers] = useState<any[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const [showMemberManagement, setShowMemberManagement] = useState(false);
 
   // Load settings on mount
   useEffect(() => {
@@ -533,6 +538,98 @@ export default function ChatManagementPage() {
     }
   };
 
+  // Channel member management functions
+  const loadChannelMembers = async (channelId: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/admin/chat/channels/${channelId}/members`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setChannelMembers(data.members || []);
+      }
+    } catch (error) {
+      console.error('Error loading channel members:', error);
+    }
+  };
+
+  const loadAvailableUsers = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/developer/users', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableUsers(data.users || []);
+      }
+    } catch (error) {
+      console.error('Error loading available users:', error);
+    }
+  };
+
+  const addChannelMember = async (channelId: string, userId: string) => {
+    try {
+      setIsProcessing(true);
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/admin/chat/channels/${channelId}/members`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          role: 'member'
+        })
+      });
+
+      if (response.ok) {
+        await loadChannelMembers(channelId);
+        await loadChannels(); // Refresh channel list to update member counts
+        alert('Member added successfully!');
+      } else {
+        const error = await response.json();
+        alert(`Failed to add member: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error adding channel member:', error);
+      alert('Error occurred while adding member.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const removeChannelMember = async (channelId: string, userId: string) => {
+    if (!confirm('Remove this member from the channel?')) return;
+    
+    try {
+      setIsProcessing(true);
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/admin/chat/channels/${channelId}/members/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        await loadChannelMembers(channelId);
+        await loadChannels(); // Refresh channel list to update member counts
+        alert('Member removed successfully!');
+      } else {
+        const error = await response.json();
+        alert(`Failed to remove member: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error removing channel member:', error);
+      alert('Error occurred while removing member.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Helper functions for UI
   const getBrowserFromUserAgent = (userAgent: string) => {
     if (userAgent?.includes('Chrome')) return 'chrome';
@@ -733,7 +830,7 @@ export default function ChatManagementPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className={`grid w-full ${currentUser?.permissions?.includes('admin.manage_chat_channels') ? 'grid-cols-5' : 'grid-cols-4'}`}>
+        <TabsList className="flex w-full justify-start space-x-1">
           <TabsTrigger value="dashboard">
             <Activity className="h-4 w-4 mr-2" />
             Dashboard
@@ -746,12 +843,13 @@ export default function ChatManagementPage() {
             <Users className="h-4 w-4 mr-2" />
             Users
           </TabsTrigger>
-          {currentUser?.permissions?.includes('admin.manage_chat_channels') && (
-            <TabsTrigger value="channels">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Channels
-            </TabsTrigger>
-          )}
+          <TabsTrigger 
+            value="channels" 
+            className={!currentUser?.permissions?.includes('admin.manage_chat_channels') ? 'hidden' : ''}
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Channels
+          </TabsTrigger>
           <TabsTrigger value="monitor">
             <Monitor className="h-4 w-4 mr-2" />
             Monitor
@@ -1505,6 +1603,19 @@ export default function ChatManagementPage() {
                           size="sm"
                           onClick={() => {
                             setSelectedChannel(channel);
+                            loadChannelMembers(channel.id);
+                            loadAvailableUsers();
+                            setShowMemberManagement(true);
+                          }}
+                          title="Manage Members"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedChannel(channel);
                             setShowEditChannelModal(true);
                           }}
                         >
@@ -1770,6 +1881,137 @@ export default function ChatManagementPage() {
               >
                 {isProcessing ? 'Updating...' : 'Update Channel'}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Member Management Modal */}
+      {showMemberManagement && selectedChannel && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <UserPlus className="h-5 w-5" />
+                Manage Members: #{selectedChannel.name}
+              </h2>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowMemberManagement(false);
+                  setSelectedChannel(null);
+                  setChannelMembers([]);
+                  setMemberSearchQuery('');
+                }}
+              >
+                Close
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Current Members */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Current Members ({channelMembers.length})
+                </h3>
+                
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {channelMembers.map(member => (
+                    <div key={member.user_id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <div className="font-medium">{member.display_name}</div>
+                        <div className="text-sm text-gray-500">{member.user_id}</div>
+                        <div className="text-xs text-gray-400">
+                          {member.role} • Joined {new Date(member.joined_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeChannelMember(selectedChannel.id, member.user_id)}
+                        disabled={member.role === 'owner'}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <UserMinus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  {channelMembers.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No members in this channel yet.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Add Members */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Add Members</h3>
+                
+                <div className="mb-4">
+                  <Input
+                    placeholder="Search users..."
+                    value={memberSearchQuery}
+                    onChange={(e) => setMemberSearchQuery(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {availableUsers
+                    .filter(user => 
+                      user.active && 
+                      !channelMembers.some(member => member.user_id === user.username) &&
+                      (user.display_name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                       user.username.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                       user.email?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
+                    )
+                    .map(user => (
+                      <div key={user.username} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <div className="font-medium">{user.display_name}</div>
+                          <div className="text-sm text-gray-500">{user.username}</div>
+                          <div className="text-xs text-gray-400">{user.email}</div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addChannelMember(selectedChannel.id, user.username)}
+                          disabled={isProcessing}
+                        >
+                          <UserPlus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    
+                  {availableUsers.filter(user => 
+                    user.active && 
+                    !channelMembers.some(member => member.user_id === user.username) &&
+                    (user.display_name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                     user.username.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                     user.email?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
+                  ).length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>{memberSearchQuery ? 'No users found matching your search.' : 'All active users are already members.'}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Channel Info */}
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium mb-2">Channel Information</h4>
+              <div className="text-sm text-gray-600 space-y-1">
+                <p><strong>Name:</strong> #{selectedChannel.name}</p>
+                <p><strong>Type:</strong> {selectedChannel.type === 'public_channel' ? 'Public' : 'Private'}</p>
+                <p><strong>Description:</strong> {selectedChannel.description || 'No description'}</p>
+                <p><strong>Read-Only:</strong> {selectedChannel.is_read_only ? 'Yes' : 'No'}</p>
+                <p><strong>Total Members:</strong> {channelMembers.length}</p>
+              </div>
             </div>
           </div>
         </div>

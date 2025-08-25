@@ -80,76 +80,119 @@ export default function ChatWidget({
   const [quickMessage, setQuickMessage] = useState('');
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [chatSystemError, setChatSystemError] = useState<string | null>(null);
 
   const componentId = useRef(`ChatWidget_${Date.now()}`).current;
   const widgetRef = useRef<HTMLDivElement>(null);
 
-  // Mock recent conversations for development
-  const mockConversations: ChatConversation[] = [
-    {
-      id: '1',
-      type: 'dm',
-      name: 'john.smith',
-      displayName: 'John Smith',
-      lastMessage: {
-        content: 'Hey, can you check the server status?',
-        timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-        sender: { username: 'john.smith', display_name: 'John Smith', role_id: 'support' }
-      },
-      unreadCount: 2,
-      isOnline: true,
-      status: 'online'
-    },
-    {
-      id: '2',
-      type: 'dm', 
-      name: 'jane.doe',
-      displayName: 'Jane Doe',
-      lastMessage: {
-        content: 'Thanks for the help!',
-        timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-        sender: { username: 'jane.doe', display_name: 'Jane Doe', role_id: 'user' }
-      },
-      unreadCount: 0,
-      isOnline: true,
-      status: 'away'
-    },
-    {
-      id: '3',
-      type: 'channel',
-      name: 'general',
-      displayName: '#general',
-      lastMessage: {
-        content: 'Meeting starts in 10 minutes',
-        timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-        sender: { username: 'admin', display_name: 'Admin', role_id: 'admin' }
-      },
-      unreadCount: 1,
-      isOnline: false,
-      status: 'offline'
+  // Load real conversations from API
+  const loadConversations = useCallback(async () => {
+    if (!currentUser?.username) {
+      setIsLoading(false);
+      return;
     }
-  ];
 
-  // Initialize conversations and Socket.io
+    try {
+      setIsLoading(true);
+      setChatSystemError(null);
+      
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        setChatSystemError('Authentication required for chat system');
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await fetch('/api/chat/channels', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const realConversations = data.channels?.map((channel: any) => ({
+          id: channel.id.toString(),
+          type: 'channel' as const,
+          name: channel.name,
+          displayName: `#${channel.name}`,
+          lastMessage: channel.lastMessage ? {
+            content: channel.lastMessage.message,
+            timestamp: channel.lastMessage.timestamp,
+            sender: {
+              username: channel.lastMessage.user_id,
+              display_name: channel.lastMessage.user_display_name,
+              role_id: 'user'
+            }
+          } : undefined,
+          unreadCount: channel.unreadCount || 0,
+          isOnline: false,
+          status: 'offline' as const
+        })) || [];
+        
+        setConversations(realConversations);
+        setTotalUnreadCount(realConversations.reduce((sum: number, conv: any) => sum + conv.unreadCount, 0));
+        setChatSystemError(null);
+      } else if (response.status === 401) {
+        setChatSystemError('Chat authentication failed - please log in again');
+      } else if (response.status === 403) {
+        setChatSystemError('Insufficient permissions for chat system');
+      } else {
+        setChatSystemError(`Chat API error: ${response.status} - ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Failed to load conversations:', error);
+      setChatSystemError('Chat system unavailable - server connection failed');
+      setConversations([]);
+      setTotalUnreadCount(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentUser?.username]);
+
+  // Initialize Socket.io connection
   useEffect(() => {
     if (!currentUser?.username) return;
 
-    // Set mock conversations
-    setConversations(mockConversations);
-    setTotalUnreadCount(mockConversations.reduce((sum, conv) => sum + conv.unreadCount, 0));
-
-    // Initialize Socket.io connection using singleton
-    const token = localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
-    if (!token) return;
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      setChatSystemError('Authentication required for chat system');
+      return;
+    }
 
     console.log('🔌 Connecting ChatWidget to Socket.io via singleton');
     
-    // Connect using singleton client
-    const socket = socketClient.connect(token);
+    try {
+      // Connect using singleton client
+      const socket = socketClient.connect(token);
+      
+      // Load conversations
+      loadConversations();
+      
+      // Handle Socket.io connection errors
+      socketClient.addEventListener(componentId, 'connect_error', (error: any) => {
+        console.error('Socket.io connection error:', error);
+        setChatSystemError('Chat server connection failed - real-time features unavailable');
+      });
+
+      socketClient.addEventListener(componentId, 'disconnect', (reason: string) => {
+        console.warn('Socket.io disconnected:', reason);
+        setChatSystemError('Chat connection lost - attempting to reconnect...');
+      });
+
+      socketClient.addEventListener(componentId, 'connect', () => {
+        console.log('Socket.io connected successfully');
+        setChatSystemError(null);
+      });
+    } catch (error) {
+      console.error('Failed to initialize Socket.io:', error);
+      setChatSystemError('Chat system initialization failed');
+    }
 
     // Listen for new messages
     socketClient.addEventListener(componentId, 'message_received', (data: any) => {
       const { message } = data;
+      
       // Update conversation with new message
       setConversations(prev => prev.map(conv => {
         if (conv.id === message.channelId.toString()) {
@@ -170,8 +213,21 @@ export default function ChatWidget({
         return conv;
       }));
 
-      // Update total unread count
-      if (message.userId !== currentUser.username) {
+      // If this message is for the currently selected chat, add it to messages
+      if (selectedChat && message.channelId.toString() === selectedChat.id) {
+        setMessages(prev => [...prev, {
+          id: message.id,
+          message: message.message,
+          timestamp: message.timestamp,
+          user_id: message.userId,
+          user_display_name: message.userDisplayName,
+          channel_id: message.channelId
+        }]);
+      }
+
+      // Update total unread count (only if not the current user's message and not viewing this chat)
+      if (message.userId !== currentUser.username && 
+          (!selectedChat || selectedChat.id !== message.channelId.toString())) {
         setTotalUnreadCount(prev => prev + 1);
       }
     });
@@ -181,7 +237,7 @@ export default function ChatWidget({
       console.log('🧹 Cleaning up ChatWidget event listeners for component:', componentId);
       socketClient.removeEventListeners(componentId);
     };
-  }, [currentUser?.username, componentId]);
+  }, [currentUser?.username, componentId, loadConversations, selectedChat]);
 
   // Position classes
   const positionClasses = {
@@ -198,20 +254,65 @@ export default function ChatWidget({
 
   // Handle quick message send
   const handleQuickMessage = useCallback(() => {
-    if (!quickMessage.trim() || !selectedChat || !socketRef.current?.connected) return;
+    if (!quickMessage.trim() || !selectedChat || !socketClient.isConnected()) return;
 
-    socketRef.current.emit('send_message', {
-      channelId: selectedChat.id,
-      message: quickMessage.trim(),
-      type: 'text'
-    });
+    const socket = socketClient.getSocket();
+    if (socket) {
+      const messageData = {
+        channelId: selectedChat.id,
+        message: quickMessage.trim(),
+        type: 'text'
+      };
+      
+      socket.emit('send_message', messageData);
+      
+      // Optimistically add message to local state
+      const optimisticMessage = {
+        id: `temp_${Date.now()}`,
+        message: quickMessage.trim(),
+        timestamp: new Date().toISOString(),
+        user_id: currentUser?.username || '',
+        user_display_name: currentUser?.display_name || 'You',
+        channel_id: selectedChat.id
+      };
+      
+      setMessages(prev => [...prev, optimisticMessage]);
+    }
 
     setQuickMessage('');
-  }, [quickMessage, selectedChat]);
+  }, [quickMessage, selectedChat, currentUser]);
+
+  // Load recent messages for selected chat
+  const loadRecentMessages = useCallback(async (chatId: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        setMessages([]);
+        return;
+      }
+
+      const response = await fetch(`/api/chat/messages?channelId=${chatId}&limit=5`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(data.messages || []);
+      } else {
+        console.error(`Failed to load messages for chat ${chatId}:`, response.status);
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Failed to load recent messages:', error);
+      setMessages([]);
+    }
+  }, []);
 
   // Handle chat selection
   const handleChatSelect = (chat: ChatConversation) => {
     setSelectedChat(chat);
+    loadRecentMessages(chat.id);
+    
     // Mark as read
     setConversations(prev => prev.map(conv => 
       conv.id === chat.id ? { ...conv, unreadCount: 0 } : conv
@@ -252,14 +353,18 @@ export default function ChatWidget({
             <MessageCircle className="h-6 w-6" />
           </Button>
           
-          {/* Unread badge */}
-          {totalUnreadCount > 0 && (
+          {/* Unread badge or error indicator */}
+          {chatSystemError ? (
+            <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center">
+              !
+            </Badge>
+          ) : totalUnreadCount > 0 ? (
             <Badge 
               className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center"
             >
               {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
             </Badge>
-          )}
+          ) : null}
         </motion.div>
       </div>
     );
@@ -315,12 +420,47 @@ export default function ChatWidget({
             </CardHeader>
 
             <CardContent className="p-0 h-[calc(100%-4rem)] flex flex-col">
+              {/* Chat System Status/Error Display */}
+              {chatSystemError && (
+                <div className="p-3 mx-2 mt-2 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-2 h-2 bg-red-500 rounded-full mt-1.5"></div>
+                    <div>
+                      <p className="text-xs font-medium text-red-800 mb-1">Chat System Status</p>
+                      <p className="text-xs text-red-700">{chatSystemError}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {!selectedChat ? (
                 /* Recent Conversations List */
                 <ScrollArea className="flex-1">
                   <div className="p-2">
                     <div className="text-xs font-medium text-gray-500 mb-2 px-2">Recent</div>
-                    {conversations.map((chat) => (
+                    
+                    {isLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="text-xs text-gray-500">Loading conversations...</div>
+                      </div>
+                    ) : chatSystemError ? (
+                      <div className="flex items-center justify-center py-8 text-center">
+                        <div className="text-xs text-gray-500">
+                          <MessageCircle className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                          <p>Chat unavailable</p>
+                          <p>Check system status above</p>
+                        </div>
+                      </div>
+                    ) : conversations.length === 0 ? (
+                      <div className="flex items-center justify-center py-8 text-center">
+                        <div className="text-xs text-gray-500">
+                          <MessageCircle className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                          <p>No conversations yet</p>
+                          <p>Start chatting to see them here</p>
+                        </div>
+                      </div>
+                    ) : (
+                      conversations.map((chat) => (
                       <button
                         key={chat.id}
                         onClick={() => handleChatSelect(chat)}
@@ -359,7 +499,7 @@ export default function ChatWidget({
                           )}
                         </div>
                       </button>
-                    ))}
+                    )))}
                   </div>
                 </ScrollArea>
               ) : (
@@ -404,13 +544,41 @@ export default function ChatWidget({
                     )}
                   </div>
                   
-                  {/* Messages Area - Simplified for quick view */}
-                  <div className="flex-1 p-4 flex items-center justify-center text-center">
-                    <div className="text-sm text-gray-500">
-                      <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>Click "Expand" to view full conversation</p>
-                    </div>
-                  </div>
+                  {/* Messages Area - Show recent messages */}
+                  <ScrollArea className="flex-1 p-3">
+                    {messages.length > 0 ? (
+                      <div className="space-y-3">
+                        {messages.slice(-3).map((message: any, index: number) => (
+                          <div key={message.id || index} className="flex flex-col">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-medium text-gray-600">
+                                {message.user_display_name || message.userId}
+                              </span>
+                              <span className="text-xs text-gray-400">
+                                {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-800 bg-gray-50 rounded-lg p-2 ml-2">
+                              {message.message}
+                            </div>
+                          </div>
+                        ))}
+                        {messages.length > 3 && (
+                          <div className="text-xs text-gray-500 text-center py-2 border-t">
+                            Click "Expand" to view all messages
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-center">
+                        <div className="text-sm text-gray-500">
+                          <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p>No messages yet</p>
+                          <p className="text-xs">Start the conversation below</p>
+                        </div>
+                      </div>
+                    )}
+                  </ScrollArea>
                   
                   {/* Quick Message Input */}
                   <div className="p-3 border-t">
@@ -418,8 +586,9 @@ export default function ChatWidget({
                       <Input
                         value={quickMessage}
                         onChange={(e) => setQuickMessage(e.target.value)}
-                        placeholder="Quick message..."
+                        placeholder={chatSystemError ? "Chat unavailable..." : "Quick message..."}
                         className="flex-1 text-sm"
+                        disabled={!!chatSystemError}
                         onKeyPress={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
@@ -430,8 +599,9 @@ export default function ChatWidget({
                       <Button
                         onClick={handleQuickMessage}
                         size="sm"
-                        disabled={!quickMessage.trim()}
+                        disabled={!quickMessage.trim() || !!chatSystemError}
                         className="px-3"
+                        title={chatSystemError ? "Chat system unavailable" : "Send message"}
                       >
                         <Send className="h-3 w-3" />
                       </Button>

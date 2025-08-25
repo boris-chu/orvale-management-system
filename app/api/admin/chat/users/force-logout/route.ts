@@ -19,8 +19,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Check chat management permissions
-    if (!authResult.user.permissions?.includes('chat.admin_dashboard') && 
-        !authResult.user.permissions?.includes('chat.manage_users')) {
+    const hasPermission = authResult.user.permissions?.includes('chat.manage_system') || 
+                         authResult.user.permissions?.includes('admin.system_settings') ||
+                         authResult.user.permissions?.includes('admin.manage_chat_channels') ||
+                         authResult.user.role === 'admin';
+
+    if (!hasPermission) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
