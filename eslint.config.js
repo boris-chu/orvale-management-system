@@ -7,18 +7,17 @@ const compat = new FlatCompat({
   recommendedConfig: js.configs.recommended,
 });
 
-module.exports = [
-  ...compat.extends('next/core-web-vitals', 'next/typescript'),
-  {
-    ignores: [
-      '.next/**',
-      'node_modules/**',
-      'dist/**',
-      'build/**',
-      'coverage/**',
-      '*.config.js',
-      '*.config.ts',
-      'tsconfig.tsbuildinfo',
-    ],
-  },
-];
+module.exports = [{
+  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts"]
+}, ...compat.extends('next/core-web-vitals', 'next/typescript'), {
+  ignores: [
+    '.next/**',
+    'node_modules/**',
+    'dist/**',
+    'build/**',
+    'coverage/**',
+    '*.config.js',
+    '*.config.ts',
+    'tsconfig.tsbuildinfo',
+  ],
+}];

@@ -10,7 +10,7 @@ import { verifyAuth } from '@/lib/auth';
 
 const db = new Database.Database('./orvale_tickets.db');
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<Response> {
   try {
     // Verify authentication
     const authResult = await verifyAuth(request);
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     presenceQuery += ` ORDER BY p.status, u.display_name`;
 
-    return new Promise((resolve) => {
+    return new Promise<Response>((resolve) => {
       db.all(presenceQuery, queryParams, (err, users) => {
         if (err) {
           console.error('Database error fetching presence:', err);

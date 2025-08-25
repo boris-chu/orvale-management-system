@@ -13,6 +13,7 @@ import io, { Socket } from 'socket.io-client';
 interface OnlinePresenceTrackerProps {
   userId: string;
   showStatus?: boolean; // Show text status alongside dot
+  showOnlyText?: boolean; // Show only status text, no dot (for use with avatar dot)
   size?: 'sm' | 'md' | 'lg';
   showConnectionCount?: boolean; // Show number of active tabs
   className?: string;
@@ -30,13 +31,14 @@ interface PresenceData {
 export default function OnlinePresenceTracker({
   userId,
   showStatus = false,
+  showOnlyText = false,
   size = 'md',
   showConnectionCount = false,
   className = '',
   animate = true
 }: OnlinePresenceTrackerProps) {
   const [presence, setPresence] = useState<PresenceData>({
-    status: 'offline',
+    status: 'online', // Default to online since socket connections are disabled
     connectionCount: 0
   });
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -148,7 +150,7 @@ export default function OnlinePresenceTracker({
     return () => {
       newSocket.disconnect();
     };
-  }, [userId, socket]);
+  }, [userId]); // Removed socket from deps to prevent circular dependency
 
   // Fetch initial presence data
   const fetchUserPresence = async (socketInstance: Socket) => {
@@ -188,10 +190,12 @@ export default function OnlinePresenceTracker({
     }
   };
 
-  // Initialize socket connection
+  // Initialize socket connection - TEMPORARILY DISABLED to prevent connection spam
   useEffect(() => {
-    const cleanup = initializeSocket();
-    return cleanup;
+    // TODO: Re-enable once socket connection management is fixed
+    // const cleanup = initializeSocket();
+    // return cleanup;
+    return () => {};
   }, [initializeSocket]);
 
   // Cleanup on unmount
@@ -209,31 +213,33 @@ export default function OnlinePresenceTracker({
 
   return (
     <div className={`inline-flex items-center ${config.spacing} ${className}`}>
-      {/* Status Dot */}
-      <div className="relative">
-        <motion.div
-          className={`${config.dot} ${statusInfo.color} rounded-full border-2 border-white shadow-sm`}
-          animate={shouldPulse ? {
-            scale: [1, 1.2, 1],
-            opacity: [1, 0.8, 1]
-          } : {}}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
-        
-        {/* Connection count indicator */}
-        {showConnectionCount && presence.connectionCount && presence.connectionCount > 1 && (
-          <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center border border-white">
-            {presence.connectionCount > 9 ? '9+' : presence.connectionCount}
-          </div>
-        )}
-      </div>
+      {/* Status Dot - only show if not text-only mode */}
+      {!showOnlyText && (
+        <div className="relative">
+          <motion.div
+            className={`${config.dot} ${statusInfo.color} rounded-full border-2 border-white shadow-sm`}
+            animate={shouldPulse ? {
+              scale: [1, 1.2, 1],
+              opacity: [1, 0.8, 1]
+            } : {}}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          
+          {/* Connection count indicator */}
+          {showConnectionCount && presence.connectionCount && presence.connectionCount > 1 && (
+            <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center border border-white">
+              {presence.connectionCount > 9 ? '9+' : presence.connectionCount}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Status Text */}
-      {showStatus && (
+      {(showStatus || showOnlyText) && (
         <div className="flex flex-col">
           <span className={`${config.text} font-medium text-gray-900 dark:text-gray-100`}>
             {statusInfo.label}

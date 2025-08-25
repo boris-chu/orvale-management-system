@@ -10,7 +10,7 @@ import { verifyAuth } from '@/lib/auth';
 
 const db = new Database.Database('./orvale_tickets.db');
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<Response> {
   try {
     // Verify authentication
     const authResult = await verifyAuth(request);
@@ -89,9 +89,9 @@ export async function GET(request: NextRequest) {
     }
 
     messagesQuery += ` ORDER BY m.created_at DESC LIMIT ? OFFSET ?`;
-    queryParams.push(limit, offset);
+    queryParams.push(String(limit), String(offset));
 
-    return new Promise((resolve) => {
+    return new Promise<Response>((resolve) => {
       db.all(messagesQuery, queryParams, (err, messages) => {
         if (err) {
           console.error('Database error fetching messages:', err);

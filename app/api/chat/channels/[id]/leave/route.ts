@@ -9,15 +9,12 @@ import { verifyAuth } from '@/lib/auth';
 
 const db = new Database.Database('./orvale_tickets.db');
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(
+  request: NextRequest, 
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const channelId = params.id;
+    const { id: channelId } = await params;
     
     // Verify authentication
     const authResult = await verifyAuth(request);

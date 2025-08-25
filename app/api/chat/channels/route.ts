@@ -10,7 +10,7 @@ import { verifyAuth } from '@/lib/auth';
 
 const db = new Database.Database('./orvale_tickets.db');
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<Response> {
   try {
     // Verify authentication
     const authResult = await verifyAuth(request);
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       ORDER BY c.type, c.name
     `;
 
-    return new Promise((resolve) => {
+    return new Promise<Response>((resolve) => {
       db.all(query, [user.username, user.username], (err, channels) => {
         if (err) {
           console.error('Database error fetching channels:', err);

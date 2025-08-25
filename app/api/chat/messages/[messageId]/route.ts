@@ -10,15 +10,12 @@ import { verifyAuth } from '@/lib/auth';
 
 const db = new Database.Database('./orvale_tickets.db');
 
-interface RouteParams {
-  params: {
-    messageId: string;
-  };
-}
-
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(
+  request: NextRequest, 
+  { params }: { params: Promise<{ messageId: string }> }
+) {
   try {
-    const messageId = params.messageId;
+    const { messageId } = await params;
     
     // Verify authentication
     const authResult = await verifyAuth(request);
@@ -102,9 +99,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(
+  request: NextRequest, 
+  { params }: { params: Promise<{ messageId: string }> }
+) {
   try {
-    const messageId = params.messageId;
+    const { messageId } = await params;
     
     // Verify authentication
     const authResult = await verifyAuth(request);

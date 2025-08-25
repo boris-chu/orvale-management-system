@@ -30,8 +30,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   let authResult: any = null;
+  let resolvedParams: { id: string } | null = null;
   try {
-    const resolvedParams = await params;
+    resolvedParams = await params;
     const attachmentId = resolvedParams.id;
     
     if (!attachmentId) {
@@ -160,7 +161,7 @@ export async function GET(
       event: 'file_download_failed',
       error_message: error instanceof Error ? error.message : 'Unknown error',
       user: authResult?.user?.username || 'unknown',
-      attachment_id: params ? 'unknown' : 'unknown'
+      attachment_id: resolvedParams?.id || 'unknown'
     }, `File download failed`);
     
     return NextResponse.json(
@@ -175,8 +176,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   let authResult: any = null;
+  let resolvedParams: { id: string } | null = null;
   try {
-    const resolvedParams = await params;
+    resolvedParams = await params;
     const attachmentId = resolvedParams.id;
     
     if (!attachmentId) {

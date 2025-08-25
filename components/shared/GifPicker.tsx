@@ -84,7 +84,7 @@ export default function GifPicker({
     enable_categories: true
   });
 
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isMobile = useIsMobile();
 
   // Fetch admin settings on component mount

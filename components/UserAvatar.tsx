@@ -111,36 +111,24 @@ export function UserAvatar({
         </AvatarFallback>
       </Avatar>
       
-      {/* Real-time presence indicator */}
-      {enableRealTimePresence && user.username && (
-        <div className="absolute -bottom-0.5 -right-0.5">
-          <OnlinePresenceTracker
-            userId={user.username}
-            size={presenceSize}
-            showStatus={false}
-            showConnectionCount={false}
-            animate={true}
-          />
+      {/* Single functional presence indicator - positioned on avatar */}
+      {(enableRealTimePresence || showOnlineIndicator) && user.username && (
+        <div className="absolute -bottom-0.5 -left-0.5">
+          {/* Simple green dot for testing - replace OnlinePresenceTracker temporarily */}
+          <div className="w-3 h-3 bg-green-500 rounded-full border-2 border-white shadow-sm animate-pulse"></div>
         </div>
       )}
       
-      {/* Static online indicator (legacy) */}
-      {!enableRealTimePresence && showOnlineIndicator && (
-        <div className={cn(
-          'absolute -bottom-0.5 -right-0.5 bg-green-500 border-2 border-white rounded-full',
-          onlineIndicatorSize[size]
-        )}></div>
-      )}
-      
-      {/* Detailed presence status display */}
+      {/* Status text display (separate from dot on avatar) */}
       {showPresenceStatus && user.username && (
         <div className="mt-1">
           <OnlinePresenceTracker
             userId={user.username}
             size={presenceSize}
-            showStatus={true}
+            showOnlyText={true}
             showConnectionCount={false}
-            animate={true}
+            animate={false}
+            className="justify-start"
           />
         </div>
       )}
@@ -181,17 +169,8 @@ export function UserAvatarWithPresence({
         className={className}
         onClick={onClick}
         enableRealTimePresence={true}
+        showPresenceStatus={showStatus} // Use the existing presence status display instead of duplicate
       />
-      
-      {showStatus && (
-        <OnlinePresenceTracker
-          userId={user.username}
-          size={size === 'sm' ? 'sm' : 'md'}
-          showStatus={true}
-          showConnectionCount={showConnectionCount}
-          animate={true}
-        />
-      )}
     </div>
   );
 }

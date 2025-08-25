@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -88,36 +88,37 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
   const isMobile = useIsMobile();
   const isTouchDevice = useIsTouchDevice();
 
-  // Mock messages for development
-  useEffect(() => {
-    const mockMessages: Message[] = [
+  // Mock messages for development - using useMemo to prevent recreation
+  const mockMessages = useMemo(() => {
+    const baseTime = Date.now();
+    return [
       {
         id: '1',
         content: 'Hey there! How are you doing today?',
         sender: { username: 'jane.smith', display_name: 'Jane Smith', role_id: 'support' },
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-        message_type: 'text'
+        timestamp: new Date(baseTime - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
+        message_type: 'text' as const
       },
       {
         id: '2',
         content: 'I\'m doing great! Just working on the chat system implementation. It\'s coming along nicely.',
         sender: { username: 'boris.chu', display_name: 'Boris Chu', role_id: 'admin' },
-        timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1 hour ago
-        message_type: 'text'
+        timestamp: new Date(baseTime - 1000 * 60 * 60).toISOString(), // 1 hour ago
+        message_type: 'text' as const
       },
       {
         id: '3',
         content: 'That sounds awesome! Can you share some screenshots when you have a chance?',
         sender: { username: 'jane.smith', display_name: 'Jane Smith', role_id: 'support' },
-        timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min ago
-        message_type: 'text'
+        timestamp: new Date(baseTime - 1000 * 60 * 30).toISOString(), // 30 min ago
+        message_type: 'text' as const
       },
       {
         id: '4',
         content: 'Sure thing! I\'ll upload some mockups shortly. The mobile-first approach is working really well.',
         sender: { username: 'boris.chu', display_name: 'Boris Chu', role_id: 'admin' },
-        timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(), // 15 min ago
-        message_type: 'text',
+        timestamp: new Date(baseTime - 1000 * 60 * 15).toISOString(), // 15 min ago
+        message_type: 'text' as const,
         reactions: [
           { emoji: '👍', users: ['jane.smith'], count: 1 },
           { emoji: '🚀', users: ['jane.smith', 'john.doe'], count: 2 }
@@ -127,13 +128,15 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
         id: '5',
         content: 'Looking forward to seeing it! The team will love the new chat system.',
         sender: { username: 'jane.smith', display_name: 'Jane Smith', role_id: 'support' },
-        timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(), // 5 min ago
-        message_type: 'text'
+        timestamp: new Date(baseTime - 1000 * 60 * 5).toISOString(), // 5 min ago
+        message_type: 'text' as const
       }
     ];
-    
-    setMessages(mockMessages);
   }, [chat.id]);
+
+  useEffect(() => {
+    setMessages(mockMessages);
+  }, [mockMessages]);
 
   // Auto-scroll to bottom on new messages
   const scrollToBottom = useCallback(() => {

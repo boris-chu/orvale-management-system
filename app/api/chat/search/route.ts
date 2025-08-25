@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
       messageParams.push(user.username);
 
       messageQuery += ` ORDER BY m.created_at DESC LIMIT ?`;
-      messageParams.push(limit);
+      messageParams.push(String(limit));
 
       const messages: any[] = await new Promise((resolve) => {
         db.all(messageQuery, messageParams, (err, rows) => {
