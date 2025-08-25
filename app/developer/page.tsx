@@ -23,7 +23,8 @@ import {
   ArrowLeft,
   User,
   Globe,
-  Table
+  Table,
+  MessageCircle
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -226,6 +227,16 @@ export default function DeveloperDashboard() {
         color: 'bg-gray-500',
         stats: 'Configuration management',
         requiredPermissions: ['admin.system_settings']
+      },
+      {
+        id: 'chat_management',
+        title: 'Chat Management System',
+        description: 'Configure chat system, widget, and user management',
+        icon: MessageCircle,
+        href: '/admin/chat-management',
+        color: 'bg-emerald-500',
+        stats: 'Chat system administration',
+        requiredPermissions: ['chat.manage_system', 'admin.system_settings']
       },
       {
         id: 'rbac',

@@ -124,7 +124,13 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
         },
         timestamp: message.timestamp,
         message_type: message.messageType || 'text',
-        reply_to: message.replyToId ? { id: message.replyToId } : undefined
+        reply_to: message.replyToId ? { 
+          id: message.replyToId.toString(), 
+          content: '', 
+          sender: { username: '', display_name: '', role_id: '' }, 
+          timestamp: '', 
+          message_type: 'text' 
+        } : undefined
       }]);
     });
 
