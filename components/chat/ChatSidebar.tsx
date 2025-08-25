@@ -28,6 +28,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UserAvatar } from '@/components/UserAvatar';
 import OnlinePresenceTracker from '@/components/shared/OnlinePresenceTracker';
 import io, { Socket } from 'socket.io-client';
+import { useChatSettings } from '@/hooks/useChatSettings';
 
 interface User {
   username: string;
@@ -77,6 +78,7 @@ export default function ChatSidebar({
   });
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const socketRef = useRef<Socket | null>(null);
+  const { settings: chatUISettings } = useChatSettings();
 
   // Load real channels from API
   useEffect(() => {
@@ -276,7 +278,7 @@ export default function ChatSidebar({
                 <UserAvatar 
                   user={otherParticipant} 
                   size="md"
-                  enableRealTimePresence={true}
+                  enableRealTimePresence={chatUISettings.show_online_status}
                 />
               </div>
             ) : chat.type === 'channel' ? (
@@ -313,8 +315,11 @@ export default function ChatSidebar({
                 <span className="text-xs text-gray-500">
                   {formatTime(chat.lastMessageTime)}
                 </span>
-                {chat.unreadCount && chat.unreadCount > 0 && (
-                  <Badge variant="destructive" className="text-xs px-1.5 py-0.5 min-w-[18px] h-4 flex items-center justify-center">
+                {chatUISettings.show_unread_badges && chat.unreadCount && chat.unreadCount > 0 && (
+                  <Badge 
+                    className="text-xs px-1.5 py-0.5 min-w-[18px] h-4 flex items-center justify-center"
+                    style={{ backgroundColor: chatUISettings.unread_badge_color, color: 'white' }}
+                  >
                     {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                   </Badge>
                 )}
@@ -365,7 +370,7 @@ export default function ChatSidebar({
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
               {title}
             </span>
-            {unreadCount > 0 && (
+            {chatUISettings.show_unread_badges && unreadCount > 0 && (
               <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
                 {unreadCount}
               </Badge>

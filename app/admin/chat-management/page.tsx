@@ -62,6 +62,15 @@ interface ChatSettings {
   read_receipts_enabled: boolean;
   file_sharing_enabled: boolean;
   gif_picker_enabled: boolean;
+  
+  // UI Settings
+  show_unread_badges: boolean;
+  unread_badge_color: string;
+  show_channel_member_count: boolean;
+  show_typing_indicators: boolean;
+  show_online_status: boolean;
+  message_grouping_enabled: boolean;
+  timestamp_format: 'relative' | 'absolute' | 'both';
 }
 
 interface SystemStats {
@@ -96,6 +105,13 @@ export default function ChatManagementPage() {
     read_receipts_enabled: true,
     file_sharing_enabled: true,
     gif_picker_enabled: true,
+    show_unread_badges: true,
+    unread_badge_color: '#dc3545',
+    show_channel_member_count: false,
+    show_typing_indicators: true,
+    show_online_status: true,
+    message_grouping_enabled: true,
+    timestamp_format: 'relative',
   });
   const [stats, setStats] = useState<SystemStats>({
     socketio_status: 'connected',
@@ -869,6 +885,115 @@ export default function ChatManagementPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* UI Customization Settings */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>UI Customization</CardTitle>
+              <CardDescription>Configure chat interface appearance and behavior</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Unread Badges */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-sm font-medium">Show Unread Badges</Label>
+                      <p className="text-xs text-muted-foreground">Display unread message count badges</p>
+                    </div>
+                    <Switch
+                      checked={settings.show_unread_badges}
+                      onCheckedChange={(checked) => updateSetting('show_unread_badges', checked)}
+                    />
+                  </div>
+                  
+                  {settings.show_unread_badges && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Unread Badge Color</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="color"
+                          value={settings.unread_badge_color}
+                          onChange={(e) => updateSetting('unread_badge_color', e.target.value)}
+                          className="w-20 h-10"
+                        />
+                        <Input
+                          type="text"
+                          value={settings.unread_badge_color}
+                          onChange={(e) => updateSetting('unread_badge_color', e.target.value)}
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Typing Indicators */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium">Show Typing Indicators</Label>
+                    <p className="text-xs text-muted-foreground">Show when users are typing</p>
+                  </div>
+                  <Switch
+                    checked={settings.show_typing_indicators}
+                    onCheckedChange={(checked) => updateSetting('show_typing_indicators', checked)}
+                  />
+                </div>
+
+                {/* Online Status */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium">Show Online Status</Label>
+                    <p className="text-xs text-muted-foreground">Display user online/offline status</p>
+                  </div>
+                  <Switch
+                    checked={settings.show_online_status}
+                    onCheckedChange={(checked) => updateSetting('show_online_status', checked)}
+                  />
+                </div>
+
+                {/* Message Grouping */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium">Message Grouping</Label>
+                    <p className="text-xs text-muted-foreground">Group consecutive messages from same user</p>
+                  </div>
+                  <Switch
+                    checked={settings.message_grouping_enabled}
+                    onCheckedChange={(checked) => updateSetting('message_grouping_enabled', checked)}
+                  />
+                </div>
+
+                {/* Timestamp Format */}
+                <div className="space-y-2">
+                  <FormControl fullWidth size="small">
+                    <InputLabel className="text-sm font-medium">Timestamp Format</InputLabel>
+                    <MuiSelect
+                      value={settings.timestamp_format}
+                      label="Timestamp Format"
+                      onChange={(e) => updateSetting('timestamp_format', e.target.value)}
+                    >
+                      <MenuItem value="relative">Relative (5m ago)</MenuItem>
+                      <MenuItem value="absolute">Absolute (2:45 PM)</MenuItem>
+                      <MenuItem value="both">Both</MenuItem>
+                    </MuiSelect>
+                  </FormControl>
+                </div>
+
+                {/* Channel Member Count */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium">Show Channel Member Count</Label>
+                    <p className="text-xs text-muted-foreground">Display member count next to channels</p>
+                  </div>
+                  <Switch
+                    checked={settings.show_channel_member_count}
+                    onCheckedChange={(checked) => updateSetting('show_channel_member_count', checked)}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Users Tab */}
