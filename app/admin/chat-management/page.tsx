@@ -223,10 +223,18 @@ export default function ChatManagementPage() {
   const saveSettings = async () => {
     setIsSaving(true);
     try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        alert('Authentication required. Please log in again.');
+        window.location.href = '/';
+        return;
+      }
+
       const response = await fetch('/api/admin/chat/settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(settings),
       });
@@ -238,7 +246,17 @@ export default function ChatManagementPage() {
         // Trigger widget refresh across all pages
         window.dispatchEvent(new CustomEvent('chat-settings-updated', { detail: settings }));
       } else {
-        throw new Error('Failed to save settings');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Save failed:', response.status, errorData);
+        if (response.status === 401) {
+          alert('Authentication expired. Please log in again.');
+          window.location.href = '/';
+          return;
+        } else if (response.status === 403) {
+          alert('You do not have permission to modify chat settings.');
+          return;
+        }
+        throw new Error(errorData.error || 'Failed to save settings');
       }
     } catch (error) {
       console.error('Failed to save settings:', error);
