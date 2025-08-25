@@ -99,9 +99,11 @@ export default function ChatWidget({
   const [messages, setMessages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [chatSystemError, setChatSystemError] = useState<string | null>(null);
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
 
   const componentId = useRef(`ChatWidget_${Date.now()}`).current;
   const widgetRef = useRef<HTMLDivElement>(null);
+  const selectedChatRef = useRef<ChatConversation | null>(null);
 
   // Load real conversations from API
   const loadConversations = useCallback(async () => {
@@ -194,19 +196,94 @@ export default function ChatWidget({
       socketClient.addEventListener(componentId, 'disconnect', (reason: string) => {
         console.warn('Socket.io disconnected:', reason);
         setChatSystemError('Chat connection lost - attempting to reconnect...');
+        setIsSocketConnected(false);
       });
 
       socketClient.addEventListener(componentId, 'connect', () => {
         console.log('Socket.io connected successfully');
         setChatSystemError(null);
+        setIsSocketConnected(true);
       });
     } catch (error) {
       console.error('Failed to initialize Socket.io:', error);
       setChatSystemError('Chat system initialization failed');
     }
 
+    // Listen for confirmation of our own sent messages
+    socketClient.addEventListener(componentId, 'message_sent', (data: any) => {
+      const { message } = data;
+      console.log('✅ ChatWidget: Message sent confirmation:', message);
+      
+      // Replace optimistic message with server version
+      if (selectedChatRef.current && message.channelId.toString() === selectedChatRef.current.id) {
+        setMessages(prev => {
+          const optimisticIndex = prev.findIndex(msg => 
+            msg.isOptimistic && 
+            msg.message_text === message.message && 
+            msg.user_id === message.userId
+          );
+          
+          if (optimisticIndex !== -1) {
+            console.log('🔄 ChatWidget: Replacing optimistic message with server confirmation');
+            const newMessages = [...prev];
+            newMessages[optimisticIndex] = {
+              id: message.id,
+              message_text: message.message,
+              created_at: message.timestamp,
+              user_id: message.userId,
+              user_display_name: message.userDisplayName,
+              channel_id: message.channelId
+            };
+            return newMessages;
+          }
+          return prev;
+        });
+      }
+    });
+
+    // Listen for global message notifications for unread count updates
+    socketClient.addEventListener(componentId, 'message_notification', (data: any) => {
+      const { message, channel } = data;
+      const channelId = channel.id.toString();
+      
+      console.log('📬 ChatWidget received message notification for channel:', channelId, 'from:', message.userDisplayName);
+      
+      // Only increment unread count if:
+      // 1. This channel is not currently selected, AND 
+      // 2. The message is not from the current user (avoid self-notifications)
+      if (channelId !== selectedChatRef.current?.id && message.userId !== currentUser?.username) {
+        console.log('📊 ChatWidget: Incrementing unread count for channel:', channelId);
+        
+        // Update conversation unread count
+        setConversations(prev => prev.map(conv => 
+          conv.id === channelId ? { 
+            ...conv, 
+            unreadCount: (conv.unreadCount || 0) + 1,
+            lastMessage: {
+              content: message.message,
+              timestamp: message.timestamp,
+              sender: {
+                username: message.userId,
+                display_name: message.userDisplayName,
+                role_id: 'user'
+              }
+            }
+          } : conv
+        ));
+        
+        // Update total unread count
+        setTotalUnreadCount(prev => prev + 1);
+      } else {
+        console.log('📊 ChatWidget: Skipping unread increment - channel selected or own message:', {
+          isSelected: channelId === selectedChatRef.current?.id,
+          isOwnMessage: message.userId === currentUser?.username
+        });
+      }
+    });
+
     // Listen for new messages
     socketClient.addEventListener(componentId, 'message_received', (data: any) => {
+      console.log('🔔 ChatWidget: Socket.io message_received event:', data);
       const { message } = data;
       
       // Update conversation with new message
@@ -230,15 +307,57 @@ export default function ChatWidget({
       }));
 
       // If this message is for the currently selected chat, add it to messages
-      if (selectedChat && message.channelId.toString() === selectedChat.id) {
-        setMessages(prev => [...prev, {
-          id: message.id,
-          message: message.message,
-          timestamp: message.timestamp,
-          user_id: message.userId,
-          user_display_name: message.userDisplayName,
-          channel_id: message.channelId
-        }]);
+      console.log('📨 ChatWidget: Received message for channel:', message.channelId, 'Selected chat:', selectedChatRef.current?.id);
+      
+      if (selectedChatRef.current && message.channelId.toString() === selectedChatRef.current.id) {
+        console.log('✅ ChatWidget: Adding message to selected chat:', {
+          messageChannelId: message.channelId.toString(),
+          selectedChatId: selectedChatRef.current.id,
+          messageContent: message.message,
+          fromUser: message.userDisplayName
+        });
+        
+        setMessages(prev => {
+          // Check for optimistic message to replace
+          const optimisticIndex = prev.findIndex(msg => 
+            msg.isOptimistic && 
+            msg.message_text === message.message && 
+            msg.user_id === message.userId
+          );
+          
+          const newMessage = {
+            id: message.id,
+            message_text: message.message,
+            created_at: message.timestamp,
+            user_id: message.userId,
+            user_display_name: message.userDisplayName,
+            channel_id: message.channelId
+          };
+          
+          if (optimisticIndex !== -1) {
+            // Replace optimistic message with server version
+            console.log('🔄 ChatWidget: Replacing optimistic message with server version');
+            const newMessages = [...prev];
+            newMessages[optimisticIndex] = newMessage;
+            return newMessages;
+          } else {
+            // Check if message already exists (prevent duplicates)
+            const exists = prev.find(msg => msg.id === message.id.toString());
+            if (exists) {
+              console.log('⚠️ ChatWidget: Message already exists, skipping duplicate');
+              return prev;
+            }
+            // Add new message
+            return [...prev, newMessage];
+          }
+        });
+      } else {
+        console.log('❌ ChatWidget: NOT adding message - no selected chat or channel mismatch:', {
+          messageChannelId: message.channelId.toString(),
+          selectedChatId: selectedChatRef.current?.id,
+          hasSelectedChat: !!selectedChatRef.current,
+          messageContent: message.message
+        });
       }
 
       // Update total unread count (only if not the current user's message and not viewing this chat)
@@ -255,6 +374,20 @@ export default function ChatWidget({
     };
   }, [currentUser?.username, componentId, loadConversations, selectedChat]);
 
+  // Auto-join all channels when conversations are loaded and socket is connected
+  useEffect(() => {
+    const socket = socketClient.getSocket();
+    if (!socket || !isSocketConnected || conversations.length === 0) return;
+
+    console.log('🔌 ChatWidget: Auto-joining all channels for notifications');
+    conversations.forEach(conv => {
+      if (conv.type === 'channel') {
+        console.log('🔌 ChatWidget: Auto-joining channel:', conv.id);
+        socketClient.joinChannel(conv.id);
+      }
+    });
+  }, [conversations, isSocketConnected]);
+
   // Position classes
   const positionClasses = {
     'bottom-right': 'bottom-4 right-4',
@@ -270,29 +403,31 @@ export default function ChatWidget({
 
   // Handle quick message send
   const handleQuickMessage = useCallback(() => {
-    if (!quickMessage.trim() || !selectedChat || !socketClient.isConnected()) return;
+    if (!quickMessage.trim() || !selectedChat || !socketClient.isConnected() || !currentUser) return;
 
-    const socket = socketClient.getSocket();
-    if (socket) {
-      const messageData = {
-        channelId: selectedChat.id,
-        message: quickMessage.trim(),
-        type: 'text'
-      };
-      
-      socket.emit('send_message', messageData);
-      
-      // Optimistically add message to local state
-      const optimisticMessage = {
-        id: `temp_${Date.now()}`,
-        message: quickMessage.trim(),
-        timestamp: new Date().toISOString(),
-        user_id: currentUser?.username || '',
-        user_display_name: currentUser?.display_name || 'You',
-        channel_id: selectedChat.id
-      };
-      
-      setMessages(prev => [...prev, optimisticMessage]);
+    const messageContent = quickMessage.trim();
+    console.log('💬 ChatWidget: Sending message:', messageContent);
+    
+    // Add optimistic message immediately for instant feedback
+    const optimisticMessage = {
+      id: `temp_${Date.now()}`,
+      message_text: messageContent,
+      created_at: new Date().toISOString(),
+      user_id: currentUser.username,
+      user_display_name: currentUser.display_name,
+      channel_id: selectedChat.id,
+      isOptimistic: true // Flag to identify optimistic messages
+    };
+    
+    setMessages(prev => [...prev, optimisticMessage]);
+    
+    // Use the singleton client's sendMessage method for consistency
+    const success = socketClient.sendMessage(selectedChat.id, messageContent, 'text');
+    
+    if (!success) {
+      console.error('❌ ChatWidget: Failed to send message');
+      // Remove optimistic message on failure
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
     }
 
     setQuickMessage('');
@@ -301,21 +436,45 @@ export default function ChatWidget({
   // Load recent messages for selected chat
   const loadRecentMessages = useCallback(async (chatId: string) => {
     try {
+      console.log('🔍 ChatWidget: Loading messages for channel ID:', chatId);
+      
       const token = localStorage.getItem('authToken');
       if (!token) {
+        console.warn('No auth token available for loading messages');
         setMessages([]);
         return;
       }
 
-      const response = await fetch(`/api/chat/messages?channelId=${chatId}&limit=5`, {
+      const url = `/api/chat/messages?channelId=${chatId}&limit=5`;
+      console.log('🔗 ChatWidget: Fetching messages from:', url);
+      
+      const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
+      console.log('📡 ChatWidget: Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        setMessages(data.messages || []);
+        console.log(`📨 ChatWidget: API response:`, data);
+        console.log(`📨 ChatWidget: Loaded ${data.messages?.length || 0} messages for channel ${chatId}`);
+        
+        // The API returns messages in an array
+        if (Array.isArray(data.messages)) {
+          setMessages(data.messages);
+        } else {
+          console.warn('ChatWidget: Messages is not an array:', data.messages);
+          setMessages([]);
+        }
       } else {
-        console.error(`Failed to load messages for chat ${chatId}:`, response.status);
+        console.error(`❌ ChatWidget: Failed to load messages for chat ${chatId}:`, response.status);
+        try {
+          const errorData = await response.json();
+          console.error('Error response:', errorData);
+        } catch {
+          const errorText = await response.text();
+          console.error('Error response text:', errorText);
+        }
         setMessages([]);
       }
     } catch (error) {
@@ -326,8 +485,20 @@ export default function ChatWidget({
 
   // Handle chat selection
   const handleChatSelect = (chat: ChatConversation) => {
+    console.log('💬 ChatWidget: Selected chat:', chat);
     setSelectedChat(chat);
+    selectedChatRef.current = chat; // Update ref for real-time messages
+    
+    // Clear current messages to avoid confusion during loading
+    setMessages([]);
+    
     loadRecentMessages(chat.id);
+    
+    // Join the channel via Socket.io using singleton method
+    if (chat.type === 'channel') {
+      console.log('🔌 ChatWidget: Joining channel:', chat.id);
+      socketClient.joinChannel(chat.id);
+    }
     
     // Mark as read
     setConversations(prev => prev.map(conv => 
@@ -344,6 +515,13 @@ export default function ChatWidget({
       window.location.href = '/chat';
     }
   };
+  
+  // Clear selected chat ref when closing
+  useEffect(() => {
+    if (!selectedChat) {
+      selectedChatRef.current = null;
+    }
+  }, [selectedChat]);
 
   // Render collapsed widget (floating button)
   if (isMinimized) {
@@ -568,14 +746,14 @@ export default function ChatWidget({
                           <div key={message.id || index} className="flex flex-col">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-xs font-medium text-gray-600">
-                                {message.user_display_name || message.userId}
+                                {message.user_display_name || message.user_id}
                               </span>
                               <span className="text-xs text-gray-400">
-                                {safeFormatDistanceToNow(message.timestamp, { addSuffix: true })}
+                                {safeFormatDistanceToNow(message.created_at || message.timestamp, { addSuffix: true })}
                               </span>
                             </div>
                             <div className="text-sm text-gray-800 bg-gray-50 rounded-lg p-2 ml-2">
-                              {message.message}
+                              {message.message_text || message.message}
                             </div>
                           </div>
                         ))}
