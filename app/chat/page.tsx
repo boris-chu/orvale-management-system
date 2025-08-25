@@ -45,7 +45,7 @@ export default function ChatPage() {
       }
 
       // Fetch current user data
-      const userResponse = await fetch('/api/auth/me', {
+      const userResponse = await fetch('/api/auth/user', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -59,7 +59,8 @@ export default function ChatPage() {
       const userData = await userResponse.json();
       
       // Check chat permissions
-      const hasBasicChatPermission = userData.permissions?.includes('chat.send_messages') ||
+      const hasBasicChatPermission = userData.permissions?.includes('chat.access') ||
+                                    userData.permissions?.includes('chat.send_messages') ||
                                     userData.permissions?.includes('chat.basic_messaging') ||
                                     userData.role === 'admin';
 
