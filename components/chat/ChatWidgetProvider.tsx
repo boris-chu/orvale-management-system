@@ -138,20 +138,20 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
         }
       }
 
-      // Load widget settings from admin configuration
+      // Load widget settings from public API (no auth required)
       try {
-        const settingsResponse = await fetch('/api/admin/chat/settings');
+        const settingsResponse = await fetch('/api/chat/widget-settings');
         if (settingsResponse.ok) {
-          const chatSettings = await settingsResponse.json();
-          console.log('🔧 Loaded chat settings:', chatSettings);
+          const widgetSettings = await settingsResponse.json();
+          console.log('🔧 Loaded widget settings:', widgetSettings);
           
           const newSettings = {
             ...prev,
-            enabled: chatSettings.widget_enabled || false,
-            position: chatSettings.widget_position || 'bottom-right',
-            theme: chatSettings.widget_theme || 'light',
-            shape: chatSettings.widget_shape || 'rounded-square',
-            primaryColor: chatSettings.widget_primary_color || '#1976d2',
+            enabled: widgetSettings.enabled || false,
+            position: widgetSettings.position || 'bottom-right',
+            theme: widgetSettings.theme || 'light',
+            shape: widgetSettings.shape || 'rounded-square',
+            primaryColor: widgetSettings.primaryColor || '#1976d2',
             showOnPages: ['*'], // Show on all pages
             hideOnPages: ['/chat', '/chat/*'] // Hide on chat pages
           };
@@ -159,10 +159,11 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
           console.log('🔧 Widget settings updated:', newSettings);
           setSettings(newSettings);
         } else {
-          console.warn('❌ Failed to load chat settings:', settingsResponse.status);
+          console.warn('❌ Failed to load widget settings:', settingsResponse.status);
         }
       } catch (error) {
-        console.log('Using default widget settings');
+        console.log('❌ Error loading widget settings:', error);
+        console.log('🔧 Using default widget settings');
       }
     } catch (error) {
       console.error('Failed to load chat widget data:', error);
