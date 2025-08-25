@@ -37,12 +37,11 @@ import {
   RefreshCw
 } from 'lucide-react';
 import {
-  Select,
-  SelectContent,
-  SelectItem, 
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Select as MuiSelect,
+  MenuItem,
+  FormControl,
+  InputLabel
+} from '@mui/material';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -586,19 +585,17 @@ export default function ChatManagementPage() {
 
                 {/* Position */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Position</Label>
-                  <Select
-                    value={settings.widget_position}
-                    onValueChange={(value) => updateSetting('widget_position', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bottom-right">Bottom Right</SelectItem>
-                      <SelectItem value="bottom-left">Bottom Left</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormControl fullWidth size="small">
+                    <InputLabel className="text-sm font-medium">Position</InputLabel>
+                    <MuiSelect
+                      value={settings.widget_position}
+                      label="Position"
+                      onChange={(e) => updateSetting('widget_position', e.target.value)}
+                    >
+                      <MenuItem value="bottom-right">Bottom Right</MenuItem>
+                      <MenuItem value="bottom-left">Bottom Left</MenuItem>
+                    </MuiSelect>
+                  </FormControl>
                 </div>
 
                 {/* Shape */}
@@ -662,20 +659,18 @@ export default function ChatManagementPage() {
 
                 {/* Theme */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Theme</Label>
-                  <Select
-                    value={settings.widget_theme}
-                    onValueChange={(value) => updateSetting('widget_theme', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">Light</SelectItem>
-                      <SelectItem value="dark">Dark</SelectItem>
-                      <SelectItem value="auto">Auto (System)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormControl fullWidth size="small">
+                    <InputLabel className="text-sm font-medium">Theme</InputLabel>
+                    <MuiSelect
+                      value={settings.widget_theme}
+                      label="Theme"
+                      onChange={(e) => updateSetting('widget_theme', e.target.value)}
+                    >
+                      <MenuItem value="light">Light</MenuItem>
+                      <MenuItem value="dark">Dark</MenuItem>
+                      <MenuItem value="auto">Auto (System)</MenuItem>
+                    </MuiSelect>
+                  </FormControl>
                 </div>
               </CardContent>
             </Card>
