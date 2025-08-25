@@ -81,6 +81,32 @@ export default function ChatSidebar({
   const componentId = useRef(`ChatSidebar_${Date.now()}`).current;
   const { settings: chatUISettings, loading: settingsLoading } = useChatSettings();
   
+  // Function to refresh unread counts from API (authoritative source)
+  const refreshUnreadCounts = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
+      if (!token) return;
+
+      const response = await fetch('/api/chat/channels', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const newUnreadCounts: Record<string, number> = {};
+        
+        data.channels?.forEach((channel: any) => {
+          newUnreadCounts[channel.id.toString()] = channel.unread_count || 0;
+        });
+        
+        console.log('📊 ChatSidebar: Refreshed unread counts from API:', newUnreadCounts);
+        setUnreadCounts(newUnreadCounts);
+      }
+    } catch (error) {
+      console.error('Failed to refresh unread counts:', error);
+    }
+  }, []);
+  
   // Debug logging for badge settings
   useEffect(() => {
     console.log('🔧 ChatSidebar Settings Debug:', {
@@ -123,6 +149,9 @@ export default function ChatSidebar({
             channels,
             groups: []
           });
+          
+          // Load initial unread counts from API
+          refreshUnreadCounts();
         }
       } catch (error) {
         console.error('Failed to load channels:', error);
@@ -130,7 +159,7 @@ export default function ChatSidebar({
     };
 
     loadChannels();
-  }, [currentUser]); // Remove unreadCounts dependency to prevent reload loops
+  }, [currentUser, refreshUnreadCounts]); // Include refreshUnreadCounts dependency
 
   // Socket.io connection for real-time updates using singleton
   useEffect(() => {
@@ -144,7 +173,7 @@ export default function ChatSidebar({
     // Connect using singleton client
     const socket = socketClient.connect(token);
 
-    // Listen for new message notifications to update unread counts  
+    // Listen for new message notifications to trigger unread count refresh from API
     socketClient.addEventListener(componentId, 'message_notification', (data: any) => {
       const { message, channel } = data;
       const channelId = channel.id.toString();
@@ -152,20 +181,11 @@ export default function ChatSidebar({
       console.log('📬 ChatSidebar received message notification for channel:', channelId, 'from:', message.userDisplayName);
       console.log('📬 Current selectedChatId:', selectedChatId, 'Current user:', currentUser?.username);
       
-      // Only increment unread count if:
-      // 1. This channel is not currently selected, AND
-      // 2. The message is not from the current user (avoid self-notifications)
-      if (channelId !== selectedChatId && message.userId !== currentUser?.username) {
-        console.log('📊 Incrementing unread count for channel:', channelId);
-        setUnreadCounts(prev => ({
-          ...prev,
-          [channelId]: (prev[channelId] || 0) + 1
-        }));
-      } else {
-        console.log('📊 Skipping unread increment - channel selected or own message:', {
-          isSelected: channelId === selectedChatId,
-          isOwnMessage: message.userId === currentUser?.username
-        });
+      // Instead of incrementing manually, refresh unread counts from API
+      // This ensures we get the authoritative count based on last_read_at
+      if (message.userId !== currentUser?.username) {
+        console.log('📊 ChatSidebar: Refreshing unread counts from API due to new message');
+        refreshUnreadCounts();
       }
     });
 
