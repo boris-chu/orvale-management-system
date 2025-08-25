@@ -577,9 +577,9 @@ export default function ChatWidget({
               <Badge 
                 className={cn(
                   "absolute -top-2 -right-2 h-6 w-6 text-xs flex items-center justify-center",
-                  chatUISettings.unread_badge_style === 'rounded' && "rounded-md",
-                  chatUISettings.unread_badge_style === 'square' && "rounded-none",
-                  chatUISettings.unread_badge_style === 'pill' && "rounded-full"
+                  chatUISettings.unread_badge_style === 'rounded' && "!rounded-md",
+                  chatUISettings.unread_badge_style === 'square' && "!rounded-none",
+                  chatUISettings.unread_badge_style === 'pill' && "!rounded-full"
                 )}
                 style={{ 
                   backgroundColor: chatUISettings.unread_badge_color, 

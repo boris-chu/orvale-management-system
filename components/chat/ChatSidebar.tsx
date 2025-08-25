@@ -349,13 +349,20 @@ export default function ChatSidebar({
                   if (!chatUISettings.show_unread_badges) return null;
                   if (chat.unreadCount === 0 && !chatUISettings.show_zero_counts) return null;
                   
+                  console.log('🔧 ChatSidebar Chat Badge Debug:', {
+                    badgeStyle: chatUISettings.unread_badge_style,
+                    badgeColor: chatUISettings.unread_badge_color,
+                    chatName: chat.displayName,
+                    unreadCount: chat.unreadCount
+                  });
+                  
                   return (
                     <Badge 
                       className={cn(
                         "text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center font-medium flex-shrink-0",
-                        chatUISettings.unread_badge_style === 'rounded' && "rounded-md",
-                        chatUISettings.unread_badge_style === 'square' && "rounded-none",
-                        chatUISettings.unread_badge_style === 'pill' && "rounded-full"
+                        chatUISettings.unread_badge_style === 'rounded' && "!rounded-md",
+                        chatUISettings.unread_badge_style === 'square' && "!rounded-none", 
+                        chatUISettings.unread_badge_style === 'pill' && "!rounded-full"
                       )}
                       style={{ 
                         backgroundColor: chatUISettings.unread_badge_color, 
@@ -419,14 +426,20 @@ export default function ChatSidebar({
               if (!chatUISettings.show_unread_badges) return null;
               if (unreadCount === 0 && !chatUISettings.show_zero_counts) return null;
               
+              console.log('🔧 ChatSidebar Section Badge Debug:', {
+                badgeStyle: chatUISettings.unread_badge_style,
+                badgeColor: chatUISettings.unread_badge_color,
+                unreadCount,
+                title
+              });
+              
               return (
                 <Badge 
-                  variant="secondary" 
                   className={cn(
                     "text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center font-medium",
-                    chatUISettings.unread_badge_style === 'rounded' && "rounded-md",
-                    chatUISettings.unread_badge_style === 'square' && "rounded-none",
-                    chatUISettings.unread_badge_style === 'pill' && "rounded-full"
+                    chatUISettings.unread_badge_style === 'rounded' && "!rounded-md",
+                    chatUISettings.unread_badge_style === 'square' && "!rounded-none",
+                    chatUISettings.unread_badge_style === 'pill' && "!rounded-full"
                   )}
                   style={{ 
                     backgroundColor: chatUISettings.unread_badge_color, 
