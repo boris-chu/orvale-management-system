@@ -31,7 +31,10 @@ import {
   Wifi,
   WifiOff,
   User,
-  Clock
+  Clock,
+  ArrowLeft,
+  LogOut,
+  RefreshCw
 } from 'lucide-react';
 import {
   Select,
@@ -40,6 +43,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { motion, AnimatePresence } from 'framer-motion';
+import { UserAvatar } from '@/components/UserAvatar';
+import { ProfileEditModal } from '@/components/ProfileEditModal';
 
 interface ChatSettings {
   // Widget Settings
@@ -74,6 +81,10 @@ interface SystemStats {
 
 export default function ChatManagementPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [settings, setSettings] = useState<ChatSettings>({
     widget_enabled: false,
     widget_position: 'bottom-right',
@@ -105,9 +116,81 @@ export default function ChatManagementPage() {
 
   // Load settings on mount
   useEffect(() => {
+    checkAdminAccess();
     loadChatSettings();
     loadSystemStats();
   }, []);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (showUserMenu) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showUserMenu]);
+
+  const checkAdminAccess = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        window.location.href = '/';
+        return;
+      }
+
+      const response = await fetch('/api/auth/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const user = await response.json();
+        
+        // Check if user has chat management permissions
+        const hasPermission = user.permissions?.includes('chat.manage_system') || 
+                             user.permissions?.includes('admin.system_settings') ||
+                             user.role === 'admin';
+
+        if (!hasPermission) {
+          window.location.href = '/tickets';
+          return;
+        }
+        
+        setCurrentUser(user);
+      } else {
+        window.location.href = '/';
+        return;
+      }
+    } catch (error) {
+      console.error('Failed to verify admin access:', error);
+      window.location.href = '/';
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Logout function
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('currentUser');
+    window.location.href = '/';
+  };
+
+  // Handle profile update
+  const handleProfileUpdate = (updatedUser: any) => {
+    setCurrentUser(updatedUser);
+    const currentUserData = localStorage.getItem('currentUser');
+    if (currentUserData) {
+      const userData = JSON.parse(currentUserData);
+      localStorage.setItem('currentUser', JSON.stringify({ ...userData, ...updatedUser }));
+    }
+  };
 
   const loadChatSettings = async () => {
     try {
@@ -166,29 +249,152 @@ export default function ChatManagementPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center"
+        >
+          <RefreshCw className="h-8 w-8 text-emerald-600 mx-auto mb-4 animate-spin" />
+          <p className="text-gray-600">Loading chat management...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Chat Management System</h1>
-          <p className="text-gray-600">Configure chat system settings, monitor activity, and customize the chat widget</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={stats.socketio_status === 'connected' ? 'default' : 'destructive'}>
-            {stats.socketio_status === 'connected' ? (
-              <>
-                <Wifi className="h-3 w-3 mr-1" />
-                Connected
-              </>
-            ) : (
-              <>
-                <WifiOff className="h-3 w-3 mr-1" />
-                Disconnected
-              </>
-            )}
-          </Badge>
+    <TooltipProvider>
+      <div 
+        className="min-h-screen bg-gray-50"
+        onClick={() => setShowUserMenu(false)}
+      >
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center space-x-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => window.location.href = '/developer'}
+                className="flex items-center space-x-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Dashboard</span>
+              </Button>
+              
+              <div className="h-6 border-l border-gray-300"></div>
+              
+              <div className="flex items-center space-x-3">
+                <MessageCircle className="h-6 w-6 text-emerald-600" />
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Chat Management System</h1>
+                  <p className="text-sm text-gray-500">Configure chat system settings, monitor activity, and customize the chat widget</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <Badge variant={stats.socketio_status === 'connected' ? 'default' : 'destructive'}>
+                {stats.socketio_status === 'connected' ? (
+                  <>
+                    <Wifi className="h-3 w-3 mr-1" />
+                    Connected
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="h-3 w-3 mr-1" />
+                    Disconnected
+                  </>
+                )}
+              </Badge>
+
+              {/* User Profile Section */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowUserMenu(!showUserMenu);
+                    }}
+                    className="flex items-center rounded-full p-1 hover:bg-gray-100 transition-colors duration-200"
+                  >
+                    <UserAvatar 
+                      user={currentUser}
+                      size="lg"
+                      showOnlineIndicator={true}
+                      className="border-2 border-gray-200 hover:border-emerald-400 transition-colors duration-200"
+                    />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>User Menu</p>
+                </TooltipContent>
+              </Tooltip>
+
+              {/* User Dropdown Menu */}
+              <AnimatePresence>
+                {showUserMenu && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute top-20 right-4 w-72 bg-white rounded-lg shadow-xl border z-50"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* User Info Section */}
+                    <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-green-50">
+                      <div className="flex items-center space-x-3">
+                        <UserAvatar 
+                          user={currentUser}
+                          size="lg"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{currentUser?.display_name}</p>
+                          <p className="text-xs text-gray-600 truncate">{currentUser?.email}</p>
+                          <div className="mt-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                              {currentUser?.role_id}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Menu Items */}
+                    <div className="py-2">
+                      <button
+                        onClick={() => {
+                          setShowProfileModal(true);
+                          setShowUserMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                      >
+                        <User className="h-4 w-4" />
+                        <span>Edit Profile</span>
+                      </button>
+
+                      <div className="border-t border-gray-100 mt-2 pt-2">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-4">
@@ -532,6 +738,7 @@ export default function ChatManagementPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
 
       {/* Save Changes Bar */}
       {hasChanges && (
@@ -548,6 +755,15 @@ export default function ChatManagementPage() {
           </div>
         </div>
       )}
-    </div>
+
+      {/* Profile Edit Modal */}
+      <ProfileEditModal
+        open={showProfileModal}
+        onOpenChange={setShowProfileModal}
+        user={currentUser}
+        onProfileUpdate={handleProfileUpdate}
+      />
+      </div>
+    </TooltipProvider>
   );
 }
