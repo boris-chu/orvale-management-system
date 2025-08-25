@@ -140,6 +140,7 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
 
       // Load widget settings from public API (no auth required)
       try {
+        console.log('🔧 Fetching widget settings from: /api/chat/widget-settings');
         const settingsResponse = await fetch('/api/chat/widget-settings');
         if (settingsResponse.ok) {
           const widgetSettings = await settingsResponse.json();
@@ -159,7 +160,7 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
           console.log('🔧 Widget settings updated:', newSettings);
           setSettings(newSettings);
         } else {
-          console.warn('❌ Failed to load widget settings:', settingsResponse.status);
+          console.warn('❌ Failed to load widget settings from /api/chat/widget-settings:', settingsResponse.status);
         }
       } catch (error) {
         console.log('❌ Error loading widget settings:', error);
