@@ -12,7 +12,7 @@ const db = new Database.Database('./orvale_tickets.db');
 export async function POST(
   request: NextRequest, 
   { params }: { params: Promise<{ id: string }> }
-) {
+): Promise<NextResponse> {
   try {
     const { id: channelId } = await params;
     
@@ -71,7 +71,7 @@ export async function POST(
       VALUES (?, ?, 'member', CURRENT_TIMESTAMP)
     `;
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       db.run(joinQuery, [channelId, user.username], function(err) {
         if (err) {
           console.error('Database error joining channel:', err);

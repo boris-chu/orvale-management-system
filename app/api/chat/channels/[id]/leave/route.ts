@@ -12,7 +12,7 @@ const db = new Database.Database('./orvale_tickets.db');
 export async function POST(
   request: NextRequest, 
   { params }: { params: Promise<{ id: string }> }
-) {
+): Promise<NextResponse> {
   try {
     const { id: channelId } = await params;
     

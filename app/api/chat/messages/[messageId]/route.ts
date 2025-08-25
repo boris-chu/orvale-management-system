@@ -13,7 +13,7 @@ const db = new Database.Database('./orvale_tickets.db');
 export async function PUT(
   request: NextRequest, 
   { params }: { params: Promise<{ messageId: string }> }
-) {
+): Promise<NextResponse> {
   try {
     const { messageId } = await params;
     
@@ -79,7 +79,7 @@ export async function PUT(
       WHERE id = ?
     `;
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       db.run(updateQuery, [message, messageId], function(err) {
         if (err) {
           console.error('Database error updating message:', err);
@@ -102,7 +102,7 @@ export async function PUT(
 export async function DELETE(
   request: NextRequest, 
   { params }: { params: Promise<{ messageId: string }> }
-) {
+): Promise<NextResponse> {
   try {
     const { messageId } = await params;
     
@@ -162,7 +162,7 @@ export async function DELETE(
       WHERE id = ?
     `;
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       db.run(deleteQuery, [messageId], function(err) {
         if (err) {
           console.error('Database error deleting message:', err);

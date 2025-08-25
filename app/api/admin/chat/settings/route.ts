@@ -126,7 +126,9 @@ export async function GET(request: NextRequest) {
 
     // Check admin permissions for chat settings
     if (!authResult.user.permissions?.includes('admin.manage_chat_settings') && 
-        !authResult.user.permissions?.includes('admin.system_settings')) {
+        !authResult.user.permissions?.includes('admin.system_settings') &&
+        !authResult.user.permissions?.includes('chat.manage_system') &&
+        authResult.user.role !== 'admin') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
@@ -134,7 +136,7 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
 
     let query = 'SELECT setting_key, setting_value, setting_type, description, category FROM chat_system_settings';
-    const params: any[] = [];
+    const params: string[] = [];
 
     if (category) {
       query += ' WHERE category = ?';
@@ -143,22 +145,55 @@ export async function GET(request: NextRequest) {
 
     query += ' ORDER BY category, setting_key';
 
-    const settings = await dbAll(query, params) as any[];
+    const settings = await dbAll(query, params) as Array<{ setting_key: string; setting_value: string; setting_type: string; description: string; category: string }>;
 
-    // Convert to key-value object
-    const settingsObject: Record<string, string> = {};
+    // Convert to format expected by Chat Management System
+    const managementSettings = {
+      // Widget Settings
+      widget_enabled: false,
+      widget_position: 'bottom-right',
+      widget_shape: 'rounded-square', 
+      widget_primary_color: '#1976d2',
+      widget_secondary_color: '#6c757d',
+      widget_theme: 'light',
+      
+      // System Settings
+      chat_system_enabled: true,
+      notification_sounds_enabled: true,
+      read_receipts_enabled: true,
+      file_sharing_enabled: true,
+      gif_picker_enabled: false, // Default to false until Giphy is configured
+    };
+
+    // Apply database settings over defaults
     settings.forEach(setting => {
-      settingsObject[setting.setting_key] = setting.setting_value;
+      const key = setting.setting_key;
+      let value = setting.setting_value;
+      
+      // Convert string values to appropriate types for the management system
+      let convertedValue: string | boolean | number = value;
+      if (setting.setting_type === 'boolean') {
+        convertedValue = value === 'true';
+      } else if (setting.setting_type === 'number') {
+        convertedValue = parseInt(value);
+      }
+
+      // Map Giphy settings to management format
+      if (key === 'giphy_enabled') {
+        managementSettings.gif_picker_enabled = convertedValue as boolean;
+      } else if (managementSettings.hasOwnProperty(key)) {
+        managementSettings[key as keyof typeof managementSettings] = convertedValue as never;
+      }
     });
 
-    return NextResponse.json(settingsObject);
+    return NextResponse.json(managementSettings);
   } catch (error) {
     console.error('Failed to retrieve chat settings:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// PUT - Update a specific chat setting
+// PUT - Bulk update chat management settings
 export async function PUT(request: NextRequest) {
   try {
     await initializeDatabase();
@@ -171,67 +206,77 @@ export async function PUT(request: NextRequest) {
 
     // Check admin permissions for chat settings
     if (!authResult.user.permissions?.includes('admin.manage_chat_settings') && 
-        !authResult.user.permissions?.includes('admin.system_settings')) {
+        !authResult.user.permissions?.includes('admin.system_settings') &&
+        !authResult.user.permissions?.includes('chat.manage_system') &&
+        authResult.user.role !== 'admin') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { setting_key, setting_value, setting_type = 'string' } = body;
+    const settings = await request.json();
 
-    if (!setting_key || setting_value === undefined) {
-      return NextResponse.json({ 
-        error: 'Missing required fields: setting_key and setting_value' 
-      }, { status: 400 });
+    // Map Chat Management System settings to database format
+    const settingsToUpdate = [];
+
+    // Widget settings
+    if (settings.widget_enabled !== undefined) {
+      settingsToUpdate.push({ key: 'widget_enabled', value: settings.widget_enabled, type: 'boolean' });
+    }
+    if (settings.widget_position !== undefined) {
+      settingsToUpdate.push({ key: 'widget_position', value: settings.widget_position, type: 'string' });
+    }
+    if (settings.widget_shape !== undefined) {
+      settingsToUpdate.push({ key: 'widget_shape', value: settings.widget_shape, type: 'string' });
+    }
+    if (settings.widget_primary_color !== undefined) {
+      settingsToUpdate.push({ key: 'widget_primary_color', value: settings.widget_primary_color, type: 'string' });
+    }
+    if (settings.widget_secondary_color !== undefined) {
+      settingsToUpdate.push({ key: 'widget_secondary_color', value: settings.widget_secondary_color, type: 'string' });
+    }
+    if (settings.widget_theme !== undefined) {
+      settingsToUpdate.push({ key: 'widget_theme', value: settings.widget_theme, type: 'string' });
     }
 
-    // Validate setting types
-    const validTypes = ['string', 'number', 'boolean', 'json'];
-    if (!validTypes.includes(setting_type)) {
-      return NextResponse.json({ error: 'Invalid setting_type' }, { status: 400 });
+    // System settings
+    if (settings.chat_system_enabled !== undefined) {
+      settingsToUpdate.push({ key: 'chat_system_enabled', value: settings.chat_system_enabled, type: 'boolean' });
+    }
+    if (settings.notification_sounds_enabled !== undefined) {
+      settingsToUpdate.push({ key: 'notification_sounds_enabled', value: settings.notification_sounds_enabled, type: 'boolean' });
+    }
+    if (settings.read_receipts_enabled !== undefined) {
+      settingsToUpdate.push({ key: 'read_receipts_enabled', value: settings.read_receipts_enabled, type: 'boolean' });
+    }
+    if (settings.file_sharing_enabled !== undefined) {
+      settingsToUpdate.push({ key: 'file_sharing_enabled', value: settings.file_sharing_enabled, type: 'boolean' });
+    }
+    if (settings.gif_picker_enabled !== undefined) {
+      settingsToUpdate.push({ key: 'giphy_enabled', value: settings.gif_picker_enabled, type: 'boolean' });
     }
 
-    // Special validation for Giphy settings
-    if (setting_key.startsWith('giphy_')) {
-      if (setting_key === 'giphy_content_rating') {
-        const validRatings = ['g', 'pg', 'pg-13', 'r'];
-        if (!validRatings.includes(setting_value)) {
-          return NextResponse.json({ 
-            error: 'Invalid content rating. Must be g, pg, pg-13, or r' 
-          }, { status: 400 });
-        }
-      }
-
-      if (setting_key === 'giphy_search_limit' || setting_key === 'giphy_rate_limit') {
-        const numValue = parseInt(setting_value);
-        if (isNaN(numValue) || numValue < 1 || numValue > 200) {
-          return NextResponse.json({ 
-            error: 'Numeric values must be between 1 and 200' 
-          }, { status: 400 });
-        }
-      }
+    // Update all settings in database
+    for (const setting of settingsToUpdate) {
+      await dbRun(
+        `INSERT OR REPLACE INTO chat_system_settings 
+         (setting_key, setting_value, setting_type, updated_by, updated_at, category)
+         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
+        [
+          setting.key, 
+          setting.value.toString(), 
+          setting.type, 
+          authResult.user.username,
+          setting.key.startsWith('widget_') ? 'widget' : 'system'
+        ]
+      );
     }
-
-    // Update or insert setting
-    await dbRun(
-      `INSERT OR REPLACE INTO chat_system_settings 
-       (setting_key, setting_value, setting_type, updated_by, updated_at)
-       VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-      [setting_key, setting_value.toString(), setting_type, authResult.user.username]
-    );
-
-    // Get the updated setting with metadata
-    const updatedSetting = await dbGet(
-      'SELECT * FROM chat_system_settings WHERE setting_key = ?',
-      [setting_key]
-    ) as any;
 
     return NextResponse.json({
-      message: 'Setting updated successfully',
-      setting: updatedSetting
+      message: 'Chat settings updated successfully',
+      settings
     });
 
   } catch (error) {
-    console.error('Failed to update chat setting:', error);
+    console.error('Failed to update chat settings:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

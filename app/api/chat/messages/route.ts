@@ -115,7 +115,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Verify authentication
     const authResult = await verifyAuth(request);
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
       ) VALUES (?, ?, ?, ?, ?, ?)
     `;
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       db.run(insertQuery, [
         channelId, user.username, message, msgType, 
         replyToId || null, ticketReference || null

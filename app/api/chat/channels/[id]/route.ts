@@ -13,7 +13,7 @@ const db = new Database.Database('./orvale_tickets.db');
 export async function PUT(
   request: NextRequest, 
   { params }: { params: Promise<{ id: string }> }
-) {
+): Promise<NextResponse> {
   try {
     const { id: channelId } = await params;
     
@@ -59,7 +59,7 @@ export async function PUT(
       WHERE id = ? AND active = 1
     `;
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       db.run(updateQuery, [name, description, is_read_only, allow_posting, channelId], function(err) {
         if (err) {
           console.error('Database error updating channel:', err);
@@ -87,7 +87,7 @@ export async function PUT(
 export async function DELETE(
   request: NextRequest, 
   { params }: { params: Promise<{ id: string }> }
-) {
+): Promise<NextResponse> {
   try {
     const { id: channelId } = await params;
     
@@ -111,7 +111,7 @@ export async function DELETE(
       WHERE id = ? AND active = 1
     `;
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       db.run(deleteQuery, [channelId], function(err) {
         if (err) {
           console.error('Database error deleting channel:', err);

@@ -5,12 +5,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/lib/auth';
-import Database from 'sqlite3';
+import { verifyAuth } from '@/lib/auth-utils';
 
-const db = new Database.Database('./orvale_tickets.db');
-
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(): Promise<NextResponse> {
   try {
     // For now, return default settings
     // In the future, this will fetch from database

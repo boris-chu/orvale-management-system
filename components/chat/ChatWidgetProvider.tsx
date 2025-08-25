@@ -66,6 +66,25 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
   // Load user and settings on mount
   useEffect(() => {
     loadUserAndSettings();
+
+    // Listen for settings updates from admin dashboard
+    const handleSettingsUpdate = (event: CustomEvent) => {
+      const updatedSettings = event.detail;
+      setSettings(prev => ({
+        ...prev,
+        enabled: updatedSettings.widget_enabled || false,
+        position: updatedSettings.widget_position || 'bottom-right',
+        theme: updatedSettings.widget_theme || 'light',
+        shape: updatedSettings.widget_shape || 'rounded-square',
+        primaryColor: updatedSettings.widget_primary_color || '#1976d2',
+      }));
+    };
+
+    window.addEventListener('chat-settings-updated', handleSettingsUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('chat-settings-updated', handleSettingsUpdate as EventListener);
+    };
   }, []);
 
   // Update visibility based on pathname
@@ -107,12 +126,18 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
 
       // Load widget settings from admin configuration
       try {
-        const settingsResponse = await fetch('/api/admin/chat/widget-settings');
+        const settingsResponse = await fetch('/api/admin/chat/settings');
         if (settingsResponse.ok) {
-          const widgetSettings = await settingsResponse.json();
+          const chatSettings = await settingsResponse.json();
           setSettings(prev => ({
             ...prev,
-            ...widgetSettings
+            enabled: chatSettings.widget_enabled || false,
+            position: chatSettings.widget_position || 'bottom-right',
+            theme: chatSettings.widget_theme || 'light',
+            shape: chatSettings.widget_shape || 'rounded-square',
+            primaryColor: chatSettings.widget_primary_color || '#1976d2',
+            showOnPages: ['*'], // Show on all pages
+            hideOnPages: ['/chat', '/chat/*'] // Hide on chat pages
           }));
         }
       } catch (error) {

@@ -60,7 +60,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Verify authentication
     const authResult = await verifyAuth(request);
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       VALUES (?, ?, ?, ?, ?, ?)
     `;
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       db.run(insertQuery, [name, description, type, user.username, team_id, is_read_only || false], function(err) {
         if (err) {
           console.error('Database error creating channel:', err);
