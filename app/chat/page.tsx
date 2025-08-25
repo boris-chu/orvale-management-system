@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, MessageCircle, Users, Hash } from 'lucide-react';
 import ChatLayout from '@/components/chat/ChatLayout';
+import { ThemeSystemProvider } from '@/hooks/useThemeSystem';
 
 interface User {
   username: string;
@@ -187,7 +188,8 @@ export default function ChatPage() {
 
   // Main chat interface
   return (
-    <div className="h-screen bg-gray-50 dark:bg-gray-900">
+    <ThemeSystemProvider>
+      <div className="h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header bar with system info */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -253,6 +255,7 @@ export default function ChatPage() {
           </Card>
         </div>
       )}
-    </div>
+      </div>
+    </ThemeSystemProvider>
   );
 }

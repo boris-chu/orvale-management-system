@@ -862,41 +862,550 @@ CREATE TABLE IF NOT EXISTS public_queue_analytics (
 );
 ```
 
-#### **Admin Configuration for Public Queue Theming**
+#### **Enhanced Admin Theme Configuration System**
+*Comprehensive theming for both Internal Chat and Public Queue with preset and fully customizable options*
+
 ```javascript
-const PublicQueueThemeSettings = {
-  // Visual Identity
-  theme_colors: {
-    primary: '#e57373',        // Main accent (red theme)
-    secondary: '#ffcdd2',      // Light backgrounds  
-    accent: '#d32f2f',         // Action buttons
-    sidebar: '#fce4ec',        // Sidebar background
-    success: '#81c784',        // Resolved sessions
-    warning: '#ffb74d',        // Queue warnings
-    urgent: '#f44336'          // High priority sessions
+// Enhanced Theme System in Admin → Chat Management → UI Customization
+const ChatThemeConfiguration = {
+  // 🎨 PRESET THEMES (Internal Chat & Public Queue)
+  preset_themes: {
+    // Light Theme (Current Default)
+    light: {
+      internal_chat: {
+        primary: '#1976d2',       // Blue accent
+        secondary: '#f5f5f5',     // Light backgrounds
+        accent: '#1565c0',        // Action buttons
+        sidebar: '#ffffff',       // Sidebar background
+        text_primary: '#212121',  // Main text
+        text_secondary: '#757575', // Secondary text
+        background: '#ffffff',    // Main background
+        surface: '#fafafa'        // Card/surface backgrounds
+      },
+      public_queue: {
+        primary: '#e57373',       // Red accent (visual distinction)
+        secondary: '#ffcdd2',     // Light red backgrounds
+        accent: '#d32f2f',        // Action buttons
+        sidebar: '#fce4ec',       // Pink sidebar
+        text_primary: '#212121',
+        text_secondary: '#757575',
+        background: '#ffffff',
+        surface: '#fafafa'
+      }
+    },
+
+    // iPhone-like Theme (iOS 16/17 Style)
+    iphone: {
+      internal_chat: {
+        primary: '#007aff',       // iOS Blue
+        secondary: '#f2f2f7',     // iOS Light Background
+        accent: '#0051d5',        // Darker iOS Blue
+        sidebar: '#ffffff',       // Pure white
+        text_primary: '#000000',  // True black text
+        text_secondary: '#3c3c43', // iOS secondary text
+        background: '#ffffff',    // Pure white
+        surface: '#f2f2f7',       // iOS surface gray
+        border_radius: '16px',    // Rounded corners
+        font_family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto'
+      },
+      public_queue: {
+        primary: '#ff3b30',       // iOS Red
+        secondary: '#ffebee',     // Light red iOS style
+        accent: '#d70015',        // Darker iOS Red
+        sidebar: '#f2f2f7',       // iOS Light gray
+        text_primary: '#000000',
+        text_secondary: '#3c3c43',
+        background: '#ffffff',
+        surface: '#f2f2f7',
+        border_radius: '16px',
+        font_family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto'
+      }
+    },
+
+    // Darcula Theme (VS Code Dark Style)
+    darcula: {
+      internal_chat: {
+        primary: '#569cd6',       // VS Code Blue
+        secondary: '#2d2d30',     // Dark background
+        accent: '#4fc1ff',        // Bright blue accent
+        sidebar: '#252526',       // VS Code sidebar dark
+        text_primary: '#cccccc',  // Light text
+        text_secondary: '#969696', // Muted light text
+        background: '#1e1e1e',    // VS Code dark background
+        surface: '#2d2d30',       // Card backgrounds
+        border: '#3e3e42',        // Border color
+        font_family: 'Monaco, "Cascadia Code", "SF Mono", Consolas, monospace'
+      },
+      public_queue: {
+        primary: '#f48771',       // Warm orange-red
+        secondary: '#3c2415',     // Dark brown background
+        accent: '#ff6b47',        // Bright orange accent
+        sidebar: '#2d1810',       // Darker brown sidebar
+        text_primary: '#cccccc',
+        text_secondary: '#969696',
+        background: '#1e1e1e',
+        surface: '#2d2d30',
+        border: '#3e3e42',
+        font_family: 'Monaco, "Cascadia Code", "SF Mono", Consolas, monospace'
+      }
+    },
+
+    // GitHub Theme (Modern Developer Style)
+    github: {
+      internal_chat: {
+        primary: '#0969da',       // GitHub Blue
+        secondary: '#f6f8fa',     // GitHub light background
+        accent: '#0550ae',        // Darker GitHub blue
+        sidebar: '#ffffff',       // Pure white
+        text_primary: '#24292f',  // GitHub text
+        text_secondary: '#656d76', // GitHub muted text
+        background: '#ffffff',
+        surface: '#f6f8fa',
+        border: '#d0d7de',        // GitHub border
+        font_family: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica'
+      },
+      public_queue: {
+        primary: '#da3633',       // GitHub Red
+        secondary: '#fff5f5',     // Light red background
+        accent: '#b91c1c',        // Darker red
+        sidebar: '#f6f8fa',       // GitHub light gray
+        text_primary: '#24292f',
+        text_secondary: '#656d76',
+        background: '#ffffff',
+        surface: '#f6f8fa',
+        border: '#d0d7de',
+        font_family: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica'
+      }
+    },
+
+    // Slack Theme (Professional Communication Style)
+    slack: {
+      internal_chat: {
+        primary: '#4a154b',       // Slack Purple
+        secondary: '#f8f8f8',     // Light gray
+        accent: '#611f69',        // Darker purple
+        sidebar: '#3f0e40',       // Slack sidebar purple
+        text_primary: '#1d1c1d',  // Slack text
+        text_secondary: '#616061', // Muted text
+        background: '#ffffff',
+        surface: '#f8f8f8',
+        font_family: 'Slack-Lato, Lato, Helvetica Neue, Helvetica, Arial, sans-serif'
+      },
+      public_queue: {
+        primary: '#e01e5a',       // Slack Pink
+        secondary: '#fff0f3',     // Light pink
+        accent: '#c91c3f',        // Darker pink
+        sidebar: '#4a0e1a',       // Dark red sidebar
+        text_primary: '#1d1c1d',
+        text_secondary: '#616061',
+        background: '#ffffff',
+        surface: '#f8f8f8',
+        font_family: 'Slack-Lato, Lato, Helvetica Neue, Helvetica, Arial, sans-serif'
+      }
+    }
   },
 
-  // Header Configuration
-  header_config: {
-    title: 'Public Support Queue',
-    subtitle: 'Helping visitors and guests',
-    show_queue_count: true,
-    show_active_agents: true,
-    theme_indicator: 'Public Portal Mode'
+  // 🎛️ FULLY CUSTOMIZABLE THEME BUILDER
+  custom_theme: {
+    // Internal Chat Customization
+    internal_chat: {
+      primary_color: '#1976d2',      // Color picker
+      secondary_color: '#f5f5f5',    // Color picker
+      accent_color: '#1565c0',       // Color picker
+      sidebar_color: '#ffffff',      // Color picker
+      text_primary_color: '#212121',  // Color picker
+      text_secondary_color: '#757575', // Color picker
+      background_color: '#ffffff',   // Color picker
+      surface_color: '#fafafa',      // Color picker
+      border_color: '#e0e0e0',       // Color picker
+      border_radius: '8px',          // Slider: 0-32px
+      font_family: 'Inter, system-ui, sans-serif', // Dropdown
+      font_size_base: '14px',        // Slider: 12-18px
+      compact_mode: false,           // Toggle
+      animations_enabled: true       // Toggle
+    },
+
+    // Public Queue Customization
+    public_queue: {
+      primary_color: '#e57373',      // Color picker
+      secondary_color: '#ffcdd2',    // Color picker
+      accent_color: '#d32f2f',       // Color picker
+      sidebar_color: '#fce4ec',      // Color picker
+      text_primary_color: '#212121',
+      text_secondary_color: '#757575',
+      background_color: '#ffffff',
+      surface_color: '#fafafa',
+      border_color: '#e0e0e0',
+      border_radius: '8px',
+      font_family: 'Inter, system-ui, sans-serif',
+      font_size_base: '14px',
+      compact_mode: false,
+      animations_enabled: true,
+      
+      // Public Queue Specific Settings
+      queue_priority_colors: {
+        vip: '#9c27b0',              // Purple for VIP
+        urgent: '#f44336',           // Red for urgent
+        normal: '#4caf50'            // Green for normal
+      },
+      session_status_colors: {
+        waiting: '#ff9800',          // Orange for waiting
+        active: '#4caf50',           // Green for active
+        resolved: '#2196f3',         // Blue for resolved
+        abandoned: '#607d8b'         // Gray for abandoned
+      }
+    },
+
+    // Global Theme Settings
+    global_settings: {
+      apply_to_widgets: true,        // Apply theme to chat widgets
+      apply_to_modals: true,         // Apply theme to chat modals
+      sync_with_system: false,       // Auto light/dark based on OS
+      high_contrast_mode: false,     // Accessibility mode
+      reduce_animations: false,      // Accessibility mode
+      allow_user_override: true      // Users can override admin default
+    }
   },
 
-  // Queue Display Options
-  display_options: {
-    show_guest_info: true,     // Name, email if provided
-    show_wait_times: true,     // How long they've been waiting
-    show_session_previews: true, // Last message preview
-    group_by_priority: true,   // VIP, urgent, normal sections
-    auto_refresh_seconds: 5    // Real-time updates
+  // 👥 USER PERSONALIZATION SYSTEM
+  user_personalization: {
+    // Admin-controlled defaults
+    admin_defaults: {
+      internal_chat_theme: 'light',           // System-wide default theme
+      public_queue_theme: 'light',            // Public queue default theme
+      allow_user_customization: true,         // Users can pick their own themes
+      available_themes: [                     // Which themes users can choose from
+        'light', 'iphone', 'darcula', 'github', 'slack', 'custom'
+      ],
+      force_theme_compliance: false,          // Override user preferences (emergency)
+      theme_change_frequency_limit: 'daily'   // Prevent excessive switching
+    },
+
+    // User preference storage
+    user_preferences: {
+      // Per-user theme settings stored in database
+      user_internal_chat_theme: 'inherit',    // 'inherit' uses admin default
+      user_public_queue_theme: 'inherit',     // Or specific theme name
+      user_custom_theme_json: '{}',           // User's custom theme data
+      user_accessibility_settings: {
+        high_contrast_mode: false,
+        reduce_animations: false,
+        font_size_multiplier: 1.0             // 0.8x to 1.5x scaling
+      },
+      last_theme_change: null,                // Rate limiting
+      theme_change_count: 0                   // Usage analytics
+    },
+
+    // Theme resolution priority
+    theme_resolution: {
+      priority_order: [
+        '1. Force compliance (admin emergency override)',
+        '2. User accessibility overrides (high contrast, etc.)',
+        '3. User selected theme preference',
+        '4. Admin system default',
+        '5. Fallback to light theme'
+      ],
+      
+      // Real-time theme switching
+      live_switching: {
+        enabled: true,                         // Users can change themes instantly
+        preview_mode: true,                    // Preview before applying
+        remember_per_device: true,             // Different themes per device
+        sync_across_sessions: true             // Theme follows user across logins
+      }
+    }
   },
 
-  // Staff Experience
-  staff_ui: {
-    quick_switch_button: true,  // Switch to internal chat
+  // 🎮 USER THEME INTERFACE
+  user_theme_selector: {
+    // Location in UI
+    access_points: [
+      'Chat sidebar header → Settings icon → Theme Preferences',
+      'User profile dropdown → Chat Theme',
+      'ChatWidget → Settings gear → Appearance'
+    ],
+
+    // Theme picker interface
+    theme_picker_ui: {
+      layout: 'compact_grid',                  // Grid of theme previews
+      preview_size: 'thumbnail',               // Small previews for quick selection
+      show_theme_names: true,                  // Light, Darcula, iPhone, etc.
+      live_preview: true,                      // Apply temporarily for preview
+      quick_apply: true,                       // One-click theme switching
+      reset_to_default: true,                  // Reset to admin default button
+      
+      // Theme preview content
+      preview_elements: [
+        'Sample message bubble',
+        'Sidebar background',
+        'Primary accent color',
+        'Text readability sample'
+      ]
+    },
+
+    // User customization limits
+    customization_scope: {
+      preset_themes: 'full_access',            // Users can pick any preset
+      custom_themes: 'colors_only',            // Users can modify colors only
+      typography: 'admin_controlled',          // Font/size controlled by admin
+      layout: 'admin_controlled',              // Border radius, spacing locked
+      accessibility: 'user_controlled'        // Contrast, animations user choice
+    }
+  }
+  },
+
+  // 🎨 THEME PREVIEW SYSTEM
+  preview_settings: {
+    live_preview: true,              // Real-time preview as you customize
+    sample_conversations: true,      // Show sample messages
+    all_components_preview: true,    // Preview sidebar, messages, widgets
+    export_theme: true,              // Export custom theme as JSON
+    import_theme: true,              // Import theme from JSON
+    share_theme: true               // Generate shareable theme codes
+  }
+};
+
+// Database Schema Enhancement for Theme System
+const EnhancedThemeSchema = `
+-- Enhanced chat_ui_settings table (Admin Global Defaults)
+ALTER TABLE chat_ui_settings ADD COLUMN theme_preset TEXT DEFAULT 'light';
+ALTER TABLE chat_ui_settings ADD COLUMN custom_theme_json TEXT DEFAULT '{}';
+ALTER TABLE chat_ui_settings ADD COLUMN public_queue_theme_preset TEXT DEFAULT 'light';
+ALTER TABLE chat_ui_settings ADD COLUMN public_queue_custom_theme_json TEXT DEFAULT '{}';
+ALTER TABLE chat_ui_settings ADD COLUMN theme_sync_enabled BOOLEAN DEFAULT FALSE;
+ALTER TABLE chat_ui_settings ADD COLUMN high_contrast_mode BOOLEAN DEFAULT FALSE;
+ALTER TABLE chat_ui_settings ADD COLUMN reduce_animations BOOLEAN DEFAULT FALSE;
+
+-- Admin theme policy controls
+ALTER TABLE chat_ui_settings ADD COLUMN allow_user_customization BOOLEAN DEFAULT TRUE;
+ALTER TABLE chat_ui_settings ADD COLUMN available_themes_json TEXT DEFAULT '["light","iphone","darcula","github","slack","custom"]';
+ALTER TABLE chat_ui_settings ADD COLUMN force_theme_compliance BOOLEAN DEFAULT FALSE;
+ALTER TABLE chat_ui_settings ADD COLUMN theme_change_frequency_limit TEXT DEFAULT 'daily';
+
+-- User theme preferences table
+CREATE TABLE IF NOT EXISTS user_theme_preferences (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    
+    -- User theme selections
+    internal_chat_theme TEXT DEFAULT 'inherit',  -- 'inherit' or theme name
+    public_queue_theme TEXT DEFAULT 'inherit',   -- 'inherit' or theme name
+    custom_theme_json TEXT DEFAULT '{}',         -- User's custom theme data
+    
+    -- User accessibility settings
+    high_contrast_mode BOOLEAN DEFAULT FALSE,
+    reduce_animations BOOLEAN DEFAULT FALSE,
+    font_size_multiplier REAL DEFAULT 1.0,      -- 0.8 to 1.5 scaling
+    
+    -- Rate limiting and analytics
+    last_theme_change TIMESTAMP DEFAULT NULL,
+    theme_change_count INTEGER DEFAULT 0,
+    
+    -- Device/session preferences
+    device_fingerprint TEXT DEFAULT NULL,       -- Remember per-device themes
+    sync_across_sessions BOOLEAN DEFAULT TRUE,
+    
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (username) REFERENCES users(username),
+    UNIQUE(username)
+);
+
+-- Theme usage analytics (Enhanced with user tracking)
+CREATE TABLE IF NOT EXISTS theme_usage_analytics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    theme_type TEXT CHECK(theme_type IN ('preset', 'custom', 'admin_default')) NOT NULL,
+    theme_name TEXT NOT NULL,
+    interface_type TEXT CHECK(interface_type IN ('internal_chat', 'public_queue')) NOT NULL,
+    user_count INTEGER DEFAULT 0,
+    active_sessions INTEGER DEFAULT 0,
+    switch_count INTEGER DEFAULT 0,             -- How many times theme was changed to
+    total_usage_minutes INTEGER DEFAULT 0,      -- Time spent using this theme
+    usage_date DATE DEFAULT CURRENT_DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(theme_name, interface_type, usage_date)
+);
+
+-- User theme change log (For rate limiting and admin monitoring)
+CREATE TABLE IF NOT EXISTS user_theme_change_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    old_theme TEXT,
+    new_theme TEXT,
+    interface_type TEXT CHECK(interface_type IN ('internal_chat', 'public_queue')) NOT NULL,
+    change_reason TEXT DEFAULT 'user_preference', -- 'user_preference', 'admin_override', 'accessibility'
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (username) REFERENCES users(username)
+);
+`;
+
+// Admin Interface Implementation (Enhanced with User Management)
+const ThemeConfigurationUI = {
+  // Enhanced UI Customization Tab
+  ui_sections: [
+    {
+      title: "🎨 System Theme Defaults",
+      components: [
+        "AdminDefaultThemeSelector", // Set system-wide defaults
+        "UserPolicyControls",        // User customization permissions
+        "ThemeComplianceControls"    // Force compliance toggle
+      ]
+    },
+    {
+      title: "🎛️ Internal Chat Theming",
+      components: [
+        "ColorPickerGrid",           // All color customizations
+        "TypographyControls",        // Font, size, weight settings
+        "LayoutControls",            // Border radius, spacing, compact mode
+        "AnimationControls"          // Enable/disable animations
+      ]
+    },
+    {
+      title: "🎯 Public Queue Theming", 
+      components: [
+        "PublicQueueColorPicker",    // Color customizations for queue
+        "PriorityColorMapping",      // VIP, urgent, normal colors
+        "StatusColorMapping",        // Waiting, active, resolved colors
+        "QueueLayoutControls"        // Queue-specific layout options
+      ]
+    },
+    {
+      title: "👥 User Theme Management",
+      components: [
+        "UserThemeOverview",         // See what themes users are using
+        "ThemeUsageAnalytics",       // Popular themes, usage stats
+        "UserThemeOverrides",        // Admin can override specific users
+        "ThemeChangeRateLimit"       // Control how often users can switch
+      ]
+    },
+    {
+      title: "♿ Accessibility & Global Settings",
+      components: [
+        "AccessibilityControls",     // High contrast, reduced motion
+        "GlobalSyncSettings",        // System theme sync
+        "ThemeImportExport"          // Import/export functionality
+      ]
+    }
+  ],
+
+  // Implementation Components
+  components: {
+    AdminDefaultThemeSelector: `
+      // Admin sets system defaults
+      - Default internal chat theme dropdown
+      - Default public queue theme dropdown  
+      - Live preview of selected defaults
+      - "Apply to all users" bulk action
+    `,
+    
+    UserPolicyControls: `
+      // Control user customization permissions
+      - Toggle: Allow users to customize themes
+      - Multi-select: Available themes for users
+      - Toggle: Allow custom theme creation
+      - Slider: Theme change frequency limit
+    `,
+    
+    UserThemeOverview: `
+      // See user theme preferences
+      - Data table showing username, current theme, last change
+      - Filter by theme type (preset/custom)
+      - Search users by theme preference
+      - Override user themes with admin controls
+    `,
+    
+    ThemeUsageAnalytics: `
+      // Theme popularity and usage stats
+      - Pie chart: Theme distribution across users
+      - Line chart: Theme adoption over time
+      - Top 5 most popular themes
+      - Average session time per theme
+    `,
+    
+    LivePreviewPanel: `
+      // Split preview showing both interfaces
+      - Left: Internal chat preview with admin default
+      - Right: Public queue preview with admin default
+      - Sample conversations and UI elements
+      - Real-time updates as settings change
+    `
+  }
+};
+
+// User Theme Interface Implementation
+const UserThemeInterface = {
+  // User-facing theme selection
+  access_locations: [
+    {
+      location: "Chat Sidebar Settings",
+      trigger: "Settings gear icon in chat sidebar header",
+      interface: "Dropdown menu with theme options"
+    },
+    {
+      location: "User Profile Menu",
+      trigger: "Profile dropdown → Chat Appearance",
+      interface: "Full theme selection modal"
+    },
+    {
+      location: "Chat Widget Settings", 
+      trigger: "Widget settings gear → Appearance",
+      interface: "Compact theme picker"
+    }
+  ],
+
+  // User theme picker UI
+  theme_picker: {
+    layout: "grid_4x2",                    // 4 columns, 2 rows max
+    theme_preview_size: "120x80px",        // Thumbnail size
+    show_theme_names: true,                // Light, Darcula, etc.
+    show_current_indicator: true,          // Highlight active theme
+    live_preview_on_hover: false,          // Don't spam with hover previews
+    apply_button: true,                    // Confirm before applying
+    reset_to_default: true,                // Reset to admin default
+    
+    // Available actions
+    user_actions: [
+      "Select preset theme",
+      "Modify colors (if allowed)",
+      "Reset to system default", 
+      "Apply accessibility settings"
+    ],
+    
+    // Restrictions based on admin policy
+    restrictions: {
+      available_themes: "from_admin_policy",     // Admin controls which themes
+      custom_theme_access: "admin_controlled",   // Can users create custom?
+      rate_limiting: "enforce_admin_limits",     // Respect change frequency
+      force_compliance: "override_user_choice"   // Admin emergency override
+    }
+  },
+
+  // Theme resolution system
+  theme_resolution: {
+    resolution_order: [
+      "1. Admin force compliance (emergency)",
+      "2. User accessibility overrides",
+      "3. User selected theme",
+      "4. Admin system default",
+      "5. Hard-coded fallback (light)"
+    ],
+    
+    caching_strategy: {
+      cache_duration: "24_hours",            // Cache resolved themes
+      invalidate_on: [                      // When to refresh
+        "admin_policy_change",
+        "user_theme_change",
+        "accessibility_change"
+      ],
+      fallback_behavior: "use_cached_theme"  // If resolution fails
+    }
+  }
+};
     session_alerts: true,       // New session notifications
     keyboard_shortcuts: true,   // Alt+P for public queue
     multi_session_support: true, // Handle multiple guests

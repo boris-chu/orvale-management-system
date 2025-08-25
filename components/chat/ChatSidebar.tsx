@@ -30,6 +30,7 @@ import OnlinePresenceTracker from '@/components/shared/OnlinePresenceTracker';
 import { socketClient } from '@/lib/socket-client';
 import { useChatSettings } from '@/hooks/useChatSettings';
 import { cn } from '@/lib/utils';
+import UserThemeModal from './UserThemeModal';
 
 interface User {
   username: string;
@@ -78,6 +79,7 @@ export default function ChatSidebar({
     groups: []
   });
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [showThemeModal, setShowThemeModal] = useState(false);
   const componentId = useRef(`ChatSidebar_${Date.now()}`).current;
   const { settings: chatUISettings, loading: settingsLoading } = useChatSettings();
   
@@ -501,7 +503,13 @@ export default function ChatSidebar({
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Chat</h2>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="w-8 h-8 p-0">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-8 h-8 p-0"
+              onClick={() => setShowThemeModal(true)}
+              title="Chat theme settings"
+            >
               <Settings className="w-4 h-4" />
             </Button>
             <Button 
@@ -579,6 +587,12 @@ export default function ChatSidebar({
           </div>
         </ScrollArea>
       </CardContent>
+      
+      {/* User Theme Selection Modal */}
+      <UserThemeModal 
+        open={showThemeModal}
+        onClose={() => setShowThemeModal(false)}
+      />
     </Card>
   );
 }
