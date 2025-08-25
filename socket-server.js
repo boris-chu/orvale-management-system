@@ -144,75 +144,7 @@ io.on('connection', async (socket) => {
     }
   });
 
-  // === CHAT MESSAGE EVENTS ===
-  
-  socket.on('chat:join_channel', (channelId) => {
-    if (!authenticatedUser) return;
-    
-    socket.join(`channel_${channelId}`);
-    
-    // Track room membership
-    if (!roomUsers.has(`channel_${channelId}`)) {
-      roomUsers.set(`channel_${channelId}`, new Set());
-    }
-    roomUsers.get(`channel_${channelId}`).add(socket.userId);
-    
-    console.log(`${socket.userDisplayName} joined channel ${channelId}`);
-  });
-
-  socket.on('chat:leave_channel', (channelId) => {
-    if (!authenticatedUser) return;
-    
-    socket.leave(`channel_${channelId}`);
-    roomUsers.get(`channel_${channelId}`)?.delete(socket.userId);
-    
-    console.log(`${socket.userDisplayName} left channel ${channelId}`);
-  });
-
-  socket.on('chat:send_message', (data) => {
-    if (!authenticatedUser) return;
-    
-    const { channelId, message, messageType = 'text', replyToId = null } = data;
-    
-    // Save message to database
-    db.run(
-      `INSERT INTO chat_messages (channel_id, user_id, message_text, message_type, reply_to_id) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [channelId, socket.userId, message, messageType, replyToId],
-      function(err) {
-        if (err) {
-          socket.emit('chat:error', 'Failed to send message');
-          return;
-        }
-        
-        const messageData = {
-          id: this.lastID,
-          channelId,
-          userId: socket.userId,
-          userDisplayName: socket.userDisplayName,
-          message,
-          messageType,
-          replyToId,
-          timestamp: new Date().toISOString()
-        };
-        
-        // Broadcast to all users in the channel
-        io.to(`channel_${channelId}`).emit('chat:new_message', messageData);
-        console.log(`Message sent to channel ${channelId} by ${socket.userDisplayName}`);
-      }
-    );
-  });
-
-  socket.on('chat:typing', (data) => {
-    if (!authenticatedUser) return;
-    
-    const { channelId, isTyping } = data;
-    socket.to(`channel_${channelId}`).emit('chat:user_typing', {
-      userId: socket.userId,
-      userDisplayName: socket.userDisplayName,
-      isTyping
-    });
-  });
+  // === STANDARDIZED CHAT EVENTS (Legacy handlers removed for clarity) ===
 
   // === STANDARDIZED 11 WEBSOCKET EVENTS (per Chat Implementation Plan) ===
   
@@ -418,47 +350,7 @@ io.on('connection', async (socket) => {
     );
   });
 
-  // Handle user joining channels (enhanced)
-  socket.on('join_channel', (channelId) => {
-    if (!authenticatedUser) return;
-    
-    socket.join(`channel_${channelId}`);
-    
-    // Track room membership
-    if (!roomUsers.has(`channel_${channelId}`)) {
-      roomUsers.set(`channel_${channelId}`, new Set());
-    }
-    roomUsers.get(`channel_${channelId}`).add(socket.userId);
-    
-    // Notify other users in channel
-    socket.to(`channel_${channelId}`).emit('user_joined', {
-      userId: socket.userId,
-      userDisplayName: socket.userDisplayName,
-      userRole: socket.userRole,
-      channelId: parseInt(channelId),
-      joinedAt: new Date().toISOString()
-    });
-    
-    console.log(`${socket.userDisplayName} joined channel ${channelId}`);
-  });
-
-  // Handle user leaving channels (enhanced)  
-  socket.on('leave_channel', (channelId) => {
-    if (!authenticatedUser) return;
-    
-    socket.leave(`channel_${channelId}`);
-    roomUsers.get(`channel_${channelId}`)?.delete(socket.userId);
-    
-    // Notify other users in channel
-    socket.to(`channel_${channelId}`).emit('user_left', {
-      userId: socket.userId,
-      userDisplayName: socket.userDisplayName,
-      channelId: parseInt(channelId),
-      leftAt: new Date().toISOString()
-    });
-    
-    console.log(`${socket.userDisplayName} left channel ${channelId}`);
-  });
+  // === Duplicate handlers removed for clarity ===
 
   // File upload notification
   socket.on('file_uploaded', (data) => {

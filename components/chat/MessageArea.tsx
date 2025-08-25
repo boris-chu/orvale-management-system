@@ -144,6 +144,14 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
     // Listen for new messages
     socket.on('message_received', (data) => {
       const { message } = data;
+      console.log('📨 Received message from Socket.io:', message);
+      
+      // Don't add messages from yourself (optimistic updates already handle this)
+      if (message.userId === currentUser?.username) {
+        console.log('🔄 Ignoring own message (optimistic update already added)');
+        return;
+      }
+      
       setMessages(prev => [...prev, {
         id: message.id.toString(),
         content: message.message,

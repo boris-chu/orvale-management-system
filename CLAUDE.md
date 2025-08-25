@@ -502,6 +502,52 @@ import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 
 **This is especially important for StaffTicketModal, user creation modals, and any other dialog-based forms.**
 
+### 🚫 Mock Data in Components - CRITICAL LESSON LEARNED
+
+**NEVER use mock data in components for development**. Always load real data from APIs to avoid wasting time debugging phantom issues.
+
+#### ❌ **What NOT to do:**
+```javascript
+// DON'T: Mock data in components
+const ChatSidebar = () => {
+  const [chatData, setChatData] = useState({
+    directMessages: [
+      { id: 'dm_1', name: 'mock_user', displayName: 'Mock User' }, // Mock data!
+    ],
+    channels: [
+      { id: '1', name: 'general', displayName: '#general' }, // Mock data!
+    ]
+  });
+  
+  // This leads to confusion when debugging real API issues
+  // Messages may work with mock data but fail with real API
+```
+
+#### ✅ **What TO do:**
+```javascript
+// DO: Always load real data from APIs
+const ChatSidebar = () => {
+  const [chatData, setChatData] = useState({ directMessages: [], channels: [] });
+  
+  useEffect(() => {
+    // Load real data from API
+    const loadChats = async () => {
+      const response = await fetch('/api/chat/channels');
+      const data = await response.json();
+      setChatData(data);
+    };
+    loadChats();
+  }, []);
+```
+
+#### 🔧 **Lessons Learned:**
+1. **Mock data masks real issues**: Real API problems hidden by working mock data
+2. **Authentication issues invisible**: Mock data doesn't require auth tokens
+3. **Database schema mismatches hidden**: Mock structure may not match real API
+4. **Time wasted debugging**: Phantom issues that don't exist with real data
+
+**Debugging Rule**: If something works in isolation but fails integrated, check for mock data masking real API issues.
+
 ### API Response Handling
 ```javascript
 try {
