@@ -37,7 +37,7 @@ export default function ChatPage() {
       setError(null);
 
       // Check if user is authenticated
-      const token = localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
+      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
       if (!token) {
         setError('Please log in to access the chat system');
         setIsLoading(false);
@@ -91,12 +91,15 @@ export default function ChatPage() {
 
   const checkChatSystemStatus = async () => {
     try {
-      const response = await fetch('/api/admin/chat/settings?category=general');
+      // Use the public widget settings API to check if chat is enabled
+      const response = await fetch('/api/chat/widget-settings');
       if (response.ok) {
         const settings = await response.json();
-        setChatSystemEnabled(settings.chat_system_enabled === 'true');
+        // If widget is enabled, chat system is enabled
+        setChatSystemEnabled(settings.enabled === true);
       } else {
         // Default to enabled if we can't check settings
+        console.log('Could not check chat system status, defaulting to enabled');
         setChatSystemEnabled(true);
       }
     } catch (error) {
