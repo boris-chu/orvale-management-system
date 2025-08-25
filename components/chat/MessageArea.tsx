@@ -28,6 +28,7 @@ import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { UserAvatar } from '@/components/UserAvatar';
 import { cn } from '@/lib/utils';
 import { useIsMobile, useIsTouchDevice } from '@/hooks/useMediaQuery';
+import io, { Socket } from 'socket.io-client';
 
 interface User {
   username: string;
@@ -85,8 +86,122 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const socketRef = useRef<Socket | null>(null);
   const isMobile = useIsMobile();
   const isTouchDevice = useIsTouchDevice();
+
+  // Socket.io connection setup
+  useEffect(() => {
+    if (!currentUser?.username) return;
+
+    const token = localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
+    if (!token) return;
+
+    // Initialize socket connection
+    const socket = io('http://localhost:3001', {
+      transports: ['websocket', 'polling'],
+      auth: { token }
+    });
+
+    socketRef.current = socket;
+
+    // Authentication
+    socket.emit('authenticate', token);
+
+    // Join current chat channel
+    socket.emit('join_channel', { channelId: chat.id });
+
+    // Listen for new messages
+    socket.on('message_received', (data) => {
+      const { message } = data;
+      setMessages(prev => [...prev, {
+        id: message.id.toString(),
+        content: message.message,
+        sender: {
+          username: message.userId,
+          display_name: message.userDisplayName,
+          role_id: 'user'
+        },
+        timestamp: message.timestamp,
+        message_type: message.messageType || 'text',
+        reply_to: message.replyToId ? { id: message.replyToId } : undefined
+      }]);
+    });
+
+    // Listen for typing indicators
+    socket.on('user_typing', (data) => {
+      const { userId, userDisplayName, isTyping } = data;
+      if (userId !== currentUser.username) {
+        setTypingUsers(prev => {
+          if (isTyping) {
+            return prev.includes(userDisplayName) ? prev : [...prev, userDisplayName];
+          } else {
+            return prev.filter(user => user !== userDisplayName);
+          }
+        });
+      }
+    });
+
+    // Listen for user join/leave
+    socket.on('user_joined', (data) => {
+      console.log(`${data.displayName} joined the channel`);
+    });
+
+    socket.on('user_left', (data) => {
+      console.log(`${data.displayName} left the channel`);
+    });
+
+    // Cleanup on unmount
+    return () => {
+      socket.emit('leave_channel', { channelId: chat.id });
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [chat.id, currentUser?.username]);
+
+  // Typing indicator management
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleTypingStart = useCallback(() => {
+    if (!socketRef.current?.connected || isTyping) return;
+    
+    setIsTyping(true);
+    socketRef.current.emit('typing_start', { channelId: chat.id });
+    
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Set timeout to stop typing after 3 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      handleTypingStop();
+    }, 3000);
+  }, [chat.id, isTyping]);
+
+  const handleTypingStop = useCallback(() => {
+    if (!socketRef.current?.connected || !isTyping) return;
+    
+    setIsTyping(false);
+    socketRef.current.emit('typing_stop', { channelId: chat.id });
+    
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+  }, [chat.id, isTyping]);
+
+  // Handle input change with typing indicators
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewMessage(value);
+    
+    if (value.trim()) {
+      handleTypingStart();
+    } else {
+      handleTypingStop();
+    }
+  }, [handleTypingStart, handleTypingStop]);
 
   // Mock messages for development - using useMemo to prevent recreation
   const mockMessages = useMemo(() => {
@@ -171,6 +286,7 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
 
     const messageContent = newMessage.trim();
     setNewMessage('');
+    handleTypingStop(); // Stop typing indicator when sending
 
     // Create optimistic message
     const optimisticMessage: Message = {
@@ -185,16 +301,20 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
     setMessages(prev => [...prev, optimisticMessage]);
     setReplyingTo(null);
 
-    // TODO: Send via Socket.io
+    // Send via Socket.io
     try {
-      // socket.emit('send_message', {
-      //   channel_id: chat.id,
-      //   content: messageContent,
-      //   reply_to: replyingTo?.id
-      // });
+      if (socketRef.current?.connected) {
+        socketRef.current.emit('send_message', {
+          channelId: chat.id,
+          message: messageContent,
+          type: 'text',
+          replyToId: replyingTo?.id || null
+        });
+      }
     } catch (error) {
       console.error('Failed to send message:', error);
-      // TODO: Handle send failure
+      // Remove optimistic message on failure
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
     }
   }, [newMessage, currentUser, chat.id, replyingTo]);
 
@@ -496,7 +616,7 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
             <Input
               ref={inputRef}
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
+              onChange={handleInputChange}
               onKeyPress={handleKeyPress}
               placeholder={`Message ${chat.displayName}...`}
               className={cn(
