@@ -1380,7 +1380,7 @@ export default function TicketsPage() {
                               user={{...currentUser, username: currentUser?.username}}
                               size="lg"
                               enableRealTimePresence={true}
-                              showPresenceStatus={true}
+                              showPresenceStatus={false}
                             />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-gray-900 truncate">{currentUser?.display_name}</p>
