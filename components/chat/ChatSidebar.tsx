@@ -414,12 +414,20 @@ export default function ChatSidebar({
     return (
       <div className="mb-4">
         <div 
-          className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+          className="flex items-center justify-between px-3 py-2 cursor-pointer rounded-md transition-colors duration-200"
+          style={{ 
+            ':hover': { backgroundColor: 'var(--chat-secondary, #f5f5f5)' }
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--chat-secondary, #f5f5f5)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           onClick={() => setActiveSection(activeSection === type ? 'all' : type)}
         >
           <div className="flex items-center gap-2">
             {icon}
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span 
+              className="text-sm font-medium" 
+              style={{ color: 'var(--chat-text-primary, #212121)' }}
+            >
               {title}
             </span>
             {/* Section Unread Badge - Fixed Conditional Rendering */}
@@ -498,10 +506,18 @@ export default function ChatSidebar({
   };
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card 
+      className="h-full flex flex-col"
+      style={{ backgroundColor: 'var(--chat-sidebar, #ffffff)' }}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Chat</h2>
+          <h2 
+            className="text-lg font-semibold" 
+            style={{ color: 'var(--chat-text-primary, #212121)' }}
+          >
+            Chat
+          </h2>
           <div className="flex items-center gap-1">
             <Button 
               variant="ghost" 

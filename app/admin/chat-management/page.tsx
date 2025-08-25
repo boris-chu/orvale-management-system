@@ -45,7 +45,8 @@ import {
   EyeOff,
   UserPlus,
   UserMinus,
-  Hash
+  Hash,
+  Check
 } from 'lucide-react';
 import {
   Select as MuiSelect,
@@ -58,6 +59,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UserAvatar } from '@/components/UserAvatar';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
 import { cn } from '@/lib/utils';
+import { ThemeSystemProvider, useThemeSystem, PRESET_THEMES } from '@/hooks/useThemeSystem';
 
 interface ChatSettings {
   // Chat UI Settings
@@ -101,6 +103,735 @@ interface SystemStats {
   total_channels: number;
   messages_per_hour: number;
   storage_used_mb: number;
+}
+
+// Theme Management Tab Component
+interface ThemeManagementTabProps {
+  settings: ChatSettings;
+  updateSetting: (key: keyof ChatSettings, value: string | boolean) => void;
+  currentUser: any;
+}
+
+function ThemeManagementTab({ settings, updateSetting, currentUser }: ThemeManagementTabProps) {
+  const {
+    adminSettings,
+    userPreferences,
+    updateAdminSettings,
+    adminLoading,
+    getAvailableThemes,
+    canUserCustomize,
+    resolveTheme
+  } = useThemeSystem();
+  
+  // Apply resolved theme CSS to demonstrate theme system
+  const currentInternalTheme = resolveTheme('internal_chat');
+  const currentPublicQueueTheme = resolveTheme('public_queue');
+  
+  useEffect(() => {
+    // Inject current theme CSS variables for demonstration
+    const root = document.documentElement;
+    
+    // Apply internal chat theme variables
+    Object.entries(currentInternalTheme.colors).forEach(([key, value]) => {
+      root.style.setProperty(`--chat-${key.replace('_', '-')}`, value);
+    });
+    
+    // Apply public queue theme variables  
+    Object.entries(currentPublicQueueTheme.colors).forEach(([key, value]) => {
+      root.style.setProperty(`--queue-${key.replace('_', '-')}`, value);
+    });
+    
+    // Apply other theme properties
+    root.style.setProperty('--chat-border-radius', currentInternalTheme.border_radius || '8px');
+    root.style.setProperty('--chat-font-family', currentInternalTheme.font_family || 'Inter, system-ui, sans-serif');
+    root.style.setProperty('--chat-font-size-base', currentInternalTheme.font_size_base || '14px');
+    
+  }, [currentInternalTheme, currentPublicQueueTheme]);
+  
+  const [activeThemeTab, setActiveThemeTab] = useState('system-defaults');
+  const [previewTheme, setPreviewTheme] = useState('light');
+  const [showLivePreview, setShowLivePreview] = useState(false);
+  const [themeStats, setThemeStats] = useState({
+    totalUsers: 0,
+    usingCustomThemes: 0,
+    mostPopularTheme: 'light',
+    themeDistribution: [] as any[]
+  });
+
+  // Load theme usage analytics
+  useEffect(() => {
+    loadThemeAnalytics();
+  }, []);
+
+  const loadThemeAnalytics = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/theme-analytics', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setThemeStats(data);
+      }
+    } catch (error) {
+      console.error('Failed to load theme analytics:', error);
+    }
+  };
+
+  // Handle admin theme setting updates
+  const handleAdminThemeUpdate = async (updates: any) => {
+    try {
+      await updateAdminSettings(updates);
+      await loadThemeAnalytics(); // Refresh stats
+    } catch (error) {
+      console.error('Failed to update admin theme settings:', error);
+      alert('Failed to update theme settings. Please try again.');
+    }
+  };
+
+  // Force theme compliance
+  const handleForceCompliance = async () => {
+    if (!confirm('This will override all user theme preferences with the system default. Continue?')) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/force-theme-compliance', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          internal_chat_theme: adminSettings?.internal_chat_theme || 'light',
+          public_queue_theme: adminSettings?.public_queue_theme || 'light'
+        })
+      });
+      
+      if (response.ok) {
+        alert('Theme compliance enforced successfully!');
+        await loadThemeAnalytics();
+      } else {
+        throw new Error('Failed to enforce compliance');
+      }
+    } catch (error) {
+      console.error('Failed to force theme compliance:', error);
+      alert('Failed to enforce theme compliance. Please try again.');
+    }
+  };
+
+  const themePresets = [
+    { name: 'light', displayName: 'Light', colors: PRESET_THEMES.light.internal_chat.colors },
+    { name: 'iphone', displayName: 'iPhone', colors: PRESET_THEMES.iphone.internal_chat.colors },
+    { name: 'darcula', displayName: 'Darcula', colors: PRESET_THEMES.darcula.internal_chat.colors },
+    { name: 'github', displayName: 'GitHub', colors: PRESET_THEMES.github.internal_chat.colors },
+    { name: 'slack', displayName: 'Slack', colors: PRESET_THEMES.slack.internal_chat.colors }
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Current Theme Status */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="font-medium text-blue-900">Active Theme Configuration</h4>
+            <p className="text-sm text-blue-700 mt-1">
+              Internal Chat: <span className="font-medium capitalize">{adminSettings?.internal_chat_theme || 'light'}</span> • 
+              Public Queue: <span className="font-medium capitalize">{adminSettings?.public_queue_theme || 'light'}</span>
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-4 h-4 rounded-full border border-blue-300" 
+              style={{ backgroundColor: currentInternalTheme.colors.primary }}
+              title="Internal Chat Primary Color"
+            />
+            <div 
+              className="w-4 h-4 rounded-full border border-blue-300" 
+              style={{ backgroundColor: currentPublicQueueTheme.colors.primary }}
+              title="Public Queue Primary Color"
+            />
+          </div>
+        </div>
+      </div>
+      
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveThemeTab('system-defaults')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeThemeTab === 'system-defaults'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            System Defaults
+          </button>
+          <button
+            onClick={() => setActiveThemeTab('user-management')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeThemeTab === 'user-management'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            User Management
+          </button>
+          <button
+            onClick={() => setActiveThemeTab('analytics')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeThemeTab === 'analytics'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Theme Analytics
+          </button>
+          <button
+            onClick={() => setActiveThemeTab('live-preview')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeThemeTab === 'live-preview'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Live Preview
+          </button>
+        </nav>
+      </div>
+
+      {/* System Defaults Tab */}
+      {activeThemeTab === 'system-defaults' && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                System Theme Defaults
+              </CardTitle>
+              <CardDescription>
+                Configure default themes that will be applied system-wide
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Internal Chat Theme */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Internal Chat Default Theme</Label>
+                <div className="grid grid-cols-5 gap-3">
+                  {themePresets.map(theme => (
+                    <Card 
+                      key={theme.name}
+                      className={`cursor-pointer transition-all hover:shadow-md ${
+                        adminSettings?.internal_chat_theme === theme.name 
+                          ? 'ring-2 ring-blue-500 bg-blue-50' 
+                          : ''
+                      }`}
+                      onClick={() => handleAdminThemeUpdate({ internal_chat_theme: theme.name })}
+                    >
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="flex justify-center gap-1 mb-2">
+                            <div 
+                              className="w-4 h-4 rounded-full border"
+                              style={{ backgroundColor: theme.colors.primary }}
+                            />
+                            <div 
+                              className="w-4 h-4 rounded-full border"
+                              style={{ backgroundColor: theme.colors.sidebar }}
+                            />
+                            <div 
+                              className="w-4 h-4 rounded-full border"
+                              style={{ backgroundColor: theme.colors.surface }}
+                            />
+                          </div>
+                          <p className="text-sm font-medium">{theme.displayName}</p>
+                          {adminSettings?.internal_chat_theme === theme.name && (
+                            <Check className="w-4 h-4 text-blue-600 mx-auto mt-1" />
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              {/* Public Queue Theme */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Public Queue Default Theme</Label>
+                <div className="grid grid-cols-5 gap-3">
+                  {themePresets.map(theme => (
+                    <Card 
+                      key={theme.name}
+                      className={`cursor-pointer transition-all hover:shadow-md ${
+                        adminSettings?.public_queue_theme === theme.name 
+                          ? 'ring-2 ring-blue-500 bg-blue-50' 
+                          : ''
+                      }`}
+                      onClick={() => handleAdminThemeUpdate({ public_queue_theme: theme.name })}
+                    >
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <div className="flex justify-center gap-1 mb-2">
+                            <div 
+                              className="w-4 h-4 rounded-full border"
+                              style={{ backgroundColor: theme.colors.primary }}
+                            />
+                            <div 
+                              className="w-4 h-4 rounded-full border"
+                              style={{ backgroundColor: theme.colors.sidebar }}
+                            />
+                            <div 
+                              className="w-4 h-4 rounded-full border"
+                              style={{ backgroundColor: theme.colors.surface }}
+                            />
+                          </div>
+                          <p className="text-sm font-medium">{theme.displayName}</p>
+                          {adminSettings?.public_queue_theme === theme.name && (
+                            <Check className="w-4 h-4 text-blue-600 mx-auto mt-1" />
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* User Management Tab */}
+      {activeThemeTab === 'user-management' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* User Customization Policy */}
+            <Card>
+              <CardHeader>
+                <CardTitle>User Customization Policy</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium">Allow User Theme Customization</Label>
+                    <p className="text-xs text-muted-foreground">Users can choose their preferred themes</p>
+                  </div>
+                  <Switch
+                    checked={adminSettings?.allow_user_customization ?? true}
+                    onCheckedChange={(checked) => 
+                      handleAdminThemeUpdate({ allow_user_customization: checked })
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium">Force Theme Compliance</Label>
+                    <p className="text-xs text-muted-foreground">Override all user preferences with system default</p>
+                  </div>
+                  <Switch
+                    checked={adminSettings?.force_theme_compliance ?? false}
+                    onCheckedChange={(checked) => 
+                      handleAdminThemeUpdate({ force_theme_compliance: checked })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Available Themes</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {themePresets.map(theme => (
+                      <div
+                        key={theme.name}
+                        className={`px-3 py-1 text-xs rounded-full cursor-pointer transition-colors ${
+                          adminSettings?.available_themes?.includes(theme.name)
+                            ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                        onClick={() => {
+                          const current = adminSettings?.available_themes || [];
+                          const updated = current.includes(theme.name)
+                            ? current.filter(t => t !== theme.name)
+                            : [...current, theme.name];
+                          handleAdminThemeUpdate({ available_themes: updated });
+                        }}
+                      >
+                        {theme.displayName}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Click themes to toggle availability for users
+                  </p>
+                </div>
+
+                <div className="pt-4">
+                  <Button 
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleForceCompliance}
+                    className="w-full"
+                  >
+                    <Lock className="w-4 h-4 mr-2" />
+                    Force Compliance for All Users
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Theme Change Frequency */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Theme Change Limits</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Change Frequency Limit</Label>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Frequency</InputLabel>
+                    <MuiSelect
+                      value={adminSettings?.theme_change_frequency_limit || 'daily'}
+                      label="Frequency"
+                      onChange={(e) => 
+                        handleAdminThemeUpdate({ theme_change_frequency_limit: e.target.value })
+                      }
+                    >
+                      <MenuItem value="none">No Limit</MenuItem>
+                      <MenuItem value="hourly">Once per Hour</MenuItem>
+                      <MenuItem value="daily">Once per Day</MenuItem>
+                      <MenuItem value="weekly">Once per Week</MenuItem>
+                      <MenuItem value="monthly">Once per Month</MenuItem>
+                    </MuiSelect>
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Prevent excessive theme switching that could impact performance
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Analytics Tab */}
+      {activeThemeTab === 'analytics' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {/* Theme Usage Stats */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Total Users</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">{themeStats.totalUsers}</div>
+                <p className="text-xs text-muted-foreground mt-1">Active chat users</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Custom Themes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{themeStats.usingCustomThemes}</div>
+                <p className="text-xs text-muted-foreground mt-1">Users with custom themes</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Most Popular</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-purple-600 capitalize">
+                  {themeStats.mostPopularTheme}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Preferred theme</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Compliance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">
+                  {adminSettings?.force_theme_compliance ? '100%' : '---'}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {adminSettings?.force_theme_compliance ? 'Enforced' : 'Optional'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Theme Distribution Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Theme Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {themeStats.themeDistribution.length > 0 ? (
+                <div className="space-y-3">
+                  {themeStats.themeDistribution.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex gap-1">
+                          {themePresets.find(t => t.name === item.theme)?.colors && (
+                            <div 
+                              className="w-4 h-4 rounded border"
+                              style={{ 
+                                backgroundColor: themePresets.find(t => t.name === item.theme)?.colors.primary 
+                              }}
+                            />
+                          )}
+                        </div>
+                        <span className="capitalize font-medium">{item.theme}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-32 bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                            style={{ width: `${(item.count / themeStats.totalUsers) * 100}%` }}
+                          >
+                          </div>
+                        </div>
+                        <span className="text-sm font-medium w-12 text-right">
+                          {item.count}
+                        </span>
+                        <span className="text-xs text-muted-foreground w-12 text-right">
+                          {Math.round((item.count / themeStats.totalUsers) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No theme usage data available yet</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Live Preview Tab */}
+      {activeThemeTab === 'live-preview' && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Live Theme Preview</CardTitle>
+              <CardDescription>
+                Preview how different themes will look in the chat interface
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Preview Theme</Label>
+                  <FormControl size="small">
+                    <InputLabel>Theme</InputLabel>
+                    <MuiSelect
+                      value={previewTheme}
+                      label="Theme"
+                      onChange={(e) => setPreviewTheme(e.target.value)}
+                      className="w-48"
+                    >
+                      {themePresets.map(theme => (
+                        <MenuItem key={theme.name} value={theme.name}>
+                          {theme.displayName}
+                        </MenuItem>
+                      ))}
+                    </MuiSelect>
+                  </FormControl>
+                </div>
+              </div>
+
+              {/* Live Preview Panel */}
+              <div className="border rounded-lg overflow-hidden">
+                <div 
+                  className="h-96 p-4 transition-all duration-500"
+                  style={{
+                    backgroundColor: themePresets.find(t => t.name === previewTheme)?.colors.background,
+                    color: themePresets.find(t => t.name === previewTheme)?.colors.text_primary
+                  }}
+                >
+                  {/* Mock Chat Interface */}
+                  <div className="flex h-full">
+                    {/* Sidebar */}
+                    <div 
+                      className="w-1/3 border-r p-3 space-y-2"
+                      style={{
+                        backgroundColor: themePresets.find(t => t.name === previewTheme)?.colors.sidebar,
+                        borderColor: themePresets.find(t => t.name === previewTheme)?.colors.border
+                      }}
+                    >
+                      <div className="text-sm font-medium mb-3">Channels</div>
+                      {['general', 'development', 'support'].map(channel => (
+                        <div key={channel} className="flex items-center gap-2 p-2 rounded text-sm">
+                          <Hash className="w-4 h-4 text-green-500" />
+                          <span>{channel}</span>
+                        </div>
+                      ))}
+                      
+                      <div className="text-sm font-medium mb-3 mt-6">Direct Messages</div>
+                      {['John Doe', 'Jane Smith'].map(user => (
+                        <div key={user} className="flex items-center gap-2 p-2 rounded text-sm">
+                          <div className="w-6 h-6 rounded-full bg-gray-400"></div>
+                          <span>{user}</span>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Chat Area */}
+                    <div className="flex-1 flex flex-col">
+                      <div className="border-b p-3" style={{ borderColor: themePresets.find(t => t.name === previewTheme)?.colors.border }}>
+                        <div className="font-medium">#general</div>
+                        <div className="text-xs text-gray-500">3 members</div>
+                      </div>
+                      
+                      <div className="flex-1 p-3 space-y-3">
+                        <div className="flex gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-400 flex-shrink-0"></div>
+                          <div>
+                            <div className="font-medium text-sm">John Doe</div>
+                            <div className="text-sm">Welcome to the preview! This is how messages will look in the {previewTheme} theme.</div>
+                            <div className="text-xs text-gray-500 mt-1">2:45 PM</div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-400 flex-shrink-0"></div>
+                          <div>
+                            <div className="font-medium text-sm">Admin</div>
+                            <div className="text-sm">Theme colors and spacing look great!</div>
+                            <div className="text-xs text-gray-500 mt-1">2:46 PM</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="border-t p-3" style={{ borderColor: themePresets.find(t => t.name === previewTheme)?.colors.border }}>
+                        <div className="flex gap-2">
+                          <input 
+                            type="text" 
+                            placeholder="Type a message..."
+                            className="flex-1 p-2 border rounded text-sm"
+                            style={{
+                              backgroundColor: themePresets.find(t => t.name === previewTheme)?.colors.surface,
+                              borderColor: themePresets.find(t => t.name === previewTheme)?.colors.border
+                            }}
+                          />
+                          <Button size="sm" style={{ backgroundColor: themePresets.find(t => t.name === previewTheme)?.colors.primary }}>Send</Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Widget Preview */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Widget Configuration */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Chat Widget Settings</CardTitle>
+                <CardDescription>Configure the floating chat widget behavior</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Master Toggle */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium">Enable Chat Widget</Label>
+                    <p className="text-xs text-muted-foreground">Show chat widget on all pages</p>
+                  </div>
+                  <Switch
+                    checked={settings.widget_enabled}
+                    onCheckedChange={(checked) => updateSetting('widget_enabled', checked)}
+                  />
+                </div>
+
+                {/* Position */}
+                <div className="space-y-2">
+                  <FormControl fullWidth size="small">
+                    <InputLabel className="text-sm font-medium">Position</InputLabel>
+                    <MuiSelect
+                      value={settings.widget_position}
+                      label="Position"
+                      onChange={(e) => updateSetting('widget_position', e.target.value)}
+                    >
+                      <MenuItem value="bottom-right">Bottom Right</MenuItem>
+                      <MenuItem value="bottom-left">Bottom Left</MenuItem>
+                    </MuiSelect>
+                  </FormControl>
+                </div>
+
+                {/* Colors */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Primary Color</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="color"
+                        value={settings.widget_primary_color}
+                        onChange={(e) => updateSetting('widget_primary_color', e.target.value)}
+                        className="w-16 h-10"
+                      />
+                      <Input
+                        value={settings.widget_primary_color}
+                        onChange={(e) => updateSetting('widget_primary_color', e.target.value)}
+                        className="flex-1"
+                        placeholder="#1976d2"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Live Widget Preview */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Widget Preview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="relative h-64 bg-gray-50 dark:bg-gray-900 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-900"></div>
+                  
+                  {/* Mock Widget Preview */}
+                  <div className={`absolute ${settings.widget_position === 'bottom-right' ? 'bottom-4 right-4' : 'bottom-4 left-4'}`}>
+                    <div 
+                      className={`w-12 h-12 shadow-lg flex items-center justify-center text-white ${
+                        settings.widget_shape === 'round' ? 'rounded-full' :
+                        settings.widget_shape === 'square' ? 'rounded-none' : 'rounded-lg'
+                      }`}
+                      style={{ backgroundColor: settings.widget_primary_color }}
+                    >
+                      <MessageCircle className="h-6 w-6" />
+                    </div>
+                    <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
+                      3
+                    </Badge>
+                  </div>
+
+                  <div className="absolute top-4 left-4 text-sm text-gray-600 dark:text-gray-400">
+                    Widget Preview
+                  </div>
+                  
+                  <div className="absolute bottom-16 left-4 right-4 text-xs text-gray-500 text-center">
+                    Theme: {previewTheme} • Position: {settings.widget_position}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ChatManagementPage() {
@@ -715,6 +1446,7 @@ export default function ChatManagementPage() {
   }
 
   return (
+    <ThemeSystemProvider>
     <TooltipProvider>
       <div 
         className="min-h-screen bg-gray-50"
@@ -1075,391 +1807,11 @@ export default function ChatManagementPage() {
 
         {/* UI Customization Tab */}
         <TabsContent value="widget" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Widget Configuration */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Chat Widget Settings</CardTitle>
-                <CardDescription>Configure the floating chat widget behavior</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Master Toggle */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-sm font-medium">Enable Chat Widget</Label>
-                    <p className="text-xs text-muted-foreground">Show chat widget on all pages</p>
-                  </div>
-                  <Switch
-                    checked={settings.widget_enabled}
-                    onCheckedChange={(checked) => updateSetting('widget_enabled', checked)}
-                  />
-                </div>
-
-                {/* Position */}
-                <div className="space-y-2">
-                  <FormControl fullWidth size="small">
-                    <InputLabel className="text-sm font-medium">Position</InputLabel>
-                    <MuiSelect
-                      value={settings.widget_position}
-                      label="Position"
-                      onChange={(e) => updateSetting('widget_position', e.target.value)}
-                    >
-                      <MenuItem value="bottom-right">Bottom Right</MenuItem>
-                      <MenuItem value="bottom-left">Bottom Left</MenuItem>
-                    </MuiSelect>
-                  </FormControl>
-                </div>
-
-                {/* Shape */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Shape</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(['round', 'square', 'rounded-square'] as const).map((shape) => (
-                      <Button
-                        key={shape}
-                        variant={settings.widget_shape === shape ? 'default' : 'outline'}
-                        onClick={() => updateSetting('widget_shape', shape)}
-                        className="flex flex-col items-center gap-2 h-16"
-                      >
-                        {shape === 'round' && <Circle className="h-6 w-6" />}
-                        {shape === 'square' && <Square className="h-6 w-6" />}
-                        {shape === 'rounded-square' && <RotateCcw className="h-6 w-6" />}
-                        <span className="text-xs capitalize">{shape.replace('-', ' ')}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Colors */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Primary Color</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="color"
-                        value={settings.widget_primary_color}
-                        onChange={(e) => updateSetting('widget_primary_color', e.target.value)}
-                        className="w-16 h-10"
-                      />
-                      <Input
-                        value={settings.widget_primary_color}
-                        onChange={(e) => updateSetting('widget_primary_color', e.target.value)}
-                        className="flex-1"
-                        placeholder="#1976d2"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Secondary Color</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="color"
-                        value={settings.widget_secondary_color}
-                        onChange={(e) => updateSetting('widget_secondary_color', e.target.value)}
-                        className="w-16 h-10"
-                      />
-                      <Input
-                        value={settings.widget_secondary_color}
-                        onChange={(e) => updateSetting('widget_secondary_color', e.target.value)}
-                        className="flex-1"
-                        placeholder="#6c757d"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Theme */}
-                <div className="space-y-2">
-                  <FormControl fullWidth size="small">
-                    <InputLabel className="text-sm font-medium">Theme</InputLabel>
-                    <MuiSelect
-                      value={settings.widget_theme}
-                      label="Theme"
-                      onChange={(e) => updateSetting('widget_theme', e.target.value)}
-                    >
-                      <MenuItem value="light">Light</MenuItem>
-                      <MenuItem value="dark">Dark</MenuItem>
-                      <MenuItem value="auto">Auto (System)</MenuItem>
-                    </MuiSelect>
-                  </FormControl>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Live Preview */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Live Preview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="relative h-64 bg-gray-50 dark:bg-gray-900 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-800 dark:to-gray-900"></div>
-                  
-                  {/* Mock Widget Preview */}
-                  <div className={`absolute ${settings.widget_position === 'bottom-right' ? 'bottom-4 right-4' : 'bottom-4 left-4'}`}>
-                    <div 
-                      className={`w-12 h-12 shadow-lg flex items-center justify-center text-white ${
-                        settings.widget_shape === 'round' ? 'rounded-full' :
-                        settings.widget_shape === 'square' ? 'rounded-none' : 'rounded-lg'
-                      }`}
-                      style={{ backgroundColor: settings.widget_primary_color }}
-                    >
-                      <MessageCircle className="h-6 w-6" />
-                    </div>
-                    <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
-                      3
-                    </Badge>
-                  </div>
-
-                  <div className="absolute top-4 left-4 text-sm text-gray-600 dark:text-gray-400">
-                    Widget Preview
-                  </div>
-                  
-                  <div className="absolute bottom-16 left-4 right-4 text-xs text-gray-500 text-center">
-                    Badge styles apply to both widget and main chat sidebar
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* UI Customization Settings */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Chat Interface Settings</CardTitle>
-              <CardDescription>Configure appearance and behavior for all chat components (widget, sidebar, main chat)</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Global Settings Notice */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Palette className="w-4 h-4 text-blue-600" />
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-blue-900 mb-1">System-wide Settings</h4>
-                    <p className="text-sm text-blue-700">
-                      These UI settings apply to all chat components: the floating widget, main chat sidebar, and message interface. 
-                      Changes will be reflected immediately across the entire chat system.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Unread Badges */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-sm font-medium">Show Unread Badges</Label>
-                      <p className="text-xs text-muted-foreground">Display unread message count badges (applies to both widget and sidebar)</p>
-                    </div>
-                    <Switch
-                      checked={settings.show_unread_badges}
-                      onCheckedChange={(checked) => updateSetting('show_unread_badges', checked)}
-                    />
-                  </div>
-                  
-                  {settings.show_unread_badges && (
-                    <div className="space-y-4">
-                      {/* Badge Colors */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Background Color</Label>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="color"
-                              value={settings.unread_badge_color}
-                              onChange={(e) => updateSetting('unread_badge_color', e.target.value)}
-                              className="w-16 h-8"
-                            />
-                            <Input
-                              type="text"
-                              value={settings.unread_badge_color}
-                              onChange={(e) => updateSetting('unread_badge_color', e.target.value)}
-                              className="flex-1 text-xs"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Text Color</Label>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="color"
-                              value={settings.unread_badge_text_color}
-                              onChange={(e) => updateSetting('unread_badge_text_color', e.target.value)}
-                              className="w-16 h-8"
-                            />
-                            <Input
-                              type="text"
-                              value={settings.unread_badge_text_color}
-                              onChange={(e) => updateSetting('unread_badge_text_color', e.target.value)}
-                              className="flex-1 text-xs"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Badge Style */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Badge Style</Label>
-                        <MuiSelect
-                          size="small"
-                          value={settings.unread_badge_style}
-                          onChange={(e) => updateSetting('unread_badge_style', e.target.value as 'rounded' | 'square' | 'pill')}
-                          className="w-full"
-                        >
-                          <MenuItem value="rounded">Rounded Corners</MenuItem>
-                          <MenuItem value="square">Square</MenuItem>
-                          <MenuItem value="pill">Pill Shape</MenuItem>
-                        </MuiSelect>
-                      </div>
-
-                      {/* Badge Position */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Badge Position</Label>
-                        <MuiSelect
-                          size="small"
-                          value={settings.unread_badge_position}
-                          onChange={(e) => updateSetting('unread_badge_position', e.target.value as 'right' | 'left' | 'top-right')}
-                          className="w-full"
-                        >
-                          <MenuItem value="right">Right Side</MenuItem>
-                          <MenuItem value="left">Left Side</MenuItem>
-                          <MenuItem value="top-right">Top Right Corner</MenuItem>
-                        </MuiSelect>
-                      </div>
-
-                      {/* Show Zero Counts */}
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label className="text-sm font-medium">Show Zero Counts</Label>
-                          <p className="text-xs text-muted-foreground">Display "0" when no unread messages</p>
-                        </div>
-                        <Switch
-                          checked={settings.show_zero_counts}
-                          onCheckedChange={(checked) => updateSetting('show_zero_counts', checked)}
-                        />
-                      </div>
-
-                      {/* Badge Preview */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Preview</Label>
-                        <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <Hash className="w-4 h-4 text-green-500" />
-                            <span className="text-sm">general</span>
-                            <div 
-                              className={cn(
-                                "text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center font-medium",
-                                settings.unread_badge_style === 'rounded' && "rounded-md",
-                                settings.unread_badge_style === 'square' && "rounded-none", 
-                                settings.unread_badge_style === 'pill' && "rounded-full"
-                              )}
-                              style={{ 
-                                backgroundColor: settings.unread_badge_color, 
-                                color: settings.unread_badge_text_color 
-                              }}
-                            >
-                              3
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <MessageCircle className="w-4 h-4 text-blue-500" />
-                            <span className="text-sm">John Doe</span>
-                            {settings.show_zero_counts && (
-                              <div 
-                                className={cn(
-                                  "text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center font-medium",
-                                  settings.unread_badge_style === 'rounded' && "rounded-md",
-                                  settings.unread_badge_style === 'square' && "rounded-none", 
-                                  settings.unread_badge_style === 'pill' && "rounded-full"
-                                )}
-                                style={{ 
-                                  backgroundColor: settings.unread_badge_color, 
-                                  color: settings.unread_badge_text_color 
-                                }}
-                              >
-                                0
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Typing Indicators */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-sm font-medium">Show Typing Indicators</Label>
-                    <p className="text-xs text-muted-foreground">Show when users are typing</p>
-                  </div>
-                  <Switch
-                    checked={settings.show_typing_indicators}
-                    onCheckedChange={(checked) => updateSetting('show_typing_indicators', checked)}
-                  />
-                </div>
-
-                {/* Online Status */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-sm font-medium">Show Online Status</Label>
-                    <p className="text-xs text-muted-foreground">Display user online/offline status</p>
-                  </div>
-                  <Switch
-                    checked={settings.show_online_status}
-                    onCheckedChange={(checked) => updateSetting('show_online_status', checked)}
-                  />
-                </div>
-
-                {/* Message Grouping */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-sm font-medium">Message Grouping</Label>
-                    <p className="text-xs text-muted-foreground">Group consecutive messages from same user</p>
-                  </div>
-                  <Switch
-                    checked={settings.message_grouping_enabled}
-                    onCheckedChange={(checked) => updateSetting('message_grouping_enabled', checked)}
-                  />
-                </div>
-
-                {/* Timestamp Format */}
-                <div className="space-y-2">
-                  <FormControl fullWidth size="small">
-                    <InputLabel className="text-sm font-medium">Timestamp Format</InputLabel>
-                    <MuiSelect
-                      value={settings.timestamp_format}
-                      label="Timestamp Format"
-                      onChange={(e) => updateSetting('timestamp_format', e.target.value)}
-                    >
-                      <MenuItem value="relative">Relative (5m ago)</MenuItem>
-                      <MenuItem value="absolute">Absolute (2:45 PM)</MenuItem>
-                      <MenuItem value="both">Both</MenuItem>
-                    </MuiSelect>
-                  </FormControl>
-                </div>
-
-                {/* Channel Member Count */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-sm font-medium">Show Channel Member Count</Label>
-                    <p className="text-xs text-muted-foreground">Display member count next to channels</p>
-                  </div>
-                  <Switch
-                    checked={settings.show_channel_member_count}
-                    onCheckedChange={(checked) => updateSetting('show_channel_member_count', checked)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <ThemeManagementTab 
+            settings={settings}
+            updateSetting={updateSetting}
+            currentUser={currentUser}
+          />
         </TabsContent>
 
         {/* Users Tab */}
@@ -2112,5 +2464,6 @@ export default function ChatManagementPage() {
 
       </div>
     </TooltipProvider>
+    </ThemeSystemProvider>
   );
 }

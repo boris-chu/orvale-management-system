@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theme System Test</title>
+    <style>
+        body {
+            font-family: var(--chat-font-family, 'Inter, system-ui, sans-serif');
+            background-color: var(--chat-background, #ffffff);
+            color: var(--chat-text-primary, #212121);
+            margin: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            border-radius: var(--chat-border-radius, 8px);
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chat-sidebar {
+            background-color: var(--chat-sidebar, #ffffff);
+            border: 1px solid var(--chat-border, #e0e0e0);
+            padding: 16px;
+            color: var(--chat-text-primary, #212121);
+        }
+        
+        .chat-surface {
+            background-color: var(--chat-surface, #fafafa);
+            border: 1px solid var(--chat-border, #e0e0e0);
+            padding: 16px;
+            margin-top: 10px;
+        }
+        
+        .theme-button {
+            background-color: var(--chat-primary, #1976d2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin: 5px;
+            border-radius: var(--chat-border-radius, 8px);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .theme-button:hover {
+            background-color: var(--chat-accent, #1565c0);
+        }
+        
+        .secondary-text {
+            color: var(--chat-text-secondary, #757575);
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <h1>Theme System Test</h1>
+        
+        <div class="theme-controls">
+            <h3>Theme Selection:</h3>
+            <button class="theme-button" onclick="setTheme('light')">Light</button>
+            <button class="theme-button" onclick="setTheme('iphone')">iPhone</button>
+            <button class="theme-button" onclick="setTheme('darcula')">Darcula</button>
+            <button class="theme-button" onclick="setTheme('github')">GitHub</button>
+            <button class="theme-button" onclick="setTheme('slack')">Slack</button>
+        </div>
+        
+        <div class="chat-sidebar">
+            <h2>Chat Sidebar (uses --chat-sidebar)</h2>
+            <p class="secondary-text">This uses --chat-text-secondary color</p>
+            <p>Primary text color: var(--chat-text-primary)</p>
+        </div>
+        
+        <div class="chat-surface">
+            <h2>Chat Surface (uses --chat-surface)</h2>
+            <p>Background: var(--chat-background)</p>
+            <p>Border: var(--chat-border)</p>
+            <p>Border Radius: var(--chat-border-radius)</p>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <h3>Current CSS Variables:</h3>
+            <pre id="css-variables"></pre>
+        </div>
+    </div>
+
+    <script>
+        // Theme definitions (matching useThemeSystem.tsx)
+        const themes = {
+            light: {
+                primary: '#1976d2',
+                secondary: '#f5f5f5',
+                accent: '#1565c0',
+                sidebar: '#ffffff',
+                'text-primary': '#212121',
+                'text-secondary': '#757575',
+                background: '#ffffff',
+                surface: '#fafafa',
+                border: '#e0e0e0'
+            },
+            iphone: {
+                primary: '#007aff',
+                secondary: '#f2f2f7',
+                accent: '#0051d5',
+                sidebar: '#ffffff',
+                'text-primary': '#000000',
+                'text-secondary': '#3c3c43',
+                background: '#ffffff',
+                surface: '#f2f2f7',
+                border: '#d1d1d6'
+            },
+            darcula: {
+                primary: '#569cd6',
+                secondary: '#2d2d30',
+                accent: '#4fc1ff',
+                sidebar: '#252526',
+                'text-primary': '#cccccc',
+                'text-secondary': '#969696',
+                background: '#1e1e1e',
+                surface: '#2d2d30',
+                border: '#3e3e42'
+            },
+            github: {
+                primary: '#0969da',
+                secondary: '#f6f8fa',
+                accent: '#0550ae',
+                sidebar: '#ffffff',
+                'text-primary': '#24292f',
+                'text-secondary': '#656d76',
+                background: '#ffffff',
+                surface: '#f6f8fa',
+                border: '#d0d7de'
+            },
+            slack: {
+                primary: '#4a154b',
+                secondary: '#f8f8f8',
+                accent: '#611f69',
+                sidebar: '#3f0e40',
+                'text-primary': '#1d1c1d',
+                'text-secondary': '#616061',
+                background: '#ffffff',
+                surface: '#f8f8f8',
+                border: '#e1e1e1'
+            }
+        };
+        
+        function setTheme(themeName) {
+            const theme = themes[themeName];
+            if (!theme) return;
+            
+            const root = document.documentElement;
+            
+            // Apply chat theme CSS variables
+            Object.entries(theme).forEach(([key, value]) => {
+                root.style.setProperty(`--chat-${key}`, value);
+            });
+            
+            // Set border radius and font based on theme
+            const borderRadius = {
+                light: '8px',
+                iphone: '16px',
+                darcula: '6px',
+                github: '6px',
+                slack: '8px'
+            }[themeName] || '8px';
+            
+            const fontFamily = {
+                light: 'Inter, system-ui, sans-serif',
+                iphone: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto',
+                darcula: 'Monaco, "Cascadia Code", "SF Mono", Consolas, monospace',
+                github: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica',
+                slack: 'Slack-Lato, Lato, Helvetica Neue, Helvetica, Arial, sans-serif'
+            }[themeName] || 'Inter, system-ui, sans-serif';
+            
+            root.style.setProperty('--chat-border-radius', borderRadius);
+            root.style.setProperty('--chat-font-family', fontFamily);
+            
+            // Update the display
+            updateCSSVariablesDisplay();
+            
+            console.log(`🎨 Applied ${themeName} theme`);
+        }
+        
+        function updateCSSVariablesDisplay() {
+            const root = document.documentElement;
+            const computedStyle = getComputedStyle(root);
+            
+            const variables = [
+                '--chat-primary',
+                '--chat-secondary', 
+                '--chat-accent',
+                '--chat-sidebar',
+                '--chat-text-primary',
+                '--chat-text-secondary',
+                '--chat-background',
+                '--chat-surface',
+                '--chat-border',
+                '--chat-border-radius',
+                '--chat-font-family'
+            ];
+            
+            let output = '';
+            variables.forEach(variable => {
+                const value = computedStyle.getPropertyValue(variable) || root.style.getPropertyValue(variable);
+                output += `${variable}: ${value}\n`;
+            });
+            
+            document.getElementById('css-variables').textContent = output;
+        }
+        
+        // Initialize with light theme
+        setTheme('light');
+    </script>
+</body>
+</html>

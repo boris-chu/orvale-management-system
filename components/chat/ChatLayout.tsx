@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import ChatSidebar from './ChatSidebar';
 import MessageArea from './MessageArea';
 import { useIsMobile, useIsTablet, useIsDesktop } from '@/hooks/useMediaQuery';
+import { useThemeCSS } from '@/hooks/useThemeSystem';
 
 interface User {
   username: string;
@@ -57,6 +58,9 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
   const [selectedChat, setSelectedChat] = useState<ChatItem | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showChatInfo, setShowChatInfo] = useState(false);
+  
+  // Apply theme CSS
+  const currentTheme = useThemeCSS('internal_chat');
   
   // Responsive breakpoints
   const isMobile = useIsMobile();
@@ -107,7 +111,14 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
     if (!selectedChat) return null;
 
     return (
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+      <div 
+        className="flex items-center justify-between p-4 border-b"
+        style={{
+          backgroundColor: 'var(--chat-surface, #ffffff)',
+          borderColor: 'var(--chat-border, #e0e0e0)',
+          color: 'var(--chat-text-primary, #212121)'
+        }}
+      >
         {/* Mobile back button */}
         {isMobile && (
           <Button
@@ -211,13 +222,22 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
   const EmptyState = () => (
     <div className="flex-1 flex items-center justify-center p-8 text-center">
       <div className="max-w-md">
-        <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Menu className="w-8 h-8 text-gray-400" />
+        <div 
+          className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+          style={{ backgroundColor: 'var(--chat-secondary, #f5f5f5)' }}
+        >
+          <Menu className="w-8 h-8" style={{ color: 'var(--chat-text-secondary, #757575)' }} />
         </div>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+        <h3 
+          className="text-lg font-medium mb-2"
+          style={{ color: 'var(--chat-text-primary, #212121)' }}
+        >
           {isMobile ? 'Select a chat to start' : 'Welcome to Chat'}
         </h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-4">
+        <p 
+          className="mb-4"
+          style={{ color: 'var(--chat-text-secondary, #757575)' }}
+        >
           {isMobile 
             ? 'Tap a conversation from the sidebar to begin messaging'
             : 'Choose a conversation from the sidebar or start a new one'
@@ -237,7 +257,10 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
   );
 
   return (
-    <div className="h-full flex bg-gray-50 dark:bg-gray-900">
+    <div 
+      className="h-full flex transition-colors duration-200"
+      style={{ backgroundColor: `var(--chat-background, #f9fafb)` }}
+    >
       {/* Sidebar */}
       <AnimatePresence mode="wait">
         {(sidebarOpen || isDesktop) && (
@@ -266,7 +289,7 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
                 duration: 0.3
               }}
               className={cn(
-                "bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700",
+                "border-r transition-colors duration-200",
                 // Mobile: fixed overlay
                 isMobile && "fixed inset-y-0 left-0 z-50 w-80 shadow-xl",
                 // Tablet: slide panel
@@ -274,11 +297,23 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
                 // Desktop: fixed sidebar
                 isDesktop && "w-80 flex-shrink-0"
               )}
+              style={{
+                backgroundColor: `var(--chat-sidebar, #ffffff)`,
+                borderColor: `var(--chat-border, #e5e7eb)`
+              }}
             >
               {/* Mobile sidebar header */}
               {isMobile && (
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                  <h2 className="text-lg font-semibold">Chats</h2>
+                <div 
+                  className="flex items-center justify-between p-4 border-b transition-colors duration-200"
+                  style={{ borderColor: `var(--chat-border, #e5e7eb)` }}
+                >
+                  <h2 
+                    className="text-lg font-semibold transition-colors duration-200"
+                    style={{ color: `var(--chat-text-primary, #111827)` }}
+                  >
+                    Chats
+                  </h2>
                   <Button
                     variant="ghost"
                     size="sm"
