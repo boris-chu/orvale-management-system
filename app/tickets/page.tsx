@@ -1350,9 +1350,9 @@ export default function TicketsPage() {
                         className="flex items-center rounded-full p-1 hover:bg-blue-700 transition-colors duration-200"
                       >
                         <UserAvatar 
-                          user={currentUser}
+                          user={{...currentUser, username: currentUser?.username}}
                           size="lg"
-                          showOnlineIndicator={true}
+                          enableRealTimePresence={true}
                           className="border-2 border-white/30 hover:border-white transition-colors duration-200"
                         />
                       </button>
@@ -1377,13 +1377,15 @@ export default function TicketsPage() {
                         <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
                           <div className="flex items-center space-x-3">
                             <UserAvatar 
-                              user={currentUser}
+                              user={{...currentUser, username: currentUser?.username}}
                               size="lg"
+                              enableRealTimePresence={true}
+                              showPresenceStatus={true}
                             />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-gray-900 truncate">{currentUser?.display_name}</p>
                               <p className="text-xs text-gray-600 truncate">{currentUser?.email}</p>
-                              <div className="mt-1">
+                              <div className="mt-1 flex items-center gap-2">
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                   {currentUser?.role_id}
                                 </span>

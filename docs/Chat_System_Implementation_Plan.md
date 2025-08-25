@@ -710,17 +710,509 @@ interface EmojiPickerProps {
 <EmojiPicker onEmojiSelect={addReaction} position="bottom" />
 ```
 
-### **GifPicker with Giphy Integration**
-*Giphy API integration for system-wide GIF support*
+### **Public Portal Widget Management with Business Hours**
+*Admin-controlled public portal chat widget with operating hours and customizable settings*
+```javascript
+// Public Portal Chat Widget Settings
+const PublicPortalWidgetSettings = {
+  // Master Control
+  enabled: true,                    // Master on/off toggle
+  
+  // Business Hours Configuration
+  business_hours: {
+    enabled: true,                  // Enable/disable business hours
+    timezone: 'America/New_York',   // Server timezone
+    schedule: {
+      monday: { open: '07:00', close: '18:00', enabled: true },
+      tuesday: { open: '07:00', close: '18:00', enabled: true },
+      wednesday: { open: '07:00', close: '18:00', enabled: true },
+      thursday: { open: '07:00', close: '18:00', enabled: true },
+      friday: { open: '07:00', close: '18:00', enabled: true },
+      saturday: { open: '09:00', close: '17:00', enabled: false },
+      sunday: { open: '09:00', close: '17:00', enabled: false }
+    },
+    holidays: [
+      { date: '2025-12-25', name: 'Christmas Day' },
+      { date: '2025-01-01', name: 'New Year\'s Day' }
+    ]
+  },
+  
+  // Messages and Display
+  welcome_message: 'Hi! How can we help you today?',
+  offline_message: 'We are currently offline (7:00 AM - 6:00 PM EST). Please submit a ticket and we will get back to you.',
+  business_hours_message: 'Live chat is available Monday-Friday, 7:00 AM - 6:00 PM EST.',
+  queue_message: 'You are #{{position}} in queue. Average wait time: {{wait_time}} minutes.',
+  
+  // Widget Appearance
+  widget_shape: 'circle',          // circle, square, rounded-square
+  widget_color: '#1976d2',
+  widget_size: 'medium',           // small, medium, large
+  widget_position: 'bottom-right', // bottom-right, bottom-left, custom
+  widget_image: null,              // Optional company logo/avatar
+  
+  // Functionality
+  show_agent_typing: true,
+  show_user_queue_position: true,
+  enable_file_uploads: true,
+  enable_screenshot_sharing: false,
+  max_file_size_mb: 5,
+  allowed_file_types: ['image/*', 'application/pdf', 'text/plain'],
+  
+  // Pre-chat Form
+  require_name: true,
+  require_email: true,
+  require_department: false,
+  custom_fields: [
+    { name: 'phone', label: 'Phone Number', required: false, type: 'tel' },
+    { name: 'department', label: 'Department', required: true, type: 'select', 
+      options: ['IT Support', 'HR', 'Finance', 'General'] }
+  ]
+};
+
+// Database schema for public portal widget settings
+CREATE TABLE IF NOT EXISTS public_portal_widget_settings (
+    id INTEGER PRIMARY KEY,
+    -- Master Control
+    enabled BOOLEAN DEFAULT FALSE,
+    
+    -- Business Hours
+    business_hours_enabled BOOLEAN DEFAULT TRUE,
+    timezone TEXT DEFAULT 'America/New_York',
+    schedule_json TEXT DEFAULT '{}', -- JSON of weekly schedule
+    holidays_json TEXT DEFAULT '[]', -- JSON array of holidays
+    
+    -- Messages (customizable by admin)
+    welcome_message TEXT DEFAULT 'Hi! How can we help you today?',
+    offline_message TEXT DEFAULT 'We are currently offline. Please submit a ticket.',
+    business_hours_message TEXT DEFAULT 'Live chat available Monday-Friday, 7:00 AM - 6:00 PM EST.',
+    queue_message TEXT DEFAULT 'You are in queue. Please wait for the next available agent.',
+    
+    -- Widget Appearance
+    widget_shape TEXT DEFAULT 'circle',
+    widget_color TEXT DEFAULT '#1976d2',
+    widget_size TEXT DEFAULT 'medium',
+    widget_position TEXT DEFAULT 'bottom-right',
+    widget_image TEXT, -- URL to logo/avatar
+    
+    -- Functionality Toggles
+    show_agent_typing BOOLEAN DEFAULT TRUE,
+    show_queue_position BOOLEAN DEFAULT TRUE,
+    enable_file_uploads BOOLEAN DEFAULT TRUE,
+    enable_screenshot_sharing BOOLEAN DEFAULT FALSE,
+    max_file_size_mb INTEGER DEFAULT 5,
+    allowed_file_types_json TEXT DEFAULT '["image/*", "application/pdf"]',
+    
+    -- Pre-chat Form Configuration
+    require_name BOOLEAN DEFAULT TRUE,
+    require_email BOOLEAN DEFAULT TRUE,
+    require_department BOOLEAN DEFAULT FALSE,
+    custom_fields_json TEXT DEFAULT '[]',
+    
+    -- Metadata
+    updated_by TEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (updated_by) REFERENCES users(username)
+);
+
+-- Default settings
+INSERT OR IGNORE INTO public_portal_widget_settings (
+    id, enabled, welcome_message, offline_message, business_hours_message, 
+    schedule_json, updated_by
+) VALUES (
+    1, FALSE, 
+    'Hi! How can we help you today?',
+    'We are currently offline (7:00 AM - 6:00 PM EST). Please submit a ticket.',
+    'Live chat is available Monday-Friday, 7:00 AM - 6:00 PM EST.',
+    '{"monday":{"open":"07:00","close":"18:00","enabled":true},"tuesday":{"open":"07:00","close":"18:00","enabled":true},"wednesday":{"open":"07:00","close":"18:00","enabled":true},"thursday":{"open":"07:00","close":"18:00","enabled":true},"friday":{"open":"07:00","close":"18:00","enabled":true},"saturday":{"open":"09:00","close":"17:00","enabled":false},"sunday":{"open":"09:00","close":"17:00","enabled":false}}',
+    'system'
+);
+```
+
+#### **Admin Interface for Public Portal Widget Management**
+```javascript
+// Admin portal chat widget configuration component
+const PublicPortalWidgetConfig = () => {
+  const [settings, setSettings] = useState({
+    enabled: false,
+    business_hours_enabled: true,
+    welcome_message: '',
+    offline_message: '',
+    widget_color: '#1976d2',
+    schedule: {}
+  });
+
+  const [previewMode, setPreviewMode] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Check if chat should be available based on business hours
+  const isChatAvailable = () => {
+    if (!settings.business_hours_enabled) return settings.enabled;
+    
+    const now = new Date();
+    const dayName = now.toLocaleLowerCase().slice(0, -1) + 'y'; // Convert to schedule key
+    const daySchedule = settings.schedule[dayName];
+    
+    if (!daySchedule || !daySchedule.enabled) return false;
+    
+    const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+    return currentTime >= daySchedule.open && currentTime <= daySchedule.close;
+  };
+
+  const updateSetting = async (key, value) => {
+    const response = await fetch('/api/admin/public-portal/widget-settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [key]: value })
+    });
+
+    if (response.ok) {
+      setSettings(prev => ({ ...prev, [key]: value }));
+      // Broadcast to all public portal pages to update widget
+      socket.emit('public_widget_setting_updated', { setting: key, value });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Master Toggle */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">Public Portal Chat Widget</h3>
+              <p className="text-sm text-gray-500">
+                Enable live chat on public portal pages
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch 
+                checked={settings.enabled}
+                onCheckedChange={(enabled) => updateSetting('enabled', enabled)}
+              />
+              <Badge variant={isChatAvailable() ? "default" : "secondary"}>
+                {isChatAvailable() ? 'Online' : 'Offline'}
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {settings.enabled && (
+        <>
+          {/* Business Hours Configuration */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold">Business Hours</h4>
+                <Switch 
+                  checked={settings.business_hours_enabled}
+                  onCheckedChange={(enabled) => updateSetting('business_hours_enabled', enabled)}
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              {settings.business_hours_enabled && (
+                <div className="space-y-4">
+                  {Object.entries(settings.schedule || {}).map(([day, schedule]) => (
+                    <div key={day} className="flex items-center gap-4">
+                      <div className="w-24 capitalize">{day}</div>
+                      <Switch 
+                        checked={schedule.enabled}
+                        onCheckedChange={(enabled) => {
+                          const newSchedule = { ...settings.schedule };
+                          newSchedule[day].enabled = enabled;
+                          updateSetting('schedule', newSchedule);
+                        }}
+                      />
+                      {schedule.enabled && (
+                        <>
+                          <Input 
+                            type="time" 
+                            value={schedule.open}
+                            onChange={(e) => {
+                              const newSchedule = { ...settings.schedule };
+                              newSchedule[day].open = e.target.value;
+                              updateSetting('schedule', newSchedule);
+                            }}
+                          />
+                          <span>to</span>
+                          <Input 
+                            type="time"
+                            value={schedule.close}
+                            onChange={(e) => {
+                              const newSchedule = { ...settings.schedule };
+                              newSchedule[day].close = e.target.value;
+                              updateSetting('schedule', newSchedule);
+                            }}
+                          />
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Messages Configuration */}
+          <Card>
+            <CardHeader>
+              <h4 className="font-semibold">Custom Messages</h4>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Welcome Message</Label>
+                <Input 
+                  value={settings.welcome_message}
+                  onChange={(e) => updateSetting('welcome_message', e.target.value)}
+                  placeholder="Hi! How can we help you today?"
+                />
+              </div>
+              
+              <div>
+                <Label>Offline Message</Label>
+                <Textarea 
+                  value={settings.offline_message}
+                  onChange={(e) => updateSetting('offline_message', e.target.value)}
+                  placeholder="We are currently offline. Please submit a ticket."
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label>Business Hours Message</Label>
+                <Textarea 
+                  value={settings.business_hours_message}
+                  onChange={(e) => updateSetting('business_hours_message', e.target.value)}
+                  placeholder="Live chat available Monday-Friday, 7:00 AM - 6:00 PM EST."
+                  rows={2}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Widget Appearance */}
+          <Card>
+            <CardHeader>
+              <h4 className="font-semibold">Widget Appearance</h4>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Widget Color</Label>
+                  <Input 
+                    type="color"
+                    value={settings.widget_color}
+                    onChange={(e) => updateSetting('widget_color', e.target.value)}
+                  />
+                </div>
+                
+                <div>
+                  <Label>Widget Shape</Label>
+                  <Select 
+                    value={settings.widget_shape}
+                    onValueChange={(value) => updateSetting('widget_shape', value)}
+                  >
+                    <SelectItem value="circle">Circle</SelectItem>
+                    <SelectItem value="square">Square</SelectItem>
+                    <SelectItem value="rounded">Rounded Square</SelectItem>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Live Preview */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <h4 className="font-semibold">Live Preview</h4>
+                <Button 
+                  variant="outline"
+                  onClick={() => setPreviewMode(!previewMode)}
+                >
+                  {previewMode ? 'Hide Preview' : 'Show Preview'}
+                </Button>
+              </div>
+            </CardHeader>
+            {previewMode && (
+              <CardContent>
+                <div className="relative border rounded-lg p-8 bg-gray-50 min-h-48">
+                  <div 
+                    className={`fixed ${settings.widget_position} p-4 rounded-full shadow-lg cursor-pointer`}
+                    style={{ 
+                      backgroundColor: settings.widget_color,
+                      borderRadius: settings.widget_shape === 'circle' ? '50%' : 
+                                   settings.widget_shape === 'rounded' ? '12px' : '0px'
+                    }}
+                  >
+                    <MessageCircle className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-center text-gray-500">
+                    Widget preview - Current status: {isChatAvailable() ? 'Online' : 'Offline'}
+                  </div>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+        </>
+      )}
+    </div>
+  );
+};
+```
+
+### **GifPicker with Configurable Giphy Integration**
+*Giphy API integration with admin-controlled settings*
 ```javascript
 // components/shared/GifPicker.tsx
 interface GifPickerProps {
-  onGifSelect: (gifUrl: string, gifTitle: string) => void;
-  apiKey: string;
+  onGifSelect: (gifUrl: string, gifTitle: string, gifId: string) => void;
+  onClose?: () => void;
+  position?: 'top' | 'bottom' | 'left' | 'right';
+  disabled?: boolean; // Controlled by admin settings
 }
 
-// Usage in Chat
-<GifPicker onGifSelect={sendGif} apiKey={process.env.GIPHY_API_KEY} />
+// Auto-fetches API settings from admin configuration
+// Displays "GIFs disabled by administrator" if disabled
+<GifPicker onGifSelect={sendGif} position="bottom" />
+
+// Admin configuration in Chat Management System
+const GiphySettings = {
+  enabled: true,                    // Master toggle for GIF functionality
+  api_key: 'your_giphy_api_key',   // Configurable API key
+  content_rating: 'g',             // g, pg, pg-13, r (admin controlled)
+  search_limit: 20,                // Results per search
+  trending_limit: 12,              // Trending GIFs shown
+  enable_search: true,             // Allow users to search GIFs
+  enable_trending: true,           // Show trending GIFs tab
+  enable_categories: true,         // Show GIF categories
+  cache_duration: 300,             // Cache API results (seconds)
+  rate_limit_per_user: 50,        // Max GIF sends per user per hour
+  blacklisted_terms: []           // Admin-defined blocked search terms
+};
+
+// Database schema addition for chat settings
+CREATE TABLE chat_system_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    setting_key TEXT UNIQUE NOT NULL,
+    setting_value TEXT NOT NULL, -- JSON string for complex values
+    setting_type TEXT CHECK(setting_type IN ('string', 'number', 'boolean', 'json')) DEFAULT 'string',
+    description TEXT,
+    category TEXT DEFAULT 'general', -- general, giphy, notifications, permissions
+    requires_restart BOOLEAN DEFAULT FALSE,
+    updated_by TEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (updated_by) REFERENCES users(username)
+);
+
+-- Default Giphy settings
+INSERT INTO chat_system_settings VALUES
+(1, 'giphy_enabled', 'true', 'boolean', 'Enable/disable GIF functionality system-wide', 'giphy', FALSE, 'system', CURRENT_TIMESTAMP),
+(2, 'giphy_api_key', '', 'string', 'Giphy API key for GIF integration', 'giphy', FALSE, 'system', CURRENT_TIMESTAMP),
+(3, 'giphy_content_rating', 'g', 'string', 'Content rating filter (g, pg, pg-13, r)', 'giphy', FALSE, 'system', CURRENT_TIMESTAMP),
+(4, 'giphy_search_limit', '20', 'number', 'Maximum GIFs returned per search', 'giphy', FALSE, 'system', CURRENT_TIMESTAMP),
+(5, 'giphy_rate_limit', '50', 'number', 'Max GIFs per user per hour', 'giphy', FALSE, 'system', CURRENT_TIMESTAMP);
+```
+
+#### **Admin Chat Management - Giphy Configuration Tab**
+```javascript
+// Admin interface for Giphy settings
+const GiphyConfigTab = () => {
+  const [settings, setSettings] = useState({
+    enabled: true,
+    api_key: '',
+    content_rating: 'g',
+    search_limit: 20,
+    rate_limit: 50
+  });
+
+  const updateGiphySetting = async (key, value) => {
+    const response = await fetch('/api/admin/chat/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        setting_key: `giphy_${key}`, 
+        setting_value: value.toString(),
+        setting_type: typeof value === 'boolean' ? 'boolean' : 
+                     typeof value === 'number' ? 'number' : 'string'
+      })
+    });
+
+    if (response.ok) {
+      // Broadcast to all chat users
+      socket.emit('system_setting_updated', {
+        category: 'giphy',
+        setting: key,
+        value: value
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3>Giphy Integration</h3>
+        <Switch 
+          checked={settings.enabled}
+          onCheckedChange={(enabled) => updateGiphySetting('enabled', enabled)}
+        />
+      </div>
+
+      {settings.enabled && (
+        <>
+          <div>
+            <Label>Giphy API Key</Label>
+            <Input 
+              type="password"
+              value={settings.api_key}
+              onChange={(e) => setSettings({...settings, api_key: e.target.value})}
+              placeholder="Enter your Giphy API key"
+            />
+            <Button onClick={() => updateGiphySetting('api_key', settings.api_key)}>
+              Update API Key
+            </Button>
+          </div>
+
+          <div>
+            <Label>Content Rating</Label>
+            <Select 
+              value={settings.content_rating}
+              onValueChange={(value) => updateGiphySetting('content_rating', value)}
+            >
+              <SelectItem value="g">G - General Audiences</SelectItem>
+              <SelectItem value="pg">PG - Parental Guidance</SelectItem>
+              <SelectItem value="pg-13">PG-13 - Parents Cautioned</SelectItem>
+              <SelectItem value="r">R - Restricted</SelectItem>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Search Results Limit</Label>
+            <Input 
+              type="number"
+              min="1"
+              max="50"
+              value={settings.search_limit}
+              onChange={(e) => updateGiphySetting('search_limit', parseInt(e.target.value))}
+            />
+          </div>
+
+          <div>
+            <Label>Rate Limit (GIFs per user per hour)</Label>
+            <Input 
+              type="number"
+              min="1"
+              max="200"
+              value={settings.rate_limit}
+              onChange={(e) => updateGiphySetting('rate_limit', parseInt(e.target.value))}
+            />
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 ```
 
 ### **FileUpload with Image Viewing**
@@ -1852,12 +2344,39 @@ const ChannelSearchResult = ({ channel, onClick, highlight }) => (
 - **Offline support**: Basic offline message queuing
 - **Caching**: Local storage for recent messages
 
-#### **7.2 Accessibility & Polish**
+#### **7.2 Mobile-First Design & Responsiveness**
+**Mobile-First Approach with Great Desktop Experience**
+- **Breakpoint Strategy**:
+  - Mobile: 320px - 768px (primary design focus)
+  - Tablet: 768px - 1024px (adapted mobile layout)
+  - Desktop: 1024px+ (enhanced with sidebars, multi-pane)
+- **Mobile Chat Interface**:
+  - Full-screen chat view with slide-out sidebar
+  - Touch-optimized message bubbles (min 44px target)
+  - Swipe gestures: left to reply, right to go back
+  - Bottom-sheet style emoji/GIF pickers
+  - Collapsible header with chat info
+- **Mobile Chat Widget**:
+  - Floating action button (FAB) for chat access
+  - Full-screen overlay on mobile (not mini-window)
+  - Touch-friendly close/minimize buttons
+  - Adaptive positioning (respects safe areas)
+- **Progressive Enhancement**:
+  - Core functionality works on all devices
+  - Desktop gets extra features (multi-pane, hover states)
+  - Mobile gets optimized touch interactions
+- **Performance for Mobile**:
+  - Lazy loading for message history
+  - Image compression for mobile uploads
+  - Reduced animations on slower devices
+  - Efficient memory usage for message caching
+
+#### **7.3 Accessibility & Polish**
 - **Keyboard navigation**: Full keyboard accessibility
 - **Screen reader support**: ARIA labels and announcements
 - **Dark mode**: Consistent with system theme
-- **Mobile responsive**: Mobile-friendly interface
 - **Loading states**: Proper loading indicators
+- **Focus management**: Proper focus handling in modals/sidebars
 
 #### **7.3 Admin Features**
 - **Message moderation**: Admin delete/edit capabilities

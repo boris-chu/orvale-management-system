@@ -3,17 +3,21 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import OnlinePresenceTracker from '@/components/shared/OnlinePresenceTracker';
 
 interface UserAvatarProps {
   user: {
     display_name?: string;
     profile_picture?: string;
     email?: string;
+    username?: string; // Add username for presence tracking
   };
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   className?: string;
   onClick?: () => void;
   showOnlineIndicator?: boolean;
+  showPresenceStatus?: boolean; // Show detailed presence (text + dot)
+  enableRealTimePresence?: boolean; // Use real-time presence tracking
 }
 
 const sizeClasses = {
@@ -70,10 +74,15 @@ export function UserAvatar({
   size = 'lg', 
   className, 
   onClick,
-  showOnlineIndicator = false 
+  showOnlineIndicator = false,
+  showPresenceStatus = false,
+  enableRealTimePresence = false
 }: UserAvatarProps) {
   const initials = getInitials(user.display_name);
   const gradient = getGradientFromName(user.display_name);
+  
+  // Map avatar sizes to presence tracker sizes
+  const presenceSize = size === 'sm' ? 'sm' : size === 'md' ? 'sm' : 'md';
   
   return (
     <div className="relative">
@@ -102,11 +111,86 @@ export function UserAvatar({
         </AvatarFallback>
       </Avatar>
       
-      {showOnlineIndicator && (
+      {/* Real-time presence indicator */}
+      {enableRealTimePresence && user.username && (
+        <div className="absolute -bottom-0.5 -right-0.5">
+          <OnlinePresenceTracker
+            userId={user.username}
+            size={presenceSize}
+            showStatus={false}
+            showConnectionCount={false}
+            animate={true}
+          />
+        </div>
+      )}
+      
+      {/* Static online indicator (legacy) */}
+      {!enableRealTimePresence && showOnlineIndicator && (
         <div className={cn(
           'absolute -bottom-0.5 -right-0.5 bg-green-500 border-2 border-white rounded-full',
           onlineIndicatorSize[size]
         )}></div>
+      )}
+      
+      {/* Detailed presence status display */}
+      {showPresenceStatus && user.username && (
+        <div className="mt-1">
+          <OnlinePresenceTracker
+            userId={user.username}
+            size={presenceSize}
+            showStatus={true}
+            showConnectionCount={false}
+            animate={true}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Enhanced UserAvatar with built-in real-time presence
+export function UserAvatarWithPresence({ 
+  user, 
+  size = 'lg', 
+  className, 
+  onClick,
+  showStatus = false,
+  showConnectionCount = false
+}: UserAvatarProps & { 
+  showStatus?: boolean;
+  showConnectionCount?: boolean;
+}) {
+  if (!user.username) {
+    // Fallback to regular avatar if no username
+    return (
+      <UserAvatar
+        user={user}
+        size={size}
+        className={className}
+        onClick={onClick}
+        showOnlineIndicator={false}
+      />
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <UserAvatar
+        user={user}
+        size={size}
+        className={className}
+        onClick={onClick}
+        enableRealTimePresence={true}
+      />
+      
+      {showStatus && (
+        <OnlinePresenceTracker
+          userId={user.username}
+          size={size === 'sm' ? 'sm' : 'md'}
+          showStatus={true}
+          showConnectionCount={showConnectionCount}
+          animate={true}
+        />
       )}
     </div>
   );

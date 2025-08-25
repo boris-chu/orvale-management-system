@@ -394,3 +394,108 @@ INSERT OR IGNORE INTO public_portal_widget_settings (
     'Tell us how we can improve...',
     'system'
 );
+
+-- ===================================
+-- 16. ENHANCED PUBLIC PORTAL WIDGET SETTINGS WITH BUSINESS HOURS
+-- ===================================
+
+-- Update existing public portal widget settings table with business hours
+-- First, add new columns to existing table (safe operation)
+ALTER TABLE public_portal_widget_settings ADD COLUMN business_hours_enabled BOOLEAN DEFAULT TRUE;
+ALTER TABLE public_portal_widget_settings ADD COLUMN timezone TEXT DEFAULT 'America/New_York';
+ALTER TABLE public_portal_widget_settings ADD COLUMN schedule_json TEXT DEFAULT '{}';
+ALTER TABLE public_portal_widget_settings ADD COLUMN holidays_json TEXT DEFAULT '[]';
+ALTER TABLE public_portal_widget_settings ADD COLUMN business_hours_message TEXT DEFAULT 'Live chat available during business hours.';
+ALTER TABLE public_portal_widget_settings ADD COLUMN queue_message TEXT DEFAULT 'Please wait for the next available agent.';
+
+-- Update the existing record with business hours data
+UPDATE public_portal_widget_settings SET 
+    business_hours_enabled = TRUE,
+    timezone = 'America/New_York',
+    schedule_json = '{"monday":{"open":"07:00","close":"18:00","enabled":true},"tuesday":{"open":"07:00","close":"18:00","enabled":true},"wednesday":{"open":"07:00","close":"18:00","enabled":true},"thursday":{"open":"07:00","close":"18:00","enabled":true},"friday":{"open":"07:00","close":"18:00","enabled":true},"saturday":{"open":"09:00","close":"17:00","enabled":false},"sunday":{"open":"09:00","close":"17:00","enabled":false}}',
+    holidays_json = '[{"date":"2025-12-25","name":"Christmas Day"},{"date":"2025-01-01","name":"New Year''s Day"}]',
+    business_hours_message = 'Live chat is available Monday-Friday, 7:00 AM - 6:00 PM EST.',
+    queue_message = 'You are in queue. Please wait for the next available agent.',
+    offline_message = 'We are currently offline (7:00 AM - 6:00 PM EST). Please submit a ticket and we will get back to you.'
+WHERE id = 1;
+
+-- ===================================
+-- 17. CHAT SYSTEM SETTINGS FOR ADMIN CONFIGURATION
+-- ===================================
+
+CREATE TABLE IF NOT EXISTS chat_system_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    setting_key TEXT UNIQUE NOT NULL,
+    setting_value TEXT NOT NULL, -- JSON string for complex values
+    setting_type TEXT CHECK(setting_type IN ('string', 'number', 'boolean', 'json')) DEFAULT 'string',
+    description TEXT,
+    category TEXT DEFAULT 'general', -- general, giphy, notifications, permissions
+    requires_restart BOOLEAN DEFAULT FALSE,
+    updated_by TEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (updated_by) REFERENCES users(username)
+);
+
+-- ===================================
+-- 18. GIF USAGE TRACKING AND RATE LIMITING
+-- ===================================
+
+CREATE TABLE IF NOT EXISTS gif_usage_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    gif_id TEXT NOT NULL,
+    gif_url TEXT,
+    gif_title TEXT,
+    channel_id TEXT, -- Which chat channel/DM the GIF was sent to
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ip_address TEXT,
+    user_agent TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(username)
+);
+
+CREATE TABLE IF NOT EXISTS gif_rate_limits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    gif_count INTEGER DEFAULT 0,
+    reset_time TIMESTAMP NOT NULL, -- Hour window (rounded to hour)
+    last_gif_id TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(username),
+    UNIQUE(user_id, reset_time) -- One record per user per hour
+);
+
+-- ===================================
+-- DEFAULT SETTINGS INSERTION
+-- ===================================
+
+-- Default Giphy settings
+INSERT OR IGNORE INTO chat_system_settings (setting_key, setting_value, setting_type, description, category, updated_by) VALUES
+('giphy_enabled', 'false', 'boolean', 'Enable/disable GIF functionality system-wide', 'giphy', 'system'),
+('giphy_api_key', '', 'string', 'Giphy API key for GIF integration', 'giphy', 'system'),
+('giphy_content_rating', 'g', 'string', 'Content rating filter (g, pg, pg-13, r)', 'giphy', 'system'),
+('giphy_search_limit', '20', 'number', 'Maximum GIFs returned per search', 'giphy', 'system'),
+('giphy_trending_limit', '12', 'number', 'Maximum trending GIFs to display', 'giphy', 'system'),
+('giphy_rate_limit', '50', 'number', 'Max GIFs per user per hour', 'giphy', 'system'),
+('giphy_enable_search', 'true', 'boolean', 'Allow users to search for GIFs', 'giphy', 'system'),
+('giphy_enable_trending', 'true', 'boolean', 'Show trending GIFs tab', 'giphy', 'system'),
+('giphy_enable_categories', 'true', 'boolean', 'Show GIF categories', 'giphy', 'system');
+
+-- General chat system settings
+INSERT OR IGNORE INTO chat_system_settings (setting_key, setting_value, setting_type, description, category, updated_by) VALUES
+('chat_system_enabled', 'true', 'boolean', 'Master toggle for entire chat system', 'general', 'system'),
+('max_message_length', '2000', 'number', 'Maximum characters per message', 'general', 'system'),
+('message_edit_window_minutes', '3', 'number', 'Minutes users can edit/delete messages', 'general', 'system'),
+('file_upload_max_size_mb', '10', 'number', 'Maximum file upload size in MB', 'general', 'system'),
+('notification_sounds_enabled', 'true', 'boolean', 'Allow notification sounds', 'notifications', 'system'),
+('typing_indicators_enabled', 'true', 'boolean', 'Show typing indicators', 'general', 'system');
+
+-- ===================================
+-- PERFORMANCE INDEXES
+-- ===================================
+
+CREATE INDEX IF NOT EXISTS idx_chat_settings_category ON chat_system_settings(category);
+CREATE INDEX IF NOT EXISTS idx_gif_usage_user_time ON gif_usage_log(user_id, sent_at);
+CREATE INDEX IF NOT EXISTS idx_gif_usage_gif_id ON gif_usage_log(gif_id);
+CREATE INDEX IF NOT EXISTS idx_gif_rate_limits_user_reset ON gif_rate_limits(user_id, reset_time);
+CREATE INDEX IF NOT EXISTS idx_public_widget_settings_enabled ON public_portal_widget_settings(business_hours_enabled);

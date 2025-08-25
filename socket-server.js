@@ -214,6 +214,173 @@ io.on('connection', async (socket) => {
     });
   });
 
+  // === NEW WEBSOCKET EVENTS ===
+
+  // Update user presence status
+  socket.on('update_presence', (data) => {
+    if (!authenticatedUser) return;
+    
+    const { status, statusMessage, customStatus } = data;
+    const validStatuses = ['online', 'away', 'busy', 'offline'];
+    
+    if (!validStatuses.includes(status)) {
+      socket.emit('presence:error', 'Invalid status');
+      return;
+    }
+
+    // Update presence in database and memory
+    updatePresence(socket.userId, status, socket.id);
+    
+    // Update database with additional info
+    db.run(
+      `UPDATE user_presence 
+       SET status_message = ?, custom_status = ?
+       WHERE user_id = ?`,
+      [statusMessage || null, customStatus || null, socket.userId],
+      (err) => {
+        if (!err) {
+          // Broadcast presence update to all connected users
+          io.emit('presence_updated', {
+            userId: socket.userId,
+            userDisplayName: socket.userDisplayName,
+            status,
+            statusMessage,
+            customStatus,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+    );
+  });
+
+  // Mark messages as read
+  socket.on('message_read', (data) => {
+    if (!authenticatedUser) return;
+    
+    const { channelId, messageId } = data;
+    
+    // Update user's last read timestamp for channel
+    db.run(
+      `UPDATE chat_channel_members 
+       SET last_read_at = CURRENT_TIMESTAMP 
+       WHERE channel_id = ? AND user_id = ?`,
+      [channelId, socket.userId],
+      (err) => {
+        if (!err) {
+          // Emit read receipt to channel (optional - for read receipts)
+          socket.to(`channel_${channelId}`).emit('message_read_receipt', {
+            userId: socket.userId,
+            userDisplayName: socket.userDisplayName,
+            channelId: parseInt(channelId),
+            messageId: messageId ? parseInt(messageId) : null,
+            readAt: new Date().toISOString()
+          });
+        }
+      }
+    );
+  });
+
+  // Handle user joining channels (enhanced)
+  socket.on('join_channel', (channelId) => {
+    if (!authenticatedUser) return;
+    
+    socket.join(`channel_${channelId}`);
+    
+    // Track room membership
+    if (!roomUsers.has(`channel_${channelId}`)) {
+      roomUsers.set(`channel_${channelId}`, new Set());
+    }
+    roomUsers.get(`channel_${channelId}`).add(socket.userId);
+    
+    // Notify other users in channel
+    socket.to(`channel_${channelId}`).emit('user_joined', {
+      userId: socket.userId,
+      userDisplayName: socket.userDisplayName,
+      userRole: socket.userRole,
+      channelId: parseInt(channelId),
+      joinedAt: new Date().toISOString()
+    });
+    
+    console.log(`${socket.userDisplayName} joined channel ${channelId}`);
+  });
+
+  // Handle user leaving channels (enhanced)  
+  socket.on('leave_channel', (channelId) => {
+    if (!authenticatedUser) return;
+    
+    socket.leave(`channel_${channelId}`);
+    roomUsers.get(`channel_${channelId}`)?.delete(socket.userId);
+    
+    // Notify other users in channel
+    socket.to(`channel_${channelId}`).emit('user_left', {
+      userId: socket.userId,
+      userDisplayName: socket.userDisplayName,
+      channelId: parseInt(channelId),
+      leftAt: new Date().toISOString()
+    });
+    
+    console.log(`${socket.userDisplayName} left channel ${channelId}`);
+  });
+
+  // File upload notification
+  socket.on('file_uploaded', (data) => {
+    if (!authenticatedUser) return;
+    
+    const { channelId, fileName, fileSize, fileType, messageId } = data;
+    
+    // Broadcast file upload to channel members
+    socket.to(`channel_${channelId}`).emit('file_upload_notification', {
+      messageId: parseInt(messageId),
+      channelId: parseInt(channelId),
+      uploadedBy: socket.userId,
+      uploaderName: socket.userDisplayName,
+      fileName,
+      fileSize,
+      fileType,
+      uploadedAt: new Date().toISOString()
+    });
+  });
+
+  // System broadcast (admin only)
+  socket.on('system_broadcast', (data) => {
+    if (!authenticatedUser) return;
+    
+    // Check if user has broadcast permission
+    if (!socket.userRole || !['admin'].includes(socket.userRole)) {
+      socket.emit('broadcast:error', 'Insufficient permissions for system broadcast');
+      return;
+    }
+
+    const { message, priority = 'normal' } = data;
+    
+    // Broadcast to all connected users
+    io.emit('system_broadcast_received', {
+      message,
+      priority,
+      from: socket.userDisplayName,
+      broadcastAt: new Date().toISOString(),
+      broadcastId: `broadcast_${Date.now()}`
+    });
+    
+    console.log(`System broadcast sent by ${socket.userDisplayName}: ${message}`);
+  });
+
+  // Channel updated notification
+  socket.on('channel_updated', (data) => {
+    if (!authenticatedUser) return;
+    
+    const { channelId, changes } = data;
+    
+    // Broadcast channel update to channel members
+    socket.to(`channel_${channelId}`).emit('channel_updated', {
+      channelId: parseInt(channelId),
+      changes,
+      updatedBy: socket.userId,
+      updaterName: socket.userDisplayName,
+      updatedAt: new Date().toISOString()
+    });
+  });
+
   // === WEBRTC SIGNALING EVENTS ===
   
   socket.on('call:invite', (data) => {
@@ -347,16 +514,51 @@ io.on('connection', async (socket) => {
     if (authenticatedUser) {
       console.log(`User disconnected: ${socket.userDisplayName} (${socket.id})`);
       
+      // Notify all channels that user left (for this socket connection)
+      roomUsers.forEach((users, roomId) => {
+        if (users.has(socket.userId)) {
+          // Extract channel ID from room ID (format: "channel_123")
+          const channelId = roomId.replace('channel_', '');
+          if (channelId !== roomId) {
+            socket.to(roomId).emit('user_left', {
+              userId: socket.userId,
+              userDisplayName: socket.userDisplayName,
+              channelId: parseInt(channelId),
+              leftAt: new Date().toISOString(),
+              reason: 'disconnect'
+            });
+          }
+        }
+      });
+      
       // Update presence (remove this socket from connections)
       updatePresence(socket.userId, 'offline', socket.id);
       
-      // Clean up room memberships
+      // Clean up room memberships for this socket
       roomUsers.forEach((users, roomId) => {
-        users.delete(socket.userId);
-        if (users.size === 0) {
-          roomUsers.delete(roomId);
+        // Only remove the user if they have no other active connections
+        const userConnections = activeUsers.get(socket.userId)?.connections || [];
+        const hasOtherConnections = userConnections.some(connId => connId !== socket.id);
+        
+        if (!hasOtherConnections) {
+          users.delete(socket.userId);
+          if (users.size === 0) {
+            roomUsers.delete(roomId);
+          }
         }
       });
+
+      // Broadcast updated presence if user is now offline
+      const userConnections = activeUsers.get(socket.userId)?.connections || [];
+      if (userConnections.length === 0) {
+        io.emit('presence_updated', {
+          userId: socket.userId,
+          userDisplayName: socket.userDisplayName,
+          status: 'offline',
+          timestamp: new Date().toISOString(),
+          reason: 'disconnect'
+        });
+      }
     } else {
       console.log(`Unauthenticated socket disconnected: ${socket.id}`);
     }
