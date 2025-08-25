@@ -27,7 +27,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserAvatar } from '@/components/UserAvatar';
 import OnlinePresenceTracker from '@/components/shared/OnlinePresenceTracker';
-import io, { Socket } from 'socket.io-client';
+import { socketClient } from '@/lib/socket-client';
 import { useChatSettings } from '@/hooks/useChatSettings';
 
 interface User {
@@ -77,7 +77,7 @@ export default function ChatSidebar({
     groups: []
   });
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
-  const socketRef = useRef<Socket | null>(null);
+  const componentId = useRef(`ChatSidebar_${Date.now()}`).current;
   const { settings: chatUISettings } = useChatSettings();
 
   // Load real channels from API
@@ -121,32 +121,20 @@ export default function ChatSidebar({
     loadChannels();
   }, [currentUser, unreadCounts]);
 
-  // Socket.io connection for real-time updates
+  // Socket.io connection for real-time updates using singleton
   useEffect(() => {
     if (!currentUser) return;
 
     const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
     if (!token) return;
 
-    // Connect to Socket.io
-    const socket = io('http://localhost:3001', {
-      transports: ['websocket', 'polling'],
-      auth: { token }
-    });
-
-    socketRef.current = socket;
-
-    // Authenticate
-    socket.emit('authenticate', token);
-
-    // Wait for authentication 
-    socket.on('authenticated', (data) => {
-      console.log('🔐 ChatSidebar authenticated:', data);
-      // Note: Channels will be joined separately when they're loaded
-    });
+    console.log('🔌 Connecting ChatSidebar to Socket.io via singleton');
+    
+    // Connect using singleton client
+    const socket = socketClient.connect(token);
 
     // Listen for new message notifications to update unread counts
-    socket.on('message_notification', (data) => {
+    socketClient.addEventListener(componentId, 'message_notification', (data: any) => {
       const { message, channel } = data;
       const channelId = channel.id.toString();
       
@@ -170,21 +158,14 @@ export default function ChatSidebar({
     });
 
     return () => {
-      socket.disconnect();
-      socketRef.current = null;
+      console.log('🧹 Cleaning up ChatSidebar event listeners for component:', componentId);
+      socketClient.removeEventListeners(componentId);
     };
-  }, [currentUser, selectedChatId]);
+  }, [currentUser, selectedChatId, componentId]);
   
-  // Separate effect to join channels when they're loaded
-  useEffect(() => {
-    if (socketRef.current?.connected && chatData.channels.length > 0) {
-      console.log('📡 Joining channels for notifications after load:', chatData.channels.length);
-      chatData.channels.forEach(channel => {
-        console.log('📡 Joining channel:', channel.id, channel.name);
-        socketRef.current?.emit('join_channel', { channelId: channel.id });
-      });
-    }
-  }, [chatData.channels]);
+  // Note: ChatSidebar does NOT join channels directly
+  // Only MessageArea joins channels when they're actively selected
+  // ChatSidebar receives global message_notification events for unread counts
 
   // Clear unread count when selecting a chat
   useEffect(() => {

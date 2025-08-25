@@ -31,7 +31,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UserAvatar } from '@/components/UserAvatar';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
-import io, { Socket } from 'socket.io-client';
+import { socketClient } from '@/lib/socket-client';
 
 interface User {
   username: string;
@@ -81,7 +81,7 @@ export default function ChatWidget({
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
 
-  const socketRef = useRef<Socket | null>(null);
+  const componentId = useRef(`ChatWidget_${Date.now()}`).current;
   const widgetRef = useRef<HTMLDivElement>(null);
 
   // Mock recent conversations for development
@@ -138,21 +138,17 @@ export default function ChatWidget({
     setConversations(mockConversations);
     setTotalUnreadCount(mockConversations.reduce((sum, conv) => sum + conv.unreadCount, 0));
 
-    // Initialize Socket.io connection
+    // Initialize Socket.io connection using singleton
     const token = localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
     if (!token) return;
 
-    const socket = io('http://localhost:3001', {
-      transports: ['websocket', 'polling'],
-      auth: { token }
-    });
-
-    socketRef.current = socket;
-
-    socket.emit('authenticate', token);
+    console.log('🔌 Connecting ChatWidget to Socket.io via singleton');
+    
+    // Connect using singleton client
+    const socket = socketClient.connect(token);
 
     // Listen for new messages
-    socket.on('message_received', (data) => {
+    socketClient.addEventListener(componentId, 'message_received', (data: any) => {
       const { message } = data;
       // Update conversation with new message
       setConversations(prev => prev.map(conv => {
@@ -182,10 +178,10 @@ export default function ChatWidget({
 
     // Cleanup
     return () => {
-      socket.disconnect();
-      socketRef.current = null;
+      console.log('🧹 Cleaning up ChatWidget event listeners for component:', componentId);
+      socketClient.removeEventListeners(componentId);
     };
-  }, [currentUser?.username]);
+  }, [currentUser?.username, componentId]);
 
   // Position classes
   const positionClasses = {
