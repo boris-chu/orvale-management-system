@@ -29,6 +29,7 @@ import { UserAvatar } from '@/components/UserAvatar';
 import OnlinePresenceTracker from '@/components/shared/OnlinePresenceTracker';
 import { socketClient } from '@/lib/socket-client';
 import { useChatSettings } from '@/hooks/useChatSettings';
+import { cn } from '@/lib/utils';
 
 interface User {
   username: string;
