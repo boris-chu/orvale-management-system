@@ -1379,7 +1379,7 @@ export default function TicketsPage() {
                             <UserAvatar 
                               user={{...currentUser, username: currentUser?.username}}
                               size="lg"
-                              enableRealTimePresence={true}
+                              enableRealTimePresence={false}
                               showPresenceStatus={false}
                             />
                             <div className="flex-1 min-w-0">
