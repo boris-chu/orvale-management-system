@@ -469,7 +469,7 @@ CREATE TABLE IF NOT EXISTS gif_rate_limits (
 -- DEFAULT SETTINGS INSERTION
 -- ===================================
 
--- Default Giphy settings
+-- Default Giphy settings (ensure table exists first)
 INSERT OR IGNORE INTO chat_system_settings (setting_key, setting_value, setting_type, description, category, updated_by) VALUES
 ('giphy_enabled', 'false', 'boolean', 'Enable/disable GIF functionality system-wide', 'giphy', 'system'),
 ('giphy_api_key', '', 'string', 'Giphy API key for GIF integration', 'giphy', 'system'),

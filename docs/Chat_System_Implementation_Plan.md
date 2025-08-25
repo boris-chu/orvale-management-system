@@ -710,6 +710,201 @@ interface EmojiPickerProps {
 <EmojiPicker onEmojiSelect={addReaction} position="bottom" />
 ```
 
+### **Public Queue Chat System - Separate Staff Interface**
+*Dedicated chat interface for staff to handle public portal requests with visual distinction*
+
+#### **Architecture Overview**
+The public portal chat system uses a **dual-interface approach** to maintain clear boundaries:
+
+1. **Main Chat** (`/chat`) - Internal team communication (DMs, Channels, Groups)
+2. **Public Queue Chat** (`/chat/public-queue`) - Staff handling of public portal requests
+
+#### **Staff Public Queue Interface Design**
+```javascript
+// Separate page with distinct visual identity
+const PublicQueueChatPage = {
+  route: '/chat/public-queue',
+  access: 'Staff button in main chat header',
+  
+  // Customizable Theme for Clear Distinction
+  theme: {
+    primary_color: '#e57373',        // Soft red - different from main chat blue
+    secondary_color: '#ffcdd2',      // Light red background
+    accent_color: '#d32f2f',         // Dark red for actions
+    sidebar_color: '#fce4ec',        // Pink sidebar background
+    header_text: 'Public Support Queue', // Clear header identifier
+    favicon_suffix: '_support'        // Different favicon for multi-tab users
+  },
+  
+  // Visual Indicators
+  visual_cues: {
+    header_banner: 'Public Portal Support - Guest Chat Queue',
+    color_coded_tabs: true,          // Different tab colors
+    guest_user_indicators: true,     // Icons showing guest vs staff
+    session_timers: true,            // Show active session duration
+    queue_position: true,            // Show queue position for each guest
+    urgency_indicators: true         // Visual priority/urgency markers
+  }
+};
+
+// Navigation between interfaces
+const ChatNavigation = {
+  main_chat: {
+    public_queue_button: {
+      position: 'top_right_header',
+      label: 'Public Queue',
+      badge: 'active_sessions_count',
+      color: 'red_theme',
+      permissions: ['chat.handle_public_requests']
+    }
+  },
+  
+  public_queue: {
+    main_chat_button: {
+      position: 'top_left_header', 
+      label: 'Internal Chat',
+      color: 'blue_theme',
+      quick_switch: true
+    }
+  }
+};
+```
+
+#### **Public Queue Chat Layout**
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 🏠 Internal Chat | 📧 Public Support Queue | 🔧 Settings   │ ← Header with theme
+├─────────────────────────────────────────────────────────────┤
+│ 📋 ACTIVE QUEUE (12)        │ 💬 Chat: Sarah Guest #3      │
+│ ┌─────────────────────────┐ │ ┌───────────────────────────┐ │
+│ │ 🟢 Sarah Guest #3  2:15 │ │ │ Sarah: Hi, I need help    │ │ ← Guest sessions
+│ │ 🟡 John Visitor #7  5:22│ │ │ with password reset       │ │   with timers
+│ │ 🔴 Mary Public #1  12:45│ │ │                           │ │
+│ │ ⭐ VIP Request #4   1:03│ │ │ You: I can help with that │ │
+│ ├─────────────────────────┤ │ │                           │ │
+│ │ 📝 RESOLVED (45)        │ │ │ [Typing indicator...]     │ │
+│ │ • Ticket created: #1234 │ │ └───────────────────────────┘ │
+│ │ • Session completed     │ │ 📎 📷 😀 🎁 | Send Message   │
+│ │ • User ended: Rating 5⭐│ │                               │
+│ └─────────────────────────┘ └───────────────────────────────┘
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### **Public Queue Features**
+```javascript
+const PublicQueueFeatures = {
+  // Queue Management
+  queue_sections: {
+    active_sessions: {
+      real_time_updates: true,
+      priority_sorting: true,     // VIP, urgent, regular
+      wait_time_display: true,
+      agent_assignment: 'auto_or_manual',
+      session_transfer: true      // Transfer between staff
+    },
+    
+    resolved_sessions: {
+      completion_methods: ['staff_resolved', 'user_ended', 'auto_timeout'],
+      rating_display: true,       // Show 1-5 star ratings
+      ticket_creation_link: true, // Link to created tickets
+      session_transcript: true,   // Full chat history
+      follow_up_options: true     // Email transcript, create ticket
+    }
+  },
+
+  // Staff Tools
+  staff_tools: {
+    quick_responses: ['Hello! How can I help?', 'Let me check that for you...'],
+    knowledge_base_search: true,
+    ticket_creation_shortcut: true,
+    session_notes: true,         // Internal staff notes
+    escalation_options: true,    // Escalate to specialist
+    typing_indicators: true,
+    file_sharing: true          // Share screenshots, guides
+  },
+
+  // Guest Experience
+  guest_features: {
+    queue_position: true,        // "You are #3 in queue"
+    estimated_wait: true,        // "~5 minutes"
+    agent_typing: true,
+    session_rating: true,        // 1-5 stars at end
+    transcript_email: true,      // Email chat history
+    session_recovery: true       // Return within 5 min window
+  }
+};
+```
+
+#### **Database Schema for Public Queue**
+```sql
+-- Enhanced public chat sessions for queue management
+ALTER TABLE public_chat_sessions ADD COLUMN queue_position INTEGER;
+ALTER TABLE public_chat_sessions ADD COLUMN priority TEXT CHECK(priority IN ('normal', 'high', 'vip')) DEFAULT 'normal';
+ALTER TABLE public_chat_sessions ADD COLUMN assigned_agent TEXT; -- Staff member handling
+ALTER TABLE public_chat_sessions ADD COLUMN agent_notes TEXT; -- Internal staff notes
+ALTER TABLE public_chat_sessions ADD COLUMN escalated_to TEXT; -- Escalation chain
+ALTER TABLE public_chat_sessions ADD COLUMN wait_time_seconds INTEGER; -- Time in queue
+ALTER TABLE public_chat_sessions ADD COLUMN response_time_seconds INTEGER; -- First response time
+
+-- Queue analytics for performance tracking
+CREATE TABLE IF NOT EXISTS public_queue_analytics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date DATE NOT NULL,
+    total_sessions INTEGER DEFAULT 0,
+    avg_wait_time_seconds INTEGER DEFAULT 0,
+    avg_resolution_time_seconds INTEGER DEFAULT 0,
+    satisfaction_avg REAL DEFAULT 0, -- Average rating
+    sessions_with_tickets INTEGER DEFAULT 0, -- Escalated to tickets
+    peak_queue_size INTEGER DEFAULT 0,
+    staff_active_count INTEGER DEFAULT 0,
+    calculated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(date)
+);
+```
+
+#### **Admin Configuration for Public Queue Theming**
+```javascript
+const PublicQueueThemeSettings = {
+  // Visual Identity
+  theme_colors: {
+    primary: '#e57373',        // Main accent (red theme)
+    secondary: '#ffcdd2',      // Light backgrounds  
+    accent: '#d32f2f',         // Action buttons
+    sidebar: '#fce4ec',        // Sidebar background
+    success: '#81c784',        // Resolved sessions
+    warning: '#ffb74d',        // Queue warnings
+    urgent: '#f44336'          // High priority sessions
+  },
+
+  // Header Configuration
+  header_config: {
+    title: 'Public Support Queue',
+    subtitle: 'Helping visitors and guests',
+    show_queue_count: true,
+    show_active_agents: true,
+    theme_indicator: 'Public Portal Mode'
+  },
+
+  // Queue Display Options
+  display_options: {
+    show_guest_info: true,     // Name, email if provided
+    show_wait_times: true,     // How long they've been waiting
+    show_session_previews: true, // Last message preview
+    group_by_priority: true,   // VIP, urgent, normal sections
+    auto_refresh_seconds: 5    // Real-time updates
+  },
+
+  // Staff Experience
+  staff_ui: {
+    quick_switch_button: true,  // Switch to internal chat
+    session_alerts: true,       // New session notifications
+    keyboard_shortcuts: true,   // Alt+P for public queue
+    multi_session_support: true, // Handle multiple guests
+    session_transfer: true      // Pass to other agents
+  }
+};
+```
+
 ### **Public Portal Widget Management with Business Hours**
 *Admin-controlled public portal chat widget with operating hours and customizable settings*
 ```javascript
@@ -2387,11 +2582,96 @@ const ChannelSearchResult = ({ channel, onClick, highlight }) => (
 
 ---
 
-### **Phase 8: WebRTC Foundation & Call Database**
+### **Phase 8: Public Queue Chat System - Staff Interface**
+*Estimated: 3-4 days*
+*Separate interface for handling public portal guest requests*
+
+#### **8.1 Public Queue Page Architecture**
+- **Separate Route**: `/chat/public-queue` with red theme distinction
+- **Navigation Integration**: Button in main chat header with session count badge
+- **Permission-Based Access**: Staff only with `chat.handle_public_requests` permission
+- **Visual Identity**: Customizable red theme to distinguish from internal blue theme
+
+#### **8.2 Queue Management Interface**
+```javascript
+// Public Queue Layout Components
+const PublicQueueLayout = {
+  sidebar: 'Active Sessions + Resolved Sessions',
+  main_area: 'Guest Chat Interface', 
+  header: 'Public Support Queue with theme indicator',
+  
+  features: [
+    'Real-time guest session updates',
+    'Priority queue sorting (VIP, urgent, normal)', 
+    'Wait time displays for each guest',
+    'Agent assignment (auto or manual)',
+    'Session transfer between staff members',
+    'Internal staff notes per session'
+  ]
+};
+
+// Queue Sidebar Sections
+const QueueSidebar = {
+  active_sessions: {
+    display: 'Guest Name/ID + wait timer + priority indicator',
+    sorting: ['vip', 'urgent', 'normal', 'oldest_first'],
+    indicators: ['🟢 new', '🟡 waiting', '🔴 urgent', '⭐ vip'],
+    click_action: 'Open chat with guest'
+  },
+  
+  resolved_sessions: {
+    display: 'Completed sessions with ratings/outcomes',
+    filters: ['today', 'yesterday', 'this_week'],
+    outcomes: ['staff_resolved', 'user_ended', 'auto_timeout', 'escalated_to_ticket'],
+    rating_display: '1-5 stars with comments'
+  }
+};
+```
+
+#### **8.3 Staff Tools Integration**
+- **Quick Responses**: Predefined messages for common scenarios
+- **Knowledge Base Search**: Find relevant articles/solutions
+- **Ticket Creation Shortcut**: Convert chat to support ticket
+- **Session Notes**: Internal staff comments not visible to guests
+- **File Sharing**: Send screenshots, guides, documents to guests
+- **Escalation**: Transfer to specialist or create ticket
+
+#### **8.4 Guest Experience Features**
+```javascript
+const GuestExperience = {
+  queue_visibility: {
+    position: 'You are #3 in queue',
+    wait_time: 'Estimated wait: ~5 minutes',
+    queue_updates: 'Real-time position updates'
+  },
+  
+  chat_features: {
+    agent_typing: 'Staff typing indicators',
+    file_upload: 'Send screenshots of issues',
+    session_recovery: '5-minute reconnection window',
+    rating_system: '1-5 stars + optional comment at end'
+  },
+  
+  completion_options: {
+    staff_resolved: 'Agent marks as complete',
+    user_ended: 'Guest ends session', 
+    auto_timeout: '10 min inactivity timeout',
+    transcript_email: 'Optional chat history via email'
+  }
+};
+```
+
+#### **8.5 Analytics & Performance Tracking**
+- **Daily Queue Analytics**: Total sessions, avg wait/resolution time, satisfaction scores
+- **Peak Queue Monitoring**: Identify high-traffic periods
+- **Staff Performance**: Response times, resolution rates, customer satisfaction
+- **Escalation Tracking**: Sessions converted to tickets
+
+### **Phase 9: WebRTC Foundation & Call Database**
 *Estimated: 2-3 days*
 *Can be developed concurrently with Phase 3-4*
 
-#### **8.1 Call Database Schema**
+#### **9.1 Call Database Schema**
 ```sql
 -- Single table for call history and logs
 CREATE TABLE call_logs (

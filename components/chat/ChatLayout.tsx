@@ -24,7 +24,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ChatSidebar from './ChatSidebar';
 import MessageArea from './MessageArea';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useIsMobile, useIsTablet, useIsDesktop } from '@/hooks/useMediaQuery';
 
 interface User {
   username: string;
@@ -59,9 +59,9 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
   const [showChatInfo, setShowChatInfo] = useState(false);
   
   // Responsive breakpoints
-  const isMobile = useMediaQuery('(max-width: 768px)');
-  const isTablet = useMediaQuery('(min-width: 769px) and (max-width: 1024px)');
-  const isDesktop = useMediaQuery('(min-width: 1025px)');
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
+  const isDesktop = useIsDesktop();
 
   // Mobile-first: sidebar is overlay on mobile, fixed on desktop
   const sidebarMode = isMobile ? 'overlay' : isTablet ? 'slide' : 'fixed';
@@ -404,21 +404,4 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
       </div>
     </div>
   );
-}
-
-// Hook for media queries
-function useMediaQuery(query: string) {
-  const [matches, setMatches] = useState(false);
-
-  useEffect(() => {
-    const media = window.matchMedia(query);
-    if (media.matches !== matches) {
-      setMatches(media.matches);
-    }
-    const listener = () => setMatches(media.matches);
-    media.addListener(listener);
-    return () => media.removeListener(listener);
-  }, [matches, query]);
-
-  return matches;
 }
