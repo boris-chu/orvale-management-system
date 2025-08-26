@@ -193,12 +193,13 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
     <Dialog 
       open={open} 
       onClose={handleClose}
-      maxWidth="md"
+      maxWidth="sm"
       fullWidth
       PaperProps={{
         style: {
           backgroundColor: 'var(--chat-background, #ffffff)',
-          color: 'var(--chat-text-primary, #212121)'
+          color: 'var(--chat-text-primary, #212121)',
+          maxHeight: '80vh'
         }
       }}
     >
@@ -215,8 +216,8 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
         </div>
       </DialogTitle>
 
-      <DialogContent style={{ backgroundColor: 'var(--chat-background, #ffffff)' }}>
-        <div className="space-y-4 py-2">
+      <DialogContent style={{ backgroundColor: 'var(--chat-background, #ffffff)', paddingTop: '16px' }}>
+        <div className="space-y-6">
           {/* Chat Type Selection */}
           <FormControl fullWidth size="small">
             <InputLabel style={{ color: 'var(--chat-text-secondary, #757575)' }}>
@@ -294,7 +295,7 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
           {/* Selected Users */}
           {selectedUsers.length > 0 && (
             <div>
-              <Typography variant="subtitle2" className="mb-2" style={{ color: 'var(--chat-text-primary, #212121)' }}>
+              <Typography variant="subtitle2" className="mb-2" style={{ color: 'var(--chat-text-primary, #212121)', fontSize: '0.875rem' }}>
                 Selected People ({selectedUsers.length})
                 {chatType === 'dm' && selectedUsers.length > 1 && (
                   <Typography variant="caption" color="error" className="ml-2">
@@ -302,16 +303,17 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
                   </Typography>
                 )}
               </Typography>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-2">
                 {selectedUsers.map(user => (
                   <Chip
                     key={user.username}
                     label={user.display_name}
                     onDelete={() => removeSelectedUser(user.username)}
                     deleteIcon={<X className="w-3 h-3" />}
+                    size="small"
                     avatar={
                       <Avatar 
-                        sx={{ width: 24, height: 24 }}
+                        sx={{ width: 20, height: 20 }}
                         src={user.profile_picture}
                       >
                         {user.display_name.charAt(0)}
@@ -319,7 +321,8 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
                     }
                     style={{ 
                       backgroundColor: 'var(--chat-secondary, #f5f5f5)',
-                      color: 'var(--chat-text-primary, #212121)'
+                      color: 'var(--chat-text-primary, #212121)',
+                      fontSize: '0.75rem'
                     }}
                   />
                 ))}
@@ -327,35 +330,39 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
             </div>
           )}
 
-          <Divider style={{ borderColor: 'var(--chat-border, #e0e0e0)' }} />
-
           {/* User Search */}
-          <TextField
-            label="Search People"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            fullWidth
-            size="small"
-            placeholder="Search by name or username..."
-            InputProps={{
-              startAdornment: <Search className="w-4 h-4 mr-2" style={{ color: 'var(--chat-text-secondary, #757575)' }} />,
-              style: { 
-                backgroundColor: 'var(--chat-surface, #fafafa)',
-                color: 'var(--chat-text-primary, #212121)'
-              }
-            }}
-            InputLabelProps={{
-              style: { color: 'var(--chat-text-secondary, #757575)' }
-            }}
-          />
+          <div>
+            <Typography variant="subtitle2" className="mb-2" style={{ color: 'var(--chat-text-primary, #212121)', fontSize: '0.875rem' }}>
+              Add People
+            </Typography>
+            <TextField
+              label="Search People"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              fullWidth
+              size="small"
+              placeholder="Search by name or username..."
+              InputProps={{
+                startAdornment: <Search className="w-4 h-4 mr-2" style={{ color: 'var(--chat-text-secondary, #757575)' }} />,
+                style: { 
+                  backgroundColor: 'var(--chat-surface, #fafafa)',
+                  color: 'var(--chat-text-primary, #212121)'
+                }
+              }}
+              InputLabelProps={{
+                style: { color: 'var(--chat-text-secondary, #757575)', fontSize: '0.875rem' }
+              }}
+            />
+          </div>
 
           {/* User List */}
           <Box 
             style={{ 
-              maxHeight: '300px', 
+              maxHeight: '200px', 
               overflow: 'auto',
               backgroundColor: 'var(--chat-surface, #fafafa)',
-              borderRadius: '8px'
+              borderRadius: '8px',
+              border: '1px solid var(--chat-border, #e0e0e0)'
             }}
           >
             <List dense>
@@ -376,7 +383,7 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
                       <ListItemAvatar>
                         <Avatar 
                           src={user.profile_picture}
-                          sx={{ width: 32, height: 32 }}
+                          sx={{ width: 28, height: 28 }}
                         >
                           {user.display_name.charAt(0)}
                         </Avatar>
@@ -385,10 +392,10 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
                         primary={user.display_name}
                         secondary={`@${user.username} • ${user.role_id}`}
                         primaryTypographyProps={{
-                          style: { color: 'var(--chat-text-primary, #212121)' }
+                          style: { color: 'var(--chat-text-primary, #212121)', fontSize: '0.875rem' }
                         }}
                         secondaryTypographyProps={{
-                          style: { color: 'var(--chat-text-secondary, #757575)' }
+                          style: { color: 'var(--chat-text-secondary, #757575)', fontSize: '0.75rem' }
                         }}
                       />
                       <Checkbox
@@ -436,7 +443,8 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
       <DialogActions 
         style={{ 
           backgroundColor: 'var(--chat-surface, #fafafa)',
-          borderTop: '1px solid var(--chat-border, #e0e0e0)'
+          borderTop: '1px solid var(--chat-border, #e0e0e0)',
+          padding: '12px 24px'
         }}
       >
         <Button 
