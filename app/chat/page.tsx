@@ -26,6 +26,13 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chatSystemEnabled, setChatSystemEnabled] = useState(false);
+  const [showDevInfo, setShowDevInfo] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('chat-show-dev-info');
+      return saved !== 'false'; // Default to true, hide only if explicitly set to false
+    }
+    return true;
+  });
 
   // Check authentication and load user data
   useEffect(() => {
@@ -243,16 +250,48 @@ export default function ChatPage() {
       </div>
 
       {/* Development info (only in dev mode) */}
-      {process.env.NODE_ENV === 'development' && (
+      {process.env.NODE_ENV === 'development' && showDevInfo && (
         <div className="fixed bottom-4 right-4 z-50">
           <Card className="p-3 bg-yellow-50 border-yellow-200">
             <div className="text-xs text-yellow-800 space-y-1">
-              <p className="font-medium">🚀 Development Mode</p>
+              <div className="flex items-center justify-between">
+                <p className="font-medium">🚀 Development Mode</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-4 w-4 p-0 text-yellow-600 hover:text-yellow-800"
+                  onClick={() => {
+                    setShowDevInfo(false);
+                    localStorage.setItem('chat-show-dev-info', 'false');
+                  }}
+                  title="Hide development info"
+                >
+                  ×
+                </Button>
+              </div>
               <p>Socket.io: <span className="font-mono">localhost:3001</span></p>
               <p>User: <span className="font-mono">{currentUser?.username}</span></p>
               <p>Permissions: <span className="font-mono">{currentUser?.permissions?.length || 0}</span></p>
             </div>
           </Card>
+        </div>
+      )}
+      
+      {/* Show development info toggle (if hidden) */}
+      {process.env.NODE_ENV === 'development' && !showDevInfo && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100"
+            onClick={() => {
+              setShowDevInfo(true);
+              localStorage.setItem('chat-show-dev-info', 'true');
+            }}
+            title="Show development info"
+          >
+            🚀
+          </Button>
         </div>
       )}
       </div>

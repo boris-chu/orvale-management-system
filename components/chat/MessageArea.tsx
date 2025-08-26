@@ -29,6 +29,7 @@ import { UserAvatar } from '@/components/UserAvatar';
 import { cn } from '@/lib/utils';
 import { useIsMobile, useIsTouchDevice } from '@/hooks/useMediaQuery';
 import { socketClient } from '@/lib/socket-client';
+import { useThemeCSS } from '@/hooks/useThemeSystem';
 import { Socket } from 'socket.io-client';
 
 interface User {
@@ -92,6 +93,9 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
   const componentId = useRef(`MessageArea_${chat.id}_${Date.now()}`).current;
   const isMobile = useIsMobile();
   const isTouchDevice = useIsTouchDevice();
+  
+  // Apply theme CSS variables
+  const theme = useThemeCSS('internal_chat');
 
   // Socket.io connection setup with singleton
   useEffect(() => {
@@ -753,10 +757,19 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
         className={cn(
-          "group flex gap-3 px-4 py-1 hover:bg-gray-50 dark:hover:bg-gray-800/50",
+          "group flex gap-3 px-4 py-1 transition-colors",
           isGrouped && "mt-1",
           !isGrouped && "mt-4"
         )}
+        style={{
+          '--message-hover-bg': 'var(--chat-surface)'
+        } as React.CSSProperties}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--chat-surface)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+        }}
       >
         {/* Avatar */}
         <div className="flex-shrink-0 w-8 h-8">
@@ -767,7 +780,7 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
               enableRealTimePresence={true}
             />
           ) : (
-            <div className="w-8 h-8 flex items-center justify-center text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="w-8 h-8 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--chat-text-secondary)' }}>
               {formatMessageTime(message.timestamp)}
             </div>
           )}
@@ -778,14 +791,14 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
           {/* Message header */}
           {showAvatar && (
             <div className="flex items-baseline gap-2 mb-1">
-              <span className="font-medium text-sm text-gray-900 dark:text-gray-100">
+              <span className="font-medium text-sm" style={{ color: 'var(--chat-text-primary)' }}>
                 {message.sender.display_name}
               </span>
-              <span className="text-xs text-gray-500" title={formatRelativeTime(message.timestamp)}>
+              <span className="text-xs" style={{ color: 'var(--chat-text-secondary)' }} title={formatRelativeTime(message.timestamp)}>
                 {formatMessageTime(message.timestamp)}
               </span>
               {message.edited_at && (
-                <span className="text-xs text-gray-400" title={`Edited ${formatRelativeTime(message.edited_at)}`}>
+                <span className="text-xs" style={{ color: 'var(--chat-text-secondary)' }} title={`Edited ${formatRelativeTime(message.edited_at)}`}>
                   (edited)
                 </span>
               )}
@@ -794,13 +807,20 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
 
           {/* Reply indicator */}
           {message.reply_to && (
-            <div className="flex items-center gap-2 mb-2 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg border-l-2 border-gray-300 dark:border-gray-600">
+            <div 
+              className="flex items-center gap-2 mb-2 p-2 rounded-lg border-l-2" 
+              style={{ 
+                backgroundColor: 'var(--chat-surface)', 
+                borderLeftColor: 'var(--chat-border)',
+                borderColor: 'var(--chat-border)'
+              }}
+            >
               <UserAvatar user={message.reply_to.sender} size="sm" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                <p className="text-xs font-medium" style={{ color: 'var(--chat-text-primary)' }}>
                   {message.reply_to.sender.display_name}
                 </p>
-                <p className="text-xs text-gray-500 truncate">
+                <p className="text-xs truncate" style={{ color: 'var(--chat-text-secondary)' }}>
                   {message.reply_to.content}
                 </p>
               </div>
@@ -808,7 +828,7 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
           )}
 
           {/* Message text */}
-          <div className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+          <div className="text-sm whitespace-pre-wrap" style={{ color: 'var(--chat-text-primary)' }}>
             {message.content}
           </div>
 
@@ -828,7 +848,7 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
                         className="max-w-full max-h-48 rounded-lg border hover:opacity-90 transition-opacity"
                         onClick={() => window.open(attachment.url, '_blank')}
                       />
-                      <p className="text-xs text-gray-500 mt-1 px-1">
+                      <p className="text-xs mt-1 px-1" style={{ color: 'var(--chat-text-secondary)' }}>
                         {attachment.filename} • {(attachment.size / 1024 / 1024).toFixed(1)}MB
                       </p>
                     </div>
@@ -837,14 +857,24 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
                       href={attachment.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg border hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                      className="flex items-center gap-2 p-3 rounded-lg border transition-colors"
+                      style={{ 
+                        backgroundColor: 'var(--chat-surface)', 
+                        borderColor: 'var(--chat-border)' 
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--chat-secondary)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--chat-surface)';
+                      }}
                     >
-                      <File className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                      <File className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--chat-text-secondary)' }} />
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                        <p className="text-sm font-medium truncate" style={{ color: 'var(--chat-text-primary)' }}>
                           {attachment.filename}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs" style={{ color: 'var(--chat-text-secondary)' }}>
                           {(attachment.size / 1024 / 1024).toFixed(1)}MB
                         </p>
                       </div>
@@ -863,7 +893,14 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
                   key={idx}
                   variant="outline"
                   size="sm"
-                  className="h-6 px-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-900"
+                  className="h-6 px-2 text-xs transition-colors"
+                  style={{
+                    backgroundColor: 'var(--chat-surface)',
+                    borderColor: 'var(--chat-border)',
+                    color: 'var(--chat-text-primary)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--chat-secondary)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--chat-surface)'}
                   onClick={() => {
                     // TODO: Toggle reaction
                     console.log('Toggle reaction:', reaction.emoji);
@@ -883,7 +920,13 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div 
+      className="flex flex-col h-full" 
+      style={{ 
+        backgroundColor: 'var(--chat-background)', 
+        color: 'var(--chat-text-primary)' 
+      }}
+    >
       {/* Reply bar */}
       <AnimatePresence>
         {replyingTo && (
@@ -891,12 +934,16 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-700 p-3"
+            className="border-b p-3"
+            style={{
+              backgroundColor: 'var(--chat-secondary)',
+              borderColor: 'var(--chat-border)'
+            }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Reply className="w-4 h-4 text-blue-500" />
-                <span className="text-sm text-blue-700 dark:text-blue-300">
+                <Reply className="w-4 h-4" style={{ color: 'var(--chat-primary)' }} />
+                <span className="text-sm" style={{ color: 'var(--chat-primary)' }}>
                   Replying to {replyingTo.sender.display_name}
                 </span>
               </div>
@@ -904,12 +951,15 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setReplyingTo(null)}
-                className="h-6 w-6 p-0"
+                className="h-6 w-6 p-0 transition-colors"
+                style={{}}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--chat-surface)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <MoreHorizontal className="w-3 h-3" />
               </Button>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 truncate">
+            <p className="text-sm mt-1 truncate" style={{ color: 'var(--chat-text-secondary)' }}>
               {replyingTo.content}
             </p>
           </motion.div>
@@ -922,7 +972,7 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
           <div className="py-4">
             {isLoading ? (
               <div className="flex justify-center items-center h-32">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--chat-primary)' }}></div>
               </div>
             ) : messages.length > 0 ? (
               <div>
@@ -933,12 +983,12 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
                   <div className="flex items-center gap-3 px-4 py-2">
                     <div className="w-8 h-8 flex items-center justify-center">
                       <div className="flex space-x-1">
-                        <div className="w-1 h-1 bg-gray-500 rounded-full animate-bounce"></div>
-                        <div className="w-1 h-1 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-1 h-1 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-1 h-1 rounded-full animate-bounce" style={{ backgroundColor: 'var(--chat-text-secondary)' }}></div>
+                        <div className="w-1 h-1 rounded-full animate-bounce" style={{ backgroundColor: 'var(--chat-text-secondary)', animationDelay: '0.1s' }}></div>
+                        <div className="w-1 h-1 rounded-full animate-bounce" style={{ backgroundColor: 'var(--chat-text-secondary)', animationDelay: '0.2s' }}></div>
                       </div>
                     </div>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm" style={{ color: 'var(--chat-text-secondary)' }}>
                       {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
                     </span>
                   </div>
@@ -946,7 +996,7 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
               </div>
             ) : (
               <div className="flex items-center justify-center h-32">
-                <p className="text-gray-500">No messages yet. Start the conversation!</p>
+                <p style={{ color: 'var(--chat-text-secondary)' }}>No messages yet. Start the conversation!</p>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -956,15 +1006,25 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
 
       {/* Message input */}
       <div 
-        className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900"
+        className="border-t p-4"
+        style={{
+          borderTopColor: 'var(--chat-border)',
+          backgroundColor: 'var(--chat-background)'
+        }}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
       >
         {uploadingFile && (
-          <div className="mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div 
+            className="mb-2 p-2 rounded-lg border" 
+            style={{
+              backgroundColor: 'var(--chat-secondary)',
+              borderColor: 'var(--chat-border)'
+            }}
+          >
             <div className="flex items-center gap-2">
-              <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-              <span className="text-sm text-blue-700 dark:text-blue-300">Uploading file...</span>
+              <div className="animate-spin w-4 h-4 border-2 border-t-transparent rounded-full" style={{ borderColor: 'var(--chat-primary)' }}></div>
+              <span className="text-sm" style={{ color: 'var(--chat-primary)' }}>Uploading file...</span>
             </div>
           </div>
         )}
@@ -1000,9 +1060,20 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
               onKeyPress={handleKeyPress}
               placeholder={uploadingFile ? "Uploading..." : `Message ${chat.displayName}...`}
               className={cn(
-                "resize-none border-0 shadow-none bg-gray-100 dark:bg-gray-800 focus:bg-white dark:focus:bg-gray-700",
+                "resize-none border-0 shadow-none",
                 isMobile && "text-base" // Prevent zoom on iOS
               )}
+              style={{
+                backgroundColor: 'var(--chat-surface)',
+                color: 'var(--chat-text-primary)',
+                '--placeholder-color': 'var(--chat-text-secondary)'
+              } as React.CSSProperties}
+              onFocus={(e) => {
+                e.target.style.backgroundColor = 'var(--chat-background)';
+              }}
+              onBlur={(e) => {
+                e.target.style.backgroundColor = 'var(--chat-surface)';
+              }}
               disabled={isLoading || uploadingFile}
             />
           </div>

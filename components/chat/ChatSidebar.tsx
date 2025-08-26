@@ -29,6 +29,7 @@ import { UserAvatar } from '@/components/UserAvatar';
 import OnlinePresenceTracker from '@/components/shared/OnlinePresenceTracker';
 import { socketClient } from '@/lib/socket-client';
 import { useChatSettings } from '@/hooks/useChatSettings';
+import { useThemeCSS } from '@/hooks/useThemeSystem';
 import { cn } from '@/lib/utils';
 import UserThemeModal from './UserThemeModal';
 
@@ -82,6 +83,9 @@ export default function ChatSidebar({
   const [showThemeModal, setShowThemeModal] = useState(false);
   const componentId = useRef(`ChatSidebar_${Date.now()}`).current;
   const { settings: chatUISettings, loading: settingsLoading } = useChatSettings();
+  
+  // Apply theme CSS variables
+  const theme = useThemeCSS('internal_chat');
   
   // Function to refresh unread counts from API (authoritative source)
   const refreshUnreadCounts = useCallback(async () => {
@@ -415,9 +419,7 @@ export default function ChatSidebar({
       <div className="mb-4">
         <div 
           className="flex items-center justify-between px-3 py-2 cursor-pointer rounded-md transition-colors duration-200"
-          style={{ 
-            ':hover': { backgroundColor: 'var(--chat-secondary, #f5f5f5)' }
-          }}
+          style={{}}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--chat-secondary, #f5f5f5)'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           onClick={() => setActiveSection(activeSection === type ? 'all' : type)}
@@ -542,12 +544,17 @@ export default function ChatSidebar({
         
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--chat-text-secondary)' }} />
           <Input
             placeholder="Search chats..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 h-8"
+            style={{
+              backgroundColor: 'var(--chat-surface)',
+              borderColor: 'var(--chat-border)',
+              color: 'var(--chat-text-primary)'
+            }}
           />
         </div>
       </CardHeader>
@@ -556,7 +563,7 @@ export default function ChatSidebar({
         <ScrollArea className="h-full px-3">
           <div className="py-2">
             {/* Section Toggle */}
-            <div className="flex gap-1 mb-4 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <div className="flex gap-1 mb-4 p-1 rounded-lg" style={{ backgroundColor: 'var(--chat-surface)' }}>
               {[
                 { key: 'all', label: 'All' },
                 { key: 'dm', label: 'DMs' },
@@ -566,11 +573,21 @@ export default function ChatSidebar({
                 <button
                   key={key}
                   onClick={() => setActiveSection(key as typeof activeSection)}
-                  className={`flex-1 px-2 py-1 text-xs rounded-md transition-colors ${
-                    activeSection === key
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-                  }`}
+                  className="flex-1 px-2 py-1 text-xs rounded-md transition-colors shadow-sm"
+                  style={{
+                    backgroundColor: activeSection === key ? 'var(--chat-background)' : 'transparent',
+                    color: activeSection === key ? 'var(--chat-text-primary)' : 'var(--chat-text-secondary)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeSection !== key) {
+                      e.currentTarget.style.color = 'var(--chat-text-primary)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeSection !== key) {
+                      e.currentTarget.style.color = 'var(--chat-text-secondary)';
+                    }
+                  }}
                 >
                   {label}
                 </button>
