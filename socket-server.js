@@ -405,13 +405,13 @@ io.on('connection', async (socket) => {
   socket.on('send_message', (data) => {
     if (!socket.userId) return;
     
-    const { channelId, message, type = 'text', replyToId = null } = data;
+    const { channelId, message, type = 'text', replyToId = null, fileAttachment = null } = data;
     
     // Save message to database
     db.run(
-      `INSERT INTO chat_messages (channel_id, user_id, message_text, message_type, reply_to_id) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [channelId, socket.userId, message, type, replyToId],
+      `INSERT INTO chat_messages (channel_id, user_id, message_text, message_type, reply_to_id, file_attachment) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [channelId, socket.userId, message, type, replyToId, fileAttachment],
       function(err) {
         if (err) {
           socket.emit('error', { type: 'message_send_failed', message: 'Failed to send message' });
@@ -426,6 +426,7 @@ io.on('connection', async (socket) => {
           message,
           messageType: type,
           replyToId,
+          fileAttachment,
           timestamp: new Date().toISOString()
         };
         

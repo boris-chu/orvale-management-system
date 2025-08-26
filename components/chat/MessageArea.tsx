@@ -84,9 +84,11 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const componentId = useRef(`MessageArea_${chat.id}_${Date.now()}`).current;
   const isMobile = useIsMobile();
   const isTouchDevice = useIsTouchDevice();
@@ -127,31 +129,69 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
           // If it's a temp message, replace with server version
           if (exists.id.startsWith('temp_')) {
             console.log('🔄 Replacing temp message with server version');
-            return prev.map(msg => 
-              msg.id === exists.id ? {
-                id: message.id.toString(),
-                content: message.message,
-                sender: {
-                  username: message.userId,
-                  display_name: message.userDisplayName,
-                  role_id: 'user'
-                },
-                timestamp: message.timestamp,
-                message_type: message.messageType || 'text',
-                reply_to: message.replyToId ? { 
-                  id: message.replyToId.toString(), 
-                  content: '', 
-                  sender: { username: '', display_name: '', role_id: '' }, 
-                  timestamp: '', 
-                  message_type: 'text' 
-                } : undefined
-              } : msg
-            );
+            return prev.map(msg => {
+              if (msg.id === exists.id) {
+                // Parse file attachment if it exists
+                let attachments;
+                if (message.fileAttachment) {
+                  try {
+                    const fileData = JSON.parse(message.fileAttachment);
+                    attachments = [{
+                      id: fileData.fileId,
+                      filename: fileData.filename,
+                      type: fileData.mimeType?.startsWith('image/') ? 'image' : 'file',
+                      url: `/api/chat/files/${fileData.fileId}`,
+                      size: fileData.fileSize
+                    }];
+                  } catch (e) {
+                    console.warn('Failed to parse file attachment:', e);
+                  }
+                }
+
+                return {
+                  id: message.id.toString(),
+                  content: message.message,
+                  sender: {
+                    username: message.userId,
+                    display_name: message.userDisplayName,
+                    role_id: 'user'
+                  },
+                  timestamp: message.timestamp,
+                  message_type: message.messageType || 'text',
+                  attachments,
+                  reply_to: message.replyToId ? { 
+                    id: message.replyToId.toString(), 
+                    content: '', 
+                    sender: { username: '', display_name: '', role_id: '' }, 
+                    timestamp: '', 
+                    message_type: 'text' 
+                  } : undefined
+                };
+              }
+              return msg;
+            });
           }
           return prev; // Already exists, skip
         }
         
         // Add new message
+        // Parse file attachment if it exists
+        let attachments;
+        if (message.fileAttachment) {
+          try {
+            const fileData = JSON.parse(message.fileAttachment);
+            attachments = [{
+              id: fileData.fileId,
+              filename: fileData.filename,
+              type: fileData.mimeType?.startsWith('image/') ? 'image' : 'file',
+              url: `/api/chat/files/${fileData.fileId}`,
+              size: fileData.fileSize
+            }];
+          } catch (e) {
+            console.warn('Failed to parse file attachment:', e);
+          }
+        }
+
         return [...prev, {
           id: message.id.toString(),
           content: message.message,
@@ -162,6 +202,7 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
           },
           timestamp: message.timestamp,
           message_type: message.messageType || 'text',
+          attachments,
           reply_to: message.replyToId ? { 
             id: message.replyToId.toString(), 
             content: '', 
@@ -187,6 +228,23 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
         );
         
         if (tempIndex !== -1) {
+          // Parse file attachment if it exists
+          let attachments;
+          if (message.fileAttachment) {
+            try {
+              const fileData = JSON.parse(message.fileAttachment);
+              attachments = [{
+                id: fileData.fileId,
+                filename: fileData.filename,
+                type: fileData.mimeType?.startsWith('image/') ? 'image' : 'file',
+                url: `/api/chat/files/${fileData.fileId}`,
+                size: fileData.fileSize
+              }];
+            } catch (e) {
+              console.warn('Failed to parse file attachment:', e);
+            }
+          }
+
           const newMessages = [...prev];
           newMessages[tempIndex] = {
             id: message.id.toString(),
@@ -198,6 +256,7 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
             },
             timestamp: message.timestamp,
             message_type: message.messageType || 'text',
+            attachments,
             reply_to: message.replyToId ? { 
               id: message.replyToId.toString(), 
               content: '', 
@@ -317,28 +376,48 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
         console.log('📥 Loaded messages:', data.messages?.length || 0);
         
         // Convert API messages to component format
-        const formattedMessages: Message[] = (data.messages || []).map((msg: any) => ({
-          id: msg.id.toString(),
-          content: msg.message_text,
-          sender: {
-            username: msg.user_id,
-            display_name: msg.user_display_name || msg.user_id,
-            role_id: 'user'
-          },
-          timestamp: msg.created_at,
-          message_type: msg.message_type || 'text',
-          reply_to: msg.reply_to_id ? {
-            id: msg.reply_to_id.toString(),
-            content: msg.reply_to_text || '',
+        const formattedMessages: Message[] = (data.messages || []).map((msg: any) => {
+          // Parse file attachment if it exists
+          let attachments;
+          if (msg.file_attachment) {
+            try {
+              const fileData = JSON.parse(msg.file_attachment);
+              attachments = [{
+                id: fileData.fileId,
+                filename: fileData.filename,
+                type: fileData.mimeType?.startsWith('image/') ? 'image' : 'file',
+                url: `/api/chat/files/${fileData.fileId}`,
+                size: fileData.fileSize
+              }];
+            } catch (e) {
+              console.warn('Failed to parse file attachment:', e);
+            }
+          }
+
+          return {
+            id: msg.id.toString(),
+            content: msg.message_text,
             sender: {
-              username: msg.reply_to_user || '',
-              display_name: msg.reply_to_user || '',
+              username: msg.user_id,
+              display_name: msg.user_display_name || msg.user_id,
               role_id: 'user'
             },
-            timestamp: '',
-            message_type: 'text'
-          } : undefined
-        }));
+            timestamp: msg.created_at,
+            message_type: msg.message_type || 'text',
+            attachments,
+            reply_to: msg.reply_to_id ? {
+              id: msg.reply_to_id.toString(),
+              content: msg.reply_to_text || '',
+              sender: {
+                username: msg.reply_to_user || '',
+                display_name: msg.reply_to_user || '',
+                role_id: 'user'
+              },
+              timestamp: '',
+              message_type: 'text'
+            } : undefined
+          };
+        });
 
         setMessages(formattedMessages);
       } else {
@@ -458,6 +537,103 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
       event.preventDefault();
       handleSendMessage();
     }
+  };
+
+  // Handle file upload
+  const handleFileUpload = useCallback(async (file: File) => {
+    if (!currentUser) return;
+
+    setUploadingFile(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('channel_id', chat.id);
+
+      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
+      
+      const response = await fetch('/api/chat/files/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload file');
+      }
+
+      const data = await response.json();
+      
+      // Create message with file attachment
+      const optimisticMessage: Message = {
+        id: `temp_file_${Date.now()}`,
+        content: `📎 ${file.name}`,
+        sender: currentUser,
+        timestamp: new Date().toISOString(),
+        message_type: 'file',
+        attachments: [{
+          id: data.file.id,
+          filename: data.file.filename,
+          type: data.file.type,
+          url: data.file.url,
+          size: data.file.size
+        }]
+      };
+
+      setMessages(prev => [...prev, optimisticMessage]);
+
+      // Send file message via Socket.io
+      if (socketClient.isConnected()) {
+        const success = socketClient.sendMessage(
+          chat.id,
+          JSON.stringify({
+            type: 'file',
+            filename: data.file.filename,
+            fileId: data.file.id,
+            fileSize: data.file.size,
+            mimeType: data.file.mime_type
+          }),
+          'file'
+        );
+        
+        if (!success) {
+          console.error('❌ Failed to send file message via singleton');
+          setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+        }
+      }
+
+    } catch (error) {
+      console.error('Failed to upload file:', error);
+      alert(`Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setUploadingFile(false);
+    }
+  }, [currentUser, chat.id]);
+
+  // Handle file input change
+  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+      // Reset input
+      event.target.value = '';
+    }
+  };
+
+  // Handle drag and drop
+  const handleDrop = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  }, [handleFileUpload]);
+
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault();
   };
 
   // Message grouping logic
@@ -642,14 +818,38 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
               {message.attachments.map(attachment => (
                 <div
                   key={attachment.id}
-                  className="flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg border"
+                  className="max-w-xs"
                 >
                   {attachment.type === 'image' ? (
-                    <Image className="w-4 h-4 text-blue-500" />
+                    <div className="cursor-pointer">
+                      <img
+                        src={attachment.url}
+                        alt={attachment.filename}
+                        className="max-w-full max-h-48 rounded-lg border hover:opacity-90 transition-opacity"
+                        onClick={() => window.open(attachment.url, '_blank')}
+                      />
+                      <p className="text-xs text-gray-500 mt-1 px-1">
+                        {attachment.filename} • {(attachment.size / 1024 / 1024).toFixed(1)}MB
+                      </p>
+                    </div>
                   ) : (
-                    <File className="w-4 h-4 text-gray-500" />
+                    <a
+                      href={attachment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg border hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <File className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {attachment.filename}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {(attachment.size / 1024 / 1024).toFixed(1)}MB
+                        </p>
+                      </div>
+                    </a>
                   )}
-                  <span className="text-xs font-medium">{attachment.filename}</span>
                 </div>
               ))}
             </div>
@@ -755,7 +955,20 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
       </div>
 
       {/* Message input */}
-      <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
+      <div 
+        className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900"
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+      >
+        {uploadingFile && (
+          <div className="mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+              <span className="text-sm text-blue-700 dark:text-blue-300">Uploading file...</span>
+            </div>
+          </div>
+        )}
+        
         <div className="flex items-end gap-3">
           {/* Attachment button */}
           <Button
@@ -763,9 +976,20 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
             size="sm"
             className="flex-shrink-0 p-2"
             title="Attach file"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingFile}
           >
             <Paperclip className="w-4 h-4" />
           </Button>
+
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept="image/*,.pdf,.txt,.csv,.json,.xlsx,.xls"
+            onChange={handleFileInputChange}
+          />
 
           {/* Message input */}
           <div className="flex-1">
@@ -774,12 +998,12 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
               value={newMessage}
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
-              placeholder={`Message ${chat.displayName}...`}
+              placeholder={uploadingFile ? "Uploading..." : `Message ${chat.displayName}...`}
               className={cn(
                 "resize-none border-0 shadow-none bg-gray-100 dark:bg-gray-800 focus:bg-white dark:focus:bg-gray-700",
                 isMobile && "text-base" // Prevent zoom on iOS
               )}
-              disabled={isLoading}
+              disabled={isLoading || uploadingFile}
             />
           </div>
 
@@ -796,7 +1020,7 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
           {/* Send button */}
           <Button
             onClick={handleSendMessage}
-            disabled={!newMessage.trim() || isLoading}
+            disabled={!newMessage.trim() || isLoading || uploadingFile}
             size="sm"
             className={cn(
               "flex-shrink-0 p-2",
