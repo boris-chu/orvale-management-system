@@ -529,7 +529,81 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                   if (settings?.status === 'offline' || settings?.status !== 'online') return '💤';
                   
                   // Use selected icon or fall back to defaults
-                  const iconMap: { [key: string]: string } = {
+                  const selectedIcon = settings?.widget_icon || settings?.widget?.icon;
+                  
+                  // SVG icons
+                  const svgIcons: { [key: string]: JSX.Element } = {
+                    'svg_chat_bubble': (
+                      <svg width={widgetSize * 0.5} height={widgetSize * 0.5} viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                      </svg>
+                    ),
+                    'svg_chat_outline': (
+                      <svg width={widgetSize * 0.5} height={widgetSize * 0.5} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
+                    ),
+                    'svg_message_circle': (
+                      <svg width={widgetSize * 0.5} height={widgetSize * 0.5} viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.54 0 3-.35 4.31-.99L22 22l-1.01-5.69C21.65 15 22 13.54 22 12c0-5.52-4.48-10-10-10z"/>
+                      </svg>
+                    ),
+                    'svg_message_square': (
+                      <svg width={widgetSize * 0.5} height={widgetSize * 0.5} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        <path d="M8 10h8M8 14h6"/>
+                      </svg>
+                    ),
+                    'svg_speech_bubble': (
+                      <svg width={widgetSize * 0.5} height={widgetSize * 0.5} viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 2.98.97 4.29L1 23l6.71-1.97C9.02 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/>
+                      </svg>
+                    ),
+                    'svg_help_circle': (
+                      <svg width={widgetSize * 0.5} height={widgetSize * 0.5} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                        <circle cx="12" cy="17" r="1"/>
+                      </svg>
+                    ),
+                    'svg_support': (
+                      <svg width={widgetSize * 0.5} height={widgetSize * 0.5} viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11 15h2v2h-2v-2zm0-8h2v6h-2V7zm1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                      </svg>
+                    ),
+                    'svg_headset': (
+                      <svg width={widgetSize * 0.5} height={widgetSize * 0.5} viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h3c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z"/>
+                      </svg>
+                    ),
+                    'svg_mail': (
+                      <svg width={widgetSize * 0.5} height={widgetSize * 0.5} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                        <polyline points="22,6 12,13 2,6"/>
+                      </svg>
+                    ),
+                    'svg_phone': (
+                      <svg width={widgetSize * 0.5} height={widgetSize * 0.5} viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                      </svg>
+                    ),
+                    'svg_users': (
+                      <svg width={widgetSize * 0.5} height={widgetSize * 0.5} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                      </svg>
+                    ),
+                    'svg_info': (
+                      <svg width={widgetSize * 0.5} height={widgetSize * 0.5} viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                      </svg>
+                    )
+                  };
+
+                  // Emoji icons
+                  const emojiIcons: { [key: string]: string } = {
                     'chat': '💬',
                     'support': '🎧', 
                     'help': '❓',
@@ -544,15 +618,24 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                     'bell': '🔔'
                   };
                   
-                  const selectedIcon = settings?.widget_icon || settings?.widget?.icon;
-                  return iconMap[selectedIcon] || '💬';
+                  // Return SVG icon if it's an SVG type
+                  if (selectedIcon && selectedIcon.startsWith('svg_') && svgIcons[selectedIcon]) {
+                    return (
+                      <div style={{ color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {svgIcons[selectedIcon]}
+                      </div>
+                    );
+                  }
+                  
+                  // Return emoji icon
+                  return (
+                    <span style={{ fontSize: `${widgetSize * 0.4}px` }}>
+                      {emojiIcons[selectedIcon] || '💬'}
+                    </span>
+                  );
                 };
                 
-                return (
-                  <span style={{ fontSize: `${widgetSize * 0.4}px` }}>
-                    {getIcon()}
-                  </span>
-                );
+                return getIcon();
               })()}
               
               {/* Unread Count Badge */}
