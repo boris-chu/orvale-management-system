@@ -492,7 +492,6 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                   justifyContent: 'center',
                   boxShadow: 3,
                   opacity: settings?.status === 'online' ? 1 : 0.7,
-                  border: '2px solid red', // Debug border to see if widget is rendered
                   '&:hover': {
                     boxShadow: 6
                   }
