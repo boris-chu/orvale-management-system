@@ -82,7 +82,7 @@ export const useCallManager = ({
       ringtoneRef.current.loop = true;
       ringtoneRef.current.volume = 0.7;
       
-      notificationSoundRef.current = new Audio('/sounds/call-notification.mp3');
+      notificationSoundRef.current = new Audio('/sounds/mixkit-happy-bells-notification-937.wav');
       notificationSoundRef.current.volume = 0.5;
     }
     

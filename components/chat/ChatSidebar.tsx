@@ -533,7 +533,10 @@ export default function ChatSidebar({
               onClick={() => setShowThemeModal(true)}
               title="Chat theme settings"
             >
-              <Settings className="w-4 h-4" />
+              <Settings 
+                className="w-4 h-4" 
+                style={{ color: 'var(--chat-text-secondary, #757575)' }}
+              />
             </Button>
             <Button 
               variant="ghost" 
@@ -542,7 +545,10 @@ export default function ChatSidebar({
               onClick={onCreateChat}
               title="Create new chat"
             >
-              <Plus className="w-4 h-4" />
+              <Plus 
+                className="w-4 h-4"
+                style={{ color: 'var(--chat-text-secondary, #757575)' }}
+              />
             </Button>
           </div>
         </div>

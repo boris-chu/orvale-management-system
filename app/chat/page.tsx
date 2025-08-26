@@ -198,33 +198,70 @@ export default function ChatPage() {
     <ThemeSystemProvider>
       <div className="h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header bar with system info */}
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center justify-between">
+      <div 
+        className="border-b px-4 py-2 flex items-center justify-between"
+        style={{
+          backgroundColor: 'var(--chat-sidebar, #ffffff)',
+          borderBottomColor: 'var(--chat-border, #e0e0e0)',
+          color: 'var(--chat-text-primary, #212121)'
+        }}
+      >
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-blue-500" />
-            <h1 className="text-lg font-semibold">Orvale Chat System</h1>
+            <MessageCircle 
+              className="w-5 h-5"
+              style={{ color: 'var(--chat-accent, #2563eb)' }}
+            />
+            <h1 
+              className="text-lg font-semibold"
+              style={{ color: 'var(--chat-text-primary, #212121)' }}
+            >
+              Orvale Chat System
+            </h1>
           </div>
         </div>
 
         {/* User info */}
         <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-medium">{currentUser?.display_name}</p>
-            <p className="text-xs text-gray-500 capitalize">{currentUser?.role_id}</p>
+            <p 
+              className="text-sm font-medium"
+              style={{ color: 'var(--chat-text-primary, #212121)' }}
+            >
+              {currentUser?.display_name}
+            </p>
+            <p 
+              className="text-xs capitalize"
+              style={{ color: 'var(--chat-text-secondary, #757575)' }}
+            >
+              {currentUser?.role_id}
+            </p>
           </div>
           
           {/* Quick stats */}
-          <div className="flex items-center gap-3 text-sm text-gray-500">
+          <div 
+            className="flex items-center gap-3 text-sm"
+            style={{ color: 'var(--chat-text-secondary, #757575)' }}
+          >
             <div className="flex items-center gap-1" title="Direct Messages">
-              <MessageCircle className="w-3 h-3" />
+              <MessageCircle 
+                className="w-3 h-3" 
+                style={{ color: 'var(--chat-text-secondary, #757575)' }}
+              />
               <span className="hidden sm:inline">DMs</span>
             </div>
             <div className="flex items-center gap-1" title="Channels">
-              <Hash className="w-3 h-3" />
+              <Hash 
+                className="w-3 h-3"
+                style={{ color: 'var(--chat-text-secondary, #757575)' }}
+              />
               <span className="hidden sm:inline">Channels</span>
             </div>
             <div className="flex items-center gap-1" title="Groups">
-              <Users className="w-3 h-3" />
+              <Users 
+                className="w-3 h-3"
+                style={{ color: 'var(--chat-text-secondary, #757575)' }}
+              />
               <span className="hidden sm:inline">Groups</span>
             </div>
           </div>

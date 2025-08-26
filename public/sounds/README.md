@@ -2,14 +2,19 @@
 
 This directory contains sound files for the WebRTC calling system.
 
+## Current Files:
+
+- `mixkit-happy-bells-notification-937.wav` - Notification sound for call events (pleasant bell sound)
+- `ringtone.mp3` - Ringtone played for incoming calls (needs to be added - should loop)
+
 ## Required Files:
 
 - `ringtone.mp3` - Ringtone played for incoming calls (should loop)
-- `call-notification.mp3` - Notification sound for call events
+- `mixkit-happy-bells-notification-937.wav` - ✅ Available - Notification sound for call events
 
 ## File Requirements:
 
-- **Format**: MP3 (best browser compatibility)
+- **Format**: MP3 or WAV (both supported by modern browsers)
 - **Duration**: 
   - Ringtone: 2-4 seconds (will loop)
   - Notification: 0.5-1 second (plays once)
