@@ -31,6 +31,7 @@ import { useIsMobile, useIsTouchDevice } from '@/hooks/useMediaQuery';
 import { socketClient } from '@/lib/socket-client';
 import { useThemeCSS } from '@/hooks/useThemeSystem';
 import { Socket } from 'socket.io-client';
+import { AuthenticatedImage } from './AuthenticatedImage';
 
 interface User {
   username: string;
@@ -842,11 +843,21 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
                 >
                   {attachment.type === 'image' ? (
                     <div className="cursor-pointer">
-                      <img
+                      <AuthenticatedImage
                         src={attachment.url}
                         alt={attachment.filename}
                         className="max-w-full max-h-48 rounded-lg border hover:opacity-90 transition-opacity"
-                        onClick={() => window.open(attachment.url, '_blank')}
+                        onClick={() => {
+                          // Open in new tab with auth token
+                          const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
+                          if (token) {
+                            const link = document.createElement('a');
+                            link.href = `${attachment.url}?token=${token}`;
+                            link.target = '_blank';
+                            link.rel = 'noopener noreferrer';
+                            link.click();
+                          }
+                        }}
                       />
                       <p className="text-xs mt-1 px-1" style={{ color: 'var(--chat-text-secondary)' }}>
                         {attachment.filename} • {(attachment.size / 1024 / 1024).toFixed(1)}MB
