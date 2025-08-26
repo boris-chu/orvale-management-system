@@ -29,6 +29,7 @@ import { useThemeCSS } from '@/hooks/useThemeSystem';
 import { useCallManager } from '@/hooks/useCallManager';
 import WebRTCCall from './WebRTCCall';
 import IncomingCallNotification from './IncomingCallNotification';
+import CreateChatModal from './CreateChatModal';
 
 interface User {
   username: string;
@@ -61,6 +62,7 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
   const [selectedChat, setSelectedChat] = useState<ChatItem | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showChatInfo, setShowChatInfo] = useState(false);
+  const [showCreateChatModal, setShowCreateChatModal] = useState(false);
   
   // Apply theme CSS
   const currentTheme = useThemeCSS('internal_chat');
@@ -357,10 +359,7 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
                   currentUser={currentUser}
                   onChatSelect={handleChatSelect}
                   selectedChatId={selectedChat?.id}
-                  onCreateChat={() => {
-                    // TODO: Implement create chat modal
-                    console.log('Create new chat');
-                  }}
+                  onCreateChat={() => setShowCreateChatModal(true)}
                 />
               </div>
             </motion.div>
@@ -512,6 +511,13 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
           )}
         </>
       )}
+
+      {/* Create Chat Modal */}
+      <CreateChatModal
+        open={showCreateChatModal}
+        onClose={() => setShowCreateChatModal(false)}
+        currentUser={currentUser}
+      />
     </div>
   );
 }

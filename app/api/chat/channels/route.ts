@@ -68,14 +68,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check permissions
-    if (!authResult.user.permissions?.includes('chat.create_channels')) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    // Check permissions - allow group creation for users with basic chat access
+    const canCreateChannels = authResult.user.permissions?.includes('chat.create_channels');
+    const canCreateGroups = authResult.user.permissions?.includes('chat.create_groups');
+    const hasBasicChat = authResult.user.permissions?.includes('chat.send_messages') || 
+                         authResult.user.permissions?.includes('chat.access');
+    
+    // Allow channel creation for admins, group creation for regular users
+    if (type === 'group') {
+      if (!canCreateGroups && !hasBasicChat && authResult.user.role !== 'admin') {
+        return NextResponse.json({ error: 'Insufficient permissions for group creation' }, { status: 403 });
+      }
+    } else {
+      if (!canCreateChannels) {
+        return NextResponse.json({ error: 'Insufficient permissions for channel creation' }, { status: 403 });
+      }
     }
 
     const { user } = authResult;
     const body = await request.json();
-    const { name, description, type, team_id, is_read_only } = body;
+    const { name, description, type, team_id, is_read_only, is_private, members } = body;
 
     // Validate required fields
     if (!name || !type) {
@@ -83,9 +95,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Validate channel type
-    const validTypes = ['public_channel', 'private_channel'];
+    const validTypes = ['public_channel', 'private_channel', 'group'];
     if (!validTypes.includes(type)) {
       return NextResponse.json({ error: 'Invalid channel type' }, { status: 400 });
+    }
+    
+    // For group chats, ensure members are provided
+    if (type === 'group' && (!members || !Array.isArray(members) || members.length === 0)) {
+      return NextResponse.json({ error: 'Group chats require at least one member' }, { status: 400 });
     }
 
     // Create new channel
@@ -117,20 +134,62 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             return;
           }
 
-          resolve(NextResponse.json({ 
-            message: 'Channel created successfully',
-            channelId,
-            channel: {
-              id: channelId,
-              name,
-              description,
-              type,
-              created_by: user.username,
-              team_id,
-              is_read_only: is_read_only || false,
-              user_role: 'owner'
-            }
-          }, { status: 201 }));
+          // Add additional members for groups
+          if (type === 'group' && members && members.length > 0) {
+            const addMembersPromises = members.map((memberUsername: string) => {
+              return new Promise<void>((resolveMember, rejectMember) => {
+                if (memberUsername === user.username) {
+                  resolveMember(); // Skip creator (already added as owner)
+                  return;
+                }
+                
+                const addMemberQuery = `
+                  INSERT INTO chat_channel_members (channel_id, user_id, role)
+                  VALUES (?, ?, 'member')
+                `;
+                
+                db.run(addMemberQuery, [channelId, memberUsername], (addErr) => {
+                  if (addErr) {
+                    console.warn(`Failed to add member ${memberUsername} to channel ${channelId}:`, addErr);
+                  }
+                  resolveMember(); // Continue even if one member fails
+                });
+              });
+            });
+
+            Promise.all(addMembersPromises).then(() => {
+              resolve(NextResponse.json({ 
+                message: 'Channel created successfully',
+                channelId,
+                channel: {
+                  id: channelId,
+                  name,
+                  description,
+                  type,
+                  created_by: user.username,
+                  team_id,
+                  is_read_only: is_read_only || false,
+                  user_role: 'owner',
+                  member_count: (members?.length || 0) + 1 // +1 for creator
+                }
+              }, { status: 201 }));
+            });
+          } else {
+            resolve(NextResponse.json({ 
+              message: 'Channel created successfully',
+              channelId,
+              channel: {
+                id: channelId,
+                name,
+                description,
+                type,
+                created_by: user.username,
+                team_id,
+                is_read_only: is_read_only || false,
+                user_role: 'owner'
+              }
+            }, { status: 201 }));
+          }
         });
       });
     });
