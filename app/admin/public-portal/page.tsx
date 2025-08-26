@@ -148,6 +148,9 @@ const PublicPortalAdmin = () => {
     // Staff Work Mode Settings
     work_mode_auto_assignment_enabled: true,
     work_mode_ready_auto_accept: true,
+    
+    // WebSocket Connection Settings
+    websocket_unlimited_mode: false,
     work_mode_work_auto_accept: false,
     work_mode_ticketing_auto_accept: false,
     work_mode_max_queue_time_minutes: 10,
@@ -230,6 +233,27 @@ const PublicPortalAdmin = () => {
     }
   };
 
+  // Load WebSocket system settings separately
+  const loadWebSocketSettings = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/websocket-settings', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSettings(prev => ({ 
+          ...prev, 
+          websocket_unlimited_mode: Boolean(data.websocket_unlimited_mode) 
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to load WebSocket settings:', error);
+    }
+  };
+
   const loadSettings = async () => {
     try {
       const token = localStorage.getItem('authToken');
@@ -263,6 +287,9 @@ const PublicPortalAdmin = () => {
         }
         setSettings({ ...settings, ...data });
       }
+
+      // Also load WebSocket settings
+      await loadWebSocketSettings();
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -302,8 +329,47 @@ const PublicPortalAdmin = () => {
     }
   };
 
+  // Save WebSocket system settings immediately
+  const saveWebSocketSettings = async (websocketUnlimitedMode: boolean) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/websocket-settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          websocket_unlimited_mode: websocketUnlimitedMode
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ WebSocket settings saved:', data.message);
+        return true;
+      } else {
+        console.error('❌ Failed to save WebSocket settings');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error saving WebSocket settings:', error);
+      return false;
+    }
+  };
+
   const updateSetting = (key: string, value: any) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const updateWebSocketSetting = async (key: string, value: any) => {
+    // Update local state immediately
+    setSettings(prev => ({ ...prev, [key]: value }));
+
+    // Save WebSocket settings immediately to system_settings
+    if (key === 'websocket_unlimited_mode') {
+      await saveWebSocketSettings(value);
+    }
   };
 
   const updateSchedule = (day: string, field: string, value: any) => {
@@ -559,6 +625,7 @@ const PublicPortalAdmin = () => {
           <Tab icon={<Palette />} label="Communication" />
           <Tab icon={<Refresh />} label="Recovery & Disconnects" />
           <Tab icon={<People />} label="Staff Work Modes" />
+          <Tab icon={<Speed />} label="WebSocket Management" />
           <Tab icon={<Analytics />} label="Analytics" />
         </Tabs>
 
@@ -1692,7 +1759,89 @@ const PublicPortalAdmin = () => {
         </TabPanel>
 
         {/* Analytics Tab */}
+        {/* WebSocket Management Tab */}
         <TabPanel value={activeTab} index={7}>
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Speed /> WebSocket Connection Management
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Configure WebSocket connection limits and admin bypass settings for chat functionality.
+            </Typography>
+
+            <Card sx={{ mb: 3 }}>
+              <CardHeader title="Connection Limits Override" />
+              <CardContent>
+                <Alert severity="warning" sx={{ mb: 3 }}>
+                  <Typography variant="body2">
+                    <strong>⚠️ Developer/Admin Setting</strong><br />
+                    Enabling unlimited mode bypasses all WebSocket connection limits. Use with caution.
+                  </Typography>
+                </Alert>
+
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={settings.websocket_unlimited_mode}
+                      onChange={(e) => updateWebSocketSetting('websocket_unlimited_mode', e.target.checked)}
+                      color="warning"
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body1" component="span" sx={{ fontWeight: 'bold' }}>
+                        {settings.websocket_unlimited_mode ? '🌍 Unlimited Connections ENABLED' : '🔒 Connection Limits ACTIVE'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" component="div">
+                        {settings.websocket_unlimited_mode 
+                          ? 'All WebSocket connection limits are bypassed. Perfect for testing and development.'
+                          : 'Standard connection limits apply: 10 per user, 25 per IP, 500 total in development.'
+                        }
+                      </Typography>
+                    </Box>
+                  }
+                  sx={{ alignItems: 'flex-start', mb: 2 }}
+                />
+
+                <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+                  Current Connection Limits
+                </Typography>
+                <List>
+                  <ListItem>
+                    <ListItemText
+                      primary="Per User Limit"
+                      secondary={`${settings.websocket_unlimited_mode ? '∞ (Unlimited)' : '10 connections'} per authenticated user`}
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText
+                      primary="Per IP Limit"
+                      secondary={`${settings.websocket_unlimited_mode ? '∞ (Unlimited)' : '25 connections'} per IP address`}
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText
+                      primary="Total Server Limit"
+                      secondary={`${settings.websocket_unlimited_mode ? '∞ (Unlimited)' : '500 total'} concurrent connections`}
+                    />
+                  </ListItem>
+                </List>
+
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>💡 When to use unlimited mode:</strong><br />
+                    • Development and testing scenarios<br />
+                    • Debugging connection issues<br />
+                    • High-traffic production environments with sufficient server resources<br />
+                    • Global 24/7 support with many concurrent users
+                  </Typography>
+                </Alert>
+              </CardContent>
+            </Card>
+          </Box>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={8}>
           <Box p={3} className="space-y-6">
             <Card>
               <CardHeader title="Analytics & Reporting" />

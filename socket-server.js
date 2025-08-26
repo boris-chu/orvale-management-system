@@ -22,6 +22,12 @@ const path = require('path');
 const PORT = process.env.SOCKET_PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'orvale-management-system-secret-key-2025';
 const DB_PATH = path.join(__dirname, 'orvale_tickets.db');
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+// Connection limits (can be overridden by admin settings)
+const DEFAULT_MAX_CONNECTIONS_PER_USER = isDevelopment ? 10 : 5;
+const DEFAULT_MAX_CONNECTIONS_PER_IP = isDevelopment ? 25 : 15;
+const DEFAULT_MAX_TOTAL_CONNECTIONS = isDevelopment ? 500 : 200;
 
 // Create HTTP server and Socket.io instance
 const server = http.createServer();
@@ -31,15 +37,141 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
     credentials: true
   },
-  transports: ['websocket', 'polling'] // Safari/iOS compatibility
+  transports: ['websocket', 'polling'], // Safari/iOS compatibility
+  // Improved connection settings
+  connectTimeout: isDevelopment ? 60000 : 30000,
+  pingTimeout: isDevelopment ? 45000 : 30000,
+  pingInterval: isDevelopment ? 30000 : 25000,
+  maxHttpBufferSize: 1e6,
+  allowEIO3: true
 });
 
 // Database connection
 const db = new Database(DB_PATH);
 
+// Connection tracking
+const connectionsByUser = new Map(); // userId -> Set of socket IDs
+const connectionsByIP = new Map();    // IP -> Set of socket IDs
+const totalConnections = new Set();   // All active socket IDs
+let websocketUnlimitedMode = false;   // Admin override for connection limits
+
 // In-memory stores for active connections and presence
 const activeUsers = new Map(); // userId -> { socketId, displayName, lastActive, connections: [] }
 const roomUsers = new Map();   // roomId -> Set of userIds
+
+// Load system settings for websocket unlimited mode
+const loadSystemSettings = () => {
+  db.get('SELECT websocket_unlimited_mode FROM system_settings WHERE id = 1', (err, row) => {
+    if (!err && row) {
+      websocketUnlimitedMode = Boolean(row.websocket_unlimited_mode);
+      console.log(`📡 WebSocket unlimited mode: ${websocketUnlimitedMode ? 'ENABLED' : 'DISABLED'}`);
+    }
+  });
+};
+
+// Load settings on startup
+loadSystemSettings();
+
+// Reload settings every 30 seconds
+setInterval(loadSystemSettings, 30000);
+
+// Connection management helpers
+const checkConnectionLimits = (socket, userId) => {
+  // Skip limits if unlimited mode is enabled
+  if (websocketUnlimitedMode) {
+    console.log(`🌍 Connection allowed (unlimited mode): ${userId || 'guest'} from ${socket.handshake.address}`);
+    return { allowed: true, reason: 'unlimited_mode' };
+  }
+
+  const clientIP = socket.handshake.address;
+  const userConnections = connectionsByUser.get(userId)?.size || 0;
+  const ipConnections = connectionsByIP.get(clientIP)?.size || 0;
+  const total = totalConnections.size;
+
+  // Check total connections
+  if (total >= DEFAULT_MAX_TOTAL_CONNECTIONS) {
+    return { allowed: false, reason: 'total_limit', current: total, limit: DEFAULT_MAX_TOTAL_CONNECTIONS };
+  }
+
+  // Check per-user connections (if authenticated)
+  if (userId && userConnections >= DEFAULT_MAX_CONNECTIONS_PER_USER) {
+    return { allowed: false, reason: 'user_limit', current: userConnections, limit: DEFAULT_MAX_CONNECTIONS_PER_USER };
+  }
+
+  // Check per-IP connections
+  if (ipConnections >= DEFAULT_MAX_CONNECTIONS_PER_IP) {
+    return { allowed: false, reason: 'ip_limit', current: ipConnections, limit: DEFAULT_MAX_CONNECTIONS_PER_IP };
+  }
+
+  return { allowed: true, reason: 'within_limits' };
+};
+
+const trackConnection = (socket, userId) => {
+  const socketId = socket.id;
+  const clientIP = socket.handshake.address;
+
+  // Track total connections
+  totalConnections.add(socketId);
+
+  // Track by IP
+  if (!connectionsByIP.has(clientIP)) {
+    connectionsByIP.set(clientIP, new Set());
+  }
+  connectionsByIP.get(clientIP).add(socketId);
+
+  // Track by user (if authenticated)
+  if (userId) {
+    if (!connectionsByUser.has(userId)) {
+      connectionsByUser.set(userId, new Set());
+    }
+    connectionsByUser.get(userId).add(socketId);
+  }
+
+  console.log(`✅ Connection tracked: ${userId || 'guest'} from ${clientIP} (Total: ${totalConnections.size})`);
+};
+
+const untrackConnection = (socket, userId) => {
+  const socketId = socket.id;
+  const clientIP = socket.handshake.address;
+
+  // Remove from total
+  totalConnections.delete(socketId);
+
+  // Remove from IP tracking
+  const ipSet = connectionsByIP.get(clientIP);
+  if (ipSet) {
+    ipSet.delete(socketId);
+    if (ipSet.size === 0) {
+      connectionsByIP.delete(clientIP);
+    }
+  }
+
+  // Remove from user tracking
+  if (userId) {
+    const userSet = connectionsByUser.get(userId);
+    if (userSet) {
+      userSet.delete(socketId);
+      if (userSet.size === 0) {
+        connectionsByUser.delete(userId);
+      }
+    }
+  }
+
+  console.log(`🗑️  Connection untracked: ${userId || 'guest'} from ${clientIP} (Total: ${totalConnections.size})`);
+};
+
+const getConnectionLimitMessage = (checkResult) => {
+  switch (checkResult.reason) {
+    case 'total_limit':
+      return `Server at capacity (${checkResult.current}/${checkResult.limit} connections). Please try again later.`;
+    case 'user_limit':
+      return `Too many connections for this user (${checkResult.current}/${checkResult.limit}). Please close other chat windows.`;
+    case 'ip_limit':
+      return `Too many connections from this location (${checkResult.current}/${checkResult.limit}). Please try again later.`;
+    default:
+      return 'Connection limit exceeded. Please try again later.';
+  }
+};
 
 // Helper function to authenticate socket connections
 const authenticateSocket = async (socket, token) => {
@@ -118,13 +250,47 @@ const updatePresence = (userId, status, socketId = null) => {
 io.on('connection', async (socket) => {
   let authenticatedUser = null;
   
-  console.log(`Socket connected: ${socket.id}`);
+  console.log(`Socket connected: ${socket.id} from ${socket.handshake.address}`);
+
+  // Check initial connection limits (before authentication)
+  const preAuthCheck = checkConnectionLimits(socket, null);
+  if (!preAuthCheck.allowed) {
+    console.warn(`❌ Connection rejected (pre-auth): ${preAuthCheck.reason} - ${preAuthCheck.current}/${preAuthCheck.limit}`);
+    socket.emit('connection_limit_exceeded', {
+      reason: preAuthCheck.reason,
+      message: getConnectionLimitMessage(preAuthCheck)
+    });
+    socket.disconnect(true);
+    return;
+  }
+
+  // Track the connection (initially as guest)
+  trackConnection(socket, null);
 
   // === AUTHENTICATION ===
   socket.on('authenticate', async (token) => {
     try {
       authenticatedUser = await authenticateSocket(socket, token);
-      socket.userId = authenticatedUser.userId;
+      const userId = authenticatedUser.userId;
+
+      // Check connection limits for authenticated user
+      const authCheck = checkConnectionLimits(socket, userId);
+      if (!authCheck.allowed) {
+        console.warn(`❌ Authentication rejected for ${userId}: ${authCheck.reason} - ${authCheck.current}/${authCheck.limit}`);
+        socket.emit('connection_limit_exceeded', {
+          reason: authCheck.reason,
+          message: getConnectionLimitMessage(authCheck),
+          userId: userId
+        });
+        socket.disconnect(true);
+        return;
+      }
+
+      // Re-track connection with user ID
+      untrackConnection(socket, null);
+      trackConnection(socket, userId);
+
+      socket.userId = userId;
       socket.userDisplayName = authenticatedUser.display_name;
       socket.userRole = authenticatedUser.role;
       
@@ -604,8 +770,14 @@ io.on('connection', async (socket) => {
   // === DISCONNECTION HANDLING ===
   
   socket.on('disconnect', () => {
+    // Untrack connection first
+    untrackConnection(socket, socket.userId || null);
+    
     if (authenticatedUser) {
       console.log(`User disconnected: ${socket.userDisplayName} (${socket.id})`);
+      
+      // Update presence to offline
+      updatePresence(socket.userId, 'offline', null);
       
       // Notify all channels that user left (for this socket connection)
       roomUsers.forEach((users, roomId) => {

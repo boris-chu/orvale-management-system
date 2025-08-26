@@ -12,13 +12,13 @@ export async function GET(): Promise<NextResponse> {
     // For now, return default settings
     // In the future, this will fetch from database
     const defaultSettings = {
-      enabled: true,
+      enabled: true, // Widget enabled by default
       position: 'bottom-right',
       theme: 'light', 
-      shape: 'rounded-square',
+      shape: 'round', // Match the updated default
       primaryColor: '#1976d2',
       showOnPages: ['*'],
-      hideOnPages: ['/chat', '/chat/*']
+      hideOnPages: ['/chat', '/chat/*', '/public-portal', '/public-portal/*', '/public-chat-demo']
     };
 
     return NextResponse.json(defaultSettings);

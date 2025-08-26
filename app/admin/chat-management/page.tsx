@@ -46,7 +46,8 @@ import {
   UserPlus,
   UserMinus,
   Hash,
-  Check
+  Check,
+  Upload
 } from 'lucide-react';
 import {
   Select as MuiSelect,
@@ -69,6 +70,7 @@ interface ChatSettings {
   widget_primary_color: string;
   widget_secondary_color: string;
   widget_theme: 'light' | 'dark' | 'auto';
+  widget_button_image: string;
   
   // System Settings
   chat_system_enabled: boolean;
@@ -745,8 +747,8 @@ function ThemeManagementTab({ settings, updateSetting, currentUser }: ThemeManag
                 {/* Master Toggle */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-sm font-medium">Enable Chat Widget</Label>
-                    <p className="text-xs text-muted-foreground">Show chat widget on all pages</p>
+                    <Label className="text-sm font-medium">Enable Internal Chat Widget</Label>
+                    <p className="text-xs text-muted-foreground">Show floating chat widget on internal admin/staff pages (excludes public portal)</p>
                   </div>
                   <Switch
                     checked={settings.widget_enabled}
@@ -765,6 +767,37 @@ function ThemeManagementTab({ settings, updateSetting, currentUser }: ThemeManag
                     >
                       <MenuItem value="bottom-right">Bottom Right</MenuItem>
                       <MenuItem value="bottom-left">Bottom Left</MenuItem>
+                    </MuiSelect>
+                  </FormControl>
+                </div>
+
+                {/* Widget Shape */}
+                <div className="space-y-2">
+                  <FormControl fullWidth size="small">
+                    <InputLabel className="text-sm font-medium">Widget Shape</InputLabel>
+                    <MuiSelect
+                      value={settings.widget_shape}
+                      label="Widget Shape"
+                      onChange={(e) => updateSetting('widget_shape', e.target.value)}
+                    >
+                      <MenuItem value="round">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+                          Round
+                        </div>
+                      </MenuItem>
+                      <MenuItem value="rounded-square">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-blue-500 rounded-lg"></div>
+                          Rounded Square
+                        </div>
+                      </MenuItem>
+                      <MenuItem value="square">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-blue-500 rounded-none"></div>
+                          Square
+                        </div>
+                      </MenuItem>
                     </MuiSelect>
                   </FormControl>
                 </div>
@@ -789,6 +822,122 @@ function ThemeManagementTab({ settings, updateSetting, currentUser }: ThemeManag
                     </div>
                   </div>
                 </div>
+
+                {/* Widget Button Image */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Widget Button Image</Label>
+                  <p className="text-xs text-muted-foreground mb-3">Custom image for the floating chat widget button (replaces default chat icon)</p>
+                  <div className="flex items-center gap-4">
+                    {/* Current Widget Icon Preview */}
+                    <div className="flex-shrink-0">
+                      <div 
+                        className={`w-10 h-10 border-2 border-gray-300 flex items-center justify-center text-white ${
+                          settings.widget_shape === 'round' ? 'rounded-full' :
+                          settings.widget_shape === 'square' ? 'rounded-none' : 'rounded-lg'
+                        }`}
+                        style={{ backgroundColor: settings.widget_primary_color }}
+                      >
+                        {settings.widget_button_image ? (
+                          <img 
+                            src={settings.widget_button_image} 
+                            alt="Widget icon preview" 
+                            className="w-6 h-6 object-cover"
+                            style={{
+                              borderRadius: settings.widget_shape === 'round' ? '50%' :
+                                          settings.widget_shape === 'square' ? '0' : '4px'
+                            }}
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling!.style.display = 'inline';
+                            }}
+                          />
+                        ) : null}
+                        <MessageCircle 
+                          className="h-6 w-6" 
+                          style={{ display: settings.widget_button_image ? 'none' : 'inline' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Widget Image URL Input & File Upload */}
+                    <div className="flex-1 space-y-2">
+                      <Input
+                        placeholder="Enter widget button image URL or paste data URL"
+                        value={settings.widget_button_image || ''}
+                        onChange={(e) => updateSetting('widget_button_image', e.target.value)}
+                        className="w-full"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            if (!file) return;
+
+                            // Validate file type
+                            if (!file.type.startsWith('image/')) {
+                              alert('Please select a valid image file.');
+                              return;
+                            }
+
+                            // Validate file size (max 2MB)
+                            const maxSize = 2 * 1024 * 1024; // 2MB
+                            if (file.size > maxSize) {
+                              alert('Image size must be less than 2MB.');
+                              return;
+                            }
+
+                            // Convert to data URL
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                              const dataUrl = e.target?.result as string;
+                              if (dataUrl) {
+                                updateSetting('widget_button_image', dataUrl);
+                              }
+                            };
+                            reader.onerror = () => {
+                              alert('Error reading the image file.');
+                            };
+                            reader.readAsDataURL(file);
+
+                            // Clear the input so the same file can be uploaded again
+                            event.target.value = '';
+                          }}
+                          className="hidden"
+                          id="widget-image-upload"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => document.getElementById('widget-image-upload')?.click()}
+                          className="flex items-center gap-2"
+                        >
+                          <Upload className="h-4 w-4" />
+                          Upload Image
+                        </Button>
+                        <span className="text-xs text-muted-foreground">Or enter URL above</span>
+                      </div>
+                    </div>
+
+                    {/* Clear Widget Image Button */}
+                    {settings.widget_button_image && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => updateSetting('widget_button_image', '')}
+                        className="flex-shrink-0"
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <div className="text-xs text-muted-foreground">
+                    💡 <strong>Tip:</strong> Use a square image (100x100px or larger) for best results. 
+                    Upload a file (max 2MB) or enter an image URL. This replaces the default chat bubble icon.
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -810,7 +959,25 @@ function ThemeManagementTab({ settings, updateSetting, currentUser }: ThemeManag
                       }`}
                       style={{ backgroundColor: settings.widget_primary_color }}
                     >
-                      <MessageCircle className="h-6 w-6" />
+                      {settings.widget_button_image ? (
+                        <img 
+                          src={settings.widget_avatar_image} 
+                          alt="Widget button preview" 
+                          className="w-7 h-7 object-cover"
+                          style={{
+                            borderRadius: settings.widget_shape === 'round' ? '50%' :
+                                        settings.widget_shape === 'square' ? '0' : '6px'
+                          }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling!.style.display = 'inline';
+                          }}
+                        />
+                      ) : null}
+                      <MessageCircle 
+                        className="h-6 w-6" 
+                        style={{ display: settings.widget_avatar_image ? 'none' : 'inline' }}
+                      />
                     </div>
                     <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
                       3
@@ -843,10 +1010,11 @@ export default function ChatManagementPage() {
   const [settings, setSettings] = useState<ChatSettings>({
     widget_enabled: false,
     widget_position: 'bottom-right',
-    widget_shape: 'rounded-square',
+    widget_shape: 'round',
     widget_primary_color: '#1976d2',
     widget_secondary_color: '#6c757d',
     widget_theme: 'light',
+    widget_button_image: '',
     chat_system_enabled: true,
     notification_sounds_enabled: true,
     read_receipts_enabled: true,
@@ -911,6 +1079,7 @@ export default function ChatManagementPage() {
     checkAdminAccess();
     loadChatSettings();
     loadSystemStats();
+    loadWidgetSettings();
     loadChannels();
   }, []);
 
@@ -988,10 +1157,14 @@ export default function ChatManagementPage() {
 
   const loadChatSettings = async () => {
     try {
-      const response = await fetch('/api/admin/chat/settings');
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/settings', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (response.ok) {
         const data = await response.json();
-        setSettings(data);
+        // Merge with existing settings to preserve widget settings loaded separately
+        setSettings(prev => ({ ...prev, ...data }));
       }
     } catch (error) {
       console.error('Failed to load chat settings:', error);
@@ -1010,9 +1183,61 @@ export default function ChatManagementPage() {
     }
   };
 
+  const loadWidgetSettings = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/widget-settings', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        // Map API response to our settings structure
+        setSettings(prev => ({
+          ...prev,
+          widget_enabled: data.enabled,
+          widget_position: data.position,
+          widget_shape: data.shape,
+          widget_primary_color: data.primaryColor,
+          widget_theme: data.theme
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to load widget settings:', error);
+    }
+  };
+
   const updateSetting = (key: keyof ChatSettings, value: string | boolean) => {
     setSettings(prev => ({ ...prev, [key]: value }));
     setHasChanges(true);
+  };
+
+
+  const saveWidgetSettings = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const widgetPayload = {
+        enabled: settings.widget_enabled,
+        position: settings.widget_position,
+        shape: settings.widget_shape,
+        primaryColor: settings.widget_primary_color,
+        theme: settings.widget_theme
+      };
+
+      const response = await fetch('/api/admin/chat/widget-settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(widgetPayload),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to save widget settings:', response.status);
+      }
+    } catch (error) {
+      console.error('Error saving widget settings:', error);
+    }
   };
 
   const saveSettings = async () => {
@@ -1025,16 +1250,20 @@ export default function ChatManagementPage() {
         return;
       }
 
-      const response = await fetch('/api/admin/chat/settings', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(settings),
-      });
+      // Save both chat settings and widget settings
+      const [chatResponse] = await Promise.all([
+        fetch('/api/admin/chat/settings', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(settings),
+        }),
+        saveWidgetSettings()
+      ]);
 
-      if (response.ok) {
+      if (chatResponse.ok) {
         setHasChanges(false);
         // Show success message
         alert('Settings saved successfully!');
@@ -1718,8 +1947,8 @@ export default function ChatManagementPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-sm font-medium">Chat System Enabled</Label>
-                  <p className="text-xs text-muted-foreground">Enable/disable the entire chat system</p>
+                  <Label className="text-sm font-medium">Internal Chat System Enabled</Label>
+                  <p className="text-xs text-muted-foreground">Master toggle for all internal chat functionality (Socket.io, messaging, channels)</p>
                 </div>
                 <Switch
                   checked={settings.chat_system_enabled}
@@ -1746,6 +1975,17 @@ export default function ChatManagementPage() {
                 <Switch
                   checked={settings.read_receipts_enabled}
                   onCheckedChange={(checked) => updateSetting('read_receipts_enabled', checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">Typing Indicators</Label>
+                  <p className="text-xs text-muted-foreground">Show when users are typing messages</p>
+                </div>
+                <Switch
+                  checked={settings.show_typing_indicators}
+                  onCheckedChange={(checked) => updateSetting('show_typing_indicators', checked)}
                 />
               </div>
             </CardContent>

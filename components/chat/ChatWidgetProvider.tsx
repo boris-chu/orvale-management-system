@@ -62,7 +62,7 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
     shape: 'rounded-square',
     primaryColor: '#1976d2',
     showOnPages: ['*'], // Show on all pages
-    hideOnPages: ['/chat', '/chat/*'] // Hide on chat pages
+    hideOnPages: ['/chat', '/chat/*', '/public-portal', '/public-portal/*', '/public-chat-demo'] // Hide on chat pages and public portal
   });
 
   // Load settings on mount
@@ -145,7 +145,7 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
           shape: widgetSettings.shape || 'rounded-square',
           primaryColor: widgetSettings.primaryColor || '#1976d2',
           showOnPages: ['*'], // Show on all pages
-          hideOnPages: ['/chat', '/chat/*'] // Hide on chat pages
+          hideOnPages: ['/chat', '/chat/*', '/public-portal', '/public-portal/*', '/public-chat-demo'] // Hide on chat pages and public portal
         }));
         
         console.log('🔧 Widget settings updated');

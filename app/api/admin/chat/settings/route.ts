@@ -152,10 +152,11 @@ export async function GET(request: NextRequest) {
       // Widget Settings
       widget_enabled: false,
       widget_position: 'bottom-right',
-      widget_shape: 'rounded-square', 
+      widget_shape: 'round', // Updated default
       widget_primary_color: '#1976d2',
       widget_secondary_color: '#6c757d',
       widget_theme: 'light',
+      widget_button_image: '',
       
       // System Settings
       chat_system_enabled: true,
@@ -163,6 +164,19 @@ export async function GET(request: NextRequest) {
       read_receipts_enabled: true,
       file_sharing_enabled: true,
       gif_picker_enabled: false, // Default to false until Giphy is configured
+      
+      // UI Settings
+      show_unread_badges: true,
+      unread_badge_color: '#dc3545',
+      unread_badge_text_color: '#ffffff',
+      unread_badge_style: 'rounded',
+      unread_badge_position: 'right',
+      show_zero_counts: false,
+      show_channel_member_count: false,
+      show_typing_indicators: true,
+      show_online_status: true,
+      message_grouping_enabled: true,
+      timestamp_format: 'relative',
     };
 
     // Apply database settings over defaults
@@ -254,6 +268,44 @@ export async function PUT(request: NextRequest) {
       settingsToUpdate.push({ key: 'giphy_enabled', value: settings.gif_picker_enabled, type: 'boolean' });
     }
 
+    // UI Settings
+    if (settings.show_unread_badges !== undefined) {
+      settingsToUpdate.push({ key: 'show_unread_badges', value: settings.show_unread_badges, type: 'boolean' });
+    }
+    if (settings.unread_badge_color !== undefined) {
+      settingsToUpdate.push({ key: 'unread_badge_color', value: settings.unread_badge_color, type: 'string' });
+    }
+    if (settings.unread_badge_text_color !== undefined) {
+      settingsToUpdate.push({ key: 'unread_badge_text_color', value: settings.unread_badge_text_color, type: 'string' });
+    }
+    if (settings.unread_badge_style !== undefined) {
+      settingsToUpdate.push({ key: 'unread_badge_style', value: settings.unread_badge_style, type: 'string' });
+    }
+    if (settings.unread_badge_position !== undefined) {
+      settingsToUpdate.push({ key: 'unread_badge_position', value: settings.unread_badge_position, type: 'string' });
+    }
+    if (settings.show_zero_counts !== undefined) {
+      settingsToUpdate.push({ key: 'show_zero_counts', value: settings.show_zero_counts, type: 'boolean' });
+    }
+    if (settings.show_channel_member_count !== undefined) {
+      settingsToUpdate.push({ key: 'show_channel_member_count', value: settings.show_channel_member_count, type: 'boolean' });
+    }
+    if (settings.show_typing_indicators !== undefined) {
+      settingsToUpdate.push({ key: 'show_typing_indicators', value: settings.show_typing_indicators, type: 'boolean' });
+    }
+    if (settings.show_online_status !== undefined) {
+      settingsToUpdate.push({ key: 'show_online_status', value: settings.show_online_status, type: 'boolean' });
+    }
+    if (settings.message_grouping_enabled !== undefined) {
+      settingsToUpdate.push({ key: 'message_grouping_enabled', value: settings.message_grouping_enabled, type: 'boolean' });
+    }
+    if (settings.timestamp_format !== undefined) {
+      settingsToUpdate.push({ key: 'timestamp_format', value: settings.timestamp_format, type: 'string' });
+    }
+    if (settings.widget_button_image !== undefined) {
+      settingsToUpdate.push({ key: 'widget_button_image', value: settings.widget_button_image, type: 'string' });
+    }
+
     // Update all settings in database
     for (const setting of settingsToUpdate) {
       await dbRun(
@@ -265,7 +317,9 @@ export async function PUT(request: NextRequest) {
           setting.value.toString(), 
           setting.type, 
           authResult.user.username,
-          setting.key.startsWith('widget_') ? 'widget' : 'system'
+          setting.key.startsWith('widget_') ? 'widget' :
+          setting.key.startsWith('unread_badge_') || setting.key.startsWith('show_') || setting.key.includes('_format') || setting.key.includes('grouping') ? 'ui' :
+          'system'
         ]
       );
     }
