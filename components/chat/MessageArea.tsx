@@ -390,6 +390,8 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
         const formattedMessages: Message[] = (data.messages || []).map((msg: any) => {
           // Parse file attachment if it exists
           let attachments;
+          
+          // Try to parse from file_attachment field
           if (msg.file_attachment) {
             try {
               const fileData = JSON.parse(msg.file_attachment);
@@ -402,6 +404,24 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
               }];
             } catch (e) {
               console.warn('Failed to parse file attachment:', e);
+            }
+          }
+          
+          // If no attachment but message_type is 'file', try to parse from message_text
+          if (!attachments && msg.message_type === 'file' && msg.message_text?.startsWith('{')) {
+            try {
+              const fileData = JSON.parse(msg.message_text);
+              if (fileData.fileId) {
+                attachments = [{
+                  id: fileData.fileId,
+                  filename: fileData.filename || 'Unknown',
+                  type: fileData.mimeType?.startsWith('image/') ? 'image' : 'file',
+                  url: `/api/chat/files/${fileData.fileId}`,
+                  size: fileData.fileSize || 0
+                }];
+              }
+            } catch (e) {
+              console.warn('Failed to parse file data from message_text:', e);
             }
           }
 
@@ -835,9 +855,18 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
           )}
 
           {/* Message text */}
-          <div className="text-sm whitespace-pre-wrap" style={{ color: 'var(--chat-text-primary)' }}>
-            {message.content}
-          </div>
+          {(() => {
+            // Check if content is file attachment JSON
+            if (message.message_type === 'file' && message.content.startsWith('{') && message.content.includes('"fileId"')) {
+              // Don't show JSON content for file messages
+              return null;
+            }
+            return (
+              <div className="text-sm whitespace-pre-wrap" style={{ color: 'var(--chat-text-primary)' }}>
+                {message.content}
+              </div>
+            );
+          })()}
 
           {/* Attachments */}
           {message.attachments && message.attachments.length > 0 && (

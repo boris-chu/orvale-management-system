@@ -157,16 +157,23 @@ export function ImageLightbox({
             animate={{ x: 0, scale: 1 }}
             exit={{ x: position === 'right' && !isFullscreen ? '100%' : 0, scale: 0.9 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="relative h-full flex flex-col bg-white dark:bg-gray-900"
+            className="relative h-full flex flex-col"
+            style={{ backgroundColor: 'var(--chat-background, #ffffff)' }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <div 
+              className="flex items-center justify-between p-4 border-b"
+              style={{ 
+                borderColor: 'var(--chat-border, #e0e0e0)',
+                backgroundColor: 'var(--chat-surface, #ffffff)'
+              }}
+            >
               <div>
-                <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                <h3 className="font-medium" style={{ color: 'var(--chat-text-primary, #212121)' }}>
                   {imageName}
                 </h3>
                 {imageSize && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm" style={{ color: 'var(--chat-text-secondary, #757575)' }}>
                     {(imageSize / 1024 / 1024).toFixed(2)} MB
                   </p>
                 )}
@@ -174,19 +181,26 @@ export function ImageLightbox({
               
               <div className="flex items-center gap-2">
                 {/* Zoom controls */}
-                <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                <div 
+                  className="flex items-center gap-1 rounded-lg p-1"
+                  style={{ backgroundColor: 'var(--chat-secondary, #f5f5f5)' }}
+                >
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleZoomOut}
                     disabled={zoom <= 0.5}
                     className="h-7 w-7 p-0"
+                    style={{ color: 'var(--chat-text-primary, #212121)' }}
                   >
                     <ZoomOut className="w-4 h-4" />
                   </Button>
                   <button
                     onClick={resetZoom}
-                    className="px-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                    className="px-2 text-sm transition-colors"
+                    style={{ color: 'var(--chat-text-secondary, #757575)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--chat-text-primary, #212121)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--chat-text-secondary, #757575)'}
                   >
                     {Math.round(zoom * 100)}%
                   </button>
@@ -196,6 +210,7 @@ export function ImageLightbox({
                     onClick={handleZoomIn}
                     disabled={zoom >= 3}
                     className="h-7 w-7 p-0"
+                    style={{ color: 'var(--chat-text-primary, #212121)' }}
                   >
                     <ZoomIn className="w-4 h-4" />
                   </Button>
@@ -208,6 +223,7 @@ export function ImageLightbox({
                   onClick={() => setIsFullscreen(!isFullscreen)}
                   className="h-8 w-8 p-0"
                   title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                  style={{ color: 'var(--chat-text-secondary, #757575)' }}
                 >
                   <Maximize2 className="w-4 h-4" />
                 </Button>
@@ -217,6 +233,7 @@ export function ImageLightbox({
                   onClick={handleDownload}
                   className="h-8 w-8 p-0"
                   title="Download"
+                  style={{ color: 'var(--chat-text-secondary, #757575)' }}
                 >
                   <Download className="w-4 h-4" />
                 </Button>
@@ -226,6 +243,7 @@ export function ImageLightbox({
                   onClick={onClose}
                   className="h-8 w-8 p-0"
                   title="Close (Esc)"
+                  style={{ color: 'var(--chat-text-secondary, #757575)' }}
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -240,7 +258,7 @@ export function ImageLightbox({
               
               {error && (
                 <div className="text-center">
-                  <p className="text-gray-500 dark:text-gray-400">Failed to load image</p>
+                  <p style={{ color: 'var(--chat-text-secondary, #757575)' }}>Failed to load image</p>
                 </div>
               )}
               
