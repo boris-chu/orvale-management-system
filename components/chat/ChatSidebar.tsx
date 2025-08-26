@@ -331,8 +331,13 @@ export default function ChatSidebar({
             <div className="flex items-center justify-between min-w-0">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span className={`font-medium text-sm truncate ${
-                  isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-gray-100'
-                }`}>
+                  isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900'
+                }`}
+                style={{
+                  color: isSelected 
+                    ? undefined 
+                    : 'var(--chat-text-primary, #212121)'
+                }}>
                   {displayName}
                 </span>
                 
