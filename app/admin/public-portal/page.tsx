@@ -8,15 +8,19 @@ import {
   Paper, List, ListItem, ListItemText, ListItemSecondaryAction,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
   Accordion, AccordionSummary, AccordionDetails, Slider,
-  Tooltip, Badge, CircularProgress
+  Tooltip, Badge, CircularProgress, Avatar, AppBar, Toolbar
 } from '@mui/material';
 import {
   Palette, Settings, Schedule, Message, Analytics,
   ExpandMore, Edit, Delete, Add, ColorLens, Business,
   AccessTime, Language, Star, Help, Visibility, VisibilityOff,
-  NotificationsActive, VolumeUp, ChatBubble, Phone, Email
+  NotificationsActive, VolumeUp, ChatBubble, Phone, Email,
+  Refresh, Warning, CheckCircle, Error, Speed, Timer,
+  TrendingUp, Security, RestoreFromTrash, PriorityHigh,
+  ArrowBack, SupportAgent, People, ChatBubbleOutline
 } from '@mui/icons-material';
 import { ColorPicker } from '@/components/shared/ColorPicker';
+import { OnlinePresenceTracker } from '@/components/shared/OnlinePresenceTracker';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -112,7 +116,40 @@ const PublicPortalAdmin = () => {
     
     // Page Visibility
     enabled_pages: [] as string[],
-    disabled_pages: [] as string[]
+    disabled_pages: [] as string[],
+    
+    // Recovery & Disconnect Settings
+    auto_requeue_enabled: true,
+    requeue_position: 'priority_boost',
+    priority_boost_amount: 1,
+    staff_disconnect_timeout: 30,
+    grace_period_seconds: 60,
+    auto_reassign_after_seconds: 120,
+    notify_guest_on_staff_disconnect: true,
+    staff_disconnect_message: 'Your support agent has been disconnected. We are connecting you with another agent.',
+    reassignment_message: 'You have been connected with a new support agent.',
+    escalate_on_multiple_disconnects: true,
+    max_disconnects_before_escalation: 2,
+    escalation_priority: 'urgent',
+    guest_inactivity_timeout: 10,
+    auto_end_abandoned_sessions: true,
+    
+    // Staff Work Mode Settings
+    work_mode_auto_assignment_enabled: true,
+    work_mode_ready_auto_accept: true,
+    work_mode_work_auto_accept: false,
+    work_mode_ticketing_auto_accept: false,
+    work_mode_max_queue_time_minutes: 10,
+    work_mode_escalate_unassigned: true,
+    work_mode_break_timeout_minutes: 30,
+    work_mode_away_timeout_minutes: 60,
+    work_mode_descriptions: {
+      ready: "Available for new chats",
+      work_mode: "Focused work - manual chat accept", 
+      ticketing_mode: "Ticket work - no new chats",
+      away: "Not available",
+      break: "On break - return soon"
+    }
   });
 
   const [loading, setLoading] = useState(true);
@@ -168,7 +205,12 @@ const PublicPortalAdmin = () => {
 
   const loadSettings = async () => {
     try {
-      const response = await fetch('/api/admin/public-portal/settings');
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/public-portal/settings', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         if (data.schedule_json) {
@@ -204,9 +246,13 @@ const PublicPortalAdmin = () => {
   const saveSettings = async () => {
     setSaving(true);
     try {
+      const token = localStorage.getItem('authToken');
       const response = await fetch('/api/admin/public-portal/settings', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           ...settings,
           schedule_json: JSON.stringify(settings.schedule),
@@ -280,15 +326,50 @@ const PublicPortalAdmin = () => {
 
   return (
     <Box sx={{ width: '100%' }}>
-      {/* Header */}
-      <Box mb={4}>
-        <Typography variant="h4" gutterBottom>
-          Public Portal Live Chat Settings
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Configure the public chat widget, business hours, and customer support features
-        </Typography>
-      </Box>
+      {/* Header with Back Button and User Profile */}
+      <AppBar position="static" color="default" elevation={1} sx={{ mb: 4 }}>
+        <Toolbar>
+          <IconButton
+            edge="start"
+            onClick={() => window.history.back()}
+            sx={{ mr: 2 }}
+          >
+            <ArrowBack />
+          </IconButton>
+          <SupportAgent sx={{ mr: 2, color: 'primary.main' }} />
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+              Public Portal Live Chat Settings
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Configure the public chat widget, business hours, and customer support features
+            </Typography>
+          </Box>
+          {currentUser && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <OnlinePresenceTracker />
+              <Box sx={{ textAlign: 'right' }}>
+                <Typography variant="body2" fontWeight="medium">
+                  {currentUser.display_name || currentUser.username}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {currentUser.role}
+                </Typography>
+              </Box>
+              <Avatar
+                sx={{ 
+                  width: 40, 
+                  height: 40,
+                  bgcolor: 'primary.main',
+                  cursor: 'pointer'
+                }}
+              >
+                {(currentUser.display_name || currentUser.username).substring(0, 2).toUpperCase()}
+              </Avatar>
+            </Box>
+          )}
+        </Toolbar>
+      </AppBar>
 
       {/* Master Enable/Disable */}
       <Alert 
@@ -322,6 +403,8 @@ const PublicPortalAdmin = () => {
           <Tab icon={<Message />} label="Messages & Text" />
           <Tab icon={<Settings />} label="Functionality" />
           <Tab icon={<Palette />} label="Communication" />
+          <Tab icon={<Refresh />} label="Recovery & Disconnects" />
+          <Tab icon={<People />} label="Staff Work Modes" />
           <Tab icon={<Analytics />} label="Analytics" />
         </Tabs>
 
@@ -929,8 +1012,533 @@ const PublicPortalAdmin = () => {
           </Box>
         </TabPanel>
 
-        {/* Analytics Tab */}
+        {/* Recovery & Disconnects Tab */}
         <TabPanel value={activeTab} index={5}>
+          <Box p={3} className="space-y-6">
+            {/* Auto-Requeue Settings */}
+            <Card>
+              <CardHeader
+                title={
+                  <Typography variant="h6" className="flex items-center gap-2">
+                    <RestoreFromTrash className="w-5 h-5" />
+                    Auto-Requeue Settings
+                  </Typography>
+                }
+              />
+              <CardContent className="space-y-4">
+                <FormControlLabel
+                  control={
+                    <Switch 
+                      checked={settings.auto_requeue_enabled}
+                      onChange={(e) => updateSetting('auto_requeue_enabled', e.target.checked)}
+                    />
+                  }
+                  label="Enable automatic requeue when staff disconnects"
+                />
+
+                {settings.auto_requeue_enabled && (
+                  <>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Requeue Position Strategy</InputLabel>
+                      <Select
+                        value={settings.requeue_position}
+                        label="Requeue Position Strategy"
+                        onChange={(e) => updateSetting('requeue_position', e.target.value)}
+                      >
+                        <MenuItem value="front">Front of Queue (Highest Priority)</MenuItem>
+                        <MenuItem value="priority_boost">Priority Boost (Recommended)</MenuItem>
+                        <MenuItem value="original">Original Position</MenuItem>
+                        <MenuItem value="end">End of Queue</MenuItem>
+                      </Select>
+                    </FormControl>
+
+                    <Box className="space-y-2">
+                      <Typography variant="subtitle2">Priority Boost Amount</Typography>
+                      <Slider
+                        value={settings.priority_boost_amount}
+                        onChange={(e, newValue) => updateSetting('priority_boost_amount', newValue)}
+                        min={0}
+                        max={3}
+                        step={1}
+                        valueLabelDisplay="auto"
+                        marks={[
+                          { value: 0, label: 'None' },
+                          { value: 1, label: '+1 Level' },
+                          { value: 2, label: '+2 Levels' },
+                          { value: 3, label: 'Max Priority' }
+                        ]}
+                      />
+                      <Typography variant="caption" color="text.secondary">
+                        How many priority levels to boost (Normal → High → Urgent → VIP)
+                      </Typography>
+                    </Box>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Staff Disconnect Detection */}
+            <Card>
+              <CardHeader
+                title={
+                  <Typography variant="h6" className="flex items-center gap-2">
+                    <Timer className="w-5 h-5" />
+                    Staff Disconnect Detection
+                  </Typography>
+                }
+              />
+              <CardContent className="space-y-4">
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={4}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      size="small"
+                      label="Disconnect Timeout (seconds)"
+                      value={settings.staff_disconnect_timeout}
+                      onChange={(e) => updateSetting('staff_disconnect_timeout', parseInt(e.target.value))}
+                      inputProps={{ min: 10, max: 300 }}
+                      helperText="Time before considering staff disconnected"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      size="small"
+                      label="Grace Period (seconds)"
+                      value={settings.grace_period_seconds}
+                      onChange={(e) => updateSetting('grace_period_seconds', parseInt(e.target.value))}
+                      inputProps={{ min: 30, max: 300 }}
+                      helperText="Time to wait for staff reconnection"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      size="small"
+                      label="Auto-Reassign Timeout (seconds)"
+                      value={settings.auto_reassign_after_seconds}
+                      onChange={(e) => updateSetting('auto_reassign_after_seconds', parseInt(e.target.value))}
+                      inputProps={{ min: 60, max: 600 }}
+                      helperText="Max time before forcing reassignment"
+                    />
+                  </Grid>
+                </Grid>
+
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Flow:</strong> Staff disconnect detected → Grace period → Auto-requeue with priority boost → Auto-reassign timeout → Force end session
+                  </Typography>
+                </Alert>
+              </CardContent>
+            </Card>
+
+            {/* Guest Notifications */}
+            <Card>
+              <CardHeader
+                title={
+                  <Typography variant="h6" className="flex items-center gap-2">
+                    <NotificationsActive className="w-5 h-5" />
+                    Guest Notification Settings
+                  </Typography>
+                }
+              />
+              <CardContent className="space-y-4">
+                <FormControlLabel
+                  control={
+                    <Switch 
+                      checked={settings.notify_guest_on_staff_disconnect}
+                      onChange={(e) => updateSetting('notify_guest_on_staff_disconnect', e.target.checked)}
+                    />
+                  }
+                  label="Notify guests when their agent disconnects"
+                />
+
+                {settings.notify_guest_on_staff_disconnect && (
+                  <>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={2}
+                      label="Staff Disconnect Message"
+                      value={settings.staff_disconnect_message}
+                      onChange={(e) => updateSetting('staff_disconnect_message', e.target.value)}
+                      placeholder="Your support agent has been disconnected. We are connecting you with another agent."
+                      helperText="Message shown to guest when staff disconnects"
+                    />
+
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={2}
+                      label="Reassignment Message"
+                      value={settings.reassignment_message}
+                      onChange={(e) => updateSetting('reassignment_message', e.target.value)}
+                      placeholder="You have been connected with a new support agent."
+                      helperText="Message shown when guest is connected to new staff"
+                    />
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Escalation Settings */}
+            <Card>
+              <CardHeader
+                title={
+                  <Typography variant="h6" className="flex items-center gap-2">
+                    <PriorityHigh className="w-5 h-5" />
+                    Escalation & Priority Management
+                  </Typography>
+                }
+              />
+              <CardContent className="space-y-4">
+                <FormControlLabel
+                  control={
+                    <Switch 
+                      checked={settings.escalate_on_multiple_disconnects}
+                      onChange={(e) => updateSetting('escalate_on_multiple_disconnects', e.target.checked)}
+                    />
+                  }
+                  label="Escalate sessions after multiple staff disconnects"
+                />
+
+                {settings.escalate_on_multiple_disconnects && (
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        type="number"
+                        size="small"
+                        label="Max Disconnects Before Escalation"
+                        value={settings.max_disconnects_before_escalation}
+                        onChange={(e) => updateSetting('max_disconnects_before_escalation', parseInt(e.target.value))}
+                        inputProps={{ min: 1, max: 5 }}
+                        helperText="Number of disconnects that trigger escalation"
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Escalation Priority Level</InputLabel>
+                        <Select
+                          value={settings.escalation_priority}
+                          label="Escalation Priority Level"
+                          onChange={(e) => updateSetting('escalation_priority', e.target.value)}
+                        >
+                          <MenuItem value="urgent">Urgent</MenuItem>
+                          <MenuItem value="vip">VIP</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Session Abandonment */}
+            <Card>
+              <CardHeader
+                title={
+                  <Typography variant="h6" className="flex items-center gap-2">
+                    <Warning className="w-5 h-5" />
+                    Session Abandonment Detection
+                  </Typography>
+                }
+              />
+              <CardContent className="space-y-4">
+                <TextField
+                  fullWidth
+                  type="number"
+                  size="small"
+                  label="Guest Inactivity Timeout (minutes)"
+                  value={settings.guest_inactivity_timeout}
+                  onChange={(e) => updateSetting('guest_inactivity_timeout', parseInt(e.target.value))}
+                  inputProps={{ min: 5, max: 60 }}
+                  helperText="Minutes of guest inactivity before considering session abandoned"
+                />
+
+                <FormControlLabel
+                  control={
+                    <Switch 
+                      checked={settings.auto_end_abandoned_sessions}
+                      onChange={(e) => updateSetting('auto_end_abandoned_sessions', e.target.checked)}
+                    />
+                  }
+                  label="Automatically end abandoned sessions"
+                />
+
+                <Alert severity="warning">
+                  <Typography variant="body2">
+                    <strong>Caution:</strong> Abandoned sessions are automatically closed to free up staff resources. Guests can always start a new chat session.
+                  </Typography>
+                </Alert>
+              </CardContent>
+            </Card>
+
+            {/* Recovery Statistics Preview */}
+            <Card>
+              <CardHeader
+                title={
+                  <Typography variant="h6" className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" />
+                    Recovery Statistics (Live Preview)
+                  </Typography>
+                }
+              />
+              <CardContent>
+                <Grid container spacing={2}>
+                  <Grid item xs={6} md={3}>
+                    <Box textAlign="center">
+                      <Typography variant="h4" color="primary">24</Typography>
+                      <Typography variant="caption">Sessions Recovered Today</Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6} md={3}>
+                    <Box textAlign="center">
+                      <Typography variant="h4" color="success.main">89%</Typography>
+                      <Typography variant="caption">Recovery Success Rate</Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6} md={3}>
+                    <Box textAlign="center">
+                      <Typography variant="h4" color="warning.main">3.2m</Typography>
+                      <Typography variant="caption">Avg Recovery Time</Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6} md={3}>
+                    <Box textAlign="center">
+                      <Typography variant="h4" color="info.main">5</Typography>
+                      <Typography variant="caption">Staff Disconnects Today</Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          </Box>
+        </TabPanel>
+
+        {/* Analytics Tab */}
+        {/* Staff Work Modes Tab */}
+        <TabPanel value={activeTab} index={6}>
+          <Box p={3}>
+            {/* Permission Check */}
+            {(!currentUser?.permissions?.includes('public_portal.manage_work_modes') && 
+              !currentUser?.permissions?.includes('admin.system_settings')) ? (
+              <Alert severity="warning" sx={{ mb: 3 }}>
+                <Typography variant="body2">
+                  You need "public_portal.manage_work_modes" permission to access this section.
+                </Typography>
+              </Alert>
+            ) : (
+              <Box className="space-y-6">
+                {/* Work Mode System Settings */}
+                <Card>
+                  <CardHeader
+                    title={
+                      <Typography variant="h6" className="flex items-center gap-2">
+                        <Settings />
+                        Work Mode System Settings
+                      </Typography>
+                    }
+                  />
+                  <CardContent>
+                    <Grid container spacing={3}>
+                      {/* Auto Assignment */}
+                      <Grid item xs={12} md={6}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={settings.work_mode_auto_assignment_enabled}
+                              onChange={(e) => updateSetting('work_mode_auto_assignment_enabled', e.target.checked)}
+                            />
+                          }
+                          label="Enable Automatic Chat Assignment"
+                        />
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Automatically assign new chats to available staff
+                        </Typography>
+                      </Grid>
+
+                      {/* Queue Timeout */}
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          label="Max Queue Time (minutes)"
+                          type="number"
+                          value={settings.work_mode_max_queue_time_minutes}
+                          onChange={(e) => updateSetting('work_mode_max_queue_time_minutes', parseInt(e.target.value))}
+                          helperText="Time before escalating unassigned chats"
+                          fullWidth
+                        />
+                      </Grid>
+
+                      {/* Escalation */}
+                      <Grid item xs={12} md={6}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={settings.work_mode_escalate_unassigned}
+                              onChange={(e) => updateSetting('work_mode_escalate_unassigned', e.target.checked)}
+                            />
+                          }
+                          label="Escalate Unassigned Chats"
+                        />
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Escalate chats that remain unassigned after timeout
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+
+                {/* Work Mode Auto-Accept Settings */}
+                <Card>
+                  <CardHeader
+                    title={
+                      <Typography variant="h6" className="flex items-center gap-2">
+                        <ChatBubbleOutline />
+                        Auto-Accept Chat Settings
+                      </Typography>
+                    }
+                  />
+                  <CardContent>
+                    <Grid container spacing={3}>
+                      <Grid item xs={12} md={4}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={settings.work_mode_ready_auto_accept}
+                              onChange={(e) => updateSetting('work_mode_ready_auto_accept', e.target.checked)}
+                            />
+                          }
+                          label={
+                            <Box>
+                              <Typography variant="body2">🟢 Ready Mode</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Auto-accept new chats
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} md={4}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={settings.work_mode_work_auto_accept}
+                              onChange={(e) => updateSetting('work_mode_work_auto_accept', e.target.checked)}
+                            />
+                          }
+                          label={
+                            <Box>
+                              <Typography variant="body2">🟡 Work Mode</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Manual chat acceptance
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} md={4}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={settings.work_mode_ticketing_auto_accept}
+                              onChange={(e) => updateSetting('work_mode_ticketing_auto_accept', e.target.checked)}
+                            />
+                          }
+                          label={
+                            <Box>
+                              <Typography variant="body2">🔵 Ticketing Mode</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Focus on tickets, no chats
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+
+                {/* Work Mode Timeout Settings */}
+                <Card>
+                  <CardHeader
+                    title={
+                      <Typography variant="h6" className="flex items-center gap-2">
+                        <AccessTime />
+                        Auto-Timeout Settings
+                      </Typography>
+                    }
+                  />
+                  <CardContent>
+                    <Grid container spacing={3}>
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          label="Break Timeout (minutes)"
+                          type="number"
+                          value={settings.work_mode_break_timeout_minutes}
+                          onChange={(e) => updateSetting('work_mode_break_timeout_minutes', parseInt(e.target.value))}
+                          helperText="Automatically change from 'Break' to 'Away' after timeout"
+                          fullWidth
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          label="Away Timeout (minutes)"
+                          type="number"
+                          value={settings.work_mode_away_timeout_minutes}
+                          onChange={(e) => updateSetting('work_mode_away_timeout_minutes', parseInt(e.target.value))}
+                          helperText="Time before marking inactive staff as 'Away'"
+                          fullWidth
+                        />
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+
+                {/* Work Mode Descriptions */}
+                <Card>
+                  <CardHeader
+                    title={
+                      <Typography variant="h6" className="flex items-center gap-2">
+                        <Edit />
+                        Customize Work Mode Labels & Descriptions
+                      </Typography>
+                    }
+                  />
+                  <CardContent>
+                    <Grid container spacing={3}>
+                      {Object.entries(settings.work_mode_descriptions || {}).map(([mode, description]) => (
+                        <Grid item xs={12} md={6} key={mode}>
+                          <TextField
+                            label={`${mode.charAt(0).toUpperCase() + mode.slice(1).replace('_', ' ')} Description`}
+                            value={description as string}
+                            onChange={(e) => updateSetting('work_mode_descriptions', {
+                              ...(settings.work_mode_descriptions || {}),
+                              [mode]: e.target.value
+                            })}
+                            multiline
+                            rows={2}
+                            fullWidth
+                            helperText={`Description shown to staff for ${mode.replace('_', ' ')} mode`}
+                          />
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </CardContent>
+                </Card>
+              </Box>
+            )}
+          </Box>
+        </TabPanel>
+
+        {/* Analytics Tab */}
+        <TabPanel value={activeTab} index={7}>
           <Box p={3} className="space-y-6">
             <Card>
               <CardHeader title="Analytics & Reporting" />

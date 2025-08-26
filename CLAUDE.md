@@ -1036,3 +1036,68 @@ Location: "Bureau of Human Resources" (Physical building)
 - **SF prefix** distinguishes staff-created tickets
 
 Remember: Orvale Management System should be minimal, maintainable, and focused on delivering core functionality efficiently while providing an engaging user experience through dashboards, achievements, and seamless communication.
+
+## 📊 Mock Data Information Overlays - IMPORTANT UI PATTERN
+
+**When implementing features that display mock/simulated data instead of real data, ALWAYS include clear information overlays to prevent user confusion.**
+
+### ✅ **Required Pattern for Mock Data:**
+
+```javascript
+// Add informational overlay for mock data sections
+<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+  <div className="flex items-center gap-2 text-blue-800">
+    <Activity className="h-5 w-5" />
+    <span className="font-semibold">[Feature Name] - Preview</span>
+  </div>
+  <p className="text-blue-700 text-sm mt-2">
+    This data is currently simulated for demonstration purposes. Real-time [feature] will be available once [condition]. 
+    Data includes [list key features that will be available].
+  </p>
+</div>
+
+// Add PREVIEW badges to key metrics cards
+<CardTitle className="flex items-center justify-between">
+  <div className="flex items-center gap-2">
+    <Icon className="h-5 w-5" />
+    Metric Title
+  </div>
+  <Badge variant="outline" className="text-xs text-blue-600 border-blue-200">
+    PREVIEW
+  </Badge>
+</CardTitle>
+```
+
+### 🎯 **When to Use Mock Data Overlays:**
+
+1. **Analytics Dashboards**: Work mode analytics, chat metrics, performance data
+2. **Real-time Features**: Before Socket.io implementation is complete
+3. **Database-dependent Features**: Before tables are fully populated
+4. **External Integrations**: Before APIs are connected
+5. **Complex Calculations**: Before business logic is implemented
+
+### 📋 **Example Applications:**
+
+- **Work Mode Analytics** (`/developer/analytics` - Staff Work Modes tab): Shows preview overlay
+- **Chat Statistics**: Before real chat logs accumulate
+- **Performance Metrics**: Before actual ticket resolution data
+- **User Activity**: Before real user interaction tracking
+
+### ⚠️ **Important Guidelines:**
+
+- **Always be transparent**: Never show mock data as if it were real
+- **Use consistent styling**: Blue info overlays for preview status
+- **Provide context**: Explain what the real feature will include
+- **Set expectations**: When real data will be available
+- **Visual indicators**: PREVIEW badges on individual components
+
+### 🔄 **Removal Process:**
+
+When transitioning from mock to real data:
+1. Implement real API endpoints
+2. Update data loading logic
+3. Remove preview overlays and badges
+4. Test with real data scenarios
+5. Update documentation
+
+**This pattern prevents user confusion and sets proper expectations during development phases.**

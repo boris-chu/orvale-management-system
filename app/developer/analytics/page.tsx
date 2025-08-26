@@ -93,6 +93,67 @@ export default function SystemAnalytics() {
   const [ticketTrends, setTicketTrends] = useState<TicketTrend[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryDistribution[]>([]);
   const [teamPerformance, setTeamPerformance] = useState<TeamPerformance[]>([]);
+  const [workModeData, setWorkModeData] = useState([
+    { name: 'Ready', count: 12, color: '#4ade80' },
+    { name: 'Work Mode', count: 8, color: '#fbbf24' },
+    { name: 'Ticketing Mode', count: 5, color: '#60a5fa' },
+    { name: 'Away', count: 3, color: '#f87171' },
+    { name: 'Break', count: 2, color: '#a78bfa' }
+  ]);
+  const [workModeHistory, setWorkModeHistory] = useState([
+    { hour: '00:00', ready: 15, work_mode: 5, ticketing_mode: 8, away: 2, break: 0 },
+    { hour: '04:00', ready: 12, work_mode: 3, ticketing_mode: 10, away: 5, break: 0 },
+    { hour: '08:00', ready: 18, work_mode: 12, ticketing_mode: 6, away: 2, break: 2 },
+    { hour: '12:00', ready: 20, work_mode: 15, ticketing_mode: 4, away: 1, break: 3 },
+    { hour: '16:00', ready: 16, work_mode: 18, ticketing_mode: 5, away: 2, break: 1 },
+    { hour: '20:00', ready: 14, work_mode: 8, ticketing_mode: 8, away: 3, break: 1 }
+  ]);
+  const [staffWorkModeDetails, setStaffWorkModeDetails] = useState([
+    {
+      username: 'bchu',
+      displayName: 'Boris Chu',
+      currentMode: 'Ready',
+      modeIcon: '🟢',
+      modeColor: '#4ade80',
+      timeInMode: '2h 15m',
+      activeChats: 3,
+      dailyModeChanges: 5,
+      assignmentRate: 95
+    },
+    {
+      username: 'admin',
+      displayName: 'Administrator',
+      currentMode: 'Work Mode',
+      modeIcon: '🟡',
+      modeColor: '#fbbf24',
+      timeInMode: '45m',
+      activeChats: 1,
+      dailyModeChanges: 3,
+      assignmentRate: 87
+    },
+    {
+      username: 'jdoe',
+      displayName: 'John Doe',
+      currentMode: 'Ticketing Mode',
+      modeIcon: '🔵',
+      modeColor: '#60a5fa',
+      timeInMode: '1h 30m',
+      activeChats: 0,
+      dailyModeChanges: 2,
+      assignmentRate: 0
+    },
+    {
+      username: 'msmith',
+      displayName: 'Mary Smith',
+      currentMode: 'Break',
+      modeIcon: '⏸️',
+      modeColor: '#a78bfa',
+      timeInMode: '12m',
+      activeChats: 0,
+      dailyModeChanges: 6,
+      assignmentRate: 92
+    }
+  ]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [dateRange, setDateRange] = useState('30d');
@@ -480,6 +541,7 @@ export default function SystemAnalytics() {
               <TabsTrigger value="tickets">Ticket Trends</TabsTrigger>
               <TabsTrigger value="categories">Categories</TabsTrigger>
               <TabsTrigger value="teams">Team Performance</TabsTrigger>
+              <TabsTrigger value="work-modes">Staff Work Modes</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6 mt-6">
@@ -656,6 +718,247 @@ export default function SystemAnalytics() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="work-modes" className="space-y-6 mt-6">
+              {/* Mock Data Alert */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-2 text-blue-800">
+                  <Activity className="h-5 w-5" />
+                  <span className="font-semibold">Work Mode Analytics - Preview</span>
+                </div>
+                <p className="text-blue-700 text-sm mt-2">
+                  This data is currently simulated for demonstration purposes. Real-time work mode analytics will be available once staff begin using the public portal chat system. 
+                  Data includes work mode distribution, time tracking, chat assignment rates, and productivity metrics.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Work Mode Distribution */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Current Work Mode Distribution</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <RechartsPieChart>
+                        <Pie
+                          data={workModeData}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          dataKey="count"
+                        >
+                          {workModeData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                    <div className="mt-4 space-y-2">
+                      {workModeData.map((mode) => (
+                        <div key={mode.name} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: mode.color }}
+                            />
+                            <span className="text-sm">{mode.name}</span>
+                          </div>
+                          <Badge variant="outline">{mode.count} staff</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Work Mode History */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Work Mode Changes (Last 24h)</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={workModeHistory}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="hour" />
+                        <YAxis />
+                        <RechartsTooltip />
+                        <Bar dataKey="ready" stackId="a" fill="#4ade80" />
+                        <Bar dataKey="work_mode" stackId="a" fill="#fbbf24" />
+                        <Bar dataKey="ticketing_mode" stackId="a" fill="#60a5fa" />
+                        <Bar dataKey="away" stackId="a" fill="#f87171" />
+                        <Bar dataKey="break" stackId="a" fill="#a78bfa" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Staff Work Mode Details */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Staff Work Mode Analytics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-3 px-4">Staff Member</th>
+                          <th className="text-left py-3 px-4">Current Mode</th>
+                          <th className="text-right py-3 px-4">Time in Mode</th>
+                          <th className="text-right py-3 px-4">Active Chats</th>
+                          <th className="text-right py-3 px-4">Daily Mode Changes</th>
+                          <th className="text-right py-3 px-4">Chat Assignment Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {staffWorkModeDetails.map((staff, index) => (
+                          <tr key={staff.username} className="border-b hover:bg-gray-50">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <UserAvatar 
+                                  name={staff.displayName}
+                                  size="sm"
+                                />
+                                <span className="font-medium">{staff.displayName}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <Badge 
+                                variant="outline"
+                                style={{ 
+                                  color: staff.modeColor,
+                                  borderColor: staff.modeColor
+                                }}
+                              >
+                                {staff.modeIcon} {staff.currentMode}
+                              </Badge>
+                            </td>
+                            <td className="text-right py-3 px-4 text-sm text-gray-600">
+                              {staff.timeInMode}
+                            </td>
+                            <td className="text-right py-3 px-4">
+                              <Badge variant={staff.activeChats > 0 ? "default" : "secondary"}>
+                                {staff.activeChats}
+                              </Badge>
+                            </td>
+                            <td className="text-right py-3 px-4 text-sm">
+                              {staff.dailyModeChanges}
+                            </td>
+                            <td className="text-right py-3 px-4">
+                              <Badge 
+                                variant={staff.assignmentRate >= 80 ? "default" : "destructive"}
+                              >
+                                {staff.assignmentRate}%
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Work Mode Efficiency Metrics */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Target className="h-5 w-5" />
+                        Chat Assignment Efficiency
+                      </div>
+                      <Badge variant="outline" className="text-xs text-blue-600 border-blue-200">
+                        PREVIEW
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">92.5%</div>
+                    <p className="text-sm text-gray-600">
+                      Average chat assignment success rate across all work modes
+                    </p>
+                    <div className="mt-4 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Ready Mode:</span>
+                        <span className="font-medium">98.2%</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Work Mode:</span>
+                        <span className="font-medium">85.1%</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Ticketing:</span>
+                        <span className="font-medium">0%</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-5 w-5" />
+                        Average Response Time
+                      </div>
+                      <Badge variant="outline" className="text-xs text-blue-600 border-blue-200">
+                        PREVIEW
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-blue-600">2.3 min</div>
+                    <p className="text-sm text-gray-600">
+                      Time from chat initiation to staff response
+                    </p>
+                    <div className="mt-4 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Ready Mode:</span>
+                        <span className="font-medium">1.8 min</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Work Mode:</span>
+                        <span className="font-medium">4.2 min</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5" />
+                        Queue Performance
+                      </div>
+                      <Badge variant="outline" className="text-xs text-blue-600 border-blue-200">
+                        PREVIEW
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-purple-600">18 sec</div>
+                    <p className="text-sm text-gray-600">
+                      Average guest wait time in queue
+                    </p>
+                    <div className="mt-4">
+                      <div className="flex justify-between text-sm mb-2">
+                        <span>Ready Staff Available:</span>
+                        <span className="font-medium">{workModeData.find(m => m.name === 'Ready')?.count || 0}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Peak Queue Time:</span>
+                        <span className="font-medium">2:30 PM</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
           </Tabs>
         </motion.div>

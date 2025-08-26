@@ -22,8 +22,37 @@ export async function GET(request: NextRequest) {
     const db = new Database.Database(dbPath);
 
     return new Promise((resolve) => {
+      // Load both widget settings and recovery settings
       db.get(
-        'SELECT * FROM public_portal_widget_settings WHERE id = 1',
+        `SELECT 
+          pws.*,
+          prs.auto_requeue_enabled,
+          prs.requeue_position,
+          prs.priority_boost_amount,
+          prs.staff_disconnect_timeout,
+          prs.grace_period_seconds,
+          prs.auto_reassign_after_seconds,
+          prs.notify_guest_on_staff_disconnect,
+          prs.staff_disconnect_message,
+          prs.reassignment_message,
+          prs.escalate_on_multiple_disconnects,
+          prs.max_disconnects_before_escalation,
+          prs.escalation_priority,
+          prs.guest_inactivity_timeout,
+          prs.auto_end_abandoned_sessions,
+          swms.auto_assignment_enabled as work_mode_auto_assignment_enabled,
+          swms.ready_mode_auto_accept as work_mode_ready_auto_accept,
+          swms.work_mode_auto_accept as work_mode_work_auto_accept,
+          swms.ticketing_mode_auto_accept as work_mode_ticketing_auto_accept,
+          swms.max_queue_time_minutes as work_mode_max_queue_time_minutes,
+          swms.escalate_unassigned_chats as work_mode_escalate_unassigned,
+          swms.break_timeout_minutes as work_mode_break_timeout_minutes,
+          swms.away_timeout_minutes as work_mode_away_timeout_minutes,
+          swms.work_mode_descriptions
+        FROM public_portal_widget_settings pws
+        LEFT JOIN public_portal_recovery_settings prs ON prs.id = 1
+        LEFT JOIN staff_work_mode_settings swms ON swms.id = 1
+        WHERE pws.id = 1`,
         (err, row) => {
           db.close();
           
@@ -96,7 +125,38 @@ export async function GET(request: NextRequest) {
               session_recovery_minutes: 5,
               auto_ticket_creation: true,
               enabled_pages: JSON.stringify([]),
-              disabled_pages: JSON.stringify([])
+              disabled_pages: JSON.stringify([]),
+              // Recovery settings defaults
+              auto_requeue_enabled: true,
+              requeue_position: 'priority_boost',
+              priority_boost_amount: 1,
+              staff_disconnect_timeout: 30,
+              grace_period_seconds: 60,
+              auto_reassign_after_seconds: 120,
+              notify_guest_on_staff_disconnect: true,
+              staff_disconnect_message: 'Your support agent has been disconnected. We are connecting you with another agent.',
+              reassignment_message: 'You have been connected with a new support agent.',
+              escalate_on_multiple_disconnects: true,
+              max_disconnects_before_escalation: 2,
+              escalation_priority: 'urgent',
+              guest_inactivity_timeout: 10,
+              auto_end_abandoned_sessions: true,
+              // Work mode settings defaults
+              work_mode_auto_assignment_enabled: true,
+              work_mode_ready_auto_accept: true,
+              work_mode_work_auto_accept: false,
+              work_mode_ticketing_auto_accept: false,
+              work_mode_max_queue_time_minutes: 10,
+              work_mode_escalate_unassigned: true,
+              work_mode_break_timeout_minutes: 30,
+              work_mode_away_timeout_minutes: 60,
+              work_mode_descriptions: JSON.stringify({
+                ready: "Available for new chats",
+                work_mode: "Focused work - manual chat accept", 
+                ticketing_mode: "Ticket work - no new chats",
+                away: "Not available",
+                break: "On break - return soon"
+              })
             };
             resolve(NextResponse.json(defaultSettings));
           } else {
@@ -129,8 +189,8 @@ export async function PUT(request: NextRequest) {
     const db = new Database.Database(dbPath);
 
     return new Promise((resolve) => {
-      // Update or insert settings
-      const sql = `
+      // First update widget settings
+      const widgetSql = `
         INSERT OR REPLACE INTO public_portal_widget_settings (
           id, enabled, business_hours_enabled, timezone, schedule_json, holidays_json,
           widget_shape, widget_color, widget_size, widget_position, widget_position_x, widget_position_y, widget_image, widget_text,
