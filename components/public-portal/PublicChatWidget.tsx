@@ -438,6 +438,20 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
   const position = getWidgetPosition();
   const animationVariants = getAnimationVariants();
 
+  // Debug widget styling
+  console.log('PublicChatWidget - Widget styling debug:', {
+    widgetSize,
+    borderRadius,
+    position,
+    backgroundColor: settings?.status === 'online' ? 
+      (settings?.widget?.color || settings?.widget_color || '#1976d2') : 
+      '#9e9e9e',
+    opacity: settings?.status === 'online' ? 1 : 0.7,
+    status: settings?.status,
+    shape: settings?.widget?.shape || settings?.widget_shape,
+    color: settings?.widget?.color || settings?.widget_color
+  });
+
   return (
     <>
       {/* Chat Widget Button */}
@@ -478,6 +492,7 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                   justifyContent: 'center',
                   boxShadow: 3,
                   opacity: settings?.status === 'online' ? 1 : 0.7,
+                  border: '2px solid red', // Debug border to see if widget is rendered
                   '&:hover': {
                     boxShadow: 6
                   }
