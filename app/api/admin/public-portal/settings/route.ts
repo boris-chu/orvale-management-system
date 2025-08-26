@@ -276,7 +276,7 @@ export async function PUT(request: NextRequest) {
         authResult.user.username
       ];
 
-      db.run(sql, params, function(err) {
+      db.run(widgetSql, params, function(err) {
         db.close();
         
         if (err) {
