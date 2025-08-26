@@ -1,7 +1,7 @@
 /**
  * Chat File Upload API
  * POST - Upload files for chat messages
- * Requires 'chat.send_files' permission
+ * Requires 'chat.upload_files' permission
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -42,10 +42,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Check file sharing permission
-    if (!authResult.user.permissions?.includes('chat.send_files') &&
-        !authResult.user.permissions?.includes('chat.access_channels') &&
+    if (!authResult.user.permissions?.includes('chat.upload_files') &&
+        !authResult.user.permissions?.includes('chat.send_messages') &&
         authResult.user.role !== 'admin') {
-      return NextResponse.json({ error: 'File sharing permission required' }, { status: 403 });
+      return NextResponse.json({ error: 'File upload permission required' }, { status: 403 });
     }
 
     const formData = await request.formData();

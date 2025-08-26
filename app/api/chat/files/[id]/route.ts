@@ -22,6 +22,7 @@ export async function GET(
     // Verify authentication
     const authResult = await verifyAuth(request);
     if (!authResult.success || !authResult.user) {
+      console.error('File access denied - authentication failed:', authResult.error);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -56,16 +57,17 @@ export async function GET(
     }
 
     // Check if user has access to the channel
-    // For now, allow access if user has chat.access_channels permission
-    // TODO: Add channel-specific permission checks
-    if (!authResult.user.permissions?.includes('chat.access_channels') &&
-        !authResult.user.permissions?.includes('chat.send_files') &&
+    // For now, allow access if user has basic chat access or upload files permission
+    if (!authResult.user.permissions?.includes('chat.access') &&
+        !authResult.user.permissions?.includes('chat.upload_files') &&
+        !authResult.user.permissions?.includes('chat.send_messages') &&
         authResult.user.role !== 'admin') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     // Check if file exists on disk
     if (!fs.existsSync(fileRecord.file_path)) {
+      console.error(`File not found on disk: ${fileRecord.file_path}`);
       return NextResponse.json({ error: 'File not found on disk' }, { status: 404 });
     }
 
