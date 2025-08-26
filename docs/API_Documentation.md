@@ -4,7 +4,7 @@
 
 ## Overview
 
-The Orvale Management System provides a comprehensive REST API with **80+ endpoints** across 8 functional areas. All APIs use JWT-based authentication with role-based access control (RBAC) supporting 86 granular permissions.
+The Orvale Management System provides a comprehensive REST API with **120+ endpoints** across 12 functional areas. All APIs use JWT-based authentication with role-based access control (RBAC) supporting 104 granular permissions.
 
 **Base URL**: `http://localhost:80/api/`  
 **Authentication**: Bearer token in `Authorization` header  
@@ -264,6 +264,47 @@ Search GIFs via Giphy API.
 }
 ```
 
+### File Sharing
+
+#### **POST** `/api/chat/files/upload`
+Upload files for chat messages.
+
+**Permissions**: `chat.send_files` or `chat.access_channels`
+
+**Request:** Multipart form data
+- `file`: File to upload (max 10MB)
+- `channel_id`: Target channel ID
+
+**Supported file types:**
+- Images: `image/jpeg`, `image/png`, `image/gif`, `image/webp`
+- Documents: `application/pdf`, `text/plain`, `text/csv`, `application/json`
+- Spreadsheets: `application/vnd.ms-excel`, `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+
+**Response:**
+```json
+{
+  "success": true,
+  "file": {
+    "id": "file-uuid-123",
+    "filename": "document.pdf",
+    "type": "file",
+    "url": "/api/chat/files/file-uuid-123",
+    "size": 2048576,
+    "mime_type": "application/pdf"
+  }
+}
+```
+
+#### **GET** `/api/chat/files/[id]`
+Download/serve uploaded chat files.
+
+**Permissions**: `chat.access_channels`
+
+**Response:** File content with appropriate headers
+- Images: `Content-Disposition: inline`
+- Documents: `Content-Disposition: attachment`
+- Proper MIME type and caching headers
+
 ### Chat Settings
 
 #### **GET** `/api/chat/ui-settings`
@@ -285,6 +326,46 @@ Get chat UI preferences.
   "timestamp_format": "relative"
 }
 ```
+
+#### **GET** `/api/chat/widget-settings`
+Get chat widget configuration and appearance settings.
+
+**Response:**
+```json
+{
+  "widget_enabled": true,
+  "widget_position": "bottom-right",
+  "widget_shape": "round",
+  "widget_primary_color": "#007bff",
+  "widget_button_image": null,
+  "widget_default_state": "minimized"
+}
+```
+
+#### **GET** `/api/chat/user-theme-preferences`
+Get user's chat theme preferences.
+
+**Response:**
+```json
+{
+  "theme_id": "dark_blue",
+  "custom_colors": {
+    "primary": "#1e40af",
+    "secondary": "#3b82f6",
+    "background": "#1f2937"
+  },
+  "auto_apply": true
+}
+```
+
+#### **PUT** `/api/chat/user-theme-preferences`
+Update user's chat theme preferences.
+
+#### **GET** `/api/chat/gif-usage`
+Get user's GIF usage statistics for rate limiting.
+
+#### **GET** `/api/chat/gif-rate-limit`
+Check GIF usage rate limit status.
 
 ---
 
@@ -658,7 +739,102 @@ Update helpdesk team preferences.
 
 ---
 
-## 5. Admin System APIs
+## 5. Staff Management APIs
+
+### Staff Ticketing
+
+#### **GET** `/api/staff/tickets`
+Get staff ticket queue with advanced filtering.
+
+**Permissions**: `ticket.view_team_tickets`
+
+**Response:**
+```json
+{
+  "tickets": [
+    {
+      "id": "TK-250115-001",
+      "title": "Password Reset Request",
+      "status": "open",
+      "priority": "normal",
+      "category": "Account Issues",
+      "submitted_by_name": "Jane Smith",
+      "assigned_to_name": "John Doe",
+      "created_at": "2025-01-15T10:00:00Z",
+      "age_hours": 2.5
+    }
+  ],
+  "total": 45,
+  "summary": {
+    "open": 12,
+    "in_progress": 8,
+    "urgent": 3
+  }
+}
+```
+
+#### **POST** `/api/staff/tickets`
+Create staff-generated tickets.
+
+#### **GET** `/api/staff/tickets/attachments/[id]`
+Download ticket attachments.
+
+#### **POST** `/api/staff/tickets/attachments`
+Upload ticket attachments.
+
+### Staff Work Modes
+
+#### **GET** `/api/staff/work-modes`
+Get current user's work mode status.
+
+**Response:**
+```json
+{
+  "work_mode": "ready",
+  "last_updated": "2025-01-15T14:30:00Z",
+  "auto_assignment_enabled": true
+}
+```
+
+#### **PUT** `/api/staff/work-modes`
+Update user's work mode status.
+
+**Request:**
+```json
+{
+  "work_mode": "away"
+}
+```
+
+#### **GET** `/api/staff/work-modes/all`
+Get all staff work mode statuses (managers/supervisors).
+
+**Permissions**: `staff.view_all_work_modes`
+
+**Response:**
+```json
+{
+  "staff": [
+    {
+      "username": "jdoe",
+      "display_name": "John Doe",
+      "work_mode": "ready",
+      "last_updated": "2025-01-15T14:30:00Z",
+      "active_chats": 2,
+      "max_chats": 5
+    }
+  ]
+}
+```
+
+### Staff User Management
+
+#### **GET** `/api/staff/ticket-users`
+Get users for ticket assignment and management.
+
+---
+
+## 6. Admin System APIs
 
 ### Chat Administration
 
@@ -711,6 +887,143 @@ Force logout specific chat users.
 #### **POST** `/api/admin/chat/users/block`
 Block or unblock users from chat system.
 
+#### **GET** `/api/admin/chat/messages`
+Advanced message monitoring with filtering and pagination.
+
+**Permissions**: `chat.monitor_all` or `chat.view_all_messages`
+
+**Query Parameters:**
+- `channel_id`: Filter by channel
+- `user_id`: Filter by user  
+- `time_range`: `1h`, `24h`, `7d`, `30d`, `all`
+- `message_type`: Filter by message type
+- `limit`: Results per page (default: 50)
+- `offset`: Pagination offset
+
+**Response:**
+```json
+{
+  "messages": [
+    {
+      "id": 1,
+      "channel_id": 1,
+      "user_id": "jdoe",
+      "message_text": "Hello team!",
+      "message_type": "text",
+      "created_at": "2025-01-15T14:30:00Z",
+      "channel_name": "general",
+      "user_display_name": "John Doe"
+    }
+  ],
+  "pagination": {
+    "total": 1250,
+    "limit": 50,
+    "offset": 0,
+    "hasMore": true
+  },
+  "filters": {
+    "channels": [{"id": 1, "name": "general", "type": "public_channel"}],
+    "users": [{"username": "jdoe", "display_name": "John Doe"}]
+  }
+}
+```
+
+#### **GET** `/api/admin/chat/messages/export`
+Export chat messages as CSV or JSON.
+
+**Permissions**: `chat.monitor_all`
+
+**Query Parameters:**
+- `format`: `csv` or `json`
+- `channel_id`, `user_id`, `time_range`: Same as messages API
+
+**Response:** File download with proper content-type headers
+
+#### **GET** `/api/admin/chat/widget-settings`
+Get chat widget configuration.
+
+**Response:**
+```json
+{
+  "widget_enabled": true,
+  "widget_position": "bottom-right",
+  "widget_shape": "round",
+  "widget_primary_color": "#007bff",
+  "widget_button_image": "data:image/png;base64,...",
+  "widget_default_state": "minimized",
+  "show_unread_badges": true,
+  "notification_sounds_enabled": true,
+  "read_receipts_enabled": true,
+  "typing_indicators_enabled": true
+}
+```
+
+#### **PUT** `/api/admin/chat/widget-settings`
+Update chat widget configuration.
+
+#### **GET** `/api/admin/websocket-settings`
+Get WebSocket system configuration.
+
+**Response:**
+```json
+{
+  "websocket_unlimited_mode": false
+}
+```
+
+#### **PUT** `/api/admin/websocket-settings`
+Update WebSocket configuration including unlimited mode toggle.
+
+#### **GET** `/api/admin/chat/theme-settings`
+Get chat theming system configuration.
+
+#### **PUT** `/api/admin/chat/theme-settings`
+Update chat theme settings and user assignments.
+
+#### **GET** `/api/admin/chat/theme-analytics`
+Get theme usage analytics.
+
+#### **POST** `/api/admin/chat/force-theme-compliance`
+Force all users to use compliant themes.
+
+### Public Portal Administration
+
+#### **GET** `/api/admin/public-portal/settings`
+Get public portal chat configuration.
+
+**Response:**
+```json
+{
+  "widget_settings": {
+    "enabled": true,
+    "shape": "round",
+    "color": "#007bff",
+    "position": "bottom-right",
+    "text": "Need Help?",
+    "animation": "pulse"
+  },
+  "chat_settings": {
+    "business_hours_enabled": true,
+    "welcome_message": "Hi! How can we help you today?",
+    "offline_message": "We're currently offline. Please leave a message.",
+    "session_recovery_enabled": true,
+    "auto_ticket_creation": false
+  }
+}
+```
+
+#### **PUT** `/api/admin/public-portal/settings`
+Update public portal configuration.
+
+#### **GET** `/api/admin/public-portal/recovery-settings`
+Get session recovery configuration.
+
+#### **GET** `/api/admin/public-portal/work-mode-settings`
+Get staff work mode system configuration.
+
+#### **PUT** `/api/admin/public-portal/work-mode-settings`
+Update work mode settings and policies.
+
 ### Tables Management
 
 #### **GET** `/api/admin/tables-configs`
@@ -724,7 +1037,7 @@ Get table data with advanced filtering and sorting.
 
 ---
 
-## 6. Developer/Management APIs
+## 7. Developer/Management APIs
 
 ### User Management
 
@@ -821,6 +1134,46 @@ Get support teams for public portal.
 #### **GET** `/api/developer/categories`
 Get ticket categories and classification system.
 
+#### **GET** `/api/developer/sections`
+Get organizational sections for user assignment.
+
+#### **GET** `/api/developer/dpss-org`
+Get DPSS organizational structure (offices, bureaus, divisions).
+
+#### **GET** `/api/developer/request-types`
+Get available request types for each category.
+
+#### **GET** `/api/developer/subcategories`
+Get detailed subcategories for ticket classification.
+
+#### **GET** `/api/developer/response-templates`
+Get automated response templates.
+
+#### **GET** `/api/developer/sla-configurations`
+Get SLA (Service Level Agreement) configurations.
+
+#### **GET** `/api/developer/work-mode-analytics`
+Get analytics for staff work mode system usage.
+
+**Response:**
+```json
+{
+  "analytics": {
+    "current_status_distribution": {
+      "ready": 15,
+      "away": 5,
+      "ticketing": 3,
+      "helping": 7
+    },
+    "mode_changes_today": 45,
+    "average_ready_time_hours": 6.5,
+    "most_active_users": [
+      {"username": "jdoe", "mode_changes": 8, "ready_percentage": 85}
+    ]
+  }
+}
+```
+
 ### System Settings
 
 #### **GET** `/api/developer/settings`
@@ -903,7 +1256,45 @@ Create system backup.
 
 ---
 
-## 7. Utility & Reference APIs
+## 8. Public Portal APIs
+
+### Public Portal Widget
+
+#### **GET** `/api/public-portal/widget-settings`
+Get public portal widget configuration.
+
+**Response:**
+```json
+{
+  "enabled": true,
+  "shape": "round",
+  "color": "#007bff",
+  "position": "bottom-right",
+  "text": "Need Help?",
+  "animation": "pulse",
+  "business_hours_enabled": true,
+  "welcome_message": "Hi! How can we help you today?",
+  "offline_message": "We're currently offline. Please leave a message."
+}
+```
+
+#### **GET** `/api/public-portal/widget-status`
+Check if public portal widget should be displayed.
+
+**Response:**
+```json
+{
+  "enabled": true,
+  "within_business_hours": true,
+  "staff_available": true,
+  "estimated_wait_minutes": 3,
+  "queue_position": null
+}
+```
+
+---
+
+## 9. Utility & Reference APIs
 
 ### Data Reference
 
@@ -943,6 +1334,12 @@ Get ticket categories for dropdown forms.
 #### **GET** `/api/users/assignable`
 Get users available for ticket assignment.
 
+#### **GET** `/api/ticket-data/support-teams`
+Get public portal support teams for routing.
+
+#### **GET** `/api/categories`
+Get simplified ticket categories for public forms.
+
 ### User Utilities
 
 #### **GET** `/api/users/profile-picture`
@@ -953,7 +1350,7 @@ Upload/update user profile picture.
 
 ---
 
-## 8. System Monitoring APIs
+## 10. System Monitoring APIs
 
 #### **GET** `/api/health`
 API health check and status.
@@ -992,18 +1389,24 @@ All authenticated endpoints require a Bearer token in the Authorization header:
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-### Permission Categories (86 total permissions)
+### Permission Categories (104 total permissions)
 
-#### **Chat Permissions (16)**
-- `chat.send_messages` - Send chat messages
+#### **Chat Permissions (21)**
+- `chat.access_channels` - Basic chat access
+- `chat.send_messages` - Send chat messages  
+- `chat.send_files` - Upload and share files
 - `chat.create_channels` - Create new channels
 - `chat.manage_channels` - Edit/delete channels
 - `chat.create_direct` - Create direct messages
 - `chat.create_groups` - Create group chats
 - `chat.manage_messages` - Edit/delete any messages
 - `chat.view_all_channels` - Access all channels
+- `chat.view_all_messages` - Monitor all messages (admin)
+- `chat.monitor_all` - Advanced message monitoring
 - `chat.moderate` - Moderate chat content
-- And 8 more...
+- `chat.manage_system` - Chat system administration
+- `chat.customize_widget` - Customize chat widget
+- And 7 more...
 
 #### **Ticket Permissions (25)**
 - `ticket.view_own` - View own tickets
@@ -1026,6 +1429,14 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - `admin.view_analytics` - System analytics
 - `admin.manage_backup` - Backup management
 - And 14 more...
+
+#### **Staff Permissions (8)**
+- `staff.view_all_work_modes` - View all staff work mode statuses
+- `staff.manage_work_modes` - Manage work mode settings
+- `staff.create_tickets` - Create staff-generated tickets
+- `staff.upload_attachments` - Upload ticket attachments
+- `staff.access_analytics` - Access staff analytics
+- And 3 more...
 
 #### **Helpdesk Permissions (10)**
 - `helpdesk.multi_queue_access` - Access multi-team queue
@@ -1092,6 +1503,18 @@ In addition to REST APIs, the chat system uses WebSocket connections for real-ti
 
 ## Changelog
 
+**Version 1.2.0** - January 26, 2025
+- **NEW**: File sharing APIs for chat messages (`/api/chat/files/*`)
+- **NEW**: Staff management APIs (`/api/staff/*`)
+- **NEW**: Public portal widget APIs (`/api/public-portal/*`)
+- **NEW**: Advanced chat administration APIs (`/api/admin/chat/*`)
+- **NEW**: Message monitoring and export APIs
+- **EXPANDED**: Chat theming and widget customization APIs
+- **EXPANDED**: WebSocket management and unlimited mode controls
+- **EXPANDED**: Work mode system for staff management
+- **UPDATED**: Permission system expanded to 104 permissions
+- **UPDATED**: Chat permissions include file sharing capabilities
+
 **Version 1.0.0** - January 2025
 - Initial API documentation
 - Chat system APIs complete
@@ -1102,4 +1525,4 @@ In addition to REST APIs, the chat system uses WebSocket connections for real-ti
 
 ---
 
-*This documentation covers all 80+ API endpoints in the Orvale Management System. For implementation details, see the corresponding route files in `/app/api/`.*
+*This documentation covers all 120+ API endpoints across 12 functional areas in the Orvale Management System. For implementation details, see the corresponding route files in `/app/api/`.*
