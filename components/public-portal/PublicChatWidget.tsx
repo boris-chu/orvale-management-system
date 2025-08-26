@@ -19,52 +19,73 @@ interface PublicChatWidgetProps {
 
 interface WidgetSettings {
   enabled: boolean;
-  business_hours_enabled: boolean;
-  timezone: string;
-  schedule_json: string;
-  holidays_json: string;
-  widget_shape: 'circle' | 'square' | 'rounded';
-  widget_color: string;
-  widget_size: 'small' | 'medium' | 'large';
-  widget_position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'custom';
-  widget_position_x?: number; // Custom X position (pixels from left)
-  widget_position_y?: number; // Custom Y position (pixels from top)
-  widget_image: string;
-  widget_text: string;
-  widget_animation: string;
-  animation_duration: number;
-  animation_delay: number;
-  welcome_message: string;
-  offline_message: string;
-  business_hours_message: string;
-  queue_message: string;
-  staff_disconnect_message: string;
-  require_name: boolean;
-  require_email: boolean;
-  require_phone: boolean;
-  require_department: boolean;
-  custom_fields_json: string;
-  show_agent_typing: boolean;
-  show_queue_position: boolean;
-  enable_file_uploads: boolean;
-  enable_screenshot_sharing: boolean;
-  max_file_size_mb: number;
-  allowed_file_types_json: string;
-  typing_indicators_enabled: boolean;
-  typing_timeout_seconds: number;
-  show_staff_typing_to_guests: boolean;
-  show_guest_typing_to_staff: boolean;
-  typing_indicator_text: string;
-  typing_indicator_style: string;
-  read_receipts_enabled: boolean;
-  show_delivery_status: boolean;
-  show_guest_read_status_to_staff: boolean;
-  show_staff_read_status_to_guests: boolean;
-  read_receipt_style: string;
-  delivery_status_icons: string;
-  session_recovery_enabled: boolean;
-  session_recovery_minutes: number;
-  auto_ticket_creation: boolean;
+  showWidget?: boolean;
+  status?: 'online' | 'offline' | 'outside_hours';
+  message?: string;
+  outsideBusinessHours?: boolean;
+  widget?: {
+    shape: 'circle' | 'square' | 'rounded';
+    color: string;
+    size: 'small' | 'medium' | 'large';
+    position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'custom';
+    text: string;
+    animation: string;
+    animationDuration: number;
+    animationDelay: number;
+  };
+  messages?: {
+    welcome: string;
+    offline: string;
+  };
+  schedule?: any;
+  nextAvailable?: string;
+  // Legacy fields for backwards compatibility
+  business_hours_enabled?: boolean;
+  timezone?: string;
+  schedule_json?: string;
+  holidays_json?: string;
+  widget_shape?: 'circle' | 'square' | 'rounded';
+  widget_color?: string;
+  widget_size?: 'small' | 'medium' | 'large';
+  widget_position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'custom';
+  widget_position_x?: number;
+  widget_position_y?: number;
+  widget_image?: string;
+  widget_text?: string;
+  widget_animation?: string;
+  animation_duration?: number;
+  animation_delay?: number;
+  welcome_message?: string;
+  offline_message?: string;
+  business_hours_message?: string;
+  queue_message?: string;
+  staff_disconnect_message?: string;
+  require_name?: boolean;
+  require_email?: boolean;
+  require_phone?: boolean;
+  require_department?: boolean;
+  custom_fields_json?: string;
+  show_agent_typing?: boolean;
+  show_queue_position?: boolean;
+  enable_file_uploads?: boolean;
+  enable_screenshot_sharing?: boolean;
+  max_file_size_mb?: number;
+  allowed_file_types_json?: string;
+  typing_indicators_enabled?: boolean;
+  typing_timeout_seconds?: number;
+  show_staff_typing_to_guests?: boolean;
+  show_guest_typing_to_staff?: boolean;
+  typing_indicator_text?: string;
+  typing_indicator_style?: string;
+  read_receipts_enabled?: boolean;
+  show_delivery_status?: boolean;
+  show_guest_read_status_to_staff?: boolean;
+  show_staff_read_status_to_guests?: boolean;
+  read_receipt_style?: string;
+  delivery_status_icons?: string;
+  session_recovery_enabled?: boolean;
+  session_recovery_minutes?: number;
+  auto_ticket_creation?: boolean;
 }
 
 export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: PublicChatWidgetProps) => {
@@ -93,7 +114,6 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
   useEffect(() => {
     loadWidgetSettings();
     checkPageVisibility();
-    checkBusinessHours();
     checkSessionRecovery();
   }, []);
 
@@ -172,12 +192,13 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
   // Load settings from API
   const loadWidgetSettings = async () => {
     try {
-      const response = await fetch('/api/public-portal/widget-settings');
+      const response = await fetch('/api/public-portal/widget-status');
       if (response.ok) {
         const data = await response.json();
         setSettings(data);
+        setIsOnline(data.status === 'online');
         
-        // Parse JSON fields
+        // Parse JSON fields if they exist
         if (data.schedule_json) {
           data.schedule = JSON.parse(data.schedule_json);
         }
@@ -201,26 +222,8 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
     }
   };
 
-  // Check if we're within business hours
-  const checkBusinessHours = () => {
-    if (!settings || !settings.business_hours_enabled) {
-      setIsOnline(true);
-      return;
-    }
-
-    const now = new Date();
-    const dayOfWeek = now.toLocaleLowerCase();
-    const schedule = JSON.parse(settings.schedule_json);
-    const todaySchedule = schedule[dayOfWeek];
-    
-    if (!todaySchedule || !todaySchedule.enabled) {
-      setIsOnline(false);
-      return;
-    }
-
-    const currentTime = now.toTimeString().slice(0, 5);
-    setIsOnline(currentTime >= todaySchedule.open && currentTime <= todaySchedule.close);
-  };
+  // Business hours checking is now handled by the API
+  // const checkBusinessHours = () => { ... };
 
   // Check for existing session to recover
   const checkSessionRecovery = () => {
@@ -277,7 +280,8 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
 
   // Get widget size dimensions
   const getWidgetSize = () => {
-    switch (settings?.widget_size) {
+    const size = settings?.widget?.size || settings?.widget_size;
+    switch (size) {
       case 'small': return 48;
       case 'large': return 80;
       default: return 64;
@@ -286,7 +290,8 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
 
   // Get widget border radius
   const getBorderRadius = () => {
-    switch (settings?.widget_shape) {
+    const shape = settings?.widget?.shape || settings?.widget_shape;
+    switch (shape) {
       case 'circle': return '50%';
       case 'square': return 0;
       default: return 8;
@@ -295,7 +300,8 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
 
   // Get widget position
   const getWidgetPosition = () => {
-    if (settings?.widget_position === 'custom') {
+    const position = settings?.widget?.position || settings?.widget_position;
+    if (position === 'custom') {
       return {
         left: widgetPosition.x,
         top: widgetPosition.y
@@ -308,20 +314,25 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
       'top-right': { top: 24, right: 24 },
       'top-left': { top: 24, left: 24 }
     };
-    return positions[settings?.widget_position || 'bottom-right'];
+    return positions[position || 'bottom-right'];
   };
 
   // Get animation variants
   const getAnimationVariants = () => {
-    switch (settings?.widget_animation) {
+    const animation = settings?.widget?.animation || settings?.widget_animation;
+    const duration = settings?.widget?.animationDuration || settings?.animation_duration || 2000;
+    const delay = settings?.widget?.animationDelay || settings?.animation_delay || 5000;
+    const color = settings?.widget?.color || settings?.widget_color || '#1976d2';
+
+    switch (animation) {
       case 'bounce':
         return {
           animate: { 
             y: [0, -10, 0],
             transition: { 
-              duration: settings.animation_duration / 1000,
+              duration: duration / 1000,
               repeat: Infinity,
-              delay: settings.animation_delay / 1000
+              delay: delay / 1000
             }
           }
         };
@@ -330,9 +341,9 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
           animate: { 
             scale: [1, 1.1, 1],
             transition: { 
-              duration: settings.animation_duration / 1000,
+              duration: duration / 1000,
               repeat: Infinity,
-              delay: settings.animation_delay / 1000
+              delay: delay / 1000
             }
           }
         };
@@ -341,9 +352,9 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
           animate: { 
             rotate: [0, 5, -5, 0],
             transition: { 
-              duration: settings.animation_duration / 1000,
+              duration: duration / 1000,
               repeat: Infinity,
-              delay: settings.animation_delay / 1000
+              delay: delay / 1000
             }
           }
         };
@@ -351,14 +362,14 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
         return {
           animate: { 
             boxShadow: [
-              `0 0 10px ${settings.widget_color}`,
-              `0 0 20px ${settings.widget_color}`,
-              `0 0 10px ${settings.widget_color}`
+              `0 0 10px ${color}`,
+              `0 0 20px ${color}`,
+              `0 0 10px ${color}`
             ],
             transition: { 
-              duration: settings.animation_duration / 1000,
+              duration: duration / 1000,
               repeat: Infinity,
-              delay: settings.animation_delay / 1000
+              delay: delay / 1000
             }
           }
         };
@@ -383,7 +394,8 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
 
   // Handle drag start
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (settings?.widget_position === 'custom' && !isOpen) {
+    const position = settings?.widget?.position || settings?.widget_position;
+    if (position === 'custom' && !isOpen) {
       e.preventDefault();
       const rect = e.currentTarget.getBoundingClientRect();
       setDragOffset({
@@ -410,8 +422,8 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
     return null;
   }
 
-  // Don't show if disabled
-  if (!settings.enabled || !showWidget) {
+  // Don't show if disabled or widget visibility is false
+  if (!settings.showWidget || !showWidget) {
     return null;
   }
 
@@ -437,7 +449,7 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
               position: 'fixed',
               ...position,
               zIndex: 9999,
-              cursor: settings?.widget_position === 'custom' ? (isDragging ? 'grabbing' : 'grab') : 'pointer'
+              cursor: (settings?.widget?.position || settings?.widget_position) === 'custom' ? (isDragging ? 'grabbing' : 'grab') : 'pointer'
             }}
             onClick={handleWidgetClick}
             onMouseDown={handleMouseDown}
@@ -451,23 +463,28 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                 sx={{
                   width: widgetSize,
                   height: widgetSize,
-                  backgroundColor: settings.widget_color,
+                  backgroundColor: settings?.status === 'online' ? 
+                    (settings?.widget?.color || settings?.widget_color || '#1976d2') : 
+                    '#9e9e9e',
                   borderRadius: borderRadius,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   boxShadow: 3,
+                  opacity: settings?.status === 'online' ? 1 : 0.7,
                   '&:hover': {
                     boxShadow: 6
                   }
                 }}
               >
-                {settings.widget_image ? (
+                {(settings?.widget_image || settings?.widget?.text) ? (
                   <Avatar 
-                    src={settings.widget_image} 
+                    src={settings?.widget_image || ''} 
                     sx={{ width: widgetSize * 0.7, height: widgetSize * 0.7 }}
                   />
                 ) : (
+                  settings?.status === 'outside_hours' ? '🕒' :
+                  settings?.status === 'offline' || settings?.status !== 'online' ? '💤' : 
                   <ChatBubbleOutline sx={{ color: 'white', fontSize: widgetSize * 0.5 }} />
                 )}
               </Box>
@@ -505,7 +522,9 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
               {/* Chat Header */}
               <Box
                 sx={{
-                  backgroundColor: settings.widget_color,
+                  backgroundColor: settings?.status === 'online' ? 
+                    (settings?.widget?.color || settings?.widget_color || '#1976d2') : 
+                    '#9e9e9e',
                   color: 'white',
                   p: 2,
                   display: 'flex',
@@ -514,14 +533,18 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  {settings.widget_image ? (
+                  {settings?.widget_image ? (
                     <Avatar src={settings.widget_image} sx={{ width: 32, height: 32 }} />
                   ) : (
+                    settings?.status === 'outside_hours' ? '🕒' :
+                    settings?.status !== 'online' ? '💤' : 
                     <ChatBubbleOutline />
                   )}
                   <Box>
                     <Typography variant="subtitle1" fontWeight="bold">
-                      {settings.widget_text}
+                      {settings?.widget?.text || settings?.widget_text || 'Live Chat'}{' '}
+                      {settings?.status === 'outside_hours' ? '(Outside Hours)' :
+                       settings?.status !== 'online' ? '(Offline)' : ''}
                     </Typography>
                     {connectedAgent && (
                       <Typography variant="caption">
@@ -547,8 +570,16 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                   {!isOnline && (
                     <Box sx={{ p: 2, backgroundColor: '#fff3e0' }}>
                       <Typography variant="body2" color="text.secondary">
-                        {settings.offline_message}
+                        {settings?.message || 
+                         settings?.messages?.offline || 
+                         settings?.offline_message || 
+                         'We are currently offline. Please submit a ticket.'}
                       </Typography>
+                      {settings?.nextAvailable && (
+                        <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                          Next available: {settings.nextAvailable}
+                        </Typography>
+                      )}
                     </Box>
                   )}
 
@@ -565,7 +596,9 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                     {messages.length === 0 && isOnline && (
                       <Box sx={{ textAlign: 'center', mt: 4 }}>
                         <Typography variant="body2" color="text.secondary">
-                          {settings.welcome_message}
+                          {settings?.messages?.welcome || 
+                           settings?.welcome_message || 
+                           'Hi! How can we help you today?'}
                         </Typography>
                       </Box>
                     )}
@@ -580,7 +613,7 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                           variant="outlined"
                         />
                         <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                          {settings.queue_message}
+                          {settings?.queue_message || 'Please wait for the next available agent.'}
                         </Typography>
                       </Box>
                     )}
@@ -599,7 +632,9 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                           sx={{
                             p: 1.5,
                             maxWidth: '70%',
-                            backgroundColor: message.sender === 'guest' ? settings.widget_color : 'white',
+                            backgroundColor: message.sender === 'guest' ? 
+                              (settings?.widget?.color || settings?.widget_color || '#1976d2') : 
+                              'white',
                             color: message.sender === 'guest' ? 'white' : 'text.primary'
                           }}
                         >
@@ -614,12 +649,12 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                     ))}
 
                     {/* Agent Typing Indicator */}
-                    {agentTyping && settings.show_staff_typing_to_guests && (
+                    {agentTyping && settings?.show_staff_typing_to_guests && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
                         <Typography variant="body2" color="text.secondary">
-                          Agent {settings.typing_indicator_text}
+                          Agent {settings?.typing_indicator_text || 'is typing...'}
                         </Typography>
-                        {settings.typing_indicator_style === 'dots' && (
+                        {settings?.typing_indicator_style === 'dots' && (
                           <Box sx={{ display: 'flex', gap: 0.5 }}>
                             <motion.div
                               animate={{ opacity: [0, 1, 0] }}
@@ -649,7 +684,7 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                   {isOnline && (
                     <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        {settings.enable_file_uploads && (
+                        {settings?.enable_file_uploads && (
                           <IconButton size="small">
                             <AttachFile />
                           </IconButton>

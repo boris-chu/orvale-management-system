@@ -52,6 +52,7 @@ const PublicPortalAdmin = () => {
     
     // Business Hours
     business_hours_enabled: true,
+    ignore_business_hours: false,
     timezone: 'America/New_York',
     schedule: {
       monday: { enabled: true, open: '07:00', close: '18:00' },
@@ -463,10 +464,10 @@ const PublicPortalAdmin = () => {
 
       <Box sx={{ width: '100%', px: 4, py: 3, bgcolor: 'gray.50', minHeight: 'calc(100vh - 120px)' }}>
 
-      {/* Master Enable/Disable */}
+      {/* Widget Visibility Control */}
       <Alert 
-        severity={settings.enabled ? 'success' : 'warning'} 
-        sx={{ mb: 3 }}
+        severity={settings.enabled ? 'success' : 'error'} 
+        sx={{ mb: 2 }}
         action={
           <FormControlLabel
             control={
@@ -476,7 +477,7 @@ const PublicPortalAdmin = () => {
                 color={settings.enabled ? 'success' : 'warning'}
               />
             }
-            label={settings.enabled ? 'Live Chat Enabled' : 'Live Chat Disabled'}
+            label={settings.enabled ? 'Widget Visible' : 'Widget Hidden'}
             labelPlacement="start"
           />
         }
@@ -484,18 +485,60 @@ const PublicPortalAdmin = () => {
         <Typography component="div">
           <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
             {settings.enabled 
-              ? '✅ Public live chat is currently ENABLED and visible to website visitors'
-              : '❌ Public live chat is currently DISABLED and hidden from website visitors'
+              ? '✅ Public live chat widget is VISIBLE on website pages'
+              : '❌ Public live chat widget is HIDDEN from all website pages'
             }
           </Typography>
-          <Typography variant="body2" sx={{ mb: 1 }}>
+          <Typography variant="body2">
             {settings.enabled 
-              ? 'The chat widget will appear on public pages according to business hours and widget settings configured below.' 
-              : 'Toggle the switch above to enable the public chat widget. No chat functionality will be available to visitors until enabled.'
+              ? 'The chat widget appears on public pages. Use the business hours override below to control availability.' 
+              : 'The chat widget will not appear anywhere on the website. Enable this first to show the widget.'
             }
           </Typography>
+        </Typography>
+      </Alert>
+
+      {/* Business Hours Override Control */}
+      {settings.enabled && (
+        <Alert 
+          severity={settings.ignore_business_hours ? 'success' : 'warning'} 
+          sx={{ mb: 3 }}
+          action={
+            <FormControlLabel
+              control={
+                <Switch 
+                  checked={settings.ignore_business_hours}
+                  onChange={(e) => updateSetting('ignore_business_hours', e.target.checked)}
+                  color={settings.ignore_business_hours ? 'success' : 'warning'}
+                />
+              }
+              label={settings.ignore_business_hours ? 'Always Available' : 'Business Hours Only'}
+              labelPlacement="start"
+            />
+          }
+        >
+          <Typography component="div">
+            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+              {settings.ignore_business_hours 
+                ? '🌍 Public live chat is ALWAYS AVAILABLE (ignoring business hours)'
+                : '🕒 Public live chat respects BUSINESS HOURS schedule'
+              }
+            </Typography>
+            <Typography variant="body2">
+              {settings.ignore_business_hours 
+                ? 'Chat is available 24/7. Perfect for testing or global support. Business hours settings below are ignored.' 
+                : 'Chat is only available during configured business hours. Outside hours, visitors see offline message with ticket submission option.'
+              }
+            </Typography>
+          </Typography>
+        </Alert>
+      )}
+
+      {/* Demo Link */}
+      <Alert severity="info" sx={{ mb: 3 }}>
+        <Typography variant="body2">
           <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-            Demo: <a 
+            Test Widget: <a 
               href="/public-chat-demo" 
               target="_blank" 
               style={{ color: 'inherit', textDecoration: 'underline' }}
@@ -534,7 +577,7 @@ const PublicPortalAdmin = () => {
               />
               <CardContent className="space-y-4">
                 <Grid container spacing={3}>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Widget Shape</InputLabel>
                       <Select
@@ -548,7 +591,7 @@ const PublicPortalAdmin = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Widget Size</InputLabel>
                       <Select
@@ -562,7 +605,7 @@ const PublicPortalAdmin = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Box className="space-y-2">
                       <Typography variant="subtitle2">Widget Color</Typography>
                       <Box className="flex items-center gap-3">
@@ -586,7 +629,7 @@ const PublicPortalAdmin = () => {
                       </Box>
                     </Box>
                   </Grid>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Widget Position</InputLabel>
                       <Select
@@ -611,7 +654,7 @@ const PublicPortalAdmin = () => {
                       Custom Position (pixels from left/top)
                     </Typography>
                     <Grid container spacing={2}>
-                      <Grid item xs={6}>
+                      <Grid size={6}>
                         <TextField
                           fullWidth
                           type="number"
@@ -623,7 +666,7 @@ const PublicPortalAdmin = () => {
                           helperText="Distance from left edge"
                         />
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid size={6}>
                         <TextField
                           fullWidth
                           type="number"
@@ -667,7 +710,7 @@ const PublicPortalAdmin = () => {
               <CardHeader title="Animation Settings" />
               <CardContent className="space-y-4">
                 <Grid container spacing={3}>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Animation Type</InputLabel>
                       <Select
@@ -685,7 +728,7 @@ const PublicPortalAdmin = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Box className="space-y-2">
                       <Typography variant="subtitle2">Animation Duration (ms)</Typography>
                       <Slider
@@ -817,7 +860,7 @@ const PublicPortalAdmin = () => {
                       <Card key={day} variant="outlined">
                         <CardContent>
                           <Grid container spacing={2} alignItems="center">
-                            <Grid item xs={2}>
+                            <Grid size={2}>
                               <FormControlLabel
                                 control={
                                   <Switch 
@@ -830,7 +873,7 @@ const PublicPortalAdmin = () => {
                             </Grid>
                             {daySettings.enabled && (
                               <>
-                                <Grid item xs={3}>
+                                <Grid size={3}>
                                   <TextField
                                     type="time"
                                     size="small"
@@ -840,7 +883,7 @@ const PublicPortalAdmin = () => {
                                     InputLabelProps={{ shrink: true }}
                                   />
                                 </Grid>
-                                <Grid item xs={3}>
+                                <Grid size={3}>
                                   <TextField
                                     type="time"
                                     size="small"
@@ -1200,7 +1243,7 @@ const PublicPortalAdmin = () => {
               />
               <CardContent className="space-y-4">
                 <Grid container spacing={3}>
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <TextField
                       fullWidth
                       type="number"
@@ -1212,7 +1255,7 @@ const PublicPortalAdmin = () => {
                       helperText="Time before considering staff disconnected"
                     />
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <TextField
                       fullWidth
                       type="number"
@@ -1224,7 +1267,7 @@ const PublicPortalAdmin = () => {
                       helperText="Time to wait for staff reconnection"
                     />
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <TextField
                       fullWidth
                       type="number"
@@ -1318,7 +1361,7 @@ const PublicPortalAdmin = () => {
 
                 {settings.escalate_on_multiple_disconnects && (
                   <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
                         type="number"
@@ -1330,7 +1373,7 @@ const PublicPortalAdmin = () => {
                         helperText="Number of disconnects that trigger escalation"
                       />
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                       <FormControl fullWidth size="small">
                         <InputLabel>Escalation Priority Level</InputLabel>
                         <Select
@@ -1400,25 +1443,25 @@ const PublicPortalAdmin = () => {
               />
               <CardContent>
                 <Grid container spacing={2}>
-                  <Grid item xs={6} md={3}>
+                  <Grid size={{ xs: 6, md: 3 }}>
                     <Box textAlign="center">
                       <Typography variant="h4" color="primary">24</Typography>
                       <Typography variant="caption">Sessions Recovered Today</Typography>
                     </Box>
                   </Grid>
-                  <Grid item xs={6} md={3}>
+                  <Grid size={{ xs: 6, md: 3 }}>
                     <Box textAlign="center">
                       <Typography variant="h4" color="success.main">89%</Typography>
                       <Typography variant="caption">Recovery Success Rate</Typography>
                     </Box>
                   </Grid>
-                  <Grid item xs={6} md={3}>
+                  <Grid size={{ xs: 6, md: 3 }}>
                     <Box textAlign="center">
                       <Typography variant="h4" color="warning.main">3.2m</Typography>
                       <Typography variant="caption">Avg Recovery Time</Typography>
                     </Box>
                   </Grid>
-                  <Grid item xs={6} md={3}>
+                  <Grid size={{ xs: 6, md: 3 }}>
                     <Box textAlign="center">
                       <Typography variant="h4" color="info.main">5</Typography>
                       <Typography variant="caption">Staff Disconnects Today</Typography>
@@ -1457,7 +1500,7 @@ const PublicPortalAdmin = () => {
                   <CardContent>
                     <Grid container spacing={3}>
                       {/* Auto Assignment */}
-                      <Grid item xs={12} md={6}>
+                      <Grid size={{ xs: 12, md: 6 }}>
                         <FormControlLabel
                           control={
                             <Switch
@@ -1473,7 +1516,7 @@ const PublicPortalAdmin = () => {
                       </Grid>
 
                       {/* Queue Timeout */}
-                      <Grid item xs={12} md={6}>
+                      <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                           label="Max Queue Time (minutes)"
                           type="number"
@@ -1485,7 +1528,7 @@ const PublicPortalAdmin = () => {
                       </Grid>
 
                       {/* Escalation */}
-                      <Grid item xs={12} md={6}>
+                      <Grid size={{ xs: 12, md: 6 }}>
                         <FormControlLabel
                           control={
                             <Switch
@@ -1515,7 +1558,7 @@ const PublicPortalAdmin = () => {
                   />
                   <CardContent>
                     <Grid container spacing={3}>
-                      <Grid item xs={12} md={4}>
+                      <Grid size={{ xs: 12, md: 4 }}>
                         <FormControlLabel
                           control={
                             <Switch
@@ -1534,7 +1577,7 @@ const PublicPortalAdmin = () => {
                         />
                       </Grid>
 
-                      <Grid item xs={12} md={4}>
+                      <Grid size={{ xs: 12, md: 4 }}>
                         <FormControlLabel
                           control={
                             <Switch
@@ -1553,7 +1596,7 @@ const PublicPortalAdmin = () => {
                         />
                       </Grid>
 
-                      <Grid item xs={12} md={4}>
+                      <Grid size={{ xs: 12, md: 4 }}>
                         <FormControlLabel
                           control={
                             <Switch
@@ -1587,7 +1630,7 @@ const PublicPortalAdmin = () => {
                   />
                   <CardContent>
                     <Grid container spacing={3}>
-                      <Grid item xs={12} md={6}>
+                      <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                           label="Break Timeout (minutes)"
                           type="number"
@@ -1598,7 +1641,7 @@ const PublicPortalAdmin = () => {
                         />
                       </Grid>
 
-                      <Grid item xs={12} md={6}>
+                      <Grid size={{ xs: 12, md: 6 }}>
                         <TextField
                           label="Away Timeout (minutes)"
                           type="number"
@@ -1625,7 +1668,7 @@ const PublicPortalAdmin = () => {
                   <CardContent>
                     <Grid container spacing={3}>
                       {Object.entries(settings.work_mode_descriptions || {}).map(([mode, description]) => (
-                        <Grid item xs={12} md={6} key={mode}>
+                        <Grid size={{ xs: 12, md: 6 }} key={mode}>
                           <TextField
                             label={`${mode.charAt(0).toUpperCase() + mode.slice(1).replace('_', ' ')} Description`}
                             value={(description as string) || ''}

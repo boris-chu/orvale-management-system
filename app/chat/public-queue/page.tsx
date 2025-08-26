@@ -700,7 +700,7 @@ const PublicQueuePage = () => {
           <Typography variant="h6" sx={{ mb: 2 }}>Theme Colors</Typography>
           <Grid container spacing={2}>
             {Object.entries(themeColors).map(([key, value]) => (
-              <Grid item xs={6} md={4} key={key}>
+              <Grid size={{ xs: 6, md: 4 }} key={key}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box
                     onClick={() => openColorPicker(key)}

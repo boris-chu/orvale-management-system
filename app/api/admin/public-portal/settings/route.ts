@@ -192,7 +192,7 @@ export async function PUT(request: NextRequest) {
       // First update widget settings
       const widgetSql = `
         INSERT OR REPLACE INTO public_portal_widget_settings (
-          id, enabled, business_hours_enabled, timezone, schedule_json, holidays_json,
+          id, enabled, business_hours_enabled, ignore_business_hours, timezone, schedule_json, holidays_json,
           widget_shape, widget_color, widget_size, widget_position, widget_position_x, widget_position_y, widget_image, widget_text,
           widget_animation, animation_duration, animation_delay,
           welcome_message, offline_message, business_hours_message, queue_message, staff_disconnect_message,
@@ -206,7 +206,7 @@ export async function PUT(request: NextRequest) {
           session_recovery_enabled, session_recovery_minutes, auto_ticket_creation,
           enabled_pages, disabled_pages, updated_by, updated_at
         ) VALUES (
-          1, ?, ?, ?, ?, ?,
+          1, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?,
           ?, ?, ?, ?, ?,
@@ -225,6 +225,7 @@ export async function PUT(request: NextRequest) {
       const params = [
         settings.enabled || false,
         settings.business_hours_enabled || true,
+        settings.ignore_business_hours || false,
         settings.timezone || 'America/New_York',
         settings.schedule_json || '{}',
         settings.holidays_json || '[]',

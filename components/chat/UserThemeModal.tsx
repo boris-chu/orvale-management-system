@@ -275,7 +275,7 @@ export default function UserThemeModal({ open, onClose }: UserThemeModalProps) {
             
             <Grid container spacing={2} sx={{ mb: 4 }}>
               {/* Inherit Option */}
-              <Grid item xs={12} sm={6} md={4}>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                 <Card 
                   variant="outlined"
                   sx={{ 
@@ -302,7 +302,7 @@ export default function UserThemeModal({ open, onClose }: UserThemeModalProps) {
 
               {/* Theme Options */}
               {availableThemePreviews.map(theme => (
-                <Grid item xs={12} sm={6} md={4} key={theme.name}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={theme.name}>
                   <Card 
                     variant="outlined"
                     sx={{ 

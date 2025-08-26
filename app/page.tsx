@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { LogIn, Ticket, Users, Search, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import MaterialUILoginModalAnimated from '@/components/MaterialUILoginModalAnimated';
+import { PublicChatWidget } from '@/components/public-portal/PublicChatWidget';
 import { formatRegularTime } from '@/lib/time-utils';
 
 
@@ -273,6 +274,9 @@ export default function Home() {
         title="Staff Login"
         description="Access the ticket management system"
       />
+
+      {/* Public Chat Widget */}
+      <PublicChatWidget />
     </div>
   );
 }

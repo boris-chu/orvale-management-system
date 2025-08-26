@@ -5,6 +5,8 @@ import { Box, Card, CardContent, Typography, Alert, CircularProgress } from '@mu
 
 interface WidgetStatus {
   enabled: boolean;
+  showWidget?: boolean;
+  status?: 'online' | 'offline' | 'outside_hours';
   message?: string;
   outsideBusinessHours?: boolean;
   widget?: {
@@ -70,7 +72,7 @@ const PublicChatDemo = () => {
 
     return {
       position: 'fixed' as const,
-      backgroundColor: color,
+      backgroundColor: widgetStatus?.status === 'online' ? color : '#9e9e9e',
       color: 'white',
       borderRadius: shape === 'circle' ? '50%' : shape === 'rounded' ? '12px' : '0px',
       display: 'flex',
@@ -82,6 +84,7 @@ const PublicChatDemo = () => {
       fontSize: '24px',
       fontWeight: 'bold',
       transition: 'all 0.3s ease',
+      opacity: widgetStatus?.status === 'online' ? 1 : 0.7,
       ...sizeMap[size as keyof typeof sizeMap],
       ...positionMap[position as keyof typeof positionMap],
       '&:hover': {
@@ -91,7 +94,7 @@ const PublicChatDemo = () => {
   };
 
   const getAnimationClass = () => {
-    if (!widgetStatus?.widget) return '';
+    if (!widgetStatus?.widget || widgetStatus?.status !== 'online') return '';
     
     const { animation } = widgetStatus.widget;
     switch (animation) {
@@ -128,36 +131,42 @@ const PublicChatDemo = () => {
               Widget Status
             </Typography>
             
-            {widgetStatus?.enabled ? (
-              <Alert severity="success" sx={{ mb: 3 }}>
+            {widgetStatus?.showWidget ? (
+              <Alert severity={widgetStatus?.status === 'online' ? "success" : "warning"} sx={{ mb: 3 }}>
                 <Typography variant="body2">
-                  <strong>✅ Public live chat is currently ENABLED and visible to website visitors</strong>
+                  {widgetStatus?.status === 'online' ? (
+                    <strong>✅ Public live chat is currently ONLINE and available to website visitors</strong>
+                  ) : (
+                    <strong>🕒 Public live chat widget is VISIBLE but currently {widgetStatus?.status === 'outside_hours' ? 'OUTSIDE BUSINESS HOURS' : 'OFFLINE'}</strong>
+                  )}
                   {widgetStatus.outsideBusinessHours && (
-                    <><br />Note: Currently outside business hours, but widget is still enabled for demo.</>
+                    <><br />Note: Widget shows with offline status - visitors can still see it but will get offline message.</>
+                  )}
+                  {widgetStatus?.message && (
+                    <><br />Message: {widgetStatus.message}</>
                   )}
                 </Typography>
               </Alert>
             ) : (
-              <Alert severity="warning" sx={{ mb: 3 }}>
+              <Alert severity="error" sx={{ mb: 3 }}>
                 <Typography variant="body2">
-                  <strong>❌ Public live chat is currently DISABLED</strong>
+                  <strong>❌ Public live chat is currently DISABLED BY ADMIN</strong>
                   <br />
-                  {widgetStatus?.message || 'Chat widget will not appear on public pages'}
-                  {widgetStatus?.outsideBusinessHours && widgetStatus.nextAvailable && (
-                    <><br />Next available: {widgetStatus.nextAvailable}</>
-                  )}
+                  {widgetStatus?.message || 'Chat widget will not appear on public pages at all'}
                 </Typography>
               </Alert>
             )}
 
             <Typography variant="body1" paragraph>
-              This page demonstrates the public chat widget behavior. The widget will only appear when:
+              This page demonstrates the public chat widget behavior with the new two-toggle system:
             </Typography>
             
             <ul>
-              <li>The admin has enabled "Public live chat" in the settings</li>
-              <li>Current time is within configured business hours (if enabled)</li>
-              <li>At least one staff member is available (future implementation)</li>
+              <li><strong>Widget Visibility Toggle:</strong> Controls if the widget appears on website pages at all</li>
+              <li><strong>Business Hours Override Toggle:</strong> Controls if chat is always available or respects business hours</li>
+              <li><strong>When Widget Hidden:</strong> No widget appears anywhere (admin disabled visibility)</li>
+              <li><strong>When Always Available:</strong> Widget shows online 24/7 (ignoring business hours)</li>
+              <li><strong>When Business Hours Only:</strong> Widget shows offline outside configured hours</li>
             </ul>
 
             <Typography variant="body2" color="text.secondary" mt={2}>
@@ -206,14 +215,15 @@ const PublicChatDemo = () => {
       </Box>
 
       {/* Chat Widget */}
-      {widgetStatus?.enabled && widgetStatus?.widget && (
+      {widgetStatus?.showWidget && widgetStatus?.widget && (
         <Box
           sx={getWidgetStyles()}
           className={getAnimationClass()}
           onClick={() => setShowChatWidget(true)}
           title={widgetStatus.widget.text}
         >
-          💬
+          {widgetStatus.status === 'outside_hours' ? '🕒' :
+           widgetStatus.status !== 'online' ? '💤' : '💬'}
         </Box>
       )}
 

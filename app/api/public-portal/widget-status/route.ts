@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
         SELECT 
           enabled,
           business_hours_enabled,
+          ignore_business_hours,
           timezone,
           schedule_json,
           widget_shape,
@@ -50,49 +51,50 @@ export async function GET(request: NextRequest) {
           return;
         }
 
-        // Check if chat is enabled
+        // Check if chat is enabled by admin
         if (!row.enabled) {
           resolve(NextResponse.json({
             enabled: false,
+            showWidget: false,
             message: 'Live chat is currently disabled by administrators'
           }));
           return;
         }
 
-        // Check business hours if enabled
-        if (row.business_hours_enabled) {
+        // Always show widget when enabled, but check business hours for status
+        let chatStatus = 'online';
+        let statusMessage = '';
+        let outsideHours = false;
+
+        // Check business hours if enabled and not overridden
+        if (row.business_hours_enabled && !row.ignore_business_hours) {
           const now = new Date();
           const schedule = row.schedule_json ? JSON.parse(row.schedule_json) : {};
           const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
           const daySchedule = schedule[dayOfWeek];
 
           if (!daySchedule || !daySchedule.enabled) {
-            resolve(NextResponse.json({
-              enabled: false,
-              outsideBusinessHours: true,
-              message: row.business_hours_message || 'Live chat is currently outside business hours',
-              schedule: schedule
-            }));
-            return;
-          }
-
-          // Check if current time is within business hours
-          const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
-          if (currentTime < daySchedule.open || currentTime > daySchedule.close) {
-            resolve(NextResponse.json({
-              enabled: false,
-              outsideBusinessHours: true,
-              message: row.business_hours_message || 'Live chat is currently outside business hours',
-              schedule: schedule,
-              nextAvailable: `${daySchedule.open} - ${daySchedule.close}`
-            }));
-            return;
+            chatStatus = 'outside_hours';
+            statusMessage = row.business_hours_message || 'Live chat is currently outside business hours';
+            outsideHours = true;
+          } else {
+            // Check if current time is within business hours
+            const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+            if (currentTime < daySchedule.open || currentTime > daySchedule.close) {
+              chatStatus = 'outside_hours';
+              statusMessage = row.business_hours_message || 'Live chat is currently outside business hours';
+              outsideHours = true;
+            }
           }
         }
 
-        // Chat is enabled and within business hours
+        // Return widget configuration with status
         resolve(NextResponse.json({
-          enabled: true,
+          enabled: chatStatus === 'online',
+          showWidget: true, // Always show when admin enables it
+          status: chatStatus,
+          message: statusMessage,
+          outsideBusinessHours: outsideHours,
           widget: {
             shape: row.widget_shape || 'circle',
             color: row.widget_color || '#1976d2',
@@ -106,7 +108,19 @@ export async function GET(request: NextRequest) {
           messages: {
             welcome: row.welcome_message || 'Hi! How can we help you today?',
             offline: row.offline_message || 'We are currently offline. Please submit a ticket.'
-          }
+          },
+          schedule: row.schedule_json ? JSON.parse(row.schedule_json) : null,
+          nextAvailable: outsideHours && row.schedule_json ? 
+            (() => {
+              try {
+                const schedule = JSON.parse(row.schedule_json);
+                const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
+                const daySchedule = schedule[dayOfWeek];
+                return daySchedule ? `${daySchedule.open} - ${daySchedule.close}` : null;
+              } catch {
+                return null;
+              }
+            })() : null
         }));
       });
     });

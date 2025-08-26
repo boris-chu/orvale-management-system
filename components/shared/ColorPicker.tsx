@@ -87,7 +87,7 @@ export const ColorPicker = ({ color, onChange }: ColorPickerProps) => {
         </Box>
         <Grid container spacing={1}>
           {presetColors.map((presetColor, index) => (
-            <Grid item key={index}>
+            <Grid key={index}>
               <Paper
                 sx={{
                   width: 36,

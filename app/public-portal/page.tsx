@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Ticket, Monitor, Phone, Building, Clock } from 'lucide-react';
 import MaterialUILoginModalAnimated from '@/components/MaterialUILoginModalAnimated';
+import { PublicChatWidget } from '@/components/public-portal/PublicChatWidget';
 // Import removed - will load dynamically from API
 
 interface FormData {
@@ -1084,6 +1085,9 @@ Submitted via Orvale Management System`;
         title="IT Staff Access"
         description="Access internal staff management tools"
       />
+
+      {/* Public Chat Widget */}
+      <PublicChatWidget />
     </div>
   );
 }
