@@ -498,25 +498,62 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
             >
               {/* Widget Content */}
               {settings?.widget_image ? (
-                <img 
-                  src={settings.widget_image} 
-                  alt="Chat"
+                /* Brooch-style image display */
+                <div
                   style={{
-                    width: `${widgetSize * 0.7}px`,
-                    height: `${widgetSize * 0.7}px`,
-                    borderRadius: '50%',
-                    objectFit: 'cover'
+                    width: `${widgetSize * 0.8}px`,
+                    height: `${widgetSize * 0.8}px`,
+                    borderRadius: settings?.widget?.shape === 'circle' || settings?.widget_shape === 'circle' ? '50%' : '6px',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    border: '2px solid rgba(255, 255, 255, 0.3)'
                   }}
-                />
-              ) : settings?.widget?.text ? (
-                <span style={{ fontSize: `${widgetSize * 0.3}px`, fontWeight: 'bold' }}>
-                  {settings.widget.text.charAt(0).toUpperCase()}
-                </span>
-              ) : (
-                settings?.status === 'outside_hours' ? '🕒' :
-                settings?.status === 'offline' || settings?.status !== 'online' ? '💤' : 
-                '💬'
-              )}
+                >
+                  <img 
+                    src={settings.widget_image} 
+                    alt="Chat Support"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+                </div>
+              ) : (() => {
+                // Icon logic
+                const getIcon = () => {
+                  if (settings?.status === 'outside_hours') return '🕒';
+                  if (settings?.status === 'offline' || settings?.status !== 'online') return '💤';
+                  
+                  // Use selected icon or fall back to defaults
+                  const iconMap: { [key: string]: string } = {
+                    'chat': '💬',
+                    'support': '🎧', 
+                    'help': '❓',
+                    'message': '✉️',
+                    'phone': '📞',
+                    'user': '👤',
+                    'team': '👥', 
+                    'star': '⭐',
+                    'heart': '❤️',
+                    'info': 'ℹ️',
+                    'settings': '⚙️',
+                    'bell': '🔔'
+                  };
+                  
+                  const selectedIcon = settings?.widget_icon || settings?.widget?.icon;
+                  return iconMap[selectedIcon] || '💬';
+                };
+                
+                return (
+                  <span style={{ fontSize: `${widgetSize * 0.4}px` }}>
+                    {getIcon()}
+                  </span>
+                );
+              })()}
               
               {/* Unread Count Badge */}
               {unreadCount > 0 && (

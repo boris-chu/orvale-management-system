@@ -74,6 +74,7 @@ const PublicPortalAdmin = () => {
     widget_position_x: 0,
     widget_position_y: 0,
     widget_text: 'Chat with us',
+    widget_icon: 'chat', // Default icon
     widget_image: '',
     
     // Animation Settings
@@ -775,6 +776,130 @@ const PublicPortalAdmin = () => {
                   onChange={(e) => updateSetting('widget_text', e.target.value)}
                   placeholder="Chat with us"
                 />
+
+                {/* Widget Icon Selection */}
+                <Box className="space-y-2">
+                  <Typography variant="subtitle2">Widget Icon</Typography>
+                  <Grid container spacing={2}>
+                    {[
+                      { id: 'chat', icon: '💬', label: 'Chat Bubble' },
+                      { id: 'support', icon: '🎧', label: 'Headset' },
+                      { id: 'help', icon: '❓', label: 'Question Mark' },
+                      { id: 'message', icon: '✉️', label: 'Envelope' },
+                      { id: 'phone', icon: '📞', label: 'Phone' },
+                      { id: 'user', icon: '👤', label: 'User' },
+                      { id: 'team', icon: '👥', label: 'Team' },
+                      { id: 'star', icon: '⭐', label: 'Star' },
+                      { id: 'heart', icon: '❤️', label: 'Heart' },
+                      { id: 'info', icon: 'ℹ️', label: 'Information' },
+                      { id: 'settings', icon: '⚙️', label: 'Settings' },
+                      { id: 'bell', icon: '🔔', label: 'Bell' }
+                    ].map((iconOption) => (
+                      <Grid size={{ xs: 4, sm: 3, md: 2 }} key={iconOption.id}>
+                        <Box
+                          sx={{
+                            p: 2,
+                            border: 2,
+                            borderColor: settings.widget_icon === iconOption.id ? 'primary.main' : 'divider',
+                            borderRadius: 2,
+                            textAlign: 'center',
+                            cursor: 'pointer',
+                            backgroundColor: settings.widget_icon === iconOption.id ? 'primary.50' : 'transparent',
+                            '&:hover': {
+                              borderColor: 'primary.main',
+                              backgroundColor: 'primary.50'
+                            }
+                          }}
+                          onClick={() => updateSetting('widget_icon', iconOption.id)}
+                        >
+                          <Box sx={{ fontSize: '24px', mb: 1 }}>{iconOption.icon}</Box>
+                          <Typography variant="caption" display="block">
+                            {iconOption.label}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+
+                {/* Widget Image Upload */}
+                <Box className="space-y-2">
+                  <Typography variant="subtitle2">Custom Widget Image (Optional)</Typography>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Upload an image to replace the widget button. Image will be displayed as a "brooch" style within the widget shape.
+                  </Typography>
+                  
+                  {settings.widget_image && (
+                    <Box sx={{ mb: 2 }}>
+                      <Box
+                        sx={{
+                          width: 64,
+                          height: 64,
+                          borderRadius: settings.widget_shape === 'circle' ? '50%' : '8px',
+                          backgroundColor: settings.widget_color || '#1976d2',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <img
+                          src={settings.widget_image}
+                          alt="Widget Preview"
+                          style={{
+                            width: '80%',
+                            height: '80%',
+                            borderRadius: settings.widget_shape === 'circle' ? '50%' : '4px',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      </Box>
+                      <Button
+                        size="small"
+                        onClick={() => updateSetting('widget_image', '')}
+                        startIcon={<Delete />}
+                        color="error"
+                        sx={{ mt: 1 }}
+                      >
+                        Remove Image
+                      </Button>
+                    </Box>
+                  )}
+
+                  <input
+                    type="file"
+                    id="widget-image-upload"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          updateSetting('widget_image', event.target?.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <label htmlFor="widget-image-upload">
+                    <Button
+                      component="span"
+                      variant="outlined"
+                      startIcon={<Add />}
+                      size="small"
+                    >
+                      {settings.widget_image ? 'Change Image' : 'Upload Image'}
+                    </Button>
+                  </label>
+                  
+                  {!settings.widget_image && (
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      Recommended: Square images 64x64px or larger. PNG with transparency works best.
+                    </Typography>
+                  )}
+                </Box>
 
                 <TextField
                   fullWidth

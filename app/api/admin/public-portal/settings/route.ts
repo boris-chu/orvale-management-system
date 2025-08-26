@@ -193,7 +193,7 @@ export async function PUT(request: NextRequest) {
       const widgetSql = `
         INSERT OR REPLACE INTO public_portal_widget_settings (
           id, enabled, business_hours_enabled, ignore_business_hours, timezone, schedule_json, holidays_json,
-          widget_shape, widget_color, widget_size, widget_position, widget_position_x, widget_position_y, widget_image, widget_text,
+          widget_shape, widget_color, widget_size, widget_position, widget_position_x, widget_position_y, widget_icon, widget_image, widget_text,
           widget_animation, animation_duration, animation_delay,
           welcome_message, offline_message, business_hours_message, queue_message, staff_disconnect_message,
           require_name, require_email, require_phone, require_department, custom_fields_json,
@@ -207,7 +207,7 @@ export async function PUT(request: NextRequest) {
           enabled_pages, disabled_pages, updated_by, updated_at
         ) VALUES (
           1, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?,
           ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?,
@@ -235,6 +235,7 @@ export async function PUT(request: NextRequest) {
         settings.widget_position || 'bottom-right',
         settings.widget_position_x || 0,
         settings.widget_position_y || 0,
+        settings.widget_icon || 'chat',
         settings.widget_image || '',
         settings.widget_text || 'Chat with us',
         settings.widget_animation || 'pulse',
