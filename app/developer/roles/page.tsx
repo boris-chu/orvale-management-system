@@ -34,7 +34,8 @@ import {
   Key,
   HelpCircle,
   User,
-  LogOut
+  LogOut,
+  MessageCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -526,6 +527,50 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     name: 'Reset Defaults', 
     category: 'Tables Management', 
     description: 'Reset to system defaults\n• Restore original configs\n• Clear customizations\n• Admin override capability' 
+  },
+
+  // Public Portal Permissions
+  { 
+    id: 'public_portal.manage_settings', 
+    name: 'Manage Portal Chat Settings', 
+    category: 'Public Portal', 
+    description: 'Configure public portal chat settings and themes\n• Chat system configuration\n• Theme and appearance settings\n• Public-facing chat controls\n• ⚠️ Affects public users' 
+  },
+  { 
+    id: 'public_portal.manage_queue', 
+    name: 'Manage Chat Queue', 
+    category: 'Public Portal', 
+    description: 'Manage public chat queue and assignments\n• Queue management\n• Chat assignment control\n• Workload distribution\n• Staff coordination' 
+  },
+  { 
+    id: 'public_portal.view_all_sessions', 
+    name: 'View All Chat Sessions', 
+    category: 'Public Portal', 
+    description: 'View all public chat sessions\n• Monitor active chats\n• Session oversight\n• Quality assurance\n• Management visibility' 
+  },
+  { 
+    id: 'public_portal.force_disconnect', 
+    name: 'Force Disconnect Sessions', 
+    category: 'Public Portal', 
+    description: 'Force disconnect chat sessions\n• Emergency disconnect\n• Session management\n• Security enforcement\n• ⚠️ Disruptive action' 
+  },
+  { 
+    id: 'public_portal.override_work_modes', 
+    name: 'Override Work Modes', 
+    category: 'Public Portal', 
+    description: 'Override staff work mode settings\n• Force availability changes\n• Emergency staffing\n• Administrative control\n• ⚠️ Overrides user preferences' 
+  },
+  { 
+    id: 'public_portal.handle_chats', 
+    name: 'Handle Public Chats', 
+    category: 'Public Portal', 
+    description: 'Handle public portal chat sessions\n• Accept chat requests\n• Provide support\n• Customer interaction\n• Front-line support' 
+  },
+  { 
+    id: 'public_portal.change_work_mode', 
+    name: 'Change Work Mode', 
+    category: 'Public Portal', 
+    description: 'Change own work mode status\n• Set availability\n• Control chat acceptance\n• Personal status management\n• Basic staff control' 
   }
 ];
 
@@ -802,6 +847,12 @@ export default function RoleManagement() {
       case 'Reporting': return BarChart3;
       case 'System': return Settings;
       case 'Administration': return Shield;
+      case 'Portal Management': return Settings;
+      case 'Data Management': return Settings;
+      case 'Role Management': return Shield;
+      case 'SLA Management': return Settings;
+      case 'Tables Management': return Settings;
+      case 'Public Portal': return MessageCircle;
       default: return Key;
     }
   };

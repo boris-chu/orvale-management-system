@@ -4,6 +4,7 @@ import './globals.css'
 import MaintenanceWrapper from '@/components/MaintenanceWrapper'
 import { AuthProvider } from '@/contexts/AuthContext'
 import ChatWidgetProvider from '@/components/chat/ChatWidgetProvider'
+import PublicChatProvider from '@/components/public-portal/PublicChatProvider'
 import SystemInitializer from '@/components/SystemInitializer'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -25,7 +26,9 @@ export default function RootLayout({
         <AuthProvider>
           <MaintenanceWrapper>
             <ChatWidgetProvider>
-              {children}
+              <PublicChatProvider>
+                {children}
+              </PublicChatProvider>
             </ChatWidgetProvider>
           </MaintenanceWrapper>
         </AuthProvider>

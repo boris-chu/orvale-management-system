@@ -239,6 +239,16 @@ export default function DeveloperDashboard() {
         requiredPermissions: ['chat.manage_system', 'admin.system_settings']
       },
       {
+        id: 'public_portal_admin',
+        title: 'Public Portal Live Chat',
+        description: 'Configure public portal live chat widget and settings',
+        icon: Globe,
+        href: '/admin/public-portal',
+        color: 'bg-rose-500',
+        stats: 'Public chat administration',
+        requiredPermissions: ['admin.system_settings', 'portal.manage_settings']
+      },
+      {
         id: 'rbac',
         title: 'Role Management',
         description: 'Manage roles and permissions',
