@@ -158,6 +158,24 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
                     console.warn('Failed to parse file attachment:', e);
                   }
                 }
+                
+                // If no attachment but message type is file, try to parse from message text
+                if (!attachments && message.messageType === 'file' && message.message?.startsWith('{')) {
+                  try {
+                    const fileData = JSON.parse(message.message);
+                    if (fileData.fileId) {
+                      attachments = [{
+                        id: fileData.fileId,
+                        filename: fileData.filename || 'Unknown',
+                        type: fileData.mimeType?.startsWith('image/') ? 'image' : 'file',
+                        url: `/api/chat/files/${fileData.fileId}`,
+                        size: fileData.fileSize || 0
+                      }];
+                    }
+                  } catch (e) {
+                    console.warn('Failed to parse file data from message text:', e);
+                  }
+                }
 
                 return {
                   id: message.id.toString(),
@@ -200,6 +218,24 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
             }];
           } catch (e) {
             console.warn('Failed to parse file attachment:', e);
+          }
+        }
+        
+        // If no attachment but message type is file, try to parse from message text
+        if (!attachments && message.messageType === 'file' && message.message?.startsWith('{')) {
+          try {
+            const fileData = JSON.parse(message.message);
+            if (fileData.fileId) {
+              attachments = [{
+                id: fileData.fileId,
+                filename: fileData.filename || 'Unknown',
+                type: fileData.mimeType?.startsWith('image/') ? 'image' : 'file',
+                url: `/api/chat/files/${fileData.fileId}`,
+                size: fileData.fileSize || 0
+              }];
+            }
+          } catch (e) {
+            console.warn('Failed to parse file data from message text:', e);
           }
         }
 
@@ -253,6 +289,24 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
               }];
             } catch (e) {
               console.warn('Failed to parse file attachment:', e);
+            }
+          }
+          
+          // If no attachment but message type is file, try to parse from message text
+          if (!attachments && message.messageType === 'file' && message.message?.startsWith('{')) {
+            try {
+              const fileData = JSON.parse(message.message);
+              if (fileData.fileId) {
+                attachments = [{
+                  id: fileData.fileId,
+                  filename: fileData.filename || 'Unknown',
+                  type: fileData.mimeType?.startsWith('image/') ? 'image' : 'file',
+                  url: `/api/chat/files/${fileData.fileId}`,
+                  size: fileData.fileSize || 0
+                }];
+              }
+            } catch (e) {
+              console.warn('Failed to parse file data from message text:', e);
             }
           }
 
@@ -895,11 +949,34 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
                       </p>
                     </div>
                   ) : (
-                    <a
-                      href={attachment.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 p-3 rounded-lg border transition-colors"
+                    <div
+                      onClick={async () => {
+                        try {
+                          const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
+                          if (!token) return;
+                          
+                          const response = await fetch(attachment.url, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                          });
+                          
+                          if (!response.ok) {
+                            console.error('Failed to download file');
+                            return;
+                          }
+                          
+                          const blob = await response.blob();
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = attachment.filename;
+                          link.click();
+                          URL.revokeObjectURL(url);
+                        } catch (err) {
+                          console.error('Download error:', err);
+                          alert('Failed to download file');
+                        }
+                      }}
+                      className="flex items-center gap-2 p-3 rounded-lg border transition-colors cursor-pointer"
                       style={{ 
                         backgroundColor: 'var(--chat-surface)', 
                         borderColor: 'var(--chat-border)' 
@@ -920,7 +997,7 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
                           {(attachment.size / 1024 / 1024).toFixed(1)}MB
                         </p>
                       </div>
-                    </a>
+                    </div>
                   )}
                 </div>
               ))}
