@@ -1174,35 +1174,36 @@ Submitted via Orvale Management System`;
                 </CardContent>
               </Card>
 
-              {/* Submit Button */}
-              <div className="flex justify-center items-center gap-4 pt-4">
+              {/* Submit and Clear Buttons */}
+              <div className="relative flex justify-center items-center pt-4">
+                {/* Centered Submit Button */}
                 <Button 
                   type="submit" 
                   disabled={isSubmitting}
                   size="lg"
-                  className="flex-1 max-w-md"
+                  className="px-8"
                 >
                   {isSubmitting ? (
                     <>
                       <Clock className="h-4 w-4 mr-2 animate-spin" />
-                      Submitting Request...
+                      Submitting...
                     </>
                   ) : (
                     <>
                       <Ticket className="h-4 w-4 mr-2" />
-                      Submit Support Request
+                      Submit Request
                     </>
                   )}
                 </Button>
                 
-                {/* Clear Saved Data Button */}
+                {/* Right-aligned Clear Saved Data Button */}
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={clearSavedData}
                   disabled={isSubmitting}
-                  className="shrink-0"
+                  className="absolute right-0"
                   title="Clear your saved form information"
                 >
                   Clear Saved Data
