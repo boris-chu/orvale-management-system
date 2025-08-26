@@ -457,59 +457,92 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
       {/* Chat Widget Button */}
       <AnimatePresence>
         {!isOpen && (
-          <motion.div
-            ref={widgetRef}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            {...animationVariants}
-            style={{
-              position: 'fixed',
-              ...position,
-              zIndex: 9999,
-              cursor: (settings?.widget?.position || settings?.widget_position) === 'custom' ? (isDragging ? 'grabbing' : 'grab') : 'pointer'
-            }}
-            onClick={handleWidgetClick}
-            onMouseDown={handleMouseDown}
-          >
-            <Badge 
-              badgeContent={unreadCount} 
-              color="error"
-              invisible={unreadCount === 0}
+          <>
+            {/* Professional Chat Widget - Plain HTML/CSS to avoid Material-UI conflicts */}
+            <div
+              ref={widgetRef}
+              style={{
+                position: 'fixed',
+                bottom: position?.bottom || '24px',
+                right: position?.right || '24px',
+                left: position?.left,
+                top: position?.top,
+                width: `${widgetSize}px`,
+                height: `${widgetSize}px`,
+                backgroundColor: settings?.status === 'online' ? 
+                  (settings?.widget?.color || settings?.widget_color || '#1976d2') : 
+                  '#9e9e9e',
+                borderRadius: settings?.widget?.shape === 'square' ? '8px' : '50%',
+                zIndex: 9999,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: `${widgetSize * 0.4}px`,
+                color: 'white',
+                boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
+                opacity: settings?.status === 'online' ? 1 : 0.7,
+                transition: 'all 0.2s ease-in-out',
+                border: 'none'
+              }}
+              onClick={handleWidgetClick}
+              onMouseDown={handleMouseDown}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.boxShadow = '0px 6px 20px rgba(0, 0, 0, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0px 4px 12px rgba(0, 0, 0, 0.15)';
+              }}
             >
-              <Box
-                sx={{
-                  width: widgetSize,
-                  height: widgetSize,
-                  backgroundColor: settings?.status === 'online' ? 
-                    (settings?.widget?.color || settings?.widget_color || '#1976d2') : 
-                    '#9e9e9e',
-                  borderRadius: borderRadius,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: 3,
-                  opacity: settings?.status === 'online' ? 1 : 0.7,
-                  '&:hover': {
-                    boxShadow: 6
-                  }
-                }}
-              >
-                {(settings?.widget_image || settings?.widget?.text) ? (
-                  <Avatar 
-                    src={settings?.widget_image || ''} 
-                    sx={{ width: widgetSize * 0.7, height: widgetSize * 0.7 }}
-                  />
-                ) : (
-                  settings?.status === 'outside_hours' ? '🕒' :
-                  settings?.status === 'offline' || settings?.status !== 'online' ? '💤' : 
-                  <ChatBubbleOutline sx={{ color: 'white', fontSize: widgetSize * 0.5 }} />
-                )}
-              </Box>
-            </Badge>
-          </motion.div>
+              {/* Widget Content */}
+              {settings?.widget_image ? (
+                <img 
+                  src={settings.widget_image} 
+                  alt="Chat"
+                  style={{
+                    width: `${widgetSize * 0.7}px`,
+                    height: `${widgetSize * 0.7}px`,
+                    borderRadius: '50%',
+                    objectFit: 'cover'
+                  }}
+                />
+              ) : settings?.widget?.text ? (
+                <span style={{ fontSize: `${widgetSize * 0.3}px`, fontWeight: 'bold' }}>
+                  {settings.widget.text.charAt(0).toUpperCase()}
+                </span>
+              ) : (
+                settings?.status === 'outside_hours' ? '🕒' :
+                settings?.status === 'offline' || settings?.status !== 'online' ? '💤' : 
+                '💬'
+              )}
+              
+              {/* Unread Count Badge */}
+              {unreadCount > 0 && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-8px',
+                    backgroundColor: '#f44336',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.2)'
+                  }}
+                >
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </div>
+              )}
+            </div>
+          </>
         )}
       </AnimatePresence>
 
