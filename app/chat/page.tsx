@@ -204,16 +204,6 @@ export default function ChatPage() {
             <MessageCircle className="w-5 h-5 text-blue-500" />
             <h1 className="text-lg font-semibold">Orvale Chat System</h1>
           </div>
-          
-          {/* Status badges */}
-          <div className="hidden sm:flex items-center gap-2">
-            <Badge variant="default" className="text-xs">
-              Beta Testing
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              Mobile-First Design
-            </Badge>
-          </div>
         </div>
 
         {/* User info */}
