@@ -24,7 +24,12 @@ import OnlinePresenceTracker from '@/components/shared/OnlinePresenceTracker';
 import { Button as ShadcnButton } from '@/components/ui/button';
 import { UserAvatar } from '@/components/UserAvatar';
 import { ProfileEditModal } from '@/components/ProfileEditModal';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { 
+  Tooltip as ShadcnTooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from '@/components/ui/tooltip';
 import { User, LogOut } from 'lucide-react';
 
 interface TabPanelProps {
@@ -377,7 +382,7 @@ const PublicPortalAdmin = () => {
               {currentUser && (
                 <TooltipProvider>
                   <div className="relative">
-                    <Tooltip>
+                    <ShadcnTooltip>
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => setShowUserMenu(!showUserMenu)}
@@ -399,7 +404,7 @@ const PublicPortalAdmin = () => {
                       <TooltipContent>
                         <p>View profile and settings</p>
                       </TooltipContent>
-                    </Tooltip>
+                    </ShadcnTooltip>
 
                     {/* User Menu Dropdown */}
                     {showUserMenu && (
