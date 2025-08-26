@@ -48,7 +48,11 @@ import {
   Hash,
   Check,
   Upload,
-  Minimize2
+  Minimize2,
+  Download,
+  Filter,
+  FileText,
+  Database
 } from 'lucide-react';
 import {
   Select as MuiSelect,
@@ -107,6 +111,27 @@ interface SystemStats {
   total_channels: number;
   messages_per_hour: number;
   storage_used_mb: number;
+}
+
+interface MonitoredMessage {
+  id: number;
+  channel_id: number;
+  channel_name: string;
+  channel_type: string;
+  user_id: string;
+  user_display_name: string;
+  message_text: string;
+  message_type: string;
+  created_at: string;
+  edited_at?: string;
+  file_attachment?: string;
+}
+
+interface MessageFilters {
+  channel_id: string;
+  user_id: string;
+  time_range: '1h' | '24h' | '7d' | '30d' | 'all';
+  message_type: string;
 }
 
 // Theme Management Tab Component
@@ -1108,6 +1133,24 @@ export default function ChatManagementPage() {
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
   const [showMemberManagement, setShowMemberManagement] = useState(false);
 
+  // Monitor tab state
+  const [monitoredMessages, setMonitoredMessages] = useState<MonitoredMessage[]>([]);
+  const [messageFilters, setMessageFilters] = useState<MessageFilters>({
+    channel_id: '',
+    user_id: '',
+    time_range: '24h',
+    message_type: ''
+  });
+  const [filterChannels, setFilterChannels] = useState<Array<{id: number; name: string; type: string}>>([]);
+  const [filterUsers, setFilterUsers] = useState<Array<{username: string; display_name: string}>>([]);
+  const [monitorLoading, setMonitorLoading] = useState(false);
+  const [monitorPagination, setMonitorPagination] = useState({
+    total: 0,
+    limit: 50,
+    offset: 0,
+    hasMore: false
+  });
+
   // Load settings on mount
   useEffect(() => {
     checkAdminAccess();
@@ -1667,6 +1710,128 @@ export default function ChatManagementPage() {
     }
   };
 
+  // Message monitoring functions
+  const loadMonitoredMessages = async (loadMore = false) => {
+    if (!currentUser?.permissions?.includes('chat.monitor_all') && 
+        !currentUser?.permissions?.includes('chat.view_all_messages') && 
+        currentUser?.role !== 'admin') {
+      return; // No permission
+    }
+
+    try {
+      setMonitorLoading(true);
+      const token = localStorage.getItem('authToken');
+      
+      const params = new URLSearchParams({
+        limit: monitorPagination.limit.toString(),
+        offset: loadMore ? monitorPagination.offset.toString() : '0',
+        time_range: messageFilters.time_range
+      });
+
+      if (messageFilters.channel_id) params.append('channel_id', messageFilters.channel_id);
+      if (messageFilters.user_id) params.append('user_id', messageFilters.user_id);
+      if (messageFilters.message_type) params.append('message_type', messageFilters.message_type);
+
+      const response = await fetch(`/api/admin/chat/messages?${params}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (loadMore) {
+          setMonitoredMessages(prev => [...prev, ...data.messages]);
+        } else {
+          setMonitoredMessages(data.messages);
+          setFilterChannels(data.filters.channels);
+          setFilterUsers(data.filters.users);
+        }
+
+        setMonitorPagination({
+          total: data.pagination.total,
+          limit: data.pagination.limit,
+          offset: loadMore ? monitorPagination.offset + data.pagination.limit : data.pagination.offset,
+          hasMore: data.pagination.hasMore
+        });
+      } else {
+        console.error('Failed to load monitored messages:', response.status);
+      }
+    } catch (error) {
+      console.error('Error loading monitored messages:', error);
+    } finally {
+      setMonitorLoading(false);
+    }
+  };
+
+  const handleFilterChange = (key: keyof MessageFilters, value: string) => {
+    setMessageFilters(prev => ({ ...prev, [key]: value }));
+    setMonitorPagination(prev => ({ ...prev, offset: 0 })); // Reset offset when filtering
+  };
+
+  const exportMessages = async (format: 'csv' | 'json') => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const params = new URLSearchParams({
+        format,
+        time_range: messageFilters.time_range
+      });
+
+      if (messageFilters.channel_id) params.append('channel_id', messageFilters.channel_id);
+      if (messageFilters.user_id) params.append('user_id', messageFilters.user_id);
+
+      const response = await fetch(`/api/admin/chat/messages/export?${params}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        
+        const contentDisposition = response.headers.get('content-disposition');
+        const filename = contentDisposition ? 
+          contentDisposition.split('filename=')[1].replace(/"/g, '') : 
+          `chat_messages.${format}`;
+        
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        alert('Failed to export messages');
+      }
+    } catch (error) {
+      console.error('Error exporting messages:', error);
+      alert('Error occurred while exporting messages');
+    }
+  };
+
+  const formatMessageTime = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch {
+      return 'Unknown';
+    }
+  };
+
+  const getChannelDisplayName = (message: MonitoredMessage) => {
+    if (message.channel_type === 'direct_message') {
+      return `DM: ${message.channel_name}`;
+    } else if (message.channel_type === 'group_chat') {
+      return `Group: ${message.channel_name}`;
+    } else {
+      return `#${message.channel_name}`;
+    }
+  };
+
   // Safe date formatting for admin interface
   const safeFormatDate = (timestamp: string | null | undefined) => {
     if (!timestamp) return 'Unknown';
@@ -1698,6 +1863,15 @@ export default function ChatManagementPage() {
       refreshUserData();
     }
   }, [activeTab]);
+
+  // Load monitored messages when filters change
+  useEffect(() => {
+    if (currentUser?.permissions?.includes('chat.monitor_all') || 
+        currentUser?.permissions?.includes('chat.view_all_messages') || 
+        currentUser?.role === 'admin') {
+      loadMonitoredMessages();
+    }
+  }, [messageFilters, currentUser]);
 
   if (loading) {
     return (
@@ -2405,14 +2579,238 @@ export default function ChatManagementPage() {
 
         {/* Monitor Tab */}
         <TabsContent value="monitor">
-          <Card>
-            <CardHeader>
-              <CardTitle>Message Monitoring</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Message monitoring features will be implemented here.</p>
-            </CardContent>
-          </Card>
+          {/* Check for monitor permission */}
+          {(!currentUser?.permissions?.includes('chat.monitor_all') && 
+            !currentUser?.permissions?.includes('chat.view_all_messages') && 
+            currentUser?.role !== 'admin') ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Monitor className="h-5 w-5" />
+                  Message Monitoring
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Monitor className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-muted-foreground mb-2">Access Denied</p>
+                  <p className="text-sm text-muted-foreground">You need the <code>chat.monitor_all</code> or <code>chat.view_all_messages</code> permission to access message monitoring.</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {/* Message Monitoring Controls */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Monitor className="h-5 w-5" />
+                      <div>
+                        <CardTitle>Message Monitoring</CardTitle>
+                        <CardDescription>Monitor and export chat messages across all channels</CardDescription>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => exportMessages('csv')}
+                        className="flex items-center gap-2"
+                      >
+                        <FileText className="h-4 w-4" />
+                        Export CSV
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => exportMessages('json')}
+                        className="flex items-center gap-2"
+                      >
+                        <Database className="h-4 w-4" />
+                        Export JSON
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {/* Filters */}
+                  <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      <span className="font-medium text-sm">Filters:</span>
+                    </div>
+                    
+                    {/* Channel Filter */}
+                    <FormControl size="small">
+                      <InputLabel>Channel</InputLabel>
+                      <MuiSelect
+                        value={messageFilters.channel_id}
+                        onChange={(e) => handleFilterChange('channel_id', e.target.value)}
+                        label="Channel"
+                        className="min-w-[150px]"
+                      >
+                        <MenuItem value="">All Channels</MenuItem>
+                        {filterChannels.map(channel => (
+                          <MenuItem key={channel.id} value={channel.id.toString()}>
+                            {channel.type === 'direct_message' ? `DM: ${channel.name}` : 
+                             channel.type === 'group_chat' ? `Group: ${channel.name}` : 
+                             `#${channel.name}`}
+                          </MenuItem>
+                        ))}
+                      </MuiSelect>
+                    </FormControl>
+
+                    {/* Time Range Filter */}
+                    <FormControl size="small">
+                      <InputLabel>Time Range</InputLabel>
+                      <MuiSelect
+                        value={messageFilters.time_range}
+                        onChange={(e) => handleFilterChange('time_range', e.target.value)}
+                        label="Time Range"
+                        className="min-w-[120px]"
+                      >
+                        <MenuItem value="1h">Last Hour</MenuItem>
+                        <MenuItem value="24h">Last 24 Hours</MenuItem>
+                        <MenuItem value="7d">Last 7 Days</MenuItem>
+                        <MenuItem value="30d">Last 30 Days</MenuItem>
+                        <MenuItem value="all">All Time</MenuItem>
+                      </MuiSelect>
+                    </FormControl>
+
+                    {/* User Filter */}
+                    <FormControl size="small">
+                      <InputLabel>User</InputLabel>
+                      <MuiSelect
+                        value={messageFilters.user_id}
+                        onChange={(e) => handleFilterChange('user_id', e.target.value)}
+                        label="User"
+                        className="min-w-[150px]"
+                      >
+                        <MenuItem value="">All Users</MenuItem>
+                        {filterUsers.map(user => (
+                          <MenuItem key={user.username} value={user.username}>
+                            {user.display_name}
+                          </MenuItem>
+                        ))}
+                      </MuiSelect>
+                    </FormControl>
+
+                    {/* Message Type Filter */}
+                    <FormControl size="small">
+                      <InputLabel>Type</InputLabel>
+                      <MuiSelect
+                        value={messageFilters.message_type}
+                        onChange={(e) => handleFilterChange('message_type', e.target.value)}
+                        label="Type"
+                        className="min-w-[100px]"
+                      >
+                        <MenuItem value="">All Types</MenuItem>
+                        <MenuItem value="text">Text</MenuItem>
+                        <MenuItem value="file">File</MenuItem>
+                        <MenuItem value="system">System</MenuItem>
+                      </MuiSelect>
+                    </FormControl>
+                  </div>
+
+                  {/* Messages List */}
+                  <div className="space-y-4">
+                    {monitorLoading && monitoredMessages.length === 0 ? (
+                      <div className="text-center py-8">
+                        <RefreshCw className="h-8 w-8 mx-auto mb-4 animate-spin" />
+                        <p className="text-muted-foreground">Loading messages...</p>
+                      </div>
+                    ) : monitoredMessages.length === 0 ? (
+                      <div className="text-center py-8">
+                        <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p className="text-muted-foreground">No messages found</p>
+                        <p className="text-sm text-muted-foreground">Try adjusting your filters</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-sm text-muted-foreground mb-4">
+                          Showing {monitoredMessages.length} of {monitorPagination.total} messages
+                        </div>
+                        
+                        {monitoredMessages.map((message) => (
+                          <div key={message.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                  {message.channel_type === 'direct_message' ? (
+                                    <Users className="h-4 w-4 text-blue-500" />
+                                  ) : message.channel_type === 'group_chat' ? (
+                                    <MessageSquare className="h-4 w-4 text-green-500" />
+                                  ) : (
+                                    <Hash className="h-4 w-4 text-gray-500" />
+                                  )}
+                                  <span className="font-medium text-sm">
+                                    {getChannelDisplayName(message)}
+                                  </span>
+                                </div>
+                                <Badge variant="secondary" className="text-xs">
+                                  {message.message_type}
+                                </Badge>
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {formatMessageTime(message.created_at)}
+                              </span>
+                            </div>
+                            
+                            <div className="mb-2">
+                              <span className="font-medium text-sm">
+                                {message.user_display_name || message.user_id}:
+                              </span>
+                              <span className="ml-2 text-sm">
+                                {message.file_attachment ? (
+                                  <div className="flex items-center gap-2 text-blue-600">
+                                    <Upload className="h-4 w-4" />
+                                    File attachment: {message.message_text}
+                                  </div>
+                                ) : (
+                                  message.message_text
+                                )}
+                              </span>
+                            </div>
+
+                            {message.edited_at && (
+                              <div className="text-xs text-muted-foreground">
+                                Edited: {formatMessageTime(message.edited_at)}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        {/* Load More Button */}
+                        {monitorPagination.hasMore && (
+                          <div className="text-center pt-4">
+                            <Button
+                              variant="outline"
+                              onClick={() => loadMonitoredMessages(true)}
+                              disabled={monitorLoading}
+                              className="flex items-center gap-2"
+                            >
+                              {monitorLoading ? (
+                                <>
+                                  <RefreshCw className="h-4 w-4 animate-spin" />
+                                  Loading...
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="h-4 w-4" />
+                                  Load More
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
       </div>
