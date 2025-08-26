@@ -47,7 +47,8 @@ import {
   UserMinus,
   Hash,
   Check,
-  Upload
+  Upload,
+  Minimize2
 } from 'lucide-react';
 import {
   Select as MuiSelect,
