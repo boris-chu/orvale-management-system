@@ -26,6 +26,9 @@ import ChatSidebar from './ChatSidebar';
 import MessageArea from './MessageArea';
 import { useIsMobile, useIsTablet, useIsDesktop } from '@/hooks/useMediaQuery';
 import { useThemeCSS } from '@/hooks/useThemeSystem';
+import { useCallManager } from '@/hooks/useCallManager';
+import WebRTCCall from './WebRTCCall';
+import IncomingCallNotification from './IncomingCallNotification';
 
 interface User {
   username: string;
@@ -66,6 +69,13 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const isDesktop = useIsDesktop();
+
+  // Call management
+  const callManager = currentUser ? useCallManager({
+    currentUser,
+    enableNotifications: true,
+    enableRingtones: true
+  }) : null;
 
   // Mobile-first: sidebar is overlay on mobile, fixed on desktop
   const sidebarMode = isMobile ? 'overlay' : isTablet ? 'slide' : 'fixed';
@@ -162,13 +172,22 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
         {/* Action buttons */}
         <div className="flex items-center gap-1 flex-shrink-0">
           {/* Call buttons for DMs */}
-          {selectedChat.type === 'dm' && (
+          {selectedChat.type === 'dm' && currentUser && callManager && (
             <>
               <Button
                 variant="ghost"
                 size="sm"
                 className="p-2 touch-manipulation"
                 title="Voice call"
+                onClick={() => {
+                  const targetUser = {
+                    username: selectedChat.name,
+                    display_name: selectedChat.displayName,
+                    profile_picture: selectedChat.participants?.[0]?.profile_picture
+                  };
+                  callManager.startCall(targetUser, 'audio');
+                }}
+                disabled={!callManager.canMakeCalls('audio')}
               >
                 <Phone className="w-4 h-4" />
               </Button>
@@ -177,6 +196,15 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
                 size="sm"
                 className="p-2 touch-manipulation"
                 title="Video call"
+                onClick={() => {
+                  const targetUser = {
+                    username: selectedChat.name,
+                    display_name: selectedChat.displayName,
+                    profile_picture: selectedChat.participants?.[0]?.profile_picture
+                  };
+                  callManager.startCall(targetUser, 'video');
+                }}
+                disabled={!callManager.canMakeCalls('video')}
               >
                 <Video className="w-4 h-4" />
               </Button>
@@ -437,6 +465,54 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
           <EmptyState />
         )}
       </div>
+
+      {/* WebRTC Call Components */}
+      {callManager && (
+        <>
+          {/* Incoming call notification */}
+          <IncomingCallNotification
+            open={!!callManager.incomingCall}
+            caller={callManager.incomingCall?.caller || { username: '', display_name: '' }}
+            callType={callManager.incomingCall?.callType || 'audio'}
+            onAccept={() => {
+              if (callManager.incomingCall) {
+                callManager.acceptCall(callManager.incomingCall.callId);
+              }
+            }}
+            onReject={() => {
+              if (callManager.incomingCall) {
+                callManager.rejectCall(callManager.incomingCall.callId);
+              }
+            }}
+            onTimeout={() => {
+              if (callManager.incomingCall) {
+                callManager.rejectCall(callManager.incomingCall.callId, 'timeout');
+              }
+            }}
+          />
+
+          {/* Active call interface */}
+          {callManager.currentCall && currentUser && (
+            <WebRTCCall
+              open={callManager.isCallUIOpen}
+              onClose={callManager.closeCallUI}
+              callType={callManager.currentCall.type}
+              targetUser={
+                callManager.currentCall.isIncoming
+                  ? callManager.currentCall.participants.caller
+                  : callManager.currentCall.participants.receiver
+              }
+              currentUser={currentUser}
+              isIncoming={callManager.currentCall.isIncoming}
+              callId={callManager.currentCall.callId}
+              onCallEnd={(duration) => {
+                console.log(`Call ended after ${duration} seconds`);
+                callManager.endCall(callManager.currentCall?.callId || '');
+              }}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }
