@@ -481,10 +481,29 @@ const PublicPortalAdmin = () => {
           />
         }
       >
-        {settings.enabled 
-          ? 'Public live chat is currently ENABLED and visible to website visitors'
-          : 'Public live chat is currently DISABLED. Enable to make it available to visitors'
-        }
+        <Typography component="div">
+          <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+            {settings.enabled 
+              ? '✅ Public live chat is currently ENABLED and visible to website visitors'
+              : '❌ Public live chat is currently DISABLED and hidden from website visitors'
+            }
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            {settings.enabled 
+              ? 'The chat widget will appear on public pages according to business hours and widget settings configured below.' 
+              : 'Toggle the switch above to enable the public chat widget. No chat functionality will be available to visitors until enabled.'
+            }
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+            Demo: <a 
+              href="/public-chat-demo" 
+              target="_blank" 
+              style={{ color: 'inherit', textDecoration: 'underline' }}
+            >
+              View widget behavior on demo page →
+            </a>
+          </Typography>
+        </Typography>
       </Alert>
 
       {/* Tabs */}
