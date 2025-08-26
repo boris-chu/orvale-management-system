@@ -174,7 +174,7 @@ export const PRESET_THEMES: PresetThemes = {
         text_secondary: '#969696',
         background: '#1e1e1e',
         surface: '#2d2d30',
-        border: '#3e3e42'
+        border: '#3a3a3a'
       },
       border_radius: '6px',
       font_family: 'Monaco, "Cascadia Code", "SF Mono", Consolas, monospace',
@@ -192,7 +192,7 @@ export const PRESET_THEMES: PresetThemes = {
         text_secondary: '#969696',
         background: '#1e1e1e',
         surface: '#2d2d30',
-        border: '#3e3e42'
+        border: '#3a3a3a'
       },
       border_radius: '6px',
       font_family: 'Monaco, "Cascadia Code", "SF Mono", Consolas, monospace',
