@@ -317,7 +317,7 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
                 duration: 0.3
               }}
               className={cn(
-                "border-r transition-colors duration-200",
+                "transition-colors duration-200",
                 // Mobile: fixed overlay
                 isMobile && "fixed inset-y-0 left-0 z-50 w-80 shadow-xl",
                 // Tablet: slide panel
@@ -326,8 +326,7 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
                 isDesktop && "w-80 flex-shrink-0"
               )}
               style={{
-                backgroundColor: `var(--chat-sidebar, #ffffff)`,
-                borderColor: `var(--chat-border, #3a3a3a)`
+                backgroundColor: `var(--chat-sidebar, #ffffff)`
               }}
             >
               {/* Mobile sidebar header */}
