@@ -79,6 +79,7 @@ interface ChatWidgetProps {
   theme?: 'light' | 'dark';
   shape?: 'round' | 'square' | 'rounded-square';
   primaryColor?: string;
+  defaultState?: 'open' | 'minimized';
   onExpandToFullChat?: () => void;
 }
 
@@ -88,10 +89,11 @@ export default function ChatWidget({
   theme = 'light',
   shape = 'rounded-square',
   primaryColor = '#1976d2',
+  defaultState = 'minimized',
   onExpandToFullChat
 }: ChatWidgetProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(defaultState === 'minimized');
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedChat, setSelectedChat] = useState<ChatConversation | null>(null);
   const [quickMessage, setQuickMessage] = useState('');

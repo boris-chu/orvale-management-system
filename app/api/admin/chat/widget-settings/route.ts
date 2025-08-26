@@ -17,6 +17,7 @@ export async function GET(): Promise<NextResponse> {
       theme: 'light', 
       shape: 'round', // Match the updated default
       primaryColor: '#1976d2',
+      defaultState: 'minimized', // Default widget state
       showOnPages: ['*'],
       hideOnPages: ['/chat', '/chat/*', '/public-portal', '/public-portal/*', '/public-chat-demo']
     };

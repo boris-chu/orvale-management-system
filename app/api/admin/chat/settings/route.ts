@@ -157,6 +157,7 @@ export async function GET(request: NextRequest) {
       widget_secondary_color: '#6c757d',
       widget_theme: 'light',
       widget_button_image: '',
+      widget_default_state: 'minimized', // Default state when loading
       
       // System Settings
       chat_system_enabled: true,
@@ -249,6 +250,9 @@ export async function PUT(request: NextRequest) {
     }
     if (settings.widget_theme !== undefined) {
       settingsToUpdate.push({ key: 'widget_theme', value: settings.widget_theme, type: 'string' });
+    }
+    if (settings.widget_default_state !== undefined) {
+      settingsToUpdate.push({ key: 'widget_default_state', value: settings.widget_default_state, type: 'string' });
     }
 
     // System settings

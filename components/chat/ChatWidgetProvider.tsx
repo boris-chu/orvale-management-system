@@ -24,6 +24,7 @@ interface ChatWidgetSettings {
   theme: 'light' | 'dark';
   shape: 'round' | 'square' | 'rounded-square';
   primaryColor: string;
+  defaultState: 'open' | 'minimized';
   showOnPages: string[];
   hideOnPages: string[];
 }
@@ -61,6 +62,7 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
     theme: 'light',
     shape: 'rounded-square',
     primaryColor: '#1976d2',
+    defaultState: 'minimized',
     showOnPages: ['*'], // Show on all pages
     hideOnPages: ['/chat', '/chat/*', '/public-portal', '/public-portal/*', '/public-chat-demo'] // Hide on chat pages and public portal
   });
@@ -79,6 +81,7 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
         theme: updatedSettings.widget_theme || 'light',
         shape: updatedSettings.widget_shape || 'rounded-square',
         primaryColor: updatedSettings.widget_primary_color || '#1976d2',
+        defaultState: updatedSettings.widget_default_state || 'minimized',
       }));
     };
 
@@ -144,6 +147,7 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
           theme: widgetSettings.theme || 'light',
           shape: widgetSettings.shape || 'rounded-square',
           primaryColor: widgetSettings.primaryColor || '#1976d2',
+          defaultState: widgetSettings.defaultState || 'minimized',
           showOnPages: ['*'], // Show on all pages
           hideOnPages: ['/chat', '/chat/*', '/public-portal', '/public-portal/*', '/public-chat-demo'] // Hide on chat pages and public portal
         }));
@@ -232,6 +236,7 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
           theme={settings.theme}
           shape={settings.shape}
           primaryColor={settings.primaryColor}
+          defaultState={settings.defaultState}
           onExpandToFullChat={handleExpandToFullChat}
         />
       )}

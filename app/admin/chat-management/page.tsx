@@ -71,6 +71,7 @@ interface ChatSettings {
   widget_secondary_color: string;
   widget_theme: 'light' | 'dark' | 'auto';
   widget_button_image: string;
+  widget_default_state: 'open' | 'minimized';
   
   // System Settings
   chat_system_enabled: boolean;
@@ -936,6 +937,37 @@ function ThemeManagementTab({ settings, updateSetting, currentUser }: ThemeManag
                   <div className="text-xs text-muted-foreground">
                     💡 <strong>Tip:</strong> Use a square image (100x100px or larger) for best results. 
                     Upload a file (max 2MB) or enter an image URL. This replaces the default chat bubble icon.
+                  </div>
+                </div>
+
+                {/* Widget Default State */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Widget Default State</Label>
+                  <p className="text-xs text-muted-foreground mb-3">Choose whether the widget loads expanded or minimized when users visit pages</p>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Default State</InputLabel>
+                    <MuiSelect
+                      value={settings.widget_default_state || 'minimized'}
+                      onChange={(e) => updateSetting('widget_default_state', e.target.value)}
+                      label="Default State"
+                    >
+                      <MenuItem value="minimized">
+                        <div className="flex items-center gap-2">
+                          <Minimize2 className="h-4 w-4" />
+                          Minimized - Show as floating button
+                        </div>
+                      </MenuItem>
+                      <MenuItem value="open">
+                        <div className="flex items-center gap-2">
+                          <MessageCircle className="h-4 w-4" />
+                          Open - Show expanded chat widget
+                        </div>
+                      </MenuItem>
+                    </MuiSelect>
+                  </FormControl>
+                  <div className="text-xs text-muted-foreground">
+                    💡 <strong>Tip:</strong> "Minimized" is less intrusive and recommended for most websites. 
+                    "Open" shows the full chat widget immediately but may distract users.
                   </div>
                 </div>
               </CardContent>
