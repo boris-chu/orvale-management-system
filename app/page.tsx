@@ -125,7 +125,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
@@ -257,11 +257,10 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t mt-20">
+      <footer className="bg-white border-t mt-auto">
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="text-center text-gray-600">
             <p>&copy; 2025 Orvale Management System. All rights reserved.</p>
-            <p className="mt-2">Created by Boris Chu - ITSD Region 7</p>
           </div>
         </div>
       </footer>

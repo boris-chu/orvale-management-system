@@ -195,6 +195,7 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
       const response = await fetch('/api/public-portal/widget-status');
       if (response.ok) {
         const data = await response.json();
+        console.log('Widget settings loaded:', data);
         setSettings(data);
         setIsOnline(data.status === 'online');
         
@@ -423,7 +424,8 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
   }
 
   // Don't show if disabled or widget visibility is false
-  if (!settings.showWidget || !showWidget) {
+  if (!settings.enabled || !showWidget) {
+    console.log('Widget hidden - enabled:', settings.enabled, 'showWidget:', showWidget);
     return null;
   }
 
