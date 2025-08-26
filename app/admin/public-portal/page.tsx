@@ -21,6 +21,11 @@ import {
 } from '@mui/icons-material';
 import { ColorPicker } from '@/components/shared/ColorPicker';
 import OnlinePresenceTracker from '@/components/shared/OnlinePresenceTracker';
+import { Button as ShadcnButton } from '@/components/ui/button';
+import { UserAvatar } from '@/components/UserAvatar';
+import { ProfileEditModal } from '@/components/ProfileEditModal';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { User, LogOut } from 'lucide-react';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -159,10 +164,26 @@ const PublicPortalAdmin = () => {
   const [customFieldDialogOpen, setCustomFieldDialogOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   useEffect(() => {
     checkAuthentication();
   }, []);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (showUserMenu) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showUserMenu]);
 
   // Check authentication and permissions
   const checkAuthentication = async () => {
@@ -325,51 +346,117 @@ const PublicPortalAdmin = () => {
   }
 
   return (
-    <Box sx={{ width: '100%' }}>
-      {/* Header with Back Button and User Profile */}
-      <AppBar position="static" color="default" elevation={1} sx={{ mb: 4 }}>
-        <Toolbar>
-          <IconButton
-            edge="start"
-            onClick={() => window.history.back()}
-            sx={{ mr: 2 }}
-          >
-            <ArrowBack />
-          </IconButton>
-          <SupportAgent sx={{ mr: 2, color: 'primary.main' }} />
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
-              Public Portal Live Chat Settings
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Configure the public chat widget, business hours, and customer support features
-            </Typography>
-          </Box>
-          {currentUser && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <OnlinePresenceTracker />
-              <Box sx={{ textAlign: 'right' }}>
-                <Typography variant="body2" fontWeight="medium">
-                  {currentUser.display_name || currentUser.username}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {currentUser.role}
-                </Typography>
-              </Box>
-              <Avatar
-                sx={{ 
-                  width: 40, 
-                  height: 40,
-                  bgcolor: 'primary.main',
-                  cursor: 'pointer'
-                }}
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center space-x-4">
+              <ShadcnButton 
+                variant="ghost" 
+                onClick={() => window.location.href = '/admin'}
+                className="flex items-center space-x-2"
               >
-                {(currentUser.display_name || currentUser.username).substring(0, 2).toUpperCase()}
-              </Avatar>
-            </Box>
-          )}
-        </Toolbar>
-      </AppBar>
+                <ArrowBack className="h-4 w-4" />
+                <span>Back to Dashboard</span>
+              </ShadcnButton>
+              
+              <div className="h-6 border-l border-gray-300"></div>
+              
+              <div className="flex items-center space-x-3">
+                <SupportAgent className="h-6 w-6 text-blue-600" />
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Public Portal Live Chat Settings</h1>
+                  <p className="text-sm text-gray-500">Configure the public chat widget, business hours, and customer support features</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              {/* User Profile Menu */}
+              {currentUser && (
+                <TooltipProvider>
+                  <div className="relative">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setShowUserMenu(!showUserMenu)}
+                          className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <UserAvatar 
+                            user={currentUser}
+                            size="sm"
+                          />
+                          <div className="text-left min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{currentUser?.display_name || currentUser?.username}</p>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs text-gray-600 truncate">{currentUser?.role}</span>
+                              <OnlinePresenceTracker username={currentUser.username} />
+                            </div>
+                          </div>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>View profile and settings</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    {/* User Menu Dropdown */}
+                    {showUserMenu && (
+                      <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border z-50">
+                        <div className="p-4 border-b">
+                          <div className="flex items-center space-x-3">
+                            <UserAvatar 
+                              user={currentUser}
+                              size="lg"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-900 truncate">{currentUser?.display_name}</p>
+                              <p className="text-xs text-gray-600 truncate">{currentUser?.email}</p>
+                              <div className="mt-1">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {currentUser?.role}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Menu Items */}
+                        <div className="py-1">
+                          <button
+                            onClick={() => {
+                              setShowUserMenu(false);
+                              setShowProfileModal(true);
+                            }}
+                            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            <User className="mr-3 h-4 w-4" />
+                            Edit Profile
+                          </button>
+                          <button
+                            onClick={() => {
+                              localStorage.removeItem('authToken');
+                              localStorage.removeItem('currentUser');
+                              window.location.href = '/';
+                            }}
+                            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            <LogOut className="mr-3 h-4 w-4" />
+                            Sign out
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </TooltipProvider>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Box sx={{ width: '100%', px: 4, py: 3, bgcolor: 'gray.50', minHeight: 'calc(100vh - 120px)' }}>
 
       {/* Master Enable/Disable */}
       <Alert 
@@ -1578,7 +1665,19 @@ const PublicPortalAdmin = () => {
           <Button onClick={() => setColorPickerOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
-    </Box>
+
+      {/* Profile Edit Modal */}
+      <ProfileEditModal
+        open={showProfileModal}
+        onOpenChange={setShowProfileModal}
+        user={currentUser}
+        onProfileUpdate={(updatedUser) => {
+          setCurrentUser(updatedUser);
+          localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        }}
+      />
+      </Box>
+    </div>
   );
 };
 
