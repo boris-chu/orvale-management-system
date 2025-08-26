@@ -1065,18 +1065,19 @@ export default function ChatManagementPage() {
     message_grouping_enabled: true,
     timestamp_format: 'relative',
   });
+  // Initialize with empty state - real data will be loaded from API
   const [stats, setStats] = useState<SystemStats>({
-    socketio_status: 'connected',
+    socketio_status: 'disconnected',
     socketio_port: 3001,
-    socketio_uptime: '2h 15m',
-    users_online: 12,
-    users_away: 3,
-    users_busy: 2,
-    users_offline: 8,
-    active_users: 15,
-    total_channels: 8,
-    messages_per_hour: 245,
-    storage_used_mb: 125,
+    socketio_uptime: '0m',
+    users_online: 0,
+    users_away: 0,
+    users_busy: 0,
+    users_offline: 0,
+    active_users: 0,
+    total_channels: 0,
+    messages_per_hour: 0,
+    storage_used_mb: 0,
   });
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -1206,10 +1207,16 @@ export default function ChatManagementPage() {
 
   const loadSystemStats = async () => {
     try {
-      const response = await fetch('/api/admin/chat/stats');
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/admin/chat/stats', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (response.ok) {
         const data = await response.json();
+        console.log('🔢 Real metrics loaded:', data);
         setStats(data);
+      } else {
+        console.error('Failed to load system stats:', response.status);
       }
     } catch (error) {
       console.error('Failed to load system stats:', error);
