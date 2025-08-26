@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { useThemeSystem, PRESET_THEMES } from '@/hooks/useThemeSystem';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 
 interface UserThemeModalProps {
   open: boolean;
@@ -80,9 +81,9 @@ const THEME_PREVIEWS: ThemePreview[] = [
   },
   {
     name: 'darcula',
-    displayName: 'Darcula',
+    displayName: 'Dark Theme',
     icon: <Code className="w-5 h-5" />,
-    description: 'Dark theme for developers',
+    description: 'Dark theme for comfortable viewing',
     colors: {
       primary: '#569cd6',
       sidebar: '#252526',
@@ -131,6 +132,60 @@ export default function UserThemeModal({ open, onClose }: UserThemeModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Create dynamic theme based on selected theme
+  const createModalTheme = () => {
+    const currentTheme = selectedInternalTheme === 'inherit' 
+      ? (adminSettings?.internal_chat_theme || 'light')
+      : selectedInternalTheme;
+    
+    const themePreview = getThemePreview(currentTheme);
+    
+    return createTheme({
+      palette: {
+        mode: currentTheme === 'darcula' ? 'dark' : 'light',
+        primary: {
+          main: themePreview.colors.primary
+        },
+        background: {
+          default: currentTheme === 'darcula' ? '#2d2d30' : '#ffffff',
+          paper: currentTheme === 'darcula' ? '#252526' : '#ffffff'
+        },
+        text: {
+          primary: currentTheme === 'darcula' ? '#ffffff' : '#000000',
+          secondary: currentTheme === 'darcula' ? '#cccccc' : '#666666'
+        }
+      },
+      components: {
+        MuiDialog: {
+          styleOverrides: {
+            paper: {
+              backgroundColor: currentTheme === 'darcula' ? '#252526' : '#ffffff',
+              color: currentTheme === 'darcula' ? '#ffffff' : '#000000'
+            }
+          }
+        },
+        MuiDialogTitle: {
+          styleOverrides: {
+            root: {
+              backgroundColor: currentTheme === 'darcula' ? '#1e1e1e' : '#f5f5f5',
+              borderBottom: `1px solid ${currentTheme === 'darcula' ? '#3e3e42' : '#e0e0e0'}`
+            }
+          }
+        },
+        MuiCard: {
+          styleOverrides: {
+            root: {
+              backgroundColor: currentTheme === 'darcula' ? '#2d2d30' : '#ffffff',
+              '&:hover': {
+                backgroundColor: currentTheme === 'darcula' ? '#37373d' : '#f5f5f5'
+              }
+            }
+          }
+        }
+      }
+    });
+  };
 
   // Initialize form state from user preferences
   useEffect(() => {
@@ -211,19 +266,22 @@ export default function UserThemeModal({ open, onClose }: UserThemeModalProps) {
 
   if (userLoading) {
     return (
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogContent sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <CircularProgress />
-        </DialogContent>
-      </Dialog>
+      <ThemeProvider theme={createModalTheme()}>
+        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+          <DialogContent sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress />
+          </DialogContent>
+        </Dialog>
+      </ThemeProvider>
     );
   }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <ThemeProvider theme={createModalTheme()}>
+      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Box display="flex" alignItems="center" gap={2}>
-          <Palette className="w-6 h-6 text-blue-600" />
+          <Palette className={`w-6 h-6 ${selectedInternalTheme === 'darcula' ? 'text-blue-400' : 'text-blue-600'}`} />
           Chat Theme Preferences
         </Box>
       </DialogTitle>
@@ -443,5 +501,6 @@ export default function UserThemeModal({ open, onClose }: UserThemeModalProps) {
         )}
       </DialogActions>
     </Dialog>
+    </ThemeProvider>
   );
 }
