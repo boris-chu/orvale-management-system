@@ -1037,6 +1037,54 @@ Location: "Bureau of Human Resources" (Physical building)
 
 Remember: Orvale Management System should be minimal, maintainable, and focused on delivering core functionality efficiently while providing an engaging user experience through dashboards, achievements, and seamless communication.
 
+## 📝 Comprehensive Documentation Guidelines
+
+**When to Create Comprehensive Markdown Documentation:**
+
+1. **System Implementation Status** - When conducting thorough codebase analysis
+2. **Architecture Overviews** - When documenting system design and component relationships
+3. **Feature Implementation Reports** - When assessing completion status of major features
+4. **Migration Guides** - When documenting breaking changes or upgrade procedures
+5. **Security Assessments** - When documenting RBAC, permissions, or security implementations
+6. **Performance Analysis** - When documenting optimization findings and recommendations
+7. **Database Schema Documentation** - When documenting table relationships and data flow
+8. **API Documentation** - When documenting endpoint specifications and usage patterns
+
+### **Documentation Creation Pattern:**
+
+```markdown
+# [System/Feature Name] - [Document Type]
+
+*Generated on [Date]*
+
+## 📊 Executive Summary
+[High-level overview with key metrics and status]
+
+## 🏗️ [Architecture/Implementation] Overview
+[Detailed technical information]
+
+## 🎯 [Status/Results] Analysis
+[Findings, completions, pending items]
+
+## 📈 Key [Achievements/Findings]
+[Major accomplishments or discoveries]
+
+## 📝 Conclusion
+[Summary and next steps]
+```
+
+### **File Naming Convention:**
+- `[SYSTEM]_[TYPE]_[PURPOSE].md` (all caps for major documents)
+- Examples: `ORVALE_SYSTEM_IMPLEMENTATION_STATUS.md`, `CHAT_SYSTEM_ARCHITECTURE.md`, `RBAC_SECURITY_ASSESSMENT.md`
+
+### **When NOT to Create Documentation:**
+- Single feature implementations
+- Minor bug fixes
+- Routine maintenance tasks
+- Simple configuration changes
+
+**Always create comprehensive documentation when the analysis involves multiple systems, provides strategic insights, or documents significant milestones in development.**
+
 ## 📊 Mock Data Information Overlays - IMPORTANT UI PATTERN
 
 **When implementing features that display mock/simulated data instead of real data, ALWAYS include clear information overlays to prevent user confusion.**
