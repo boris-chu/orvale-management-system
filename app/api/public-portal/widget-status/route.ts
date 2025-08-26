@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
 
         // Return widget configuration with status
         resolve(NextResponse.json({
-          enabled: chatStatus === 'online',
+          enabled: true, // Widget is enabled by admin, always show it
           showWidget: true, // Always show when admin enables it
           status: chatStatus,
           message: statusMessage,

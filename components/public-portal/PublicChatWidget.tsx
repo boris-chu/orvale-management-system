@@ -173,19 +173,23 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
   // Check page visibility rules
   const checkPageVisibility = () => {
     const currentPath = window.location.pathname;
+    console.log('PublicChatWidget - Checking page visibility for path:', currentPath, 'enabledPages:', enabledPages, 'disabledPages:', disabledPages);
     
     // Check if current page is in disabled pages
     if (disabledPages.length > 0 && disabledPages.includes(currentPath)) {
+      console.log('PublicChatWidget - Page is in disabled pages list, hiding widget');
       setShowWidget(false);
       return;
     }
     
     // Check if current page is in enabled pages (if specified)
     if (enabledPages.length > 0 && !enabledPages.includes(currentPath)) {
+      console.log('PublicChatWidget - Page is not in enabled pages list, hiding widget');
       setShowWidget(false);
       return;
     }
     
+    console.log('PublicChatWidget - Page visibility check passed, showing widget');
     setShowWidget(true);
   };
 
