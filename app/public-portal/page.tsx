@@ -403,6 +403,144 @@ export default function PublicPortal() {
     loadTicketData();
   }, []);
 
+  // localStorage utility functions
+  const STORAGE_KEY = 'orvale_public_portal_form_data';
+  const STORAGE_EXPIRY_DAYS = 30;
+
+  const saveFormDataToStorage = (data: FormData) => {
+    try {
+      // Fields to save (excluding issueTitle and issueDescription)
+      const fieldsToSave = {
+        emailRecipient: data.emailRecipient,
+        userName: data.userName,
+        employeeNumber: data.employeeNumber,
+        phoneNumber: data.phoneNumber,
+        location: data.location,
+        cubicleRoom: data.cubicleRoom,
+        section: data.section,
+        teleworking: data.teleworking,
+        requestCreatorDisplayName: data.requestCreatorDisplayName
+      };
+
+      const storageData = {
+        data: fieldsToSave,
+        timestamp: Date.now(),
+        expiryDays: STORAGE_EXPIRY_DAYS
+      };
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData));
+      console.log('✅ Form data saved to localStorage');
+    } catch (error) {
+      console.error('❌ Failed to save form data to localStorage:', error);
+    }
+  };
+
+  const loadFormDataFromStorage = (): Partial<FormData> | null => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) return null;
+
+      const storageData = JSON.parse(stored);
+      const now = Date.now();
+      const daysSinceStorage = (now - storageData.timestamp) / (1000 * 60 * 60 * 24);
+
+      // Check if data has expired
+      if (daysSinceStorage > STORAGE_EXPIRY_DAYS) {
+        localStorage.removeItem(STORAGE_KEY);
+        console.log('🗑️ Expired form data removed from localStorage');
+        return null;
+      }
+
+      // Refresh timestamp to extend expiry by 30 days from now
+      const refreshedData = {
+        ...storageData,
+        timestamp: now
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(refreshedData));
+      console.log(`✅ Form data loaded from localStorage (${Math.floor(daysSinceStorage)} days old, expiry refreshed)`);
+
+      return storageData.data;
+    } catch (error) {
+      console.error('❌ Failed to load form data from localStorage:', error);
+      return null;
+    }
+  };
+
+  // Load saved form data on component mount (after data is loaded)
+  useEffect(() => {
+    if (!dataLoading) {
+      const savedData = loadFormDataFromStorage();
+      if (savedData) {
+        setFormData(prev => ({
+          ...prev,
+          ...savedData,
+          // Keep issueTitle and issueDescription empty
+          issueTitle: '',
+          issueDescription: ''
+        }));
+        
+        // Show notification that data was loaded
+        showNotification('Your previous form information has been restored', 'info');
+      }
+    }
+  }, [dataLoading]); // Run after organizational data is loaded
+
+  // Save form data whenever relevant fields change (debounced)
+  useEffect(() => {
+    if (!dataLoading && formData.userName) { // Only save if form has meaningful data
+      const timeoutId = setTimeout(() => {
+        // Only save if we have some user data (not just empty form)
+        const hasUserData = formData.userName || formData.employeeNumber || formData.phoneNumber;
+        if (hasUserData) {
+          saveFormDataToStorage(formData);
+        }
+      }, 1000); // Debounce for 1 second
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [
+    formData.emailRecipient,
+    formData.userName,
+    formData.employeeNumber,
+    formData.phoneNumber,
+    formData.location,
+    formData.cubicleRoom,
+    formData.section,
+    formData.teleworking,
+    formData.requestCreatorDisplayName,
+    dataLoading
+  ]);
+
+  const clearSavedData = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      
+      // Reset form to defaults (keeping current issue title and description)
+      const currentIssueTitle = formData.issueTitle;
+      const currentIssueDescription = formData.issueDescription;
+      
+      setFormData({
+        emailRecipient: '',
+        userName: '',
+        employeeNumber: '',
+        phoneNumber: '',
+        location: '',
+        cubicleRoom: '',
+        section: '',
+        teleworking: 'No',
+        requestCreatorDisplayName: '',
+        issueTitle: currentIssueTitle, // Keep current values
+        issueDescription: currentIssueDescription // Keep current values
+      });
+      
+      showNotification('Saved form data has been cleared', 'success');
+      console.log('🗑️ Saved form data cleared by user');
+    } catch (error) {
+      console.error('❌ Failed to clear saved form data:', error);
+      showNotification('Failed to clear saved data', 'error');
+    }
+  };
+
   const showNotification = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 5000);
@@ -535,6 +673,9 @@ export default function PublicPortal() {
       const result = await response.json();
       
       if (result.success) {
+        // Save form data to localStorage for future use (excluding title and description)
+        saveFormDataToStorage(formData);
+        
         // Generate plain text version and open email directly
         const plainTextBody = generatePlainTextEmail();
         const mailtoLink = `mailto:${selectedTeam?.email || 'CrossroadsITSupport@dpss.lacounty.gov'}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(plainTextBody)}`;
@@ -1034,12 +1175,12 @@ Submitted via Orvale Management System`;
               </Card>
 
               {/* Submit Button */}
-              <div className="flex justify-center pt-4">
+              <div className="flex justify-center items-center gap-4 pt-4">
                 <Button 
                   type="submit" 
                   disabled={isSubmitting}
                   size="lg"
-                  className="w-full max-w-md"
+                  className="flex-1 max-w-md"
                 >
                   {isSubmitting ? (
                     <>
@@ -1052,6 +1193,19 @@ Submitted via Orvale Management System`;
                       Submit Support Request
                     </>
                   )}
+                </Button>
+                
+                {/* Clear Saved Data Button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={clearSavedData}
+                  disabled={isSubmitting}
+                  className="shrink-0"
+                  title="Clear your saved form information"
+                >
+                  Clear Saved Data
                 </Button>
               </div>
             </form>
