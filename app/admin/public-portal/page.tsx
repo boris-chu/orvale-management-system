@@ -20,7 +20,7 @@ import {
   ArrowBack, SupportAgent, People, ChatBubbleOutline
 } from '@mui/icons-material';
 import { ColorPicker } from '@/components/shared/ColorPicker';
-import { OnlinePresenceTracker } from '@/components/shared/OnlinePresenceTracker';
+import OnlinePresenceTracker from '@/components/shared/OnlinePresenceTracker';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -1517,7 +1517,7 @@ const PublicPortalAdmin = () => {
                         <Grid item xs={12} md={6} key={mode}>
                           <TextField
                             label={`${mode.charAt(0).toUpperCase() + mode.slice(1).replace('_', ' ')} Description`}
-                            value={description as string}
+                            value={(description as string) || ''}
                             onChange={(e) => updateSetting('work_mode_descriptions', {
                               ...(settings.work_mode_descriptions || {}),
                               [mode]: e.target.value
