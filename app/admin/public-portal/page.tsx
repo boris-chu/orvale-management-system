@@ -627,7 +627,7 @@ const PublicPortalAdmin = () => {
                   fullWidth
                   size="small"
                   label="Widget Text"
-                  value={settings.widget_text}
+                  value={settings.widget_text || ''}
                   onChange={(e) => updateSetting('widget_text', e.target.value)}
                   placeholder="Chat with us"
                 />
@@ -636,7 +636,7 @@ const PublicPortalAdmin = () => {
                   fullWidth
                   size="small"
                   label="Widget Image URL (optional)"
-                  value={settings.widget_image}
+                  value={settings.widget_image || ''}
                   onChange={(e) => updateSetting('widget_image', e.target.value)}
                   placeholder="https://example.com/logo.png"
                 />
@@ -886,7 +886,7 @@ const PublicPortalAdmin = () => {
                   multiline
                   rows={2}
                   label="Welcome Message"
-                  value={settings.welcome_message}
+                  value={settings.welcome_message || ''}
                   onChange={(e) => updateSetting('welcome_message', e.target.value)}
                   placeholder="Hi! How can we help you today?"
                 />
@@ -896,7 +896,7 @@ const PublicPortalAdmin = () => {
                   multiline
                   rows={2}
                   label="Offline Message"
-                  value={settings.offline_message}
+                  value={settings.offline_message || ''}
                   onChange={(e) => updateSetting('offline_message', e.target.value)}
                   placeholder="We are currently offline. Please submit a ticket."
                 />
@@ -906,7 +906,7 @@ const PublicPortalAdmin = () => {
                   multiline
                   rows={2}
                   label="Business Hours Message"
-                  value={settings.business_hours_message}
+                  value={settings.business_hours_message || ''}
                   onChange={(e) => updateSetting('business_hours_message', e.target.value)}
                   placeholder="Live chat available Monday-Friday, 7:00 AM - 6:00 PM EST."
                 />
@@ -916,7 +916,7 @@ const PublicPortalAdmin = () => {
                   multiline
                   rows={2}
                   label="Queue Message"
-                  value={settings.queue_message}
+                  value={settings.queue_message || ''}
                   onChange={(e) => updateSetting('queue_message', e.target.value)}
                   placeholder="You are in queue. Please wait for the next available agent."
                 />
@@ -926,7 +926,7 @@ const PublicPortalAdmin = () => {
                   multiline
                   rows={2}
                   label="Staff Disconnect Message"
-                  value={settings.staff_disconnect_message}
+                  value={settings.staff_disconnect_message || ''}
                   onChange={(e) => updateSetting('staff_disconnect_message', e.target.value)}
                   placeholder="Your support agent has been disconnected. We are connecting you with another agent."
                 />
@@ -1255,7 +1255,7 @@ const PublicPortalAdmin = () => {
                       multiline
                       rows={2}
                       label="Staff Disconnect Message"
-                      value={settings.staff_disconnect_message}
+                      value={settings.staff_disconnect_message || ''}
                       onChange={(e) => updateSetting('staff_disconnect_message', e.target.value)}
                       placeholder="Your support agent has been disconnected. We are connecting you with another agent."
                       helperText="Message shown to guest when staff disconnects"
@@ -1266,7 +1266,7 @@ const PublicPortalAdmin = () => {
                       multiline
                       rows={2}
                       label="Reassignment Message"
-                      value={settings.reassignment_message}
+                      value={settings.reassignment_message || ''}
                       onChange={(e) => updateSetting('reassignment_message', e.target.value)}
                       placeholder="You have been connected with a new support agent."
                       helperText="Message shown when guest is connected to new staff"
