@@ -169,6 +169,7 @@ const PublicPortalAdmin = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [holidayDialogOpen, setHolidayDialogOpen] = useState(false);
   const [customFieldDialogOpen, setCustomFieldDialogOpen] = useState(false);
@@ -321,7 +322,9 @@ const PublicPortalAdmin = () => {
       });
       
       if (response.ok) {
-        // Show success notification
+        // Show success animation
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2000); // Hide success after 2 seconds
       }
     } catch (error) {
       console.error('Failed to save settings:', error);
@@ -1869,15 +1872,55 @@ const PublicPortalAdmin = () => {
 
       {/* Save Button */}
       <Box mt={4} className="flex justify-end">
-        <Button 
-          variant="contained" 
-          onClick={saveSettings}
-          disabled={saving}
-          size="large"
-          className="px-8"
+        <motion.div
+          animate={saveSuccess ? { scale: [1, 1.05, 1] } : {}}
+          transition={{ duration: 0.3 }}
         >
-          {saving ? 'Saving...' : 'Save All Settings'}
-        </Button>
+          <Button 
+            variant="contained" 
+            onClick={saveSettings}
+            disabled={saving || saveSuccess}
+            size="large"
+            className="px-8"
+            sx={{
+              backgroundColor: saveSuccess ? '#4caf50' : undefined,
+              color: saveSuccess ? 'white' : undefined,
+              '&:hover': {
+                backgroundColor: saveSuccess ? '#45a049' : undefined,
+              },
+              transition: 'all 0.3s ease-in-out',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+            startIcon={
+              saving ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : saveSuccess ? (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.1, type: 'spring' }}
+                >
+                  <CheckCircle />
+                </motion.div>
+              ) : (
+                <Settings />
+              )
+            }
+          >
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={saving ? 'saving' : saveSuccess ? 'success' : 'default'}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                {saving ? 'Saving...' : saveSuccess ? 'Saved Successfully!' : 'Save All Settings'}
+              </motion.span>
+            </AnimatePresence>
+          </Button>
+        </motion.div>
       </Box>
 
       {/* Color Picker Dialog */}
