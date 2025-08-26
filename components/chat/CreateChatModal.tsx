@@ -70,7 +70,9 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
         });
 
         if (response.ok) {
-          const users = await response.json();
+          const data = await response.json();
+          // Extract users array from the response object
+          const users = data.users || data; // Handle both object and array responses
           // Filter out current user
           const filteredUsers = users.filter((user: User) => user.username !== currentUser?.username);
           setAvailableUsers(filteredUsers);

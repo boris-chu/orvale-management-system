@@ -521,7 +521,7 @@ io.on('connection', async (socket) => {
     if (!authenticatedUser) return;
     
     const { status, statusMessage, customStatus } = data;
-    const validStatuses = ['online', 'away', 'busy', 'offline'];
+    const validStatuses = ['online', 'away', 'busy', 'offline', 'idle', 'in_call', 'in_meeting', 'presenting'];
     
     if (!validStatuses.includes(status)) {
       socket.emit('presence:error', 'Invalid status');
@@ -844,16 +844,105 @@ setInterval(() => {
   });
 }, 5 * 60 * 1000); // Run every 5 minutes
 
+// Built-in presence timeout management (simplified)
+let presenceSettings = {
+  idleTimeoutMinutes: 10,
+  awayTimeoutMinutes: 30,
+  offlineTimeoutMinutes: 60,
+  enableAutoPresenceUpdates: true
+};
+
+// Load presence settings from database
+const loadPresenceSettings = () => {
+  db.all('SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN (?, ?, ?, ?)', 
+    ['idleTimeoutMinutes', 'awayTimeoutMinutes', 'offlineTimeoutMinutes', 'enableAutoPresenceUpdates'],
+    (err, rows) => {
+      if (!err && rows) {
+        rows.forEach(row => {
+          try {
+            presenceSettings[row.setting_key] = JSON.parse(row.setting_value);
+          } catch (e) {
+            console.warn(`Failed to parse presence setting ${row.setting_key}`);
+          }
+        });
+        console.log('✅ Presence timeout settings loaded:', presenceSettings);
+      }
+    }
+  );
+};
+
+// Update user presence based on inactivity
+const checkAndUpdatePresence = () => {
+  if (!presenceSettings.enableAutoPresenceUpdates) return;
+
+  const now = new Date();
+  
+  db.all(`
+    SELECT user_id, status, last_active, is_manual
+    FROM user_presence 
+    WHERE status != 'offline'
+  `, (err, users) => {
+    if (err || !users) return;
+
+    users.forEach(user => {
+      // Skip manual statuses (busy, in_call, in_meeting, presenting)
+      if (user.status === 'busy' || user.status === 'in_call' || 
+          user.status === 'in_meeting' || user.status === 'presenting') {
+        return;
+      }
+
+      const lastActive = new Date(user.last_active);
+      const minutesInactive = Math.floor((now.getTime() - lastActive.getTime()) / (1000 * 60));
+
+      let newStatus = user.status;
+      
+      if (minutesInactive >= presenceSettings.offlineTimeoutMinutes) {
+        newStatus = 'offline';
+      } else if (minutesInactive >= presenceSettings.awayTimeoutMinutes) {
+        newStatus = 'away';
+      } else if (minutesInactive >= presenceSettings.idleTimeoutMinutes) {
+        newStatus = 'idle';
+      }
+
+      if (newStatus !== user.status) {
+        db.run('UPDATE user_presence SET status = ? WHERE user_id = ?', [newStatus, user.user_id]);
+        
+        // Broadcast presence update
+        io.emit('presence_updated', {
+          userId: user.user_id,
+          status: newStatus,
+          timestamp: new Date().toISOString(),
+          reason: 'timeout'
+        });
+        
+        console.log(`📍 Updated ${user.user_id} from ${user.status} to ${newStatus} (${minutesInactive}min inactive)`);
+      }
+    });
+  });
+};
+
+// Load settings on startup and every 5 minutes
+loadPresenceSettings();
+setInterval(loadPresenceSettings, 5 * 60 * 1000);
+
+// Run presence check every minute
+setInterval(checkAndUpdatePresence, 60 * 1000);
+console.log('✅ Built-in presence timeout management started');
+
 // Start the server
 server.listen(PORT, () => {
-  console.log(`Socket.io server running on port ${PORT}`);
-  console.log(`CORS enabled for: http://localhost:80`);
-  console.log('Ready to handle chat messages and WebRTC signaling');
+  console.log(`🚀 Socket.io server running on port ${PORT}`);
+  console.log(`🔗 CORS enabled for: http://localhost:80`);
+  console.log(`💬 Ready to handle chat messages and WebRTC signaling`);
+  console.log(`👥 Ready for user presence tracking with automatic timeouts`);
+  console.log(`📞 Ready for audio/video call signaling`);
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, closing Socket.io server...');
+  console.log('✅ Built-in presence timeout management stopped');
+  
   server.close(() => {
     db.close();
     process.exit(0);

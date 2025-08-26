@@ -207,7 +207,7 @@ Delete a message (only by original author or admin).
 Get online users with status filtering.
 
 **Query Parameters:**
-- `status` (optional): Filter by status (`online`, `away`, `busy`, `offline`)
+- `status` (optional): Filter by status (`online`, `away`, `busy`, `offline`, `idle`, `in_call`, `in_meeting`, `presenting`)
 
 **Response:**
 ```json

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { queryAsync, getAsync, runAsync } from '@/lib/database';
 import { systemLogger, updateLogLevel } from '@/lib/logger';
+import { presenceManager } from '@/lib/presence-manager';
 
 // Default system settings
 const DEFAULT_SETTINGS = {
@@ -34,7 +35,13 @@ const DEFAULT_SETTINGS = {
   backupRetentionDays: 30,
   backupLocation: './backups',
   logLevel: 'info',
-  pinoEnabled: true
+  pinoEnabled: true,
+  
+  // Presence Settings
+  idleTimeoutMinutes: 10,
+  awayTimeoutMinutes: 30,
+  offlineTimeoutMinutes: 60,
+  enableAutoPresenceUpdates: true
 };
 
 export async function GET(request: NextRequest) {
@@ -173,6 +180,14 @@ export async function PUT(request: NextRequest) {
       systemLogger.configUpdated('logging_settings', authResult.user.username);
     }
 
+    // If presence settings were updated, reload the presence manager
+    const presenceKeys = ['idleTimeoutMinutes', 'awayTimeoutMinutes', 'offlineTimeoutMinutes', 'enableAutoPresenceUpdates'];
+    const presenceSettingsUpdated = presenceKeys.some(key => settings.hasOwnProperty(key));
+    if (presenceSettingsUpdated) {
+      await presenceManager.reloadSettings();
+      systemLogger.configUpdated('presence_settings', authResult.user.username);
+    }
+
     return NextResponse.json({ 
       success: true, 
       message: 'Settings updated successfully',
@@ -241,6 +256,28 @@ function validateSettings(settings: any) {
   const validLogLevels = ['error', 'warn', 'info', 'debug'];
   if (!validLogLevels.includes(settings.logLevel)) {
     errors.push('Log level must be one of: error, warn, info, debug');
+  }
+
+  // Validate presence settings
+  if (settings.idleTimeoutMinutes < 1 || settings.idleTimeoutMinutes > 120) {
+    errors.push('Idle timeout must be between 1 and 120 minutes');
+  }
+
+  if (settings.awayTimeoutMinutes < 5 || settings.awayTimeoutMinutes > 240) {
+    errors.push('Away timeout must be between 5 and 240 minutes');
+  }
+
+  if (settings.offlineTimeoutMinutes < 15 || settings.offlineTimeoutMinutes > 480) {
+    errors.push('Offline timeout must be between 15 and 480 minutes');
+  }
+
+  // Ensure logical progression: idle < away < offline
+  if (settings.awayTimeoutMinutes <= settings.idleTimeoutMinutes) {
+    errors.push('Away timeout must be greater than idle timeout');
+  }
+
+  if (settings.offlineTimeoutMinutes <= settings.awayTimeoutMinutes) {
+    errors.push('Offline timeout must be greater than away timeout');
   }
 
   return {

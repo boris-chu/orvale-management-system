@@ -64,6 +64,12 @@ interface SystemSettings {
   backupLocation: string;
   logLevel: string;
   pinoEnabled: boolean;
+  
+  // Presence Settings
+  idleTimeoutMinutes: number;
+  awayTimeoutMinutes: number;
+  offlineTimeoutMinutes: number;
+  enableAutoPresenceUpdates: boolean;
 }
 
 interface SettingsNotification {
@@ -102,7 +108,13 @@ export default function SystemSettings() {
     backupRetentionDays: 30,
     backupLocation: './backups',
     logLevel: 'info',
-    pinoEnabled: true
+    pinoEnabled: true,
+    
+    // Presence defaults
+    idleTimeoutMinutes: 10,
+    awayTimeoutMinutes: 30,
+    offlineTimeoutMinutes: 60,
+    enableAutoPresenceUpdates: true
   });
   
   const [originalSettings, setOriginalSettings] = useState<SystemSettings | null>(null);
@@ -675,6 +687,7 @@ export default function SystemSettings() {
               <TabsTrigger value="security">Security</TabsTrigger>
               <TabsTrigger value="system">System</TabsTrigger>
               <TabsTrigger value="email">Email</TabsTrigger>
+              <TabsTrigger value="presence">Presence</TabsTrigger>
               <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
               <TabsTrigger value="advanced">Advanced</TabsTrigger>
             </TabsList>
@@ -938,6 +951,188 @@ export default function SystemSettings() {
                       {saving ? 'Testing...' : 'Test Connection'}
                     </Button>
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Presence Settings */}
+            <TabsContent value="presence" className="space-y-6 mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <User className="h-5 w-5" />
+                    <span>User Presence Configuration</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <Switch
+                      id="enableAutoPresenceUpdates"
+                      checked={settings.enableAutoPresenceUpdates}
+                      onCheckedChange={(checked) => setSettings({
+                        ...settings, 
+                        enableAutoPresenceUpdates: checked
+                      })}
+                    />
+                    <Label htmlFor="enableAutoPresenceUpdates">Enable Automatic Presence Updates</Label>
+                  </div>
+                  
+                  {settings.enableAutoPresenceUpdates && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-green-800 font-medium">Automatic Presence Updates Active</span>
+                      </div>
+                      <p className="text-green-700 text-sm">
+                        User presence status will automatically update based on activity and the timeout settings below.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <Label htmlFor="idleTimeoutMinutes">Idle Timeout (minutes)</Label>
+                      <Input
+                        id="idleTimeoutMinutes"
+                        type="number"
+                        min="1"
+                        max="120"
+                        value={settings.idleTimeoutMinutes}
+                        onChange={(e) => setSettings({
+                          ...settings, 
+                          idleTimeoutMinutes: parseInt(e.target.value) || 10
+                        })}
+                        disabled={!settings.enableAutoPresenceUpdates}
+                      />
+                      <p className="text-sm text-gray-500 mt-1">Time of inactivity before user is marked as idle</p>
+                      <div className="mt-2 flex items-center space-x-2">
+                        <div className="w-3 h-3 bg-orange-400 rounded-full"></div>
+                        <span className="text-sm text-gray-600">Orange indicator - "Idle"</span>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="awayTimeoutMinutes">Away Timeout (minutes)</Label>
+                      <Input
+                        id="awayTimeoutMinutes"
+                        type="number"
+                        min="5"
+                        max="240"
+                        value={settings.awayTimeoutMinutes}
+                        onChange={(e) => setSettings({
+                          ...settings, 
+                          awayTimeoutMinutes: parseInt(e.target.value) || 30
+                        })}
+                        disabled={!settings.enableAutoPresenceUpdates}
+                      />
+                      <p className="text-sm text-gray-500 mt-1">Time before idle users are marked as away</p>
+                      <div className="mt-2 flex items-center space-x-2">
+                        <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600">Yellow indicator - "Away"</span>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="offlineTimeoutMinutes">Offline Timeout (minutes)</Label>
+                      <Input
+                        id="offlineTimeoutMinutes"
+                        type="number"
+                        min="15"
+                        max="480"
+                        value={settings.offlineTimeoutMinutes}
+                        onChange={(e) => setSettings({
+                          ...settings, 
+                          offlineTimeoutMinutes: parseInt(e.target.value) || 60
+                        })}
+                        disabled={!settings.enableAutoPresenceUpdates}
+                      />
+                      <p className="text-sm text-gray-500 mt-1">Time before away users are marked as offline</p>
+                      <div className="mt-2 flex items-center space-x-2">
+                        <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                        <span className="text-sm text-gray-600">Gray indicator - "Offline"</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status Flow Diagram */}
+                  <div>
+                    <Label>Presence Status Flow</Label>
+                    <div className="mt-2 p-4 bg-gray-50 border rounded-lg">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                          <span className="font-medium">Online</span>
+                        </div>
+                        <span className="text-gray-400">→</span>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-orange-400 rounded-full"></div>
+                          <span className="font-medium">Idle</span>
+                          <span className="text-xs text-gray-500">({settings.idleTimeoutMinutes}min)</span>
+                        </div>
+                        <span className="text-gray-400">→</span>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                          <span className="font-medium">Away</span>
+                          <span className="text-xs text-gray-500">({settings.awayTimeoutMinutes}min)</span>
+                        </div>
+                        <span className="text-gray-400">→</span>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                          <span className="font-medium">Offline</span>
+                          <span className="text-xs text-gray-500">({settings.offlineTimeoutMinutes}min)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Manual Status Indicators */}
+                  <div>
+                    <Label>Manual Status Options</Label>
+                    <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="p-3 bg-gray-50 border rounded-lg">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                          <span className="text-sm font-medium">Busy</span>
+                        </div>
+                        <p className="text-xs text-gray-600">User-set status</p>
+                      </div>
+                      
+                      <div className="p-3 bg-gray-50 border rounded-lg">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                          <span className="text-sm font-medium">In Call</span>
+                        </div>
+                        <p className="text-xs text-gray-600">Audio call active</p>
+                      </div>
+                      
+                      <div className="p-3 bg-gray-50 border rounded-lg">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
+                          <span className="text-sm font-medium">In Meeting</span>
+                        </div>
+                        <p className="text-xs text-gray-600">Video call active</p>
+                      </div>
+                      
+                      <div className="p-3 bg-gray-50 border rounded-lg">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <div className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></div>
+                          <span className="text-sm font-medium">Presenting</span>
+                        </div>
+                        <p className="text-xs text-gray-600">Screen sharing</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Manual statuses (Busy, In Call, In Meeting, Presenting) override automatic timeouts and require manual reset.
+                    </p>
+                  </div>
+
+                  {/* Information Alert */}
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <Info className="h-4 w-4" />
+                    <AlertDescription className="text-blue-800">
+                      <strong>Note:</strong> These settings control automatic presence updates. Users can manually set their status to Busy, In Call, In Meeting, or Presenting at any time, which will override automatic timeouts until manually changed.
+                    </AlertDescription>
+                  </Alert>
                 </CardContent>
               </Card>
             </TabsContent>

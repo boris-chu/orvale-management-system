@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Database from 'sqlite3';
 import { verifyAuth } from '@/lib/auth';
+import { presenceManager } from '@/lib/presence-manager';
 
 const db = new Database.Database('./orvale_tickets.db');
 
@@ -65,6 +66,10 @@ export async function GET(request: NextRequest): Promise<Response> {
           online: users.filter((u: any) => u.status === 'online'),
           away: users.filter((u: any) => u.status === 'away'),
           busy: users.filter((u: any) => u.status === 'busy'),
+          idle: users.filter((u: any) => u.status === 'idle'),
+          in_call: users.filter((u: any) => u.status === 'in_call'),
+          in_meeting: users.filter((u: any) => u.status === 'in_meeting'),
+          presenting: users.filter((u: any) => u.status === 'presenting'),
           offline: users.filter((u: any) => u.status === 'offline'),
           total: users.length
         };
@@ -91,16 +96,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const { status, statusMessage, customStatus } = body;
 
     // Validate status
-    const validStatuses = ['online', 'away', 'busy', 'offline'];
+    const validStatuses = ['online', 'away', 'busy', 'offline', 'idle', 'in_call', 'in_meeting', 'presenting'];
     if (status && !validStatuses.includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
 
+    // Determine if this is a manual status (overrides automatic updates)
+    const manualStatuses = ['busy', 'in_call', 'in_meeting', 'presenting'];
+    const isManual = status && manualStatuses.includes(status);
+    
+    // Create table with is_manual column if it doesn't exist
+    await new Promise<void>((resolve) => {
+      db.run(`
+        ALTER TABLE user_presence ADD COLUMN is_manual INTEGER DEFAULT 0
+      `, (err) => {
+        // Ignore error if column already exists
+        resolve();
+      });
+    });
+
     // Update user presence
     const updateQuery = `
       INSERT OR REPLACE INTO user_presence (
-        user_id, status, status_message, custom_status, last_active
-      ) VALUES (?, COALESCE(?, 'online'), ?, ?, CURRENT_TIMESTAMP)
+        user_id, status, status_message, custom_status, last_active, is_manual
+      ) VALUES (?, COALESCE(?, 'online'), ?, ?, CURRENT_TIMESTAMP, ?)
     `;
 
     return new Promise<NextResponse>((resolve) => {
@@ -108,7 +127,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         user.username, 
         status, 
         statusMessage || null, 
-        customStatus || null
+        customStatus || null,
+        isManual ? 1 : 0
       ], function(err) {
         if (err) {
           console.error('Database error updating presence:', err);
@@ -116,12 +136,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           return;
         }
 
+        // Update activity timestamp in presence manager for automatic users
+        if (!isManual) {
+          presenceManager.updateUserActivity(user.username);
+        }
+        
         resolve(NextResponse.json({ 
           message: 'Presence updated successfully',
           userId: user.username,
           status: status || 'online',
           statusMessage,
-          customStatus
+          customStatus,
+          isManual
         }));
       });
     });

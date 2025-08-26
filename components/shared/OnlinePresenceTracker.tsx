@@ -21,7 +21,7 @@ interface OnlinePresenceTrackerProps {
 }
 
 interface PresenceData {
-  status: 'online' | 'away' | 'busy' | 'offline';
+  status: 'online' | 'away' | 'busy' | 'offline' | 'idle' | 'in_call' | 'in_meeting' | 'presenting';
   statusMessage?: string;
   customStatus?: string;
   connectionCount?: number;
@@ -79,6 +79,26 @@ export default function OnlinePresenceTracker({
       color: 'bg-red-500',
       label: 'Busy',
       pulse: false
+    },
+    idle: {
+      color: 'bg-orange-400',
+      label: 'Idle',
+      pulse: false
+    },
+    in_call: {
+      color: 'bg-blue-500',
+      label: 'In Call',
+      pulse: true
+    },
+    in_meeting: {
+      color: 'bg-purple-500',
+      label: 'In Meeting',
+      pulse: true
+    },
+    presenting: {
+      color: 'bg-indigo-500',
+      label: 'Presenting',
+      pulse: true
     },
     offline: {
       color: 'bg-gray-400',
@@ -172,6 +192,10 @@ export default function OnlinePresenceTracker({
           ...data.presence.online,
           ...data.presence.away,
           ...data.presence.busy,
+          ...data.presence.idle,
+          ...data.presence.in_call,
+          ...data.presence.in_meeting,
+          ...data.presence.presenting,
           ...data.presence.offline
         ].find((user: any) => user.user_id === userId);
 
@@ -275,7 +299,7 @@ export default function OnlinePresenceTracker({
 // Hook for managing user's own presence
 export const usePresenceManager = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [currentStatus, setCurrentStatus] = useState<'online' | 'away' | 'busy' | 'offline'>('offline');
+  const [currentStatus, setCurrentStatus] = useState<'online' | 'away' | 'busy' | 'offline' | 'idle' | 'in_call' | 'in_meeting' | 'presenting'>('offline');
 
   useEffect(() => {
     const newSocket = io('http://localhost:3001');
@@ -299,7 +323,7 @@ export const usePresenceManager = () => {
   }, []);
 
   const updateStatus = useCallback((
-    status: 'online' | 'away' | 'busy' | 'offline',
+    status: 'online' | 'away' | 'busy' | 'offline' | 'idle' | 'in_call' | 'in_meeting' | 'presenting',
     statusMessage?: string,
     customStatus?: string
   ) => {
