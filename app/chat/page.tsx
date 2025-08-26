@@ -202,7 +202,7 @@ export default function ChatPage() {
         className="border-b px-4 py-2 flex items-center justify-between"
         style={{
           backgroundColor: 'var(--chat-sidebar, #ffffff)',
-          borderBottomColor: 'var(--chat-border, #e0e0e0)',
+          borderBottomColor: 'var(--chat-border, #3a3a3a)',
           color: 'var(--chat-text-primary, #212121)'
         }}
       >

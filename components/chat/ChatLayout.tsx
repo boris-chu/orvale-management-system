@@ -125,7 +125,7 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
         className="flex items-center justify-between p-4 border-b"
         style={{
           backgroundColor: 'var(--chat-surface, #ffffff)',
-          borderColor: 'var(--chat-border, #e0e0e0)',
+          borderColor: 'var(--chat-border, #3a3a3a)',
           color: 'var(--chat-text-primary, #212121)'
         }}
       >
@@ -327,14 +327,14 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
               )}
               style={{
                 backgroundColor: `var(--chat-sidebar, #ffffff)`,
-                borderColor: `var(--chat-border, #e5e7eb)`
+                borderColor: `var(--chat-border, #3a3a3a)`
               }}
             >
               {/* Mobile sidebar header */}
               {isMobile && (
                 <div 
                   className="flex items-center justify-between p-4 border-b transition-colors duration-200"
-                  style={{ borderColor: `var(--chat-border, #e5e7eb)` }}
+                  style={{ borderColor: `var(--chat-border, #3a3a3a)` }}
                 >
                   <h2 
                     className="text-lg font-semibold transition-colors duration-200"

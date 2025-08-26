@@ -164,7 +164,7 @@ export function ImageLightbox({
             <div 
               className="flex items-center justify-between p-4 border-b"
               style={{ 
-                borderColor: 'var(--chat-border, #e0e0e0)',
+                borderColor: 'var(--chat-border, #3a3a3a)',
                 backgroundColor: 'var(--chat-surface, #ffffff)'
               }}
             >
