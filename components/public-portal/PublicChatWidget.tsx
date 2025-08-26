@@ -472,6 +472,12 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                 backgroundColor: settings?.status === 'online' ? 
                   (settings?.widget?.color || settings?.widget_color || '#1976d2') : 
                   '#9e9e9e',
+                // Add backdrop blur and border for transparent backgrounds
+                ...(((settings?.widget?.color || settings?.widget_color) === 'transparent') ? {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)'
+                } : {}),
                 borderRadius: settings?.widget?.shape === 'square' ? '8px' : '50%',
                 zIndex: 9999,
                 cursor: 'pointer',

@@ -710,6 +710,46 @@ const PublicPortalAdmin = () => {
                           placeholder="#1976d2"
                         />
                       </Box>
+                      
+                      {/* Color Presets */}
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        Quick Colors:
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                        {[
+                          { name: 'Transparent', value: 'transparent' },
+                          { name: 'Blue', value: '#1976d2' },
+                          { name: 'Green', value: '#2e7d32' },
+                          { name: 'Orange', value: '#f57c00' },
+                          { name: 'Purple', value: '#7b1fa2' },
+                          { name: 'Red', value: '#d32f2f' },
+                          { name: 'Teal', value: '#00796b' },
+                          { name: 'Black', value: '#424242' }
+                        ].map((color) => (
+                          <Chip
+                            key={color.value}
+                            size="small"
+                            label={color.name}
+                            onClick={() => updateSetting('widget_color', color.value)}
+                            variant={settings.widget_color === color.value ? 'filled' : 'outlined'}
+                            sx={{
+                              backgroundColor: color.value === 'transparent' ? 
+                                (settings.widget_color === 'transparent' ? '#e3f2fd' : 'transparent') :
+                                settings.widget_color === color.value ? color.value : 'transparent',
+                              color: settings.widget_color === color.value ? 
+                                (color.value === 'transparent' || color.value === '#f57c00' ? 'black' : 'white') : 
+                                'inherit',
+                              border: color.value === 'transparent' ? 
+                                '1px dashed #ccc' : 
+                                `1px solid ${color.value}`,
+                              '&:hover': {
+                                backgroundColor: color.value === 'transparent' ? '#f5f5f5' : color.value,
+                                color: color.value === 'transparent' || color.value === '#f57c00' ? 'black' : 'white'
+                              }
+                            }}
+                          />
+                        ))}
+                      </Box>
                     </Box>
                   </Grid>
                   <Grid size={{ xs: 12, md: 6 }}>
@@ -1149,7 +1189,7 @@ const PublicPortalAdmin = () => {
                     Widget preview will appear here
                   </Typography>
                   
-                  {/* Mock widget */}
+                  {/* Live Widget Preview */}
                   <Box
                     sx={{
                       position: 'absolute',
@@ -1157,19 +1197,102 @@ const PublicPortalAdmin = () => {
                       right: 16,
                       width: settings.widget_size === 'large' ? 80 : settings.widget_size === 'medium' ? 64 : 48,
                       height: settings.widget_size === 'large' ? 80 : settings.widget_size === 'medium' ? 64 : 48,
-                      backgroundColor: settings.widget_color,
+                      backgroundColor: settings.widget_color === 'transparent' ? 'rgba(255, 255, 255, 0.1)' : settings.widget_color,
+                      backdropFilter: settings.widget_color === 'transparent' ? 'blur(10px)' : 'none',
+                      border: settings.widget_color === 'transparent' ? '1px solid rgba(255, 255, 255, 0.2)' : 'none',
                       borderRadius: settings.widget_shape === 'circle' ? '50%' : settings.widget_shape === 'rounded' ? 2 : 0,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
+                      boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
                       transition: 'all 0.3s ease',
                       '&:hover': {
-                        transform: 'scale(1.1)'
+                        transform: 'scale(1.05)'
                       }
                     }}
                   >
-                    <ChatBubble sx={{ color: 'white', fontSize: 24 }} />
+                    {/* Widget Content Preview */}
+                    {settings.widget_image ? (
+                      /* Image Preview */
+                      <Box
+                        sx={{
+                          width: '80%',
+                          height: '80%',
+                          borderRadius: settings.widget_shape === 'circle' ? '50%' : '6px',
+                          overflow: 'hidden',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          border: '2px solid rgba(255, 255, 255, 0.3)'
+                        }}
+                      >
+                        <img 
+                          src={settings.widget_image} 
+                          alt="Widget Preview"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      </Box>
+                    ) : (() => {
+                      // Preview icon logic
+                      const iconSize = (settings.widget_size === 'large' ? 80 : settings.widget_size === 'medium' ? 64 : 48) * 0.5;
+                      
+                      // SVG icons for preview
+                      const previewSvgIcons: { [key: string]: JSX.Element } = {
+                        'svg_chat_bubble': (
+                          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                          </svg>
+                        ),
+                        'svg_chat_outline': (
+                          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                          </svg>
+                        ),
+                        'svg_message_circle': (
+                          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.54 0 3-.35 4.31-.99L22 22l-1.01-5.69C21.65 15 22 13.54 22 12c0-5.52-4.48-10-10-10z"/>
+                          </svg>
+                        ),
+                        'svg_message_square': (
+                          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            <path d="M8 10h8M8 14h6"/>
+                          </svg>
+                        )
+                        // Add more as needed...
+                      };
+
+                      // Emoji icons
+                      const previewEmojiIcons: { [key: string]: string } = {
+                        'chat': '💬', 'support': '🎧', 'help': '❓', 'message': '✉️',
+                        'phone': '📞', 'user': '👤', 'team': '👥', 'star': '⭐',
+                        'heart': '❤️', 'info': 'ℹ️', 'settings': '⚙️', 'bell': '🔔'
+                      };
+                      
+                      // Show selected icon or default
+                      if (settings.widget_icon && settings.widget_icon.startsWith('svg_') && previewSvgIcons[settings.widget_icon]) {
+                        return (
+                          <Box sx={{ color: settings.widget_color === 'transparent' ? '#333' : 'white' }}>
+                            {previewSvgIcons[settings.widget_icon]}
+                          </Box>
+                        );
+                      } else if (settings.widget_icon && previewEmojiIcons[settings.widget_icon]) {
+                        return (
+                          <span style={{ fontSize: iconSize * 0.8 }}>
+                            {previewEmojiIcons[settings.widget_icon]}
+                          </span>
+                        );
+                      } else {
+                        // Default chat bubble
+                        return <ChatBubbleOutline sx={{ color: settings.widget_color === 'transparent' ? '#333' : 'white', fontSize: iconSize }} />;
+                      }
+                    })()}
                   </Box>
                 </Box>
               </CardContent>
