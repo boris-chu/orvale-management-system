@@ -31,6 +31,7 @@ import {
   TooltipTrigger 
 } from '@/components/ui/tooltip';
 import { User, LogOut } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -418,7 +419,10 @@ const PublicPortalAdmin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div 
+      className="min-h-screen bg-gray-50"
+      onClick={() => setShowUserMenu(false)}
+    >
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -452,74 +456,82 @@ const PublicPortalAdmin = () => {
                     <ShadcnTooltip>
                       <TooltipTrigger asChild>
                         <button
-                          onClick={() => setShowUserMenu(!showUserMenu)}
-                          className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowUserMenu(!showUserMenu);
+                          }}
+                          className="flex items-center rounded-full p-1 hover:bg-gray-100 transition-colors duration-200"
                         >
                           <UserAvatar 
                             user={currentUser}
-                            size="sm"
+                            size="lg"
+                            showOnlineIndicator={true}
+                            className="border-2 border-gray-200 hover:border-blue-400 transition-colors duration-200"
                           />
-                          <div className="text-left min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 truncate">{currentUser?.display_name || currentUser?.username}</p>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-xs text-gray-600 truncate">{currentUser?.role}</span>
-                              <OnlinePresenceTracker username={currentUser.username} />
-                            </div>
-                          </div>
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent>
-                        <p>View profile and settings</p>
+                      <TooltipContent side="bottom">
+                        <p>User Menu</p>
                       </TooltipContent>
                     </ShadcnTooltip>
 
-                    {/* User Menu Dropdown */}
-                    {showUserMenu && (
-                      <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border z-50">
-                        <div className="p-4 border-b">
-                          <div className="flex items-center space-x-3">
-                            <UserAvatar 
-                              user={currentUser}
-                              size="lg"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900 truncate">{currentUser?.display_name}</p>
-                              <p className="text-xs text-gray-600 truncate">{currentUser?.email}</p>
-                              <div className="mt-1">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                  {currentUser?.role}
-                                </span>
+                    {/* User Dropdown Menu */}
+                    <AnimatePresence>
+                      {showUserMenu && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                          transition={{ duration: 0.15, ease: "easeOut" }}
+                          className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 overflow-hidden"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {/* User Info Header */}
+                          <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                            <div className="flex items-center space-x-3">
+                              <UserAvatar 
+                                user={currentUser}
+                                size="lg"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-gray-900 truncate">{currentUser?.display_name}</p>
+                                <p className="text-xs text-gray-600 truncate">{currentUser?.email}</p>
+                                <div className="mt-1">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    {currentUser?.role_id}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                        
-                        {/* Menu Items */}
-                        <div className="py-1">
-                          <button
-                            onClick={() => {
-                              setShowUserMenu(false);
-                              setShowProfileModal(true);
-                            }}
-                            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                          >
-                            <User className="mr-3 h-4 w-4" />
-                            Edit Profile
-                          </button>
-                          <button
-                            onClick={() => {
-                              localStorage.removeItem('authToken');
-                              localStorage.removeItem('currentUser');
-                              window.location.href = '/';
-                            }}
-                            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                          >
-                            <LogOut className="mr-3 h-4 w-4" />
-                            Sign out
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                          
+                          {/* Menu Items */}
+                          <div className="py-2">
+                            <button
+                              onClick={() => {
+                                setShowProfileModal(true);
+                                setShowUserMenu(false);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                            >
+                              <User className="h-4 w-4" />
+                              <span>Edit Profile</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                localStorage.removeItem('authToken');
+                                localStorage.removeItem('currentUser');
+                                window.location.href = '/';
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                            >
+                              <LogOut className="h-4 w-4" />
+                              <span>Sign out</span>
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </TooltipProvider>
               )}
