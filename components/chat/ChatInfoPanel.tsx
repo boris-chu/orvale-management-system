@@ -265,7 +265,10 @@ export default function ChatInfoPanel({
               </Typography>
             )}
             
-            <Typography variant="caption" color="text.secondary">
+            <Typography 
+              variant="caption" 
+              sx={{ color: 'var(--chat-text-secondary, #757575)' }}
+            >
               {chat.type === 'group' ? 'Group' : chat.type === 'channel' ? 'Channel' : 'Direct Message'} •{' '}
               {members.length} member{members.length !== 1 ? 's' : ''}
             </Typography>
