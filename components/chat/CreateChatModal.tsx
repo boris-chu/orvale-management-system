@@ -50,9 +50,10 @@ interface CreateChatModalProps {
   open: boolean;
   onClose: () => void;
   currentUser?: User;
+  onChatCreated?: (chatId: string, chatType: 'dm' | 'group') => void; // Callback to handle navigation
 }
 
-export default function CreateChatModal({ open, onClose, currentUser }: CreateChatModalProps) {
+export default function CreateChatModal({ open, onClose, currentUser, onChatCreated }: CreateChatModalProps) {
   const [chatType, setChatType] = useState<'dm' | 'group'>('dm');
   const [chatName, setChatName] = useState('');
   const [description, setDescription] = useState('');
@@ -115,17 +116,39 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
   const toggleUserSelection = (user: User) => {
     setSelectedUsers(prev => {
       const isSelected = prev.find(u => u.username === user.username);
+      let newSelectedUsers;
+      
       if (isSelected) {
-        return prev.filter(u => u.username !== user.username);
+        newSelectedUsers = prev.filter(u => u.username !== user.username);
       } else {
-        return [...prev, user];
+        newSelectedUsers = [...prev, user];
       }
+      
+      // Auto-switch chat type based on number of selected users
+      if (newSelectedUsers.length === 0 || newSelectedUsers.length === 1) {
+        setChatType('dm');
+      } else if (newSelectedUsers.length > 1) {
+        setChatType('group');
+      }
+      
+      return newSelectedUsers;
     });
   };
 
   // Remove selected user
   const removeSelectedUser = (username: string) => {
-    setSelectedUsers(prev => prev.filter(u => u.username !== username));
+    setSelectedUsers(prev => {
+      const newSelectedUsers = prev.filter(u => u.username !== username);
+      
+      // Auto-switch chat type based on number of selected users
+      if (newSelectedUsers.length === 0 || newSelectedUsers.length === 1) {
+        setChatType('dm');
+      } else if (newSelectedUsers.length > 1) {
+        setChatType('group');
+      }
+      
+      return newSelectedUsers;
+    });
   };
 
   // Handle chat creation
@@ -178,8 +201,13 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
         setSearchQuery('');
         onClose();
 
-        // TODO: Refresh chat list or navigate to new DM
-        window.location.reload(); // Temporary solution
+        // Navigate to the new DM
+        if (onChatCreated && result.dmId) {
+          onChatCreated(result.dmId.toString(), 'dm');
+        } else {
+          // Fallback to reload if callback not provided
+          window.location.reload();
+        }
         return;
       }
 
@@ -214,8 +242,13 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
       setSearchQuery('');
       onClose();
 
-      // TODO: Refresh chat list or navigate to new chat
-      window.location.reload(); // Temporary solution
+      // Navigate to the new group
+      if (onChatCreated && result.channelId) {
+        onChatCreated(result.channelId.toString(), 'group');
+      } else {
+        // Fallback to reload if callback not provided
+        window.location.reload();
+      }
 
     } catch (err) {
       console.error('Failed to create chat:', err);
@@ -346,18 +379,19 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
 
       <DialogContent style={{ backgroundColor: 'var(--chat-background, #ffffff)', paddingTop: '16px' }}>
         <div className="space-y-6">
-          {/* Chat Type Selection */}
+          {/* Chat Type Selection - Auto-determined */}
           <FormControl fullWidth size="small">
             <InputLabel style={{ color: 'var(--chat-text-secondary, #757575)' }}>
-              Chat Type
+              Chat Type (Auto-selected)
             </InputLabel>
             <Select
               value={chatType}
-              onChange={(e) => setChatType(e.target.value as 'dm' | 'group')}
-              label="Chat Type"
+              label="Chat Type (Auto-selected)"
+              disabled={true}
               style={{ 
                 backgroundColor: 'var(--chat-surface, #fafafa)',
-                color: 'var(--chat-text-primary, #212121)'
+                color: 'var(--chat-text-primary, #212121)',
+                opacity: 0.7
               }}
             >
               <MenuItem value="dm">
@@ -374,6 +408,11 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
               </MenuItem>
             </Select>
           </FormControl>
+          
+          {/* Auto-switching explanation */}
+          <Typography variant="body2" style={{ color: 'var(--chat-text-secondary, #757575)', fontSize: '0.75rem', fontStyle: 'italic' }}>
+            💡 Selecting 1 person creates a Direct Message, selecting 2+ people creates a Group Chat
+          </Typography>
 
           {/* Group Name (only for groups) */}
           {chatType === 'group' && (

@@ -123,6 +123,36 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
     }
   }, [isMobile]);
 
+  // Handle navigation to newly created chat
+  const handleChatCreated = useCallback(async (chatId: string, chatType: 'dm' | 'group') => {
+    console.log(`Navigating to new ${chatType}:`, chatId);
+    
+    // We need to construct a ChatItem to select it
+    // Since we just created it, we'll make a basic one and let it load properly
+    const newChat: ChatItem = {
+      id: chatId,
+      type: chatType,
+      name: chatId, // Will be updated when sidebar reloads
+      displayName: chatType === 'dm' ? 'Loading...' : 'New Group',
+      participants: [],
+      unreadCount: 0,
+      lastMessage: '',
+      lastMessageTime: '',
+      isOnline: false,
+      isPinned: false,
+      isMuted: false
+    };
+    
+    // Select the new chat immediately
+    setSelectedChat(newChat);
+    
+    // Force refresh the sidebar to load the proper chat data
+    // We'll trigger a page reload to ensure fresh data
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
+  }, []);
+
   // Initialize sidebar state based on screen size
   useEffect(() => {
     setSidebarOpen(isDesktop);
@@ -554,6 +584,7 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
         open={showCreateChatModal}
         onClose={() => setShowCreateChatModal(false)}
         currentUser={currentUser}
+        onChatCreated={handleChatCreated}
       />
 
       {/* Chat More Options Menu */}
