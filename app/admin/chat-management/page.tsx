@@ -1488,7 +1488,7 @@ export default function ChatManagementPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          name: newChannelData.name.toLowerCase().replace(/\s+/g, '-'),
+          name: (newChannelData.name || 'unnamed').toLowerCase().replace(/\s+/g, '-'),
           description: newChannelData.description,
           type: newChannelData.type,
           is_read_only: newChannelData.is_read_only
@@ -1532,7 +1532,7 @@ export default function ChatManagementPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          name: selectedChannel.name.toLowerCase().replace(/\s+/g, '-'),
+          name: (selectedChannel.name || 'unnamed').toLowerCase().replace(/\s+/g, '-'),
           description: selectedChannel.description,
           is_read_only: selectedChannel.is_read_only
         })
@@ -1847,8 +1847,8 @@ export default function ChatManagementPage() {
 
   // Computed values for Users tab
   const filteredUsers = users.filter(user =>
-    user.display_name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-    user.username?.toLowerCase().includes(userSearchQuery.toLowerCase())
+    (user.display_name || '').toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+    (user.username || '').toLowerCase().includes(userSearchQuery.toLowerCase())
   );
 
   const multiTabUsers = users.filter(user => 
@@ -2466,8 +2466,8 @@ export default function ChatManagementPage() {
               <div className="space-y-2">
                 {channels
                   .filter(channel => 
-                    channel.name.toLowerCase().includes(channelSearchQuery.toLowerCase()) ||
-                    channel.description?.toLowerCase().includes(channelSearchQuery.toLowerCase())
+                    (channel.name || '').toLowerCase().includes(channelSearchQuery.toLowerCase()) ||
+                    (channel.description || '').toLowerCase().includes(channelSearchQuery.toLowerCase())
                   )
                   .map(channel => (
                     <div key={channel.id} className="flex items-center justify-between p-4 border rounded-lg">
@@ -3087,9 +3087,9 @@ export default function ChatManagementPage() {
                     .filter(user => 
                       user.active && 
                       !channelMembers.some(member => member.user_id === user.username) &&
-                      (user.display_name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-                       user.username.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-                       user.email?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
+                      ((user.display_name || '').toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                       (user.username || '').toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                       (user.email || '').toLowerCase().includes(memberSearchQuery.toLowerCase()))
                     )
                     .map(user => (
                       <div key={user.username} className="flex items-center justify-between p-3 border rounded-lg">
@@ -3112,9 +3112,9 @@ export default function ChatManagementPage() {
                   {availableUsers.filter(user => 
                     user.active && 
                     !channelMembers.some(member => member.user_id === user.username) &&
-                    (user.display_name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-                     user.username.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-                     user.email?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
+                    ((user.display_name || '').toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                     (user.username || '').toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+                     (user.email || '').toLowerCase().includes(memberSearchQuery.toLowerCase()))
                   ).length === 0 && (
                     <div className="text-center py-8 text-gray-500">
                       <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
