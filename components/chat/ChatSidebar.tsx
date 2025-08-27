@@ -287,18 +287,18 @@ export default function ChatSidebar({
           const otherParticipant = chat.participants.find(p => p.username !== currentUser.username);
           return otherParticipant?.display_name || 'Unknown User';
         }
-        return chat.displayName;
+        return chat.displayName || 'Unknown User';
 
       case 'channel':
         // Channel naming: use the pre-computed displayName with # prefix
-        return chat.displayName;
+        return chat.displayName || 'Unknown Channel';
 
       case 'group':
         // Group naming: use the group name directly (informal groups have custom names)
-        return chat.displayName;
+        return chat.displayName || 'Unnamed Group';
 
       default:
-        return chat.displayName;
+        return chat.displayName || 'Unnamed Chat';
     }
   };
 
@@ -306,8 +306,8 @@ export default function ChatSidebar({
   const getFilteredChats = (chats: ChatItem[]) => {
     return chats.filter(chat => {
       const displayName = computeDisplayName(chat);
-      const matchesSearch = displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           chat.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = (displayName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           (chat.lastMessage || '').toLowerCase().includes(searchQuery.toLowerCase());
       return matchesSearch;
     }).map(chat => ({
       ...chat,
