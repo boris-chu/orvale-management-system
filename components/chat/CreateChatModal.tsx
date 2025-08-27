@@ -53,7 +53,7 @@ interface CreateChatModalProps {
 }
 
 export default function CreateChatModal({ open, onClose, currentUser }: CreateChatModalProps) {
-  const [chatType, setChatType] = useState<'dm' | 'group'>('group');
+  const [chatType, setChatType] = useState<'dm' | 'group'>('dm');
   const [chatName, setChatName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
