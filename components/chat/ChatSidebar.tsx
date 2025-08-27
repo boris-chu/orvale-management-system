@@ -201,10 +201,9 @@ export default function ChatSidebar({
           channels,
           groups
         });
-          
-          // Load initial unread counts from API
-          refreshUnreadCounts();
-        }
+        
+        // Load initial unread counts from API
+        refreshUnreadCounts();
       } catch (error) {
         console.error('Failed to load channels:', error);
       }
