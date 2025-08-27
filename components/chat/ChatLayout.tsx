@@ -66,6 +66,7 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
   const [showChatInfo, setShowChatInfo] = useState(false);
   const [showCreateChatModal, setShowCreateChatModal] = useState(false);
   const [moreOptionsAnchor, setMoreOptionsAnchor] = useState<HTMLElement | null>(null);
+  const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
   
   // Apply theme CSS
   const currentTheme = useThemeCSS('internal_chat');
@@ -85,13 +86,34 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
   // Mobile-first: sidebar is overlay on mobile, fixed on desktop
   const sidebarMode = isMobile ? 'overlay' : isTablet ? 'slide' : 'fixed';
   
-  const handleChatSelect = useCallback((chat: ChatItem) => {
+  const handleChatSelect = useCallback(async (chat: ChatItem) => {
     setSelectedChat(chat);
     // On mobile, close sidebar when chat is selected
     if (isMobile) {
       setSidebarOpen(false);
     }
-  }, [isMobile]);
+    
+    // Load member count for non-DM chats if not cached
+    if (chat.type !== 'dm' && !memberCounts[chat.id]) {
+      try {
+        const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
+        if (token) {
+          const response = await fetch(`/api/chat/channels/${chat.id}/members`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setMemberCounts(prev => ({
+              ...prev,
+              [chat.id]: data.members?.length || 0
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load member count:', error);
+      }
+    }
+  }, [isMobile, memberCounts]);
 
   const handleBackToList = useCallback(() => {
     if (isMobile) {
@@ -160,7 +182,7 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
             )}
             {selectedChat.type !== 'dm' && (
               <p className="text-sm text-gray-500">
-                {selectedChat.participants?.length || 0} members
+                {memberCounts[selectedChat.id] ?? selectedChat.participants?.length ?? '...'} members
                 {selectedChat.lastMessage && ` • ${selectedChat.lastMessageTime}`}
               </p>
             )}

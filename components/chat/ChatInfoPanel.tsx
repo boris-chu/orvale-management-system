@@ -138,9 +138,12 @@ export default function ChatInfoPanel({
         if (response.ok) {
           const data = await response.json();
           console.log('Members data received:', data);
+          console.log('Setting members count:', data.members?.length || 0);
           setMembers(data.members || []);
         } else {
-          console.log('Members API failed, using fallback strategy');
+          const errorText = await response.text();
+          console.log('Members API failed with error:', errorText);
+          console.log('Using fallback strategy');
           // If API fails, create a member list with current user and participants
           const fallbackMembers = [];
           if (currentUser) {
@@ -369,8 +372,13 @@ export default function ChatInfoPanel({
                     }
                   }}
                 >
-                  {members.length > 0 ? members.map((member) => (
-                    <ListItem key={member.username} className="px-0">
+                  {members.length > 0 ? (
+                    <>
+                      <Typography variant="caption" sx={{ color: 'var(--chat-text-secondary, #757575)', px: 2, py: 1 }}>
+                        Showing {members.length} member{members.length !== 1 ? 's' : ''}
+                      </Typography>
+                      {members.map((member) => (
+                        <ListItem key={member.username} className="px-0">
                       <ListItemAvatar>
                         <Box position="relative">
                           <Avatar
@@ -413,9 +421,11 @@ export default function ChatInfoPanel({
                             @{member.username} • {member.presence?.status || 'offline'}
                           </span>
                         }
-                      />
-                    </ListItem>
-                  )) : (
+                          />
+                        </ListItem>
+                      ))}
+                    </>
+                  ) : (
                     <ListItem className="px-0">
                       <ListItemText
                         primary={
