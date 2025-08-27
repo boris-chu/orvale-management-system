@@ -71,7 +71,7 @@ export default function ChatSidebar({
   refreshTrigger
 }: ChatSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeSection, setActiveSection] = useState<'dm' | 'channels' | 'groups' | 'all'>('all');
+  const [activeSection, setActiveSection] = useState<'dm' | 'channels' | 'groups' | 'online' | 'all'>('all');
   const [chatData, setChatData] = useState<{
     directMessages: ChatItem[];
     channels: ChatItem[];
@@ -81,6 +81,7 @@ export default function ChatSidebar({
     channels: [],
     groups: []
   });
+  const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [showThemeModal, setShowThemeModal] = useState(false);
   const componentId = useRef(`ChatSidebar_${Date.now()}`).current;
@@ -232,6 +233,57 @@ export default function ChatSidebar({
     loadChatsData();
   }, [currentUser, refreshUnreadCounts, refreshTrigger]); // Include refreshTrigger to reload data when new chats are created
 
+  // Load online team members for quick DM access
+  useEffect(() => {
+    const loadOnlineUsers = async () => {
+      try {
+        const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
+        if (!token || !currentUser) return;
+
+        // Use the same endpoint as CreateChatModal for consistency
+        const response = await fetch('/api/chat/users', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.users) {
+            // Get online and away users, prioritize team members
+            const onlineAndAway = [
+              ...(data.users.online || []),
+              ...(data.users.away || [])
+            ].filter(user => user.username !== currentUser.username); // Exclude self
+            
+            // Check if user has permission to view all teams, otherwise filter to own team
+            const hasViewAllTeamsPermission = currentUser.permissions?.includes('ticket.view_team') || 
+                                             currentUser.permissions?.includes('admin.manage_users');
+            
+            let filteredUsers = onlineAndAway;
+            if (!hasViewAllTeamsPermission) {
+              // Only show users from the same team
+              filteredUsers = onlineAndAway.filter(user => 
+                user.is_team_member || user.team_name === currentUser.team_name
+              );
+            }
+            
+            console.log('💚 ChatSidebar loaded online users:', filteredUsers.length, 'hasViewAllPermission:', hasViewAllTeamsPermission);
+            setOnlineUsers(filteredUsers);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load online users:', error);
+        setOnlineUsers([]);
+      }
+    };
+
+    loadOnlineUsers();
+    
+    // Refresh online users every 30 seconds
+    const interval = setInterval(loadOnlineUsers, 30000);
+    return () => clearInterval(interval);
+  }, [currentUser, refreshTrigger]);
+
   // Socket.io connection for real-time updates using singleton
   useEffect(() => {
     if (!currentUser) return;
@@ -301,6 +353,71 @@ export default function ChatSidebar({
 
       default:
         return chat.displayName || 'Unnamed Chat';
+    }
+  };
+
+  // Handle creating DM directly from online users
+  const handleCreateDM = async (user: User) => {
+    try {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
+      if (!token) {
+        console.error('No authentication token');
+        return;
+      }
+
+      console.log('🔗 Creating DM with user:', user.display_name);
+
+      const response = await fetch('/api/chat/dm', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          targetUsername: user.username
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Failed to create DM:', errorData.error);
+        return;
+      }
+
+      const result = await response.json();
+      console.log('✅ DM created/found:', result);
+
+      // Create a basic ChatItem and select it immediately
+      const dmChat: ChatItem = {
+        id: result.dmId.toString(),
+        type: 'dm',
+        name: user.username,
+        displayName: user.display_name,
+        participants: [user],
+        unreadCount: 0,
+        lastMessage: '',
+        lastMessageTime: '',
+        isOnline: true,
+        status: user.presence?.status || 'online',
+        isPinned: false,
+        isMuted: false
+      };
+
+      // Select this DM immediately
+      onChatSelect(dmChat);
+
+      // Refresh chat data to show the new DM in the sidebar
+      // Use a small delay to allow the API to process
+      setTimeout(() => {
+        // Trigger refresh of chat data
+        if (refreshTrigger !== undefined) {
+          // This will be handled by the parent ChatLayout component
+          // For now, we'll rely on the real-time updates to show the DM
+        }
+      }, 500);
+
+    } catch (error) {
+      console.error('Error creating DM:', error);
     }
   };
 
@@ -624,6 +741,7 @@ export default function ChatSidebar({
             <div className="flex gap-1 mb-4 p-1 rounded-lg" style={{ backgroundColor: 'var(--chat-surface)' }}>
               {[
                 { key: 'all', label: 'All' },
+                { key: 'online', label: 'Online' },
                 { key: 'dm', label: 'DMs' },
                 { key: 'channels', label: 'Channels' },
                 { key: 'groups', label: 'Groups' }
@@ -654,6 +772,102 @@ export default function ChatSidebar({
 
             {/* Chat Sections */}
             <div className="space-y-2">
+              {/* Online Users Section */}
+              {(activeSection === 'online' || activeSection === 'all') && onlineUsers.length > 0 && (
+                <div className="mb-4">
+                  <div 
+                    className="flex items-center justify-between px-3 py-2 cursor-pointer rounded-md transition-colors duration-200"
+                    style={{}}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--chat-secondary, #f5f5f5)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    onClick={() => setActiveSection(activeSection === 'online' ? 'all' : 'online')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
+                      <span 
+                        className="text-sm font-medium" 
+                        style={{ color: 'var(--chat-text-primary, #212121)' }}
+                      >
+                        Online ({onlineUsers.length})
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <AnimatePresence>
+                    {(activeSection === 'online' || activeSection === 'all') && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-1 ml-2">
+                          {onlineUsers
+                            .filter(user => 
+                              !searchQuery || 
+                              (user.display_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              (user.username || '').toLowerCase().includes(searchQuery.toLowerCase())
+                            )
+                            .map(user => (
+                              <motion.div
+                                key={user.username}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                                className="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                                onClick={() => handleCreateDM(user)}
+                                title={`Start conversation with ${user.display_name}`}
+                              >
+                                <div className="flex-shrink-0 relative">
+                                  <UserAvatar 
+                                    user={user} 
+                                    size="sm"
+                                    enableRealTimePresence={chatUISettings.show_online_status}
+                                  />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span 
+                                      className="font-medium text-sm truncate"
+                                      style={{ color: 'var(--chat-text-primary, #212121)' }}
+                                    >
+                                      {user.display_name}
+                                    </span>
+                                    {user.is_team_member && (
+                                      <span 
+                                        className="text-xs px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                                        title="Team member"
+                                      >
+                                        TEAM
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                    @{user.username} • {user.team_name || user.role_id}
+                                  </p>
+                                </div>
+                                <MessageCircle className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </motion.div>
+                            ))}
+                          
+                          {onlineUsers.filter(user => 
+                            !searchQuery || 
+                            (user.display_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (user.username || '').toLowerCase().includes(searchQuery.toLowerCase())
+                          ).length === 0 && (
+                            <div className="text-center py-4 text-sm text-gray-500">
+                              {searchQuery ? 'No online users found' : 'No team members online'}
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
               {renderSection(
                 'Direct Messages', 
                 chatData.directMessages, 
