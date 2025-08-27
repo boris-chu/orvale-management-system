@@ -59,7 +59,7 @@ export async function GET(
       FROM chat_channel_members cm
       JOIN users u ON cm.user_id = u.username
       LEFT JOIN user_presence up ON u.username = up.username
-      WHERE cm.channel_id = ? AND cm.active = 1
+      WHERE cm.channel_id = ?
       ORDER BY 
         CASE cm.role 
           WHEN 'owner' THEN 1 
@@ -149,8 +149,8 @@ export async function POST(
     // Add members to channel
     const addMemberQuery = `
       INSERT OR REPLACE INTO chat_channel_members 
-      (channel_id, user_id, role, joined_at, active)
-      VALUES (?, ?, ?, CURRENT_TIMESTAMP, 1)
+      (channel_id, user_id, role, joined_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
     `;
 
     const addResults = await Promise.all(
@@ -224,11 +224,10 @@ export async function DELETE(
       }
     }
 
-    // Remove member from channel (soft delete)
+    // Remove member from channel
     const removeMemberQuery = `
-      UPDATE chat_channel_members 
-      SET active = 0, left_at = CURRENT_TIMESTAMP
-      WHERE channel_id = ? AND user_id = ? AND active = 1
+      DELETE FROM chat_channel_members 
+      WHERE channel_id = ? AND user_id = ?
     `;
 
     return new Promise<NextResponse>((resolve) => {

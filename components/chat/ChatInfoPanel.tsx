@@ -91,30 +91,92 @@ export default function ChatInfoPanel({
 }: ChatInfoPanelProps) {
   const [members, setMembers] = useState<User[]>([]);
   
-  // Load members for the channel
+  // Debug chat data
+  useEffect(() => {
+    console.log('ChatInfoPanel received chat data:', {
+      id: chat.id,
+      type: chat.type,
+      name: chat.name,
+      displayName: chat.displayName,
+      participants: chat.participants,
+      participantsCount: chat.participants?.length || 0
+    });
+  }, [chat]);
+  
+  // Load members for the channel/group or handle DM participants
   useEffect(() => {
     const loadMembers = async () => {
       try {
+        console.log('Loading members for chat:', chat.id, chat.type);
+        
+        // For direct messages, we don't need to load from API
+        if (chat.type === 'dm') {
+          console.log('DM detected, using participants:', chat.participants);
+          setMembers(chat.participants || []);
+          return;
+        }
+        
+        // For channels and groups, load from API
         const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
-        if (!token) return;
+        if (!token) {
+          console.log('No auth token found');
+          // Create a default member list with current user if participants are empty
+          if (!chat.participants || chat.participants.length === 0) {
+            setMembers(currentUser ? [currentUser] : []);
+          } else {
+            setMembers(chat.participants);
+          }
+          return;
+        }
 
         const response = await fetch(`/api/chat/channels/${chat.id}/members`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
+        console.log('Members API response status:', response.status);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('Members data received:', data);
           setMembers(data.members || []);
+        } else {
+          console.log('Members API failed, using fallback strategy');
+          // If API fails, create a member list with current user and participants
+          const fallbackMembers = [];
+          if (currentUser) {
+            fallbackMembers.push(currentUser);
+          }
+          if (chat.participants) {
+            chat.participants.forEach(participant => {
+              if (!fallbackMembers.find(m => m.username === participant.username)) {
+                fallbackMembers.push(participant);
+              }
+            });
+          }
+          console.log('Using fallback members:', fallbackMembers);
+          setMembers(fallbackMembers);
         }
       } catch (error) {
         console.error('Failed to load members:', error);
-        // Fallback to participants if available
-        setMembers(chat.participants || []);
+        // Final fallback: include current user at minimum
+        const finalFallback = [];
+        if (currentUser) {
+          finalFallback.push(currentUser);
+        }
+        if (chat.participants) {
+          chat.participants.forEach(participant => {
+            if (!finalFallback.find(m => m.username === participant.username)) {
+              finalFallback.push(participant);
+            }
+          });
+        }
+        console.log('Using final fallback members:', finalFallback);
+        setMembers(finalFallback);
       }
     };
 
     loadMembers();
-  }, [chat.id, chat.participants]);
+  }, [chat.id, chat.type, chat.participants, currentUser]);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editName, setEditName] = useState(chat.displayName);
   const [editDescription, setEditDescription] = useState(chat.description || '');
@@ -286,8 +348,25 @@ export default function ChatInfoPanel({
                 </Box>
               </AccordionSummary>
               <AccordionDetails>
-                <List dense>
-                  {members.map((member) => (
+                <List 
+                  dense
+                  sx={{
+                    backgroundColor: 'var(--chat-surface, #ffffff)',
+                    '& .MuiListItem-root': {
+                      color: 'var(--chat-text-primary, #212121)',
+                      '&:hover': {
+                        backgroundColor: 'var(--chat-secondary, #f5f5f5)'
+                      }
+                    },
+                    '& .MuiListItemText-primary': {
+                      color: 'var(--chat-text-primary, #212121)'
+                    },
+                    '& .MuiListItemText-secondary': {
+                      color: 'var(--chat-text-secondary, #757575)'
+                    }
+                  }}
+                >
+                  {members.length > 0 ? members.map((member) => (
                     <ListItem key={member.username} className="px-0">
                       <ListItemAvatar>
                         <Box position="relative">
@@ -315,7 +394,9 @@ export default function ChatInfoPanel({
                       <ListItemText
                         primary={
                           <div className="flex items-center gap-2">
-                            {member.display_name}
+                            <span style={{ color: 'var(--chat-text-primary, #212121)' }}>
+                              {member.display_name}
+                            </span>
                             {chat.user_role && member.username === chat.created_by && (
                               <Chip label="Owner" size="small" color="primary" />
                             )}
@@ -324,10 +405,27 @@ export default function ChatInfoPanel({
                             )}
                           </div>
                         }
-                        secondary={`@${member.username} • ${member.presence?.status || 'offline'}`}
+                        secondary={
+                          <span style={{ color: 'var(--chat-text-secondary, #757575)' }}>
+                            @{member.username} • {member.presence?.status || 'offline'}
+                          </span>
+                        }
                       />
                     </ListItem>
-                  ))}
+                  )) : (
+                    <ListItem className="px-0">
+                      <ListItemText
+                        primary={
+                          <Typography 
+                            variant="body2" 
+                            sx={{ color: 'var(--chat-text-secondary, #757575)' }}
+                          >
+                            {members.length === 0 ? 'Loading members...' : 'No members found'}
+                          </Typography>
+                        }
+                      />
+                    </ListItem>
+                  )}
                 </List>
                 
                 {canEdit && (
@@ -366,18 +464,46 @@ export default function ChatInfoPanel({
               </AccordionSummary>
               <AccordionDetails>
                 {sharedFiles.length > 0 ? (
-                  <List dense>
+                  <List 
+                    dense
+                    sx={{
+                      backgroundColor: 'var(--chat-surface, #ffffff)',
+                      '& .MuiListItem-root': {
+                        color: 'var(--chat-text-primary, #212121)',
+                        '&:hover': {
+                          backgroundColor: 'var(--chat-secondary, #f5f5f5)'
+                        }
+                      },
+                      '& .MuiListItemText-primary': {
+                        color: 'var(--chat-text-primary, #212121)'
+                      },
+                      '& .MuiListItemText-secondary': {
+                        color: 'var(--chat-text-secondary, #757575)'
+                      }
+                    }}
+                  >
                     {sharedFiles.map((file) => (
                       <ListItem key={file.id} className="px-0">
                         <ListItemText
-                          primary={file.name}
-                          secondary={`${file.size} • ${file.shared_at}`}
+                          primary={
+                            <span style={{ color: 'var(--chat-text-primary, #212121)' }}>
+                              {file.name}
+                            </span>
+                          }
+                          secondary={
+                            <span style={{ color: 'var(--chat-text-secondary, #757575)' }}>
+                              {file.size} • {file.shared_at}
+                            </span>
+                          }
                         />
                       </ListItem>
                     ))}
                   </List>
                 ) : (
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography 
+                    variant="body2" 
+                    sx={{ color: 'var(--chat-text-secondary, #757575)' }}
+                  >
                     No files shared yet
                   </Typography>
                 )}
@@ -407,19 +533,31 @@ export default function ChatInfoPanel({
               <AccordionDetails>
                 <div className="space-y-2">
                   <div>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography 
+                      variant="caption" 
+                      sx={{ color: 'var(--chat-text-secondary, #757575)' }}
+                    >
                       Created
                     </Typography>
-                    <Typography variant="body2">
+                    <Typography 
+                      variant="body2"
+                      sx={{ color: 'var(--chat-text-primary, #212121)' }}
+                    >
                       {chat.created_at ? new Date(chat.created_at).toLocaleDateString() : 'Unknown'}
                     </Typography>
                   </div>
                   {chat.created_by && (
                     <div>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography 
+                        variant="caption" 
+                        sx={{ color: 'var(--chat-text-secondary, #757575)' }}
+                      >
                         Created by
                       </Typography>
-                      <Typography variant="body2">
+                      <Typography 
+                        variant="body2"
+                        sx={{ color: 'var(--chat-text-primary, #212121)' }}
+                      >
                         {chat.created_by}
                       </Typography>
                     </div>
