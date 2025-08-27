@@ -24,6 +24,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ChatSidebar from './ChatSidebar';
 import MessageArea from './MessageArea';
+import ChatInfoPanel from './ChatInfoPanel';
+import ChatMoreOptions from './ChatMoreOptions';
 import { useIsMobile, useIsTablet, useIsDesktop } from '@/hooks/useMediaQuery';
 import { useThemeCSS } from '@/hooks/useThemeSystem';
 import { useCallManager } from '@/hooks/useCallManager';
@@ -63,6 +65,7 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showChatInfo, setShowChatInfo] = useState(false);
   const [showCreateChatModal, setShowCreateChatModal] = useState(false);
+  const [moreOptionsAnchor, setMoreOptionsAnchor] = useState<HTMLElement | null>(null);
   
   // Apply theme CSS
   const currentTheme = useThemeCSS('internal_chat');
@@ -238,6 +241,7 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
           <Button
             variant="ghost"
             size="sm"
+            onClick={(e) => setMoreOptionsAnchor(e.currentTarget)}
             className="p-2 touch-manipulation"
             title="More options"
           >
@@ -398,7 +402,7 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
 
               {/* Chat info panel (desktop only, or mobile sheet) */}
               <AnimatePresence>
-                {showChatInfo && (
+                {showChatInfo && selectedChat && (
                   <>
                     {isMobile ? (
                       /* Mobile: Full screen overlay */
@@ -408,22 +412,24 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 bg-white dark:bg-gray-900 z-50"
                       >
-                        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                          <h2 className="text-lg font-semibold">Chat Info</h2>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowChatInfo(false)}
-                            className="p-2"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <div className="p-4">
-                          <p className="text-gray-600 dark:text-gray-400">
-                            Chat info panel content goes here
-                          </p>
-                        </div>
+                        <ChatInfoPanel
+                          chat={selectedChat}
+                          currentUser={currentUser}
+                          onClose={() => setShowChatInfo(false)}
+                          onUpdateChat={(updates) => {
+                            setSelectedChat(prev => prev ? { ...prev, ...updates } : null);
+                            // TODO: Update chat via API
+                          }}
+                          onLeaveChat={() => {
+                            setShowChatInfo(false);
+                            setSelectedChat(null);
+                            // TODO: Leave chat via API
+                          }}
+                          onAddMembers={() => {
+                            setShowChatInfo(false);
+                            setShowCreateChatModal(true);
+                          }}
+                        />
                       </motion.div>
                     ) : (
                       /* Desktop: Side panel */
@@ -433,25 +439,29 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
                         exit={{ x: 300, opacity: 0 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
                         className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0"
+                        style={{
+                          backgroundColor: 'var(--chat-background, #ffffff)',
+                          borderColor: 'var(--chat-border, #e0e0e0)'
+                        }}
                       >
-                        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                          <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold">Chat Info</h3>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setShowChatInfo(false)}
-                              className="p-2"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="p-4">
-                          <p className="text-gray-600 dark:text-gray-400">
-                            Chat info panel content goes here
-                          </p>
-                        </div>
+                        <ChatInfoPanel
+                          chat={selectedChat}
+                          currentUser={currentUser}
+                          onClose={() => setShowChatInfo(false)}
+                          onUpdateChat={(updates) => {
+                            setSelectedChat(prev => prev ? { ...prev, ...updates } : null);
+                            // TODO: Update chat via API
+                          }}
+                          onLeaveChat={() => {
+                            setShowChatInfo(false);
+                            setSelectedChat(null);
+                            // TODO: Leave chat via API
+                          }}
+                          onAddMembers={() => {
+                            setShowChatInfo(false);
+                            setShowCreateChatModal(true);
+                          }}
+                        />
                       </motion.div>
                     )}
                   </>
@@ -518,6 +528,59 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
         onClose={() => setShowCreateChatModal(false)}
         currentUser={currentUser}
       />
+
+      {/* Chat More Options Menu */}
+      {selectedChat && (
+        <ChatMoreOptions
+          chat={selectedChat}
+          currentUser={currentUser}
+          anchorEl={moreOptionsAnchor}
+          open={Boolean(moreOptionsAnchor)}
+          onClose={() => setMoreOptionsAnchor(null)}
+          onSearchInChat={() => {
+            // TODO: Implement search in chat
+            console.log('Search in chat');
+          }}
+          onToggleMute={() => {
+            setSelectedChat(prev => prev ? { ...prev, isMuted: !prev.isMuted } : null);
+            // TODO: Update via API
+          }}
+          onTogglePin={() => {
+            setSelectedChat(prev => prev ? { ...prev, isPinned: !prev.isPinned } : null);
+            // TODO: Update via API
+          }}
+          onAddMembers={() => {
+            setShowCreateChatModal(true);
+          }}
+          onChatSettings={() => {
+            setShowChatInfo(true);
+          }}
+          onExportChat={() => {
+            // TODO: Implement export
+            console.log('Export chat');
+          }}
+          onReportChat={() => {
+            // TODO: Implement report
+            console.log('Report chat');
+          }}
+          onBlockUser={() => {
+            // TODO: Implement block
+            console.log('Block user');
+          }}
+          onLeaveChat={() => {
+            setSelectedChat(null);
+            // TODO: Leave via API
+          }}
+          onDeleteChat={() => {
+            setSelectedChat(null);
+            // TODO: Delete via API
+          }}
+          onArchiveChat={() => {
+            setSelectedChat(prev => prev ? { ...prev, archived: true } : null);
+            // TODO: Archive via API
+          }}
+        />
+      )}
     </div>
   );
 }

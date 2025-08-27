@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Dialog,
   DialogTitle,
@@ -19,7 +19,6 @@ import {
   Select,
   MenuItem,
   Typography,
-  Divider,
   List,
   ListItem,
   ListItemAvatar,
@@ -38,6 +37,13 @@ interface User {
   profile_picture?: string;
   role_id: string;
   is_online?: boolean;
+  team_name?: string;
+  is_team_member?: boolean;
+  presence?: {
+    status: string;
+    last_active?: string;
+    status_message?: string;
+  };
 }
 
 interface CreateChatModalProps {
@@ -52,6 +58,9 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
   const [description, setDescription] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
+  const [awayUsers, setAwayUsers] = useState<User[]>([]);
+  const [offlineUsers, setOfflineUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,17 +74,27 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
         const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
         if (!token) return;
 
-        const response = await fetch('/api/users/assignable', {
+        const response = await fetch('/api/chat/users', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
         if (response.ok) {
           const data = await response.json();
-          // Extract users array from the response object
-          const users = data.users || data; // Handle both object and array responses
-          // Filter out current user
-          const filteredUsers = users.filter((user: User) => user.username !== currentUser?.username);
-          setAvailableUsers(filteredUsers);
+          
+          if (data.users) {
+            // Set users by status groups
+            setOnlineUsers(data.users.online || []);
+            setAwayUsers(data.users.away || []);
+            setOfflineUsers(data.users.offline || []);
+            
+            // Combine all users for search functionality
+            const allUsers = [
+              ...(data.users.online || []),
+              ...(data.users.away || []),
+              ...(data.users.offline || [])
+            ];
+            setAvailableUsers(allUsers);
+          }
         }
       } catch (err) {
         console.error('Failed to load users:', err);
@@ -187,6 +206,88 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
     setSearchQuery('');
     setError(null);
     onClose();
+  };
+
+  // Render individual user item
+  const renderUserItem = (user: User, isSelected: any, isDisabled: boolean) => {
+    const getPresenceColor = (status?: string) => {
+      switch (status) {
+        case 'online': return '#4CAF50';
+        case 'idle': return '#FFA726';
+        case 'away': return '#FF9800';
+        case 'busy': return '#F44336';
+        case 'in_call': return '#2196F3';
+        case 'in_meeting': return '#9C27B0';
+        case 'presenting': return '#3F51B5';
+        default: return '#9E9E9E';
+      }
+    };
+
+    return (
+      <ListItem
+        key={user.username}
+        disablePadding
+        style={{ opacity: isDisabled ? 0.5 : 1 }}
+      >
+        <ListItemButton 
+          onClick={() => !isDisabled && toggleUserSelection(user)}
+          disabled={isDisabled}
+        >
+          <ListItemAvatar>
+            <Box position="relative" display="inline-block">
+              <Avatar 
+                src={user.profile_picture}
+                sx={{ width: 28, height: 28 }}
+              >
+                {user.display_name.charAt(0)}
+              </Avatar>
+              {/* Presence indicator */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: -2,
+                  right: -2,
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  backgroundColor: getPresenceColor(user.presence?.status),
+                  border: '2px solid var(--chat-background, #ffffff)',
+                }}
+              />
+            </Box>
+          </ListItemAvatar>
+          <ListItemText
+            primary={
+              <span>
+                {user.display_name}
+                {user.is_team_member && (
+                  <span style={{ 
+                    marginLeft: '8px',
+                    fontSize: '0.7rem',
+                    color: 'var(--chat-primary, #1976d2)',
+                    fontWeight: 'bold'
+                  }}>
+                    TEAM
+                  </span>
+                )}
+              </span>
+            }
+            secondary={`@${user.username} • ${user.team_name || user.role_id}`}
+            primaryTypographyProps={{
+              style: { color: 'var(--chat-text-primary, #212121)', fontSize: '0.875rem' }
+            }}
+            secondaryTypographyProps={{
+              style: { color: 'var(--chat-text-secondary, #757575)', fontSize: '0.75rem' }
+            }}
+          />
+          <Checkbox
+            checked={!!isSelected}
+            disabled={isDisabled}
+            style={{ color: 'var(--chat-primary, #1976d2)' }}
+          />
+        </ListItemButton>
+      </ListItem>
+    );
   };
 
   return (
@@ -358,7 +459,7 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
           {/* User List */}
           <Box 
             style={{ 
-              maxHeight: '200px', 
+              maxHeight: '280px', 
               overflow: 'auto',
               backgroundColor: 'var(--chat-surface, #fafafa)',
               borderRadius: '8px',
@@ -366,60 +467,118 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
             }}
           >
             <List dense>
-              {filteredUsers.map(user => {
-                const isSelected = selectedUsers.find(u => u.username === user.username);
-                const isDisabled = chatType === 'dm' && selectedUsers.length >= 1 && !isSelected;
-
-                return (
-                  <ListItem
-                    key={user.username}
-                    disablePadding
-                    style={{ opacity: isDisabled ? 0.5 : 1 }}
-                  >
-                    <ListItemButton 
-                      onClick={() => !isDisabled && toggleUserSelection(user)}
-                      disabled={isDisabled}
-                    >
-                      <ListItemAvatar>
-                        <Avatar 
-                          src={user.profile_picture}
-                          sx={{ width: 28, height: 28 }}
-                        >
-                          {user.display_name.charAt(0)}
-                        </Avatar>
-                      </ListItemAvatar>
+              {searchQuery ? (
+                // Show filtered users when searching
+                <>
+                  {filteredUsers.map(user => {
+                    const isSelected = selectedUsers.find(u => u.username === user.username);
+                    const isDisabled = chatType === 'dm' && selectedUsers.length >= 1 && !isSelected;
+                    return renderUserItem(user, isSelected, isDisabled);
+                  })}
+                  {filteredUsers.length === 0 && (
+                    <ListItem>
                       <ListItemText
-                        primary={user.display_name}
-                        secondary={`@${user.username} • ${user.role_id}`}
+                        primary="No users found"
                         primaryTypographyProps={{
-                          style: { color: 'var(--chat-text-primary, #212121)', fontSize: '0.875rem' }
-                        }}
-                        secondaryTypographyProps={{
-                          style: { color: 'var(--chat-text-secondary, #757575)', fontSize: '0.75rem' }
+                          style: { 
+                            color: 'var(--chat-text-secondary, #757575)',
+                            textAlign: 'center' 
+                          }
                         }}
                       />
-                      <Checkbox
-                        checked={!!isSelected}
-                        disabled={isDisabled}
-                        style={{ color: 'var(--chat-primary, #1976d2)' }}
+                    </ListItem>
+                  )}
+                </>
+              ) : (
+                // Show grouped users when not searching
+                <>
+                  {/* Online Users */}
+                  {onlineUsers.length > 0 && (
+                    <>
+                      <ListItem>
+                        <ListItemText
+                          primary={`Online (${onlineUsers.length})`}
+                          primaryTypographyProps={{
+                            style: { 
+                              color: 'var(--chat-text-secondary, #757575)',
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              textTransform: 'uppercase'
+                            }
+                          }}
+                        />
+                      </ListItem>
+                      {onlineUsers.map(user => {
+                        const isSelected = selectedUsers.find(u => u.username === user.username);
+                        const isDisabled = chatType === 'dm' && selectedUsers.length >= 1 && !isSelected;
+                        return renderUserItem(user, isSelected, isDisabled);
+                      })}
+                    </>
+                  )}
+
+                  {/* Away Users */}
+                  {awayUsers.length > 0 && (
+                    <>
+                      <ListItem>
+                        <ListItemText
+                          primary={`Away (${awayUsers.length})`}
+                          primaryTypographyProps={{
+                            style: { 
+                              color: 'var(--chat-text-secondary, #757575)',
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              textTransform: 'uppercase'
+                            }
+                          }}
+                        />
+                      </ListItem>
+                      {awayUsers.map(user => {
+                        const isSelected = selectedUsers.find(u => u.username === user.username);
+                        const isDisabled = chatType === 'dm' && selectedUsers.length >= 1 && !isSelected;
+                        return renderUserItem(user, isSelected, isDisabled);
+                      })}
+                    </>
+                  )}
+
+                  {/* Offline Users */}
+                  {offlineUsers.length > 0 && (
+                    <>
+                      <ListItem>
+                        <ListItemText
+                          primary={`Offline (${offlineUsers.length})`}
+                          primaryTypographyProps={{
+                            style: { 
+                              color: 'var(--chat-text-secondary, #757575)',
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              textTransform: 'uppercase'
+                            }
+                          }}
+                        />
+                      </ListItem>
+                      {offlineUsers.map(user => {
+                        const isSelected = selectedUsers.find(u => u.username === user.username);
+                        const isDisabled = chatType === 'dm' && selectedUsers.length >= 1 && !isSelected;
+                        return renderUserItem(user, isSelected, isDisabled);
+                      })}
+                    </>
+                  )}
+
+                  {/* No users message */}
+                  {onlineUsers.length === 0 && awayUsers.length === 0 && offlineUsers.length === 0 && (
+                    <ListItem>
+                      <ListItemText
+                        primary="No users available"
+                        primaryTypographyProps={{
+                          style: { 
+                            color: 'var(--chat-text-secondary, #757575)',
+                            textAlign: 'center' 
+                          }
+                        }}
                       />
-                    </ListItemButton>
-                  </ListItem>
-                );
-              })}
-              
-              {filteredUsers.length === 0 && (
-                <ListItem>
-                  <ListItemText
-                    primary="No users found"
-                    primaryTypographyProps={{
-                      style: { 
-                        color: 'var(--chat-text-secondary, #757575)',
-                        textAlign: 'center' 
-                      }
-                    }}
-                  />
-                </ListItem>
+                    </ListItem>
+                  )}
+                </>
               )}
             </List>
           </Box>
