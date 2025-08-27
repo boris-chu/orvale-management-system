@@ -820,7 +820,7 @@ export default function SystemAnalytics() {
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-2">
                                 <UserAvatar 
-                                  name={staff.displayName}
+                                  user={{ display_name: staff.displayName }}
                                   size="sm"
                                 />
                                 <span className="font-medium">{staff.displayName}</span>
