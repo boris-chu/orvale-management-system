@@ -137,23 +137,36 @@ export default function ChatSidebar({
         if (response.ok) {
           const data = await response.json();
           
-          // Transform API data to component format (unread counts applied dynamically in getFilteredChats)
-          const channels = data.channels.map((ch: any) => ({
-            id: ch.id.toString(),
-            type: 'channel' as const,
-            name: ch.name.toLowerCase().replace(/\s+/g, '-'),
-            displayName: `#${ch.name.toLowerCase().replace(/\s+/g, '-')}`,
-            unreadCount: 0, // Will be updated dynamically in getFilteredChats
-            lastMessage: ch.description || '',
-            lastMessageTime: '',
-            isPinned: ch.name === 'General',
-            isMuted: ch.is_read_only
-          }));
+          // Transform API data to component format and categorize by actual type
+          const channels: ChatItem[] = [];
+          const groups: ChatItem[] = [];
+          
+          data.channels.forEach((ch: any) => {
+            const chatItem = {
+              id: ch.id.toString(),
+              type: ch.type === 'group' ? 'group' as const : 'channel' as const,
+              name: ch.type === 'group' ? ch.name : ch.name.toLowerCase().replace(/\s+/g, '-'),
+              displayName: ch.type === 'group' ? ch.name : `#${ch.name.toLowerCase().replace(/\s+/g, '-')}`,
+              unreadCount: 0, // Will be updated dynamically in getFilteredChats
+              lastMessage: ch.description || '',
+              lastMessageTime: '',
+              isPinned: ch.name === 'General',
+              isMuted: ch.is_read_only
+            };
+            
+            if (ch.type === 'group') {
+              groups.push(chatItem);
+            } else {
+              channels.push(chatItem);
+            }
+          });
+
+          console.log('📂 ChatSidebar categorized chats:', { channels: channels.length, groups: groups.length });
 
           setChatData({
             directMessages: [],
             channels,
-            groups: []
+            groups
           });
           
           // Load initial unread counts from API
@@ -231,25 +244,7 @@ export default function ChatSidebar({
         return chat.displayName;
 
       case 'group':
-        // Group naming rules:
-        if (chat.participants && currentUser) {
-          const otherParticipants = chat.participants.filter(p => p.username !== currentUser.username);
-          
-          if (otherParticipants.length <= 2) {
-            // 2-3 people: 'John Doe & Jane Smith'
-            return otherParticipants.map(p => p.display_name).join(' & ');
-          } else {
-            // 3+ people: 'John, Jane, Person 3' or 'Alice, Bob, Carol & 2 others'
-            const firstTwo = otherParticipants.slice(0, 2).map(p => p.display_name);
-            const remaining = otherParticipants.length - 2;
-            
-            if (remaining === 1) {
-              return `${firstTwo.join(', ')} & ${otherParticipants[2].display_name}`;
-            } else {
-              return `${firstTwo.join(', ')} & ${remaining} others`;
-            }
-          }
-        }
+        // Group naming: use the group name directly (informal groups have custom names)
         return chat.displayName;
 
       default:
