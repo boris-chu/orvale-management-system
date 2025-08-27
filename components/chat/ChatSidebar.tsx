@@ -123,25 +123,32 @@ export default function ChatSidebar({
     });
   }, [chatUISettings, settingsLoading, unreadCounts]);
 
-  // Load real channels from API
+  // Load real channels and direct messages from API
   useEffect(() => {
-    const loadChannels = async () => {
+    const loadChatsData = async () => {
       try {
         const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
         if (!token) return;
 
-        const response = await fetch('/api/chat/channels', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        // Load channels and DMs in parallel
+        const [channelsResponse, dmsResponse] = await Promise.all([
+          fetch('/api/chat/channels', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }),
+          fetch('/api/chat/dm', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        ]);
 
-        if (response.ok) {
-          const data = await response.json();
+        const channels: ChatItem[] = [];
+        const groups: ChatItem[] = [];
+        const directMessages: ChatItem[] = [];
+
+        // Process channels data
+        if (channelsResponse.ok) {
+          const channelsData = await channelsResponse.json();
           
-          // Transform API data to component format and categorize by actual type
-          const channels: ChatItem[] = [];
-          const groups: ChatItem[] = [];
-          
-          data.channels.forEach((ch: any) => {
+          channelsData.channels.forEach((ch: any) => {
             const chatItem = {
               id: ch.id.toString(),
               type: ch.type === 'group' ? 'group' as const : 'channel' as const,
@@ -160,14 +167,40 @@ export default function ChatSidebar({
               channels.push(chatItem);
             }
           });
+        }
 
-          console.log('📂 ChatSidebar categorized chats:', { channels: channels.length, groups: groups.length });
-
-          setChatData({
-            directMessages: [],
-            channels,
-            groups
+        // Process DMs data
+        if (dmsResponse.ok) {
+          const dmsData = await dmsResponse.json();
+          
+          dmsData.dms?.forEach((dm: any) => {
+            directMessages.push({
+              id: dm.id.toString(),
+              type: 'dm' as const,
+              name: dm.name,
+              displayName: dm.displayName,
+              participants: dm.participants,
+              unreadCount: dm.unreadCount || 0,
+              lastMessage: dm.lastMessage || '',
+              lastMessageTime: dm.lastMessageTime || '',
+              status: dm.participants?.[0]?.presence?.status || 'offline',
+              isPinned: false,
+              isMuted: false
+            });
           });
+        }
+
+        console.log('📂 ChatSidebar loaded chats:', { 
+          channels: channels.length, 
+          groups: groups.length, 
+          directMessages: directMessages.length 
+        });
+
+        setChatData({
+          directMessages,
+          channels,
+          groups
+        });
           
           // Load initial unread counts from API
           refreshUnreadCounts();
@@ -177,7 +210,7 @@ export default function ChatSidebar({
       }
     };
 
-    loadChannels();
+    loadChatsData();
   }, [currentUser, refreshUnreadCounts]); // Include refreshUnreadCounts dependency
 
   // Socket.io connection for real-time updates using singleton

@@ -149,10 +149,37 @@ export default function CreateChatModal({ open, onClose, currentUser }: CreateCh
 
       // For DM, create a direct message
       if (chatType === 'dm' && selectedUsers.length === 1) {
-        // TODO: Implement DM creation API
-        console.log('Creating DM with:', selectedUsers[0]);
-        alert('Direct message creation will be implemented soon!');
+        const targetUser = selectedUsers[0];
+        console.log('Creating DM with:', targetUser);
+
+        const response = await fetch('/api/chat/dm', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            targetUsername: targetUser.username
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to create direct message');
+        }
+
+        const result = await response.json();
+        console.log('DM created/found:', result);
+
+        // Reset form and close
+        setChatName('');
+        setDescription('');
+        setSelectedUsers([]);
+        setSearchQuery('');
         onClose();
+
+        // TODO: Refresh chat list or navigate to new DM
+        window.location.reload(); // Temporary solution
         return;
       }
 
