@@ -126,6 +126,19 @@ export default function ChatMoreOptions({
     setConfirmDialog({ ...confirmDialog, open: false });
   };
 
+  // Debug logging for anchor positioning
+  React.useEffect(() => {
+    if (open && anchorEl) {
+      console.log('ChatMoreOptions: Menu opened with anchor element:', anchorEl);
+      console.log('ChatMoreOptions: Anchor element position:', {
+        top: anchorEl.offsetTop,
+        left: anchorEl.offsetLeft,
+        width: anchorEl.offsetWidth,
+        height: anchorEl.offsetHeight
+      });
+    }
+  }, [open, anchorEl]);
+
   return (
     <>
       <Menu
@@ -139,6 +152,7 @@ export default function ChatMoreOptions({
             backgroundColor: 'var(--chat-surface, #ffffff)',
             color: 'var(--chat-text-primary, #212121)',
             border: '1px solid var(--chat-border, #e0e0e0)',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
             '& .MuiMenuItem-root': {
               color: 'var(--chat-text-primary, #212121)',
               '&:hover': {
@@ -150,8 +164,21 @@ export default function ChatMoreOptions({
             }
           }
         }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        anchorOrigin={{ 
+          vertical: 'bottom', 
+          horizontal: 'right' 
+        }}
+        transformOrigin={{ 
+          vertical: 'top', 
+          horizontal: 'right' 
+        }}
+        MenuListProps={{
+          sx: {
+            py: 1
+          }
+        }}
+        disableAutoFocusItem
+        disableRestoreFocus
       >
         {/* Search in Chat */}
         <MenuItem onClick={() => handleAction(onSearchInChat || (() => {}))}>

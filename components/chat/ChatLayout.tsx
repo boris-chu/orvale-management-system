@@ -9,6 +9,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { IconButton } from '@mui/material';
 import { 
   Menu, 
   X, 
@@ -260,15 +261,19 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
           </Button>
 
           {/* Menu (mobile) / More (desktop) */}
-          <Button
-            variant="ghost"
-            size="sm"
+          <IconButton
             onClick={(e) => setMoreOptionsAnchor(e.currentTarget)}
-            className="p-2 touch-manipulation"
+            size="small"
             title="More options"
+            sx={{
+              color: 'var(--chat-text-secondary, #757575)',
+              '&:hover': {
+                backgroundColor: 'var(--chat-secondary, #f5f5f5)'
+              }
+            }}
           >
             <MoreVertical className="w-4 h-4" />
-          </Button>
+          </IconButton>
         </div>
       </div>
     );
