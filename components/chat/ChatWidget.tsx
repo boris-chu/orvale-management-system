@@ -71,6 +71,7 @@ interface ChatConversation {
   unreadCount: number;
   isOnline?: boolean;
   status?: 'online' | 'away' | 'busy' | 'offline';
+  profile_picture?: string | null;
 }
 
 interface ChatWidgetProps {
@@ -103,6 +104,7 @@ export default function ChatWidget({
   const [isLoading, setIsLoading] = useState(true);
   const [chatSystemError, setChatSystemError] = useState<string | null>(null);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [usersWithPresence, setUsersWithPresence] = useState<{[key: string]: any}>({});
 
   // Get chat UI settings from admin
   const { settings: chatUISettings, loading: settingsLoading } = useChatSettings();
@@ -140,42 +142,117 @@ export default function ChatWidget({
         return;
       }
 
-      const response = await fetch('/api/chat/channels', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      // Load both channels, direct messages, and user presence data
+      const [channelsResponse, dmsResponse, usersResponse] = await Promise.all([
+        fetch('/api/chat/channels', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('/api/chat/dm', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('/api/chat/users', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ]);
       
-      if (response.ok) {
-        const data = await response.json();
-        const realConversations = data.channels?.map((channel: any) => ({
-          id: channel.id.toString(),
-          type: 'channel' as const,
-          name: channel.name,
-          displayName: `#${channel.name}`,
-          lastMessage: channel.lastMessage ? {
-            content: channel.lastMessage.message,
-            timestamp: channel.lastMessage.timestamp,
-            sender: {
-              username: channel.lastMessage.user_id,
-              display_name: channel.lastMessage.user_display_name,
-              role_id: 'user'
-            }
-          } : undefined,
-          unreadCount: channel.unreadCount || 0,
-          isOnline: false,
-          status: 'offline' as const
-        })) || [];
+      if (channelsResponse.ok && dmsResponse.ok) {
+        const channelsData = await channelsResponse.json();
+        const dmsData = await dmsResponse.json();
+        
+        // Process user presence data for quick lookup
+        let userPresenceMap: {[key: string]: any} = {};
+        if (usersResponse.ok) {
+          const usersData = await usersResponse.json();
+          if (usersData.success && usersData.users) {
+            Object.values(usersData.users).flat().forEach((user: any) => {
+              userPresenceMap[user.username] = user;
+            });
+            setUsersWithPresence(userPresenceMap);
+          }
+        }
+        
+        // Process channels and groups
+        const channelConversations: any[] = [];
+        const groupConversations: any[] = [];
+        
+        channelsData.channels?.forEach((channel: any) => {
+          // Skip direct messages - they're handled separately
+          if (channel.type === 'direct_message') {
+            return;
+          }
+          
+          const conversationItem = {
+            id: channel.id.toString(),
+            type: channel.type === 'group' ? 'group' as const : 'channel' as const,
+            name: channel.name,
+            displayName: channel.type === 'group' ? channel.name : `#${channel.name}`,
+            lastMessage: channel.lastMessage ? {
+              content: channel.lastMessage.message,
+              timestamp: channel.lastMessage.timestamp,
+              sender: {
+                username: channel.lastMessage.user_id,
+                display_name: channel.lastMessage.user_display_name,
+                role_id: 'user'
+              }
+            } : undefined,
+            unreadCount: channel.unreadCount || 0,
+            isOnline: false,
+            status: 'offline' as const
+          };
+          
+          if (channel.type === 'group') {
+            groupConversations.push(conversationItem);
+          } else {
+            channelConversations.push(conversationItem);
+          }
+        });
+
+        // Process direct messages with presence data
+        const dmConversations = dmsData.dms?.map((dm: any) => {
+          // Find the other participant for DMs to get their presence status
+          const otherParticipant = dm.participants?.find((p: any) => p.username !== currentUser?.username);
+          const userWithPresence = userPresenceMap[otherParticipant?.username];
+          
+          return {
+            id: dm.id.toString(),
+            type: 'dm' as const,
+            name: dm.name,
+            displayName: dm.displayName,
+            participants: dm.participants || [],
+            lastMessage: dm.lastMessage ? {
+              content: dm.lastMessage,
+              timestamp: dm.lastMessageTime,
+              sender: {
+                username: dm.name,
+                display_name: dm.displayName,
+                role_id: 'user'
+              }
+            } : undefined,
+            unreadCount: dm.unreadCount || 0,
+            isOnline: userWithPresence?.presence?.status === 'online' || false,
+            status: userWithPresence?.presence?.status || 'offline' as const,
+            profile_picture: userWithPresence?.profile_picture || null
+          };
+        }) || [];
+        
+        const realConversations = [...channelConversations, ...groupConversations, ...dmConversations];
         
         setConversations(realConversations);
         setTotalUnreadCount(realConversations.reduce((sum: number, conv: any) => sum + conv.unreadCount, 0));
         setChatSystemError(null);
         
         console.log('🔄 ChatWidget: Loaded conversations with unread counts:', realConversations.map(c => ({ id: c.id, name: c.displayName, unreadCount: c.unreadCount })));
-      } else if (response.status === 401) {
-        setChatSystemError('Chat authentication failed - please log in again');
-      } else if (response.status === 403) {
-        setChatSystemError('Insufficient permissions for chat system');
       } else {
-        setChatSystemError(`Chat API error: ${response.status} - ${response.statusText}`);
+        // Handle error responses
+        if (channelsResponse.status === 401 || dmsResponse.status === 401) {
+          setChatSystemError('Chat authentication failed - please log in again');
+        } else if (channelsResponse.status === 403 || dmsResponse.status === 403) {
+          setChatSystemError('Insufficient permissions for chat system');
+        } else {
+          const errorStatus = channelsResponse.ok ? dmsResponse.status : channelsResponse.status;
+          const errorText = channelsResponse.ok ? dmsResponse.statusText : channelsResponse.statusText;
+          setChatSystemError(`Chat API error: ${errorStatus} - ${errorText}`);
+        }
       }
     } catch (error) {
       console.error('Failed to load conversations:', error);
@@ -397,10 +474,13 @@ export default function ChatWidget({
     const socket = socketClient.getSocket();
     if (!socket || !isSocketConnected || conversations.length === 0) return;
 
-    console.log('🔌 ChatWidget: Auto-joining all channels for notifications');
+    console.log('🔌 ChatWidget: Auto-joining all conversations for notifications');
     conversations.forEach(conv => {
       if (conv.type === 'channel') {
         console.log('🔌 ChatWidget: Auto-joining channel:', conv.id);
+        socketClient.joinChannel(conv.id);
+      } else if (conv.type === 'dm' || conv.type === 'group') {
+        console.log('🔌 ChatWidget: Auto-joining', conv.type, ':', conv.id);
         socketClient.joinChannel(conv.id);
       }
     });
@@ -512,9 +592,12 @@ export default function ChatWidget({
     
     loadRecentMessages(chat.id);
     
-    // Join the channel via Socket.io using singleton method
+    // Join the conversation via Socket.io using singleton method
     if (chat.type === 'channel') {
       console.log('🔌 ChatWidget: Joining channel:', chat.id);
+      socketClient.joinChannel(chat.id);
+    } else if (chat.type === 'dm' || chat.type === 'group') {
+      console.log('🔌 ChatWidget: Joining', chat.type, ':', chat.id);
       socketClient.joinChannel(chat.id);
     }
     
@@ -715,10 +798,11 @@ export default function ChatWidget({
                             user={{
                               display_name: chat.displayName,
                               username: chat.name,
-                              profile_picture: ''
+                              profile_picture: chat.profile_picture || ''
                             }}
                             size="sm"
                             showOnlineIndicator={chat.type === 'dm'}
+                            isOnline={chat.isOnline}
                           />
                           {(() => {
                             if (settingsLoading) return null;
@@ -781,9 +865,11 @@ export default function ChatWidget({
                         user={{
                           display_name: selectedChat.displayName,
                           username: selectedChat.name,
-                          profile_picture: ''
+                          profile_picture: selectedChat.profile_picture || ''
                         }}
                         size="sm"
+                        showOnlineIndicator={true}
+                        isOnline={selectedChat.isOnline}
                       />
                       <div>
                         <p className="text-sm font-medium">{selectedChat.displayName}</p>

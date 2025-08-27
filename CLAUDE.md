@@ -28,14 +28,22 @@ project management/
 
 ## 🚀 Quick Start Commands
 
+### Development Setup (2-Server Architecture)
+```bash
+# Terminal 1: Main Next.js application server (Port 80)
+sudo npm run dev
+
+# Terminal 2: Socket.io server for real-time features (Port 3001)
+node socket-server.js
+
+# Both servers must be running for full functionality
+```
+
 ### Development Commands
 ```bash
 # Linting and type checking (run after making changes)
 npm run lint
 npm run typecheck
-
-# Main development server (Port 80 - Production-style setup)
-sudo npm run dev
 
 # Build for production
 npm run build
@@ -51,13 +59,36 @@ tail -f logs/app.log
 tail -f logs/error.log
 ```
 
-### Access Points (Port 80):
+### Access Points:
+**Port 80 (Main Application):**
 - **Public Portal**: http://localhost/ (Landing page with ticket submission)
 - **Submit Tickets**: http://localhost/public-portal/ (Original ticket submission form)
 - **Admin Queue**: http://localhost/tickets (IT staff ticket management)
 - **Helpdesk Queue**: http://localhost/helpdesk/queue (Multi-team queue for helpdesk staff)
+- **Chat System**: http://localhost/chat (Real-time chat with channels, DMs, and groups)
 - **Developer Portal**: http://localhost/developer (System configuration and analytics)
 - **API Health**: http://localhost/api/health (Server status check)
+
+**Port 3001 (Socket.io Server):**
+- **WebSocket Endpoint**: ws://localhost:3001/socket.io/ (Real-time chat, presence, and notifications)
+
+## 🔄 Real-Time Features (Socket.io)
+
+### Currently Active:
+- ✅ **Real-time messaging**: Instant message delivery across channels, DMs, and groups
+- ✅ **Online presence tracking**: Live user status and activity indicators  
+- ✅ **Unread message counts**: Real-time badge updates
+- ✅ **User typing indicators**: See when others are typing
+- ✅ **Message notifications**: Instant alerts for new messages
+- ✅ **Auto-reconnection**: Resilient connection handling with exponential backoff
+
+### Socket.io Events:
+- `message_received` - New message in channel/DM
+- `user_joined_channel` - User joined a channel
+- `user_left_channel` - User left a channel
+- `typing_start` / `typing_stop` - Typing indicators
+- `presence_update` - User online status changes
+- `unread_count_update` - Message count changes
 
 ## 🏗️ Architecture Guidelines
 
@@ -167,14 +198,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 - [ ] Resource planning views
 - [ ] Mobile responsive design
 
-### Phase 6: Chat System with Audio/Video
-- [ ] Implement Socket.io server (port 3001) for chat + WebRTC signaling
-- [ ] Create 8 database tables (7 chat + 1 call_logs)
-- [ ] Add 21 new RBAC permissions (16 chat + 5 call)
-- [ ] Build full-page chat application with Material-UI
-- [ ] Add minimized chat widget for all pages
+### Phase 6: Chat System with Audio/Video ✅ **IMPLEMENTED**
+- [x] **Socket.io server (port 3001) for chat + WebRTC signaling** - Server running
+- [x] **Create 8 database tables (7 chat + 1 call_logs)** - All tables created
+- [x] **Add 21 new RBAC permissions (16 chat + 5 call)** - Permissions implemented
+- [x] **Build full-page chat application with Material-UI** - Chat system live at /chat
+- [x] **Add minimized chat widget for all pages** - Widget integrated
 - [ ] Implement WebRTC audio/video calls with Safari support
-- [ ] Create admin chat management dashboard
+- [x] **Create admin chat management dashboard** - Available in admin portal
+- [x] **Real-time messaging with channels, DMs, and groups** - Fully functional
+- [x] **Online presence tracking and user status** - Live user presence
 - [ ] **See `/docs/Chat_System_Implementation_Plan.md` for complete details**
 
 ## 🔧 Technical Guidelines

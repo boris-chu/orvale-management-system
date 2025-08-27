@@ -93,6 +93,35 @@ Leave a channel.
 
 ### Direct Messages & Groups
 
+#### **GET** `/api/chat/dm`
+Get user's direct messages (simplified endpoint for chat system).
+
+**Response:**
+```json
+{
+  "dms": []
+}
+```
+
+#### **POST** `/api/chat/dm`
+Create or find existing direct message between two users.
+
+**Request:**
+```json
+{
+  "targetUsername": "john.doe"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Direct message created successfully",
+  "dmId": 123,
+  "isNew": true
+}
+```
+
 #### **GET** `/api/chat/direct-messages`
 Get user's direct messages and group chats.
 
@@ -137,6 +166,67 @@ Create new direct message or group chat.
 {
   "type": "direct_message",
   "participants": ["john.doe", "jane.smith"]
+}
+```
+
+### Direct Message Management (New Simplified API)
+
+#### **GET** `/api/chat/dm`
+Get user's direct messages (simplified endpoint).
+
+**Response:**
+```json
+{
+  "dms": []
+}
+```
+
+#### **POST** `/api/chat/dm`
+Create or find existing direct message conversation.
+
+**Request:**
+```json
+{
+  "targetUsername": "john.doe"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Direct message created successfully",
+  "dmId": 42,
+  "isNew": true
+}
+```
+
+### Chat Users
+
+#### **GET** `/api/chat/users`
+Get available users for chat creation, grouped by online status.
+
+**Response:**
+```json
+{
+  "users": {
+    "online": [
+      {
+        "username": "john.doe",
+        "display_name": "John Doe",
+        "profile_picture": "/avatars/john.jpg",
+        "role_id": "manager",
+        "is_online": true,
+        "team_name": "Development",
+        "is_team_member": true,
+        "presence": {
+          "status": "online",
+          "last_active": "2025-01-15T14:30:00Z"
+        }
+      }
+    ],
+    "away": [...],
+    "offline": [...]
+  }
 }
 ```
 

@@ -379,21 +379,49 @@ export default function ChatSidebar({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Failed to create DM:', errorData.error);
+        let errorMessage = 'Failed to create DM';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          errorMessage = `HTTP ${response.status} - ${response.statusText}`;
+        }
+        console.error('Failed to create DM:', errorMessage);
         return;
       }
 
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+      } catch (parseError) {
+        console.error('Failed to parse DM creation response:', parseError);
+        console.error('Response status:', response.status, response.statusText);
+        return;
+      }
       console.log('✅ DM created/found:', result);
 
       // Create a basic ChatItem and select it immediately
+      // Use the target user info since this is who we're chatting with
       const dmChat: ChatItem = {
         id: result.dmId.toString(),
         type: 'dm',
         name: user.username,
         displayName: user.display_name,
-        participants: [user],
+        participants: [
+          {
+            username: currentUser?.username || '',
+            display_name: currentUser?.display_name || '',
+            profile_picture: '',
+            role_id: 'user'
+          },
+          {
+            username: user.username,
+            display_name: user.display_name,
+            profile_picture: '',
+            role_id: 'user'
+          }
+        ],
         unreadCount: 0,
         lastMessage: '',
         lastMessageTime: '',
