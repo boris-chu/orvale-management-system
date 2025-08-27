@@ -149,15 +149,20 @@ export default function ChatSidebar({
           const channelsData = await channelsResponse.json();
           
           channelsData.channels.forEach((ch: any) => {
+            // Skip direct messages - they'll be handled by the DM API
+            if (ch.type === 'direct_message') {
+              return;
+            }
+            
             const chatItem = {
               id: ch.id.toString(),
               type: ch.type === 'group' ? 'group' as const : 'channel' as const,
-              name: ch.type === 'group' ? ch.name : ch.name.toLowerCase().replace(/\s+/g, '-'),
-              displayName: ch.type === 'group' ? ch.name : `#${ch.name.toLowerCase().replace(/\s+/g, '-')}`,
+              name: ch.type === 'group' ? (ch.name || 'Unnamed Group') : (ch.name || 'unnamed').toLowerCase().replace(/\s+/g, '-'),
+              displayName: ch.type === 'group' ? (ch.name || 'Unnamed Group') : `#${(ch.name || 'unnamed').toLowerCase().replace(/\s+/g, '-')}`,
               unreadCount: 0, // Will be updated dynamically in getFilteredChats
               lastMessage: ch.description || '',
               lastMessageTime: '',
-              isPinned: ch.name === 'General',
+              isPinned: (ch.name || '').toLowerCase() === 'general',
               isMuted: ch.is_read_only
             };
             
@@ -171,23 +176,29 @@ export default function ChatSidebar({
 
         // Process DMs data
         if (dmsResponse.ok) {
-          const dmsData = await dmsResponse.json();
-          
-          dmsData.dms?.forEach((dm: any) => {
-            directMessages.push({
-              id: dm.id.toString(),
-              type: 'dm' as const,
-              name: dm.name,
-              displayName: dm.displayName,
-              participants: dm.participants,
-              unreadCount: dm.unreadCount || 0,
-              lastMessage: dm.lastMessage || '',
-              lastMessageTime: dm.lastMessageTime || '',
-              status: dm.participants?.[0]?.presence?.status || 'offline',
-              isPinned: false,
-              isMuted: false
+          try {
+            const dmsData = await dmsResponse.json();
+            
+            dmsData.dms?.forEach((dm: any) => {
+              directMessages.push({
+                id: dm.id.toString(),
+                type: 'dm' as const,
+                name: dm.name,
+                displayName: dm.displayName,
+                participants: dm.participants,
+                unreadCount: dm.unreadCount || 0,
+                lastMessage: dm.lastMessage || '',
+                lastMessageTime: dm.lastMessageTime || '',
+                status: dm.participants?.[0]?.presence?.status || 'offline',
+                isPinned: false,
+                isMuted: false
+              });
             });
-          });
+          } catch (dmError) {
+            console.error('Failed to process DMs data:', dmError);
+          }
+        } else {
+          console.error('DMs API failed with status:', dmsResponse.status);
         }
 
         console.log('📂 ChatSidebar loaded chats:', { 
@@ -205,7 +216,14 @@ export default function ChatSidebar({
         // Load initial unread counts from API
         refreshUnreadCounts();
       } catch (error) {
-        console.error('Failed to load channels:', error);
+        console.error('Failed to load chats data:', error);
+        
+        // Set empty state so sidebar doesn't disappear completely
+        setChatData({
+          directMessages: [],
+          channels: [],
+          groups: []
+        });
       }
     };
 
