@@ -381,17 +381,39 @@ export default function CreateChatModal({ open, onClose, currentUser, onChatCrea
         <div className="space-y-6">
           {/* Chat Type Selection - Auto-determined */}
           <FormControl fullWidth size="small">
-            <InputLabel style={{ color: 'var(--chat-text-secondary, #757575)' }}>
+            <InputLabel 
+              sx={{ 
+                color: 'var(--chat-text-secondary, #757575)',
+                '&.Mui-disabled': {
+                  color: 'var(--chat-text-secondary, #757575)',
+                }
+              }}
+            >
               Chat Type (Auto-selected)
             </InputLabel>
             <Select
               value={chatType}
               label="Chat Type (Auto-selected)"
               disabled={true}
-              style={{ 
+              sx={{
                 backgroundColor: 'var(--chat-surface, #fafafa)',
                 color: 'var(--chat-text-primary, #212121)',
-                opacity: 0.7
+                opacity: 0.8,
+                '& .MuiSelect-select': {
+                  color: 'var(--chat-text-primary, #212121)',
+                },
+                '& .MuiSelect-icon': {
+                  color: 'var(--chat-text-secondary, #757575)',
+                },
+                '&.Mui-disabled': {
+                  '& .MuiSelect-select': {
+                    color: 'var(--chat-text-primary, #212121)',
+                    WebkitTextFillColor: 'var(--chat-text-primary, #212121)',
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'var(--chat-border, #e0e0e0)',
+                  }
+                }
               }}
             >
               <MenuItem value="dm">
