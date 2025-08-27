@@ -68,6 +68,7 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
   const [showCreateChatModal, setShowCreateChatModal] = useState(false);
   const [moreOptionsAnchor, setMoreOptionsAnchor] = useState<HTMLElement | null>(null);
   const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // Trigger for sidebar refresh
   
   // Apply theme CSS
   const currentTheme = useThemeCSS('internal_chat');
@@ -127,31 +128,38 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
   const handleChatCreated = useCallback(async (chatId: string, chatType: 'dm' | 'group') => {
     console.log(`Navigating to new ${chatType}:`, chatId);
     
-    // We need to construct a ChatItem to select it
-    // Since we just created it, we'll make a basic one and let it load properly
-    const newChat: ChatItem = {
-      id: chatId,
-      type: chatType,
-      name: chatId, // Will be updated when sidebar reloads
-      displayName: chatType === 'dm' ? 'Loading...' : 'New Group',
-      participants: [],
-      unreadCount: 0,
-      lastMessage: '',
-      lastMessageTime: '',
-      isOnline: false,
-      isPinned: false,
-      isMuted: false
-    };
+    // Trigger sidebar refresh to load the new chat
+    setRefreshTrigger(prev => prev + 1);
     
-    // Select the new chat immediately
-    setSelectedChat(newChat);
-    
-    // Force refresh the sidebar to load the proper chat data
-    // We'll trigger a page reload to ensure fresh data
+    // Wait a bit for the refresh to complete, then try to select the new chat
     setTimeout(() => {
-      window.location.reload();
-    }, 500);
-  }, []);
+      // Create a basic chat item to select
+      const newChat: ChatItem = {
+        id: chatId,
+        type: chatType,
+        name: chatId,
+        displayName: chatType === 'dm' ? 'Loading...' : 'New Group',
+        participants: [],
+        unreadCount: 0,
+        lastMessage: '',
+        lastMessageTime: '',
+        isOnline: false,
+        isPinned: false,
+        isMuted: false
+      };
+      
+      // Select the new chat
+      setSelectedChat(newChat);
+      
+      // If still not working after 2 seconds, fall back to reload
+      setTimeout(() => {
+        if (!selectedChat || selectedChat.id !== chatId) {
+          console.log('Fallback: refreshing page to ensure new chat is loaded');
+          window.location.reload();
+        }
+      }, 2000);
+    }, 1000);
+  }, [selectedChat]);
 
   // Initialize sidebar state based on screen size
   useEffect(() => {
@@ -421,6 +429,7 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
                   onChatSelect={handleChatSelect}
                   selectedChatId={selectedChat?.id}
                   onCreateChat={() => setShowCreateChatModal(true)}
+                  refreshTrigger={refreshTrigger}
                 />
               </div>
             </motion.div>

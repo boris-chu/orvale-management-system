@@ -464,9 +464,14 @@ export default function CreateChatModal({ open, onClose, currentUser, onChatCrea
             <div>
               <Typography variant="subtitle2" className="mb-2" style={{ color: 'var(--chat-text-primary, #212121)', fontSize: '0.875rem' }}>
                 Selected People ({selectedUsers.length})
-                {chatType === 'dm' && selectedUsers.length > 1 && (
-                  <Typography variant="caption" color="error" className="ml-2">
-                    Direct messages can only have one person
+                {selectedUsers.length === 1 && (
+                  <Typography variant="caption" style={{ color: 'var(--chat-primary, #1976d2)' }} className="ml-2">
+                    → Will create Direct Message
+                  </Typography>
+                )}
+                {selectedUsers.length > 1 && (
+                  <Typography variant="caption" style={{ color: 'var(--chat-primary, #1976d2)' }} className="ml-2">
+                    → Will create Group Chat
                   </Typography>
                 )}
               </Typography>
@@ -538,7 +543,7 @@ export default function CreateChatModal({ open, onClose, currentUser, onChatCrea
                 <>
                   {filteredUsers.map(user => {
                     const isSelected = selectedUsers.find(u => u.username === user.username);
-                    const isDisabled = chatType === 'dm' && selectedUsers.length >= 1 && !isSelected;
+                    const isDisabled = false; // Allow selecting multiple users - auto-switching will handle the rest
                     return renderUserItem(user, isSelected, isDisabled);
                   })}
                   {filteredUsers.length === 0 && (
@@ -576,7 +581,7 @@ export default function CreateChatModal({ open, onClose, currentUser, onChatCrea
                       </ListItem>
                       {onlineUsers.map(user => {
                         const isSelected = selectedUsers.find(u => u.username === user.username);
-                        const isDisabled = chatType === 'dm' && selectedUsers.length >= 1 && !isSelected;
+                        const isDisabled = false; // Allow selecting multiple users - auto-switching will handle the rest
                         return renderUserItem(user, isSelected, isDisabled);
                       })}
                     </>
@@ -600,7 +605,7 @@ export default function CreateChatModal({ open, onClose, currentUser, onChatCrea
                       </ListItem>
                       {awayUsers.map(user => {
                         const isSelected = selectedUsers.find(u => u.username === user.username);
-                        const isDisabled = chatType === 'dm' && selectedUsers.length >= 1 && !isSelected;
+                        const isDisabled = false; // Allow selecting multiple users - auto-switching will handle the rest
                         return renderUserItem(user, isSelected, isDisabled);
                       })}
                     </>
@@ -624,7 +629,7 @@ export default function CreateChatModal({ open, onClose, currentUser, onChatCrea
                       </ListItem>
                       {offlineUsers.map(user => {
                         const isSelected = selectedUsers.find(u => u.username === user.username);
-                        const isDisabled = chatType === 'dm' && selectedUsers.length >= 1 && !isSelected;
+                        const isDisabled = false; // Allow selecting multiple users - auto-switching will handle the rest
                         return renderUserItem(user, isSelected, isDisabled);
                       })}
                     </>

@@ -60,13 +60,15 @@ interface ChatSidebarProps {
   onChatSelect: (chat: ChatItem) => void;
   selectedChatId?: string;
   onCreateChat?: () => void;
+  refreshTrigger?: number; // Trigger to refresh chat data
 }
 
 export default function ChatSidebar({ 
   currentUser, 
   onChatSelect, 
   selectedChatId,
-  onCreateChat 
+  onCreateChat,
+  refreshTrigger
 }: ChatSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSection, setActiveSection] = useState<'dm' | 'channels' | 'groups' | 'all'>('all');
@@ -228,7 +230,7 @@ export default function ChatSidebar({
     };
 
     loadChatsData();
-  }, [currentUser, refreshUnreadCounts]); // Include refreshUnreadCounts dependency
+  }, [currentUser, refreshUnreadCounts, refreshTrigger]); // Include refreshTrigger to reload data when new chats are created
 
   // Socket.io connection for real-time updates using singleton
   useEffect(() => {
