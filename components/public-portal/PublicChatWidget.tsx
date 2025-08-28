@@ -88,6 +88,8 @@ interface WidgetSettings {
   session_recovery_enabled?: boolean;
   session_recovery_minutes?: number;
   auto_ticket_creation?: boolean;
+  show_agent_avatars?: boolean;
+  agent_avatar_anonymity?: boolean;
 }
 
 export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: PublicChatWidgetProps) => {
@@ -117,6 +119,8 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
     message: ''
   });
   const [preChatErrors, setPreChatErrors] = useState<{ [key: string]: string }>({});
+  const [availableAgents, setAvailableAgents] = useState<any[]>([]);
+  const [agentsLoading, setAgentsLoading] = useState(false);
   
   const widgetRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -126,7 +130,16 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
     loadWidgetSettings();
     checkPageVisibility();
     checkSessionRecovery();
+    loadAvailableAgents();
   }, []);
+
+  // Refresh agents periodically while widget is open
+  useEffect(() => {
+    if (isOpen && showPreChatForm) {
+      const interval = setInterval(loadAvailableAgents, 30000); // Refresh every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [isOpen, showPreChatForm]);
 
   // Set up Socket.io connection when widget opens
   useEffect(() => {
@@ -238,6 +251,13 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
           id: Date.now()
         };
         setMessages(prev => [...prev, endMessage]);
+      });
+
+      // Listen for agent availability updates
+      publicPortalSocket.addEventListener(componentId, 'agents:availability_changed', (data) => {
+        console.log('Agent availability changed:', data);
+        // Refresh available agents list
+        loadAvailableAgents();
       });
 
       // Cleanup
@@ -377,6 +397,27 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
       } else {
         localStorage.removeItem('public_chat_session');
       }
+    }
+  };
+
+  // Load available agents for display
+  const loadAvailableAgents = async () => {
+    try {
+      setAgentsLoading(true);
+      const response = await fetch('/api/public-portal/available-agents');
+      const data = await response.json();
+      
+      if (data.success) {
+        setAvailableAgents(data.agents || []);
+      } else {
+        console.error('Failed to load available agents:', data.error);
+        setAvailableAgents([]);
+      }
+    } catch (error) {
+      console.error('Error loading available agents:', error);
+      setAvailableAgents([]);
+    } finally {
+      setAgentsLoading(false);
     }
   };
 
@@ -1058,6 +1099,90 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                         {settings?.welcome_message || 'Please fill out the form below to get started.'}
                       </Typography>
+
+                      {/* Available Agents Display */}
+                      {settings?.show_agent_avatars && availableAgents.length > 0 && (
+                        <Box sx={{ mb: 3, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
+                            Our team is online and ready to help
+                          </Typography>
+                          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
+                            {availableAgents.slice(0, 4).map((agent) => (
+                              <Box key={agent.id} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <Avatar
+                                  src={agent.profilePicture}
+                                  sx={{
+                                    width: 40,
+                                    height: 40,
+                                    backgroundColor: agent.profilePicture ? 'transparent' : agent.avatarColor,
+                                    color: 'white',
+                                    fontSize: '14px',
+                                    fontWeight: 'bold',
+                                    border: agent.availabilityLevel === 'high' ? '2px solid #4caf50' : '2px solid #ff9800',
+                                    position: 'relative'
+                                  }}
+                                >
+                                  {!agent.profilePicture && agent.initials}
+                                  {/* Online indicator */}
+                                  <Box
+                                    sx={{
+                                      position: 'absolute',
+                                      bottom: -2,
+                                      right: -2,
+                                      width: 12,
+                                      height: 12,
+                                      backgroundColor: agent.isOnline ? '#4caf50' : '#9e9e9e',
+                                      borderRadius: '50%',
+                                      border: '2px solid white'
+                                    }}
+                                  />
+                                </Avatar>
+                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, fontSize: '10px', textAlign: 'center' }}>
+                                  {settings?.agent_avatar_anonymity ? 'Support Agent' : agent.displayName}
+                                </Typography>
+                              </Box>
+                            ))}
+                            {availableAgents.length > 4 && (
+                              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <Avatar
+                                  sx={{
+                                    width: 40,
+                                    height: 40,
+                                    backgroundColor: '#e0e0e0',
+                                    color: '#666',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  +{availableAgents.length - 4}
+                                </Avatar>
+                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, fontSize: '10px' }}>
+                                  More agents
+                                </Typography>
+                              </Box>
+                            )}
+                          </Box>
+                        </Box>
+                      )}
+
+                      {/* Loading agents indicator */}
+                      {agentsLoading && (
+                        <Box sx={{ mb: 3, textAlign: 'center' }}>
+                          <CircularProgress size={20} sx={{ mr: 1 }} />
+                          <Typography variant="body2" color="text.secondary" display="inline">
+                            Checking agent availability...
+                          </Typography>
+                        </Box>
+                      )}
+
+                      {/* No agents available */}
+                      {!agentsLoading && availableAgents.length === 0 && isOnline && (
+                        <Box sx={{ mb: 3, p: 2, backgroundColor: '#fff3e0', borderRadius: 1, textAlign: 'center' }}>
+                          <Typography variant="body2" color="text.secondary">
+                            No agents are currently available. We'll connect you as soon as someone comes online.
+                          </Typography>
+                        </Box>
+                      )}
 
                       {/* Name Field */}
                       {settings?.require_name && (

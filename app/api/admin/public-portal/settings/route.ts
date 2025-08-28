@@ -124,6 +124,8 @@ export async function GET(request: NextRequest) {
               session_recovery_enabled: true,
               session_recovery_minutes: 5,
               auto_ticket_creation: true,
+              show_agent_avatars: true,
+              agent_avatar_anonymity: true,
               enabled_pages: JSON.stringify([]),
               disabled_pages: JSON.stringify([]),
               // Recovery settings defaults
@@ -204,6 +206,7 @@ export async function PUT(request: NextRequest) {
           read_receipts_enabled, show_delivery_status, show_guest_read_status_to_staff,
           show_staff_read_status_to_guests, read_receipt_style, delivery_status_icons,
           session_recovery_enabled, session_recovery_minutes, auto_ticket_creation,
+          show_agent_avatars, agent_avatar_anonymity,
           enabled_pages, disabled_pages, updated_by, updated_at
         ) VALUES (
           1, ?, ?, ?, ?, ?, ?,
@@ -218,6 +221,7 @@ export async function PUT(request: NextRequest) {
           ?, ?, ?,
           ?, ?, ?,
           ?, ?, ?,
+          ?, ?,
           ?, ?, ?, CURRENT_TIMESTAMP
         )
       `;
@@ -272,6 +276,8 @@ export async function PUT(request: NextRequest) {
         settings.session_recovery_enabled || true,
         settings.session_recovery_minutes || 5,
         settings.auto_ticket_creation || true,
+        settings.show_agent_avatars || true,
+        settings.agent_avatar_anonymity || true,
         settings.enabled_pages || '[]',
         settings.disabled_pages || '[]',
         authResult.user.username
