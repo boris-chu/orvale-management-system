@@ -440,18 +440,16 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
     }
   };
 
-  // Handle widget click
-  const handleWidgetClick = (e: React.MouseEvent) => {
+  // Handle widget click with drag prevention
+  const handleWidgetClickWithDrag = (e: React.MouseEvent) => {
     // Don't open chat if user was dragging
     if (isDragging) {
       e.preventDefault();
       return;
     }
     
-    if (!isOpen) {
-      setIsOpen(true);
-      setUnreadCount(0);
-    }
+    // Call the main widget click handler
+    handleWidgetClick();
   };
 
   // Handle drag start
@@ -605,7 +603,7 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                 transition: 'all 0.2s ease-in-out',
                 border: 'none'
               }}
-              onClick={handleWidgetClick}
+              onClick={handleWidgetClickWithDrag}
               onMouseDown={handleMouseDown}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'scale(1.05)';
