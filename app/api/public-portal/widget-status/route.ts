@@ -29,7 +29,11 @@ export async function GET(request: NextRequest) {
           animation_delay,
           welcome_message,
           offline_message,
-          business_hours_message
+          business_hours_message,
+          require_name,
+          require_email,
+          require_phone,
+          require_department
         FROM public_portal_widget_settings 
         WHERE id = 1
       `, (err, row) => {
@@ -115,6 +119,12 @@ export async function GET(request: NextRequest) {
             welcome: row.welcome_message || 'Hi! How can we help you today?',
             offline: row.offline_message || 'We are currently offline. Please submit a ticket.'
           },
+          require_name: Boolean(row.require_name),
+          require_email: Boolean(row.require_email),
+          require_phone: Boolean(row.require_phone),
+          require_department: Boolean(row.require_department),
+          show_agent_avatars: true, // Default to true for now
+          agent_avatar_anonymity: false, // Default to false for now
           schedule: row.schedule_json ? JSON.parse(row.schedule_json) : null,
           nextAvailable: outsideHours && row.schedule_json ? 
             (() => {

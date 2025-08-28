@@ -13,10 +13,32 @@ const dbGet = promisify(db.get.bind(db));
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const { name, email, phone, department, customFields } = await request.json();
+    const requestBody = await request.json();
+    console.log('🔍 Start session request body:', JSON.stringify(requestBody, null, 2));
+
+    // Handle both direct format and nested guest_info format for backwards compatibility
+    let name, email, phone, department, customFields, initialMessage;
+    
+    if (requestBody.guest_info) {
+      // New nested format from PublicChatWidget
+      const { guest_info, initial_message } = requestBody;
+      name = guest_info.name;
+      email = guest_info.email;
+      phone = guest_info.phone;
+      department = guest_info.department;
+      initialMessage = initial_message;
+      customFields = requestBody.customFields;
+    } else {
+      // Legacy direct format
+      ({ name, email, phone, department, customFields } = requestBody);
+      initialMessage = requestBody.initialMessage || requestBody.initial_message;
+    }
+
+    console.log('📝 Extracted data:', { name, email, phone, department, initialMessage });
 
     // Basic validation
     if (!name || !email) {
+      console.log('❌ Validation failed: name or email missing');
       return NextResponse.json(
         { error: 'Name and email are required' },
         { status: 400 }
@@ -26,6 +48,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+      console.log('❌ Email validation failed:', email);
       return NextResponse.json(
         { error: 'Invalid email format' },
         { status: 400 }
