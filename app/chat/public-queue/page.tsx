@@ -1058,10 +1058,126 @@ const FloatableChatWindow = ({ chat, onClose, onMinimize, onFocus }: FloatableCh
 
         {/* Chat Content */}
         {!chat.isMinimized && (
-          <Box sx={{ flex: 1, p: 2, backgroundColor: '#f9f9f9' }}>
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
-              Chat interface will be implemented here
-            </Typography>
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {/* Guest Information Header */}
+            <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', backgroundColor: '#f5f5f5' }}>
+              <Typography variant="body2" fontWeight="bold" color="primary">
+                {chat.guestInfo.guestName}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {chat.guestInfo.department} • Waiting: {formatWaitTime(chat.guestInfo.waitTime)} • {chat.guestInfo.priority}
+              </Typography>
+              {chat.guestInfo.initialMessage && (
+                <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
+                  "{chat.guestInfo.initialMessage}"
+                </Typography>
+              )}
+            </Box>
+
+            {/* Messages Area */}
+            <Box 
+              sx={{ 
+                flex: 1, 
+                overflow: 'auto',
+                p: 1,
+                backgroundColor: '#fafafa',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 1
+              }}
+            >
+              {/* System message: Staff connected */}
+              <Box sx={{ textAlign: 'center', my: 1 }}>
+                <Chip 
+                  label={`You are now chatting with ${chat.guestInfo.guestName}`}
+                  size="small"
+                  sx={{ backgroundColor: '#e3f2fd', color: '#1976d2' }}
+                />
+              </Box>
+
+              {/* Initial guest message if exists */}
+              {chat.guestInfo.initialMessage && (
+                <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 1 }}>
+                  <Paper 
+                    sx={{ 
+                      p: 1, 
+                      maxWidth: '70%',
+                      backgroundColor: '#fff',
+                      border: '1px solid #e0e0e0'
+                    }}
+                  >
+                    <Typography variant="body2">
+                      {chat.guestInfo.initialMessage}
+                    </Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mt: 0.5 }}>
+                      {chat.guestInfo.joinedAt.toLocaleTimeString()}
+                    </Typography>
+                  </Paper>
+                </Box>
+              )}
+
+              {/* Placeholder for real-time messages */}
+              <Box sx={{ textAlign: 'center', mt: 2, opacity: 0.6 }}>
+                <Typography variant="body2" color="text.secondary">
+                  💬 Real-time messaging will be connected here
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Session ID: {chat.sessionId}
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Input Area */}
+            <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', backgroundColor: '#fff' }}>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  placeholder="Type your message..."
+                  variant="outlined"
+                  disabled // Will enable when Socket.io is connected
+                  sx={{ flex: 1 }}
+                />
+                <IconButton 
+                  size="small" 
+                  color="primary"
+                  disabled // Will enable when Socket.io is connected
+                >
+                  <Send fontSize="small" />
+                </IconButton>
+              </Box>
+              
+              {/* Action Buttons */}
+              <Box sx={{ display: 'flex', gap: 1, mt: 1, justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    size="small"
+                    startIcon={<Assignment />}
+                    variant="outlined"
+                    sx={{ fontSize: '0.75rem' }}
+                  >
+                    Create Ticket
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<SwapHoriz />}
+                    variant="outlined"
+                    sx={{ fontSize: '0.75rem' }}
+                  >
+                    Transfer
+                  </Button>
+                </Box>
+                
+                <Button
+                  size="small"
+                  color="error"
+                  variant="text"
+                  sx={{ fontSize: '0.75rem' }}
+                >
+                  End Chat
+                </Button>
+              </Box>
+            </Box>
           </Box>
         )}
       </Paper>

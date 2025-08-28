@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth-utils';
-import Database from 'better-sqlite3';
-import { join } from 'path';
+import Database from 'sqlite3';
+import path from 'path';
 
-const dbPath = join(process.cwd(), 'orvale_tickets.db');
+const dbPath = path.join(process.cwd(), 'orvale_tickets.db');
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,90 +31,124 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const db = new Database(dbPath, { readonly: true });
+    const db = new Database.Database(dbPath);
 
-    try {
+    return new Promise((resolve) => {
       // Get active staff members with their work modes and online presence
-      const staff = db.prepare(`
-        SELECT DISTINCT
+      db.all(
+        `SELECT DISTINCT
           u.user_id,
           u.username,
           u.display_name,
           u.department,
           u.role,
           u.profile_picture,
-          swm.work_mode,
-          swm.status_message,
+          swm.current_mode as work_mode,
           swm.max_concurrent_chats,
-          swm.auto_accept_chats,
+          swm.auto_assign_enabled as auto_accept_chats,
+          swm.last_activity,
           up.status as presence_status,
-          up.last_seen
+          up.last_active as last_seen
         FROM users u
         INNER JOIN staff_work_modes swm ON u.username = swm.username
-        LEFT JOIN user_presence up ON u.username = up.username
+        LEFT JOIN user_presence up ON u.username = up.user_id
         WHERE u.active = 1
-          AND swm.work_mode IS NOT NULL
-          AND swm.work_mode != 'offline'
+          AND swm.current_mode IS NOT NULL
+          AND swm.current_mode != 'offline'
         ORDER BY 
-          CASE swm.work_mode 
+          CASE swm.current_mode 
             WHEN 'ready' THEN 1 
             WHEN 'work_mode' THEN 2 
-            WHEN 'helping' THEN 3
-            WHEN 'ticketing_mode' THEN 4
-            WHEN 'away' THEN 5 
-            ELSE 6 
+            WHEN 'ticketing_mode' THEN 3
+            WHEN 'away' THEN 4
+            ELSE 5 
           END,
-          u.display_name
-      `).all();
+          u.display_name`,
+        (err, staffRows) => {
+          if (err) {
+            db.close();
+            console.error('Staff queue database error:', err.message);
+            resolve(NextResponse.json({ 
+              success: false, 
+              error: 'Database error: ' + err.message,
+              staff: [] 
+            }, { status: 500 }));
+            return;
+          }
 
-      // Get active chat counts for each staff member
-      const activeChatCounts = db.prepare(`
-        SELECT 
-          assigned_staff,
-          COUNT(*) as active_chats
-        FROM public_chat_sessions 
-        WHERE status = 'active' 
-          AND assigned_staff IS NOT NULL
-        GROUP BY assigned_staff
-      `).all();
+          // Get active chat counts for each staff member
+          db.all(
+            `SELECT 
+              assigned_to as assigned_staff,
+              COUNT(*) as active_chats
+            FROM public_chat_sessions 
+            WHERE status = 'active' 
+              AND assigned_to IS NOT NULL
+            GROUP BY assigned_to`,
+            (err2, chatCountRows) => {
+              db.close();
+              
+              if (err2) {
+                console.error('Chat count database error:', err2.message);
+                resolve(NextResponse.json({ 
+                  success: false, 
+                  error: 'Database error: ' + err2.message,
+                  staff: [] 
+                }, { status: 500 }));
+                return;
+              }
 
-      // Create lookup for active chat counts
-      const chatCountLookup: { [key: string]: number } = {};
-      activeChatCounts.forEach((count: any) => {
-        chatCountLookup[count.assigned_staff] = count.active_chats;
-      });
+              // Create lookup for active chat counts
+              const chatCountLookup: { [key: string]: number } = {};
+              (chatCountRows || []).forEach((count: any) => {
+                chatCountLookup[count.assigned_staff] = count.active_chats;
+              });
 
-      // Transform data for frontend
-      const staffMembers = staff.map((member: any) => ({
-        user_id: member.user_id,
-        username: member.username,
-        display_name: member.display_name || member.username,
-        department: member.department || 'Support',
-        role: member.role,
-        profile_picture: member.profile_picture,
-        work_mode: member.work_mode,
-        status_message: member.status_message,
-        max_concurrent_chats: member.max_concurrent_chats || 3,
-        auto_accept_chats: member.auto_accept_chats || 0,
-        presence_status: member.presence_status || 'offline',
-        last_seen: member.last_seen,
-        active_chats: chatCountLookup[member.username] || 0,
-        // Calculate if staff is available for new chats
-        available: member.work_mode === 'ready' && 
-                  (chatCountLookup[member.username] || 0) < (member.max_concurrent_chats || 3)
-      }));
+              // Transform data for frontend
+              const staffMembers = (staffRows || []).map((member: any) => {
+                const activeChatCount = chatCountLookup[member.username] || 0;
+                const maxChats = member.max_concurrent_chats || 3;
+                const isAvailable = member.work_mode === 'ready' && activeChatCount < maxChats;
 
-      return NextResponse.json({
-        success: true,
-        staff: staffMembers,
-        count: staffMembers.length,
-        realTimeEnabled: hasRealTimePermission,
-        availableStaff: staffMembers.filter(s => s.available).length
-      });
+                return {
+                  user_id: member.user_id,
+                  username: member.username,
+                  display_name: member.display_name || member.username,
+                  department: member.department || 'Support',
+                  role: member.role,
+                  profile_picture: member.profile_picture,
+                  work_mode: member.work_mode,
+                  status_message: member.status_message || '',
+                  max_concurrent_chats: maxChats,
+                  auto_accept_chats: member.auto_accept_chats || 0,
+                  presence_status: member.presence_status || 'offline',
+                  last_seen: member.last_seen,
+                  last_activity: member.last_activity,
+                  active_chats: activeChatCount,
+                  available: isAvailable,
+                  
+                  // Additional computed fields for UI
+                  status_emoji: getWorkModeEmoji(member.work_mode),
+                  availability_text: isAvailable ? 'Available' : 
+                                   activeChatCount >= maxChats ? 'At Capacity' : 
+                                   member.work_mode === 'away' ? 'Away' : 'Busy'
+                };
+              });
 
-    } finally {
-      db.close();
-    }
+              resolve(NextResponse.json({
+                success: true,
+                staff: staffMembers,
+                count: staffMembers.length,
+                realTimeEnabled: hasRealTimePermission,
+                availableStaff: staffMembers.filter(s => s.available).length,
+                totalActiveChats: Object.values(chatCountLookup).reduce((sum, count) => sum + count, 0),
+                generated_at: new Date().toISOString()
+              }));
+            }
+          );
+        }
+      );
+    });
 
   } catch (error) {
     console.error('Error fetching staff queue:', error);
@@ -126,5 +160,17 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
+  }
+}
+
+// Helper function
+function getWorkModeEmoji(workMode: string): string {
+  switch (workMode) {
+    case 'ready': return '🟢';
+    case 'work_mode': return '🟡';
+    case 'ticketing_mode': return '🔵';
+    case 'away': return '🟠';
+    case 'offline': return '⚫';
+    default: return '❓';
   }
 }
