@@ -19,6 +19,7 @@ import {
 } from '@mui/icons-material';
 import { ColorPicker } from '@/components/shared/ColorPicker';
 import { motion, AnimatePresence } from 'framer-motion';
+import { socketClient } from '@/lib/socket-client';
 
 interface StaffMember {
   id: string;
@@ -52,14 +53,18 @@ interface FloatableChat {
 }
 
 const PublicQueuePage = () => {
-  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+  const [guestQueue, setGuestQueue] = useState<GuestSession[]>([]);
+  
+  // Mock data for when real-time is disabled
+  const mockStaffMembers: StaffMember[] = [
     { id: '1', name: 'John Doe', status: 'ready', activeChats: 0, maxChats: 3, department: 'IT Support' },
     { id: '2', name: 'Jane Smith', status: 'helping', activeChats: 2, maxChats: 3, department: 'General Support' },
     { id: '3', name: 'Bob Wilson', status: 'ticketing', activeChats: 0, maxChats: 2, department: 'Technical' },
     { id: '4', name: 'Alice Johnson', status: 'ready', activeChats: 1, maxChats: 4, department: 'IT Support' }
-  ]);
+  ];
 
-  const [guestQueue, setGuestQueue] = useState<GuestSession[]>([
+  const mockGuestQueue: GuestSession[] = [
     {
       id: '123',
       guestName: 'Guest #123',
@@ -90,7 +95,7 @@ const PublicQueuePage = () => {
       initialMessage: 'Connection issues with VPN',
       joinedAt: new Date(Date.now() - 1200000)
     }
-  ]);
+  ];
 
   const [floatableChats, setFloatableChats] = useState<FloatableChat[]>([]);
   const [currentStaff, setCurrentStaff] = useState<StaffMember | null>(null);
@@ -110,18 +115,36 @@ const PublicQueuePage = () => {
   const [currentColorKey, setCurrentColorKey] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [realTimeEnabled, setRealTimeEnabled] = useState(false);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
 
   const workspaceRef = useRef<HTMLDivElement>(null);
   const chatWindowRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   useEffect(() => {
     checkAuthentication();
-    initializeRealTimeUpdates();
     
     // Update wait times every second
     const interval = setInterval(updateWaitTimes, 1000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      clearInterval(interval);
+    };
   }, []);
+
+  // Initialize real-time updates or mock data after authentication and permission check
+  useEffect(() => {
+    if (!loading && !authError) {
+      if (realTimeEnabled) {
+        const cleanup = initializeRealTimeUpdates();
+        return cleanup;
+      } else {
+        // Load mock data for static mode
+        setStaffMembers(mockStaffMembers);
+        setGuestQueue(mockGuestQueue);
+      }
+    }
+  }, [realTimeEnabled, loading, authError]);
 
   const checkAuthentication = async () => {
     try {
@@ -146,6 +169,14 @@ const PublicQueuePage = () => {
           setLoading(false);
           return;
         }
+        
+        // Store user permissions for real-time features
+        setUserPermissions(user.permissions || []);
+        
+        // Check if user has real-time permission
+        const hasRealTimePermission = user.permissions?.includes('public_portal.view_realtime_queue') || 
+                                     user.permissions?.includes('admin.system_settings');
+        setRealTimeEnabled(hasRealTimePermission);
         
         setCurrentStaff({
           id: user.user_id?.toString() || user.username,
@@ -172,9 +203,123 @@ const PublicQueuePage = () => {
   };
 
   const initializeRealTimeUpdates = () => {
-    // Initialize Socket.io connection for real-time updates
-    // This will be implemented when we add Socket.io events
+    if (!realTimeEnabled) {
+      console.log('Real-time updates disabled - user lacks public_portal.view_realtime_queue permission');
+      return;
+    }
+
     console.log('Initializing real-time updates for public queue...');
+    
+    const token = localStorage.getItem('authToken');
+    if (!token) return;
+
+    try {
+      // Connect to Socket.io for real-time updates
+      const socket = socketClient.connect(token);
+      const componentId = 'PublicQueue_' + Date.now();
+
+      // Listen for queue updates
+      socketClient.addEventListener(componentId, 'public_queue:guest_joined', (data) => {
+        console.log('Guest joined queue:', data);
+        setGuestQueue(prev => {
+          // Add new guest to queue if not already present
+          const exists = prev.some(g => g.id === data.sessionId);
+          if (!exists) {
+            const newGuest: GuestSession = {
+              id: data.sessionId,
+              guestName: data.guestName || `Guest #${data.sessionId.slice(-3)}`,
+              waitTime: 0,
+              priority: data.priority || 'normal',
+              status: 'waiting',
+              department: data.department || 'General Support',
+              initialMessage: data.message || '',
+              joinedAt: new Date()
+            };
+            return [...prev, newGuest].sort((a, b) => b.waitTime - a.waitTime);
+          }
+          return prev;
+        });
+      });
+
+      socketClient.addEventListener(componentId, 'public_queue:guest_left', (data) => {
+        console.log('Guest left queue:', data);
+        setGuestQueue(prev => prev.filter(g => g.id !== data.sessionId));
+      });
+
+      socketClient.addEventListener(componentId, 'public_queue:staff_updated', (data) => {
+        console.log('Staff status updated:', data);
+        setStaffMembers(prev => prev.map(staff => 
+          staff.id === data.staffId 
+            ? { ...staff, status: data.status, activeChats: data.activeChats || staff.activeChats }
+            : staff
+        ));
+      });
+
+      // Load real queue data from server
+      loadRealQueueData();
+
+      // Cleanup function
+      return () => {
+        socketClient.removeEventListeners(componentId);
+      };
+    } catch (error) {
+      console.error('Failed to initialize real-time updates:', error);
+    }
+  };
+
+  const loadRealQueueData = async () => {
+    if (!realTimeEnabled) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      // Load active guest sessions from server
+      const guestResponse = await fetch('/api/public-portal/queue/guests', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (guestResponse.ok) {
+        const guestData = await guestResponse.json();
+        if (guestData.success && guestData.guests) {
+          const realGuests: GuestSession[] = guestData.guests.map((guest: any) => ({
+            id: guest.session_id,
+            guestName: guest.guest_name || `Guest #${guest.session_id.slice(-3)}`,
+            waitTime: Math.floor((Date.now() - new Date(guest.created_at).getTime()) / 1000),
+            priority: guest.priority || 'normal',
+            status: guest.status || 'waiting',
+            department: guest.department || 'General Support',
+            initialMessage: guest.initial_message || '',
+            joinedAt: new Date(guest.created_at)
+          }));
+          setGuestQueue(realGuests);
+        }
+      }
+
+      // Load active staff from server
+      const staffResponse = await fetch('/api/public-portal/queue/staff', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (staffResponse.ok) {
+        const staffData = await staffResponse.json();
+        if (staffData.success && staffData.staff) {
+          const realStaff: StaffMember[] = staffData.staff.map((staff: any) => ({
+            id: staff.user_id?.toString() || staff.username,
+            name: staff.display_name || staff.username,
+            status: staff.work_mode || 'away',
+            activeChats: staff.active_chats || 0,
+            maxChats: staff.max_concurrent_chats || 3,
+            department: staff.department || 'Support',
+            avatar: staff.profile_picture
+          }));
+          setStaffMembers(realStaff);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading real queue data:', error);
+      // Keep using mock data if real data fails to load
+    }
   };
 
   const loadWorkMode = async () => {
@@ -343,6 +488,16 @@ const PublicQueuePage = () => {
     setWorkMode(newMode);
     if (currentStaff) {
       setCurrentStaff(prev => prev ? { ...prev, status: newMode } : null);
+      
+      // Emit real-time update if enabled
+      if (realTimeEnabled && socketClient.isConnected()) {
+        socketClient.emit('public_queue:staff_status_change', {
+          staffId: currentStaff.id,
+          status: newMode,
+          activeChats: currentStaff.activeChats,
+          timestamp: new Date().toISOString()
+        });
+      }
     }
     
     // Save to database
@@ -392,6 +547,22 @@ const PublicQueuePage = () => {
 
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Real-time Permission Alert */}
+      {!realTimeEnabled && (
+        <Alert 
+          severity="info" 
+          sx={{ 
+            m: 1, 
+            borderRadius: 1,
+            backgroundColor: '#e3f2fd',
+            '& .MuiAlert-message': { fontSize: '0.875rem' }
+          }}
+        >
+          <strong>Static Mode:</strong> Real-time queue updates are disabled. You are seeing snapshot data only. 
+          Contact your administrator to enable the "public_portal.view_realtime_queue" permission for live updates.
+        </Alert>
+      )}
+
       {/* Header */}
       <Paper 
         elevation={1}
@@ -412,6 +583,7 @@ const PublicQueuePage = () => {
             </Typography>
             <Typography variant="caption" sx={{ opacity: 0.9 }}>
               Staff: {currentStaff?.name} | Queue: {guestQueue.length} waiting | Active: {floatableChats.length} chats
+              {realTimeEnabled ? ' | 🟢 Real-time' : ' | 🔴 Static'}
             </Typography>
           </Box>
         </Box>
