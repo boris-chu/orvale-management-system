@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Box, Paper, Typography, IconButton, Badge,
   Fade, Zoom, Collapse, TextField, Button,
-  CircularProgress, Chip, Avatar, Divider
+  CircularProgress, Chip, Avatar, Divider,
+  FormControl, InputLabel, Select, MenuItem
 } from '@mui/material';
 import {
   ChatBubbleOutline, Close, Send, AttachFile,
@@ -107,6 +108,15 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [widgetPosition, setWidgetPosition] = useState({ x: 0, y: 0 });
+  const [showPreChatForm, setShowPreChatForm] = useState(false);
+  const [preChatData, setPreChatData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    department: '',
+    message: ''
+  });
+  const [preChatErrors, setPreChatErrors] = useState<{ [key: string]: string }>({});
   
   const widgetRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -128,34 +138,80 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
 
       // Set up event listeners
       publicPortalSocket.addEventListener(componentId, 'session:started', (data) => {
+        console.log('Chat session started:', data);
         setSessionId(data.sessionId);
         setQueuePosition(data.queuePosition);
-        console.log('Chat session started:', data);
+        setLoading(false);
+        
+        // Add system message about queue position
+        if (data.queuePosition > 0) {
+          const queueMessage = {
+            sender: 'system',
+            text: `You are position ${data.queuePosition} in queue. ${data.estimatedWaitTime ? `Estimated wait time: ${data.estimatedWaitTime} minutes.` : ''}`,
+            timestamp: new Date(),
+            id: Date.now()
+          };
+          setMessages(prev => [...prev, queueMessage]);
+        }
       });
 
       publicPortalSocket.addEventListener(componentId, 'session:error', (data) => {
         console.error('Session error:', data);
-        // Show error message to user
+        setLoading(false);
+        
+        // Add error message to chat
+        const errorMessage = {
+          sender: 'system',
+          text: data.message || 'Unable to start chat session. Please try again.',
+          timestamp: new Date(),
+          id: Date.now()
+        };
+        setMessages(prev => [...prev, errorMessage]);
       });
 
       publicPortalSocket.addEventListener(componentId, 'queue:update', (data) => {
+        console.log('Queue update:', data);
         setQueuePosition(data.queuePosition);
+        
+        // Add queue update message
+        const updateMessage = {
+          sender: 'system',
+          text: `Queue position updated: ${data.queuePosition}. ${data.estimatedWaitTime ? `Estimated wait time: ${data.estimatedWaitTime} minutes.` : ''}`,
+          timestamp: new Date(),
+          id: Date.now()
+        };
+        setMessages(prev => [...prev, updateMessage]);
       });
 
       publicPortalSocket.addEventListener(componentId, 'agent:assigned', (data) => {
+        console.log('Agent assigned:', data);
         setConnectedAgent(data.agentName);
         setQueuePosition(null);
-        console.log('Agent assigned:', data);
+        
+        // Add welcome message from agent assignment
+        const welcomeMessage = {
+          sender: 'system',
+          text: `You are now connected with ${data.agentName}. How can they help you today?`,
+          timestamp: new Date(),
+          id: Date.now()
+        };
+        setMessages(prev => [...prev, welcomeMessage]);
       });
 
       publicPortalSocket.addEventListener(componentId, 'agent:message', (data) => {
-        setMessages(prev => [...prev, {
+        console.log('Agent message received:', data);
+        const newMessage = {
           sender: 'agent',
           text: data.message,
-          timestamp: data.timestamp,
-          id: data.messageId
-        }]);
-        setUnreadCount(prev => prev + 1);
+          timestamp: new Date(data.timestamp),
+          id: data.messageId || Date.now()
+        };
+        setMessages(prev => [...prev, newMessage]);
+        
+        // Only increment unread count if chat is closed
+        if (!isOpen || isMinimized) {
+          setUnreadCount(prev => prev + 1);
+        }
       });
 
       publicPortalSocket.addEventListener(componentId, 'agent:typing', (data) => {
@@ -163,8 +219,25 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
       });
 
       publicPortalSocket.addEventListener(componentId, 'message:delivered', (data) => {
-        // Update message status or show confirmation
-        console.log('Message delivered:', data);
+        console.log('Message delivered:', data.messageId);
+        // TODO: Update message status in UI to show delivered state
+      });
+
+      // Handle session end
+      publicPortalSocket.addEventListener(componentId, 'session:ended', (data) => {
+        console.log('Session ended:', data);
+        setSessionId(null);
+        setConnectedAgent(null);
+        setQueuePosition(null);
+        setAgentTyping(false);
+        
+        const endMessage = {
+          sender: 'system',
+          text: data.reason || 'Chat session has ended. Thank you for contacting us!',
+          timestamp: new Date(),
+          id: Date.now()
+        };
+        setMessages(prev => [...prev, endMessage]);
       });
 
       // Cleanup
@@ -494,8 +567,126 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
       // TODO: Implement HTTP fallback
     }
     
-    // Clear input
+    // Stop typing indicator
+    publicPortalSocket.sendTyping(false);
+    setIsTyping(false);
+    
+    // Clear input and scroll to bottom
     setInputMessage('');
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
+    }, 100);
+  };
+
+  // Handle typing indicator
+  const handleTyping = () => {
+    if (!settings?.typing_indicators_enabled || !sessionId) return;
+    
+    if (!isTyping) {
+      setIsTyping(true);
+      publicPortalSocket.sendTyping(true);
+    }
+    
+    // Set timeout to stop typing indicator
+    setTimeout(() => {
+      setIsTyping(false);
+      publicPortalSocket.sendTyping(false);
+    }, 3000);
+  };
+
+  // Validate pre-chat form
+  const validatePreChatForm = () => {
+    const errors: { [key: string]: string } = {};
+
+    if (settings?.require_name && !preChatData.name.trim()) {
+      errors.name = 'Name is required';
+    }
+
+    if (settings?.require_email) {
+      if (!preChatData.email.trim()) {
+        errors.email = 'Email is required';
+      } else if (!/\S+@\S+\.\S+/.test(preChatData.email)) {
+        errors.email = 'Please enter a valid email address';
+      }
+    }
+
+    if (settings?.require_phone && !preChatData.phone.trim()) {
+      errors.phone = 'Phone number is required';
+    }
+
+    if (settings?.require_department && !preChatData.department) {
+      errors.department = 'Please select a department';
+    }
+
+    if (!preChatData.message.trim()) {
+      errors.message = 'Please describe how we can help you';
+    }
+
+    setPreChatErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle pre-chat form submission
+  const handlePreChatSubmit = async () => {
+    if (!validatePreChatForm()) return;
+
+    setLoading(true);
+    
+    try {
+      // Call the session API to start a new chat session
+      const response = await fetch('/api/public-portal/chat/start-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          guest_info: {
+            name: preChatData.name,
+            email: preChatData.email,
+            phone: preChatData.phone || null,
+            department: preChatData.department || null
+          },
+          initial_message: preChatData.message
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // Session started successfully
+        setSessionId(result.session_id);
+        setShowPreChatForm(false);
+        
+        // Initialize Socket.io connection with session
+        const guestInfo = {
+          name: preChatData.name,
+          email: preChatData.email,
+          phone: preChatData.phone,
+          department: preChatData.department
+        };
+        
+        startChatSession(guestInfo);
+        
+        // Add initial message to UI
+        setMessages([{
+          sender: 'guest',
+          text: preChatData.message,
+          timestamp: new Date(),
+          id: Date.now()
+        }]);
+        
+      } else {
+        console.error('Failed to start chat session:', result.error);
+        // TODO: Show error message to user
+      }
+    } catch (error) {
+      console.error('Error starting chat session:', error);
+      // TODO: Show error message to user
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle starting chat session (when pre-chat form data is available)
@@ -508,16 +699,12 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
     if (settings?.enabled) {
       setIsOpen(true);
       
-      // If no active session, we'll need to start one
-      // For now, use dummy data - in real implementation, show pre-chat form
+      // Clear unread count when chat is opened
+      setUnreadCount(0);
+      
+      // If no active session, show pre-chat form
       if (!sessionId) {
-        const guestInfo = {
-          name: 'Guest User',
-          email: 'guest@example.com',
-          phone: '555-0123',
-          department: 'General Support'
-        };
-        startChatSession(guestInfo);
+        setShowPreChatForm(true);
       }
       
       // If there are messages, scroll to bottom
@@ -532,6 +719,11 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
   // Handle minimize/maximize
   const toggleMinimize = () => {
     setIsMinimized(!isMinimized);
+    
+    // Clear unread count when maximizing
+    if (isMinimized) {
+      setUnreadCount(0);
+    }
   };
 
   // Render loading state
@@ -857,8 +1049,124 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
               {/* Chat Content */}
               <Collapse in={!isMinimized} timeout="auto">
                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  {/* Online/Offline Status */}
-                  {!isOnline && (
+                  {/* Pre-Chat Form */}
+                  {showPreChatForm && (
+                    <Box sx={{ p: 3 }}>
+                      <Typography variant="h6" gutterBottom>
+                        Start a Conversation
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        {settings?.welcome_message || 'Please fill out the form below to get started.'}
+                      </Typography>
+
+                      {/* Name Field */}
+                      {settings?.require_name && (
+                        <TextField
+                          fullWidth
+                          size="small"
+                          label="Your Name *"
+                          value={preChatData.name || ''}
+                          onChange={(e) => setPreChatData(prev => ({ ...prev, name: e.target.value }))}
+                          error={!!preChatErrors.name}
+                          helperText={preChatErrors.name}
+                          sx={{ mb: 2 }}
+                        />
+                      )}
+
+                      {/* Email Field */}
+                      {settings?.require_email && (
+                        <TextField
+                          fullWidth
+                          size="small"
+                          type="email"
+                          label="Email Address *"
+                          value={preChatData.email || ''}
+                          onChange={(e) => setPreChatData(prev => ({ ...prev, email: e.target.value }))}
+                          error={!!preChatErrors.email}
+                          helperText={preChatErrors.email}
+                          sx={{ mb: 2 }}
+                        />
+                      )}
+
+                      {/* Phone Field */}
+                      {settings?.require_phone && (
+                        <TextField
+                          fullWidth
+                          size="small"
+                          type="tel"
+                          label="Phone Number *"
+                          value={preChatData.phone || ''}
+                          onChange={(e) => setPreChatData(prev => ({ ...prev, phone: e.target.value }))}
+                          error={!!preChatErrors.phone}
+                          helperText={preChatErrors.phone}
+                          sx={{ mb: 2 }}
+                        />
+                      )}
+
+                      {/* Department Field */}
+                      {settings?.require_department && (
+                        <FormControl fullWidth size="small" error={!!preChatErrors.department} sx={{ mb: 2 }}>
+                          <InputLabel>Department *</InputLabel>
+                          <Select
+                            value={preChatData.department || ''}
+                            label="Department *"
+                            onChange={(e) => setPreChatData(prev => ({ ...prev, department: e.target.value }))}
+                          >
+                            <MenuItem value="">Select Department</MenuItem>
+                            <MenuItem value="general">General Support</MenuItem>
+                            <MenuItem value="technical">Technical Support</MenuItem>
+                            <MenuItem value="billing">Billing</MenuItem>
+                            <MenuItem value="sales">Sales</MenuItem>
+                          </Select>
+                        </FormControl>
+                      )}
+
+                      {/* Message Field */}
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={3}
+                        size="small"
+                        label="How can we help you? *"
+                        value={preChatData.message || ''}
+                        onChange={(e) => setPreChatData(prev => ({ ...prev, message: e.target.value }))}
+                        error={!!preChatErrors.message}
+                        helperText={preChatErrors.message}
+                        placeholder="Please describe your question or issue..."
+                        sx={{ mb: 3 }}
+                      />
+
+                      {/* Submit Button */}
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        onClick={handlePreChatSubmit}
+                        disabled={loading || !isOnline}
+                        sx={{ 
+                          backgroundColor: settings?.widget?.color || settings?.widget_color || '#1976d2',
+                          '&:hover': { 
+                            backgroundColor: settings?.widget?.color || settings?.widget_color || '#1976d2',
+                            opacity: 0.9 
+                          }
+                        }}
+                        startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+                      >
+                        {loading ? 'Starting Chat...' : 'Start Chat'}
+                      </Button>
+
+                      {!isOnline && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+                          {settings?.offline_message || 'We are currently offline. Please try again later.'}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+
+                  {/* Chat Interface - Only show when not showing pre-chat form */}
+                  {!showPreChatForm && (
+                    <>
+                      {/* Online/Offline Status */}
+                      {!isOnline && (
                     <Box sx={{ p: 2, backgroundColor: '#fff3e0' }}>
                       <Typography variant="body2" color="text.secondary">
                         {settings?.message || 
@@ -910,34 +1218,60 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                     )}
 
                     {/* Messages */}
-                    {messages.map((message, index) => (
-                      <Box
-                        key={index}
-                        sx={{
-                          display: 'flex',
-                          justifyContent: message.sender === 'guest' ? 'flex-end' : 'flex-start',
-                          mb: 1
-                        }}
-                      >
-                        <Paper
+                    {messages.map((message, index) => {
+                      // Handle different message types
+                      if (message.sender === 'system') {
+                        return (
+                          <Box key={index} sx={{ textAlign: 'center', my: 1 }}>
+                            <Chip 
+                              label={message.text}
+                              size="small"
+                              sx={{ 
+                                backgroundColor: '#e3f2fd',
+                                color: '#1976d2',
+                                fontSize: '0.75rem'
+                              }}
+                            />
+                          </Box>
+                        );
+                      }
+
+                      return (
+                        <Box
+                          key={index}
                           sx={{
-                            p: 1.5,
-                            maxWidth: '70%',
-                            backgroundColor: message.sender === 'guest' ? 
-                              (settings?.widget?.color || settings?.widget_color || '#1976d2') : 
-                              'white',
-                            color: message.sender === 'guest' ? 'white' : 'text.primary'
+                            display: 'flex',
+                            justifyContent: message.sender === 'guest' ? 'flex-end' : 'flex-start',
+                            mb: 1
                           }}
                         >
-                          <Typography variant="body2">
-                            {message.text}
-                          </Typography>
-                          <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mt: 0.5 }}>
-                            {new Date(message.timestamp).toLocaleTimeString()}
-                          </Typography>
-                        </Paper>
-                      </Box>
-                    ))}
+                          <Paper
+                            sx={{
+                              p: 1.5,
+                              maxWidth: '70%',
+                              backgroundColor: message.sender === 'guest' ? 
+                                (settings?.widget?.color || settings?.widget_color || '#1976d2') : 
+                                message.sender === 'agent' ? '#ffffff' : '#f5f5f5',
+                              color: message.sender === 'guest' ? 'white' : 'text.primary',
+                              border: message.sender === 'agent' ? '1px solid #e0e0e0' : 'none'
+                            }}
+                          >
+                            {/* Show agent name for agent messages */}
+                            {message.sender === 'agent' && connectedAgent && (
+                              <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'primary.main', display: 'block' }}>
+                                {connectedAgent}
+                              </Typography>
+                            )}
+                            <Typography variant="body2">
+                              {message.text}
+                            </Typography>
+                            <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mt: 0.5 }}>
+                              {new Date(message.timestamp).toLocaleTimeString()}
+                            </Typography>
+                          </Paper>
+                        </Box>
+                      );
+                    })}
 
                     {/* Agent Typing Indicator */}
                     {agentTyping && settings?.show_staff_typing_to_guests && (
@@ -984,8 +1318,11 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                           fullWidth
                           size="small"
                           placeholder="Type your message..."
-                          value={inputMessage}
-                          onChange={(e) => setInputMessage(e.target.value)}
+                          value={inputMessage || ''}
+                          onChange={(e) => {
+                            setInputMessage(e.target.value);
+                            handleTyping();
+                          }}
                           onKeyPress={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
@@ -1003,6 +1340,8 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         </IconButton>
                       </Box>
                     </Box>
+                  )}
+                    </>
                   )}
                 </Box>
               </Collapse>

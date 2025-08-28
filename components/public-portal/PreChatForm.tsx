@@ -119,7 +119,7 @@ export const PreChatForm = ({ settings, onSubmit, loading }: PreChatFormProps) =
         <TextField
           fullWidth
           label="Your Name"
-          value={formData.name}
+          value={formData.name || ''}
           onChange={(e) => handleChange('name', e.target.value)}
           error={!!errors.name}
           helperText={errors.name}
@@ -137,7 +137,7 @@ export const PreChatForm = ({ settings, onSubmit, loading }: PreChatFormProps) =
           fullWidth
           type="email"
           label="Email Address"
-          value={formData.email}
+          value={formData.email || ''}
           onChange={(e) => handleChange('email', e.target.value)}
           error={!!errors.email}
           helperText={errors.email}
@@ -155,7 +155,7 @@ export const PreChatForm = ({ settings, onSubmit, loading }: PreChatFormProps) =
           fullWidth
           type="tel"
           label="Phone Number"
-          value={formData.phone}
+          value={formData.phone || ''}
           onChange={(e) => handleChange('phone', e.target.value)}
           error={!!errors.phone}
           helperText={errors.phone}
@@ -172,7 +172,7 @@ export const PreChatForm = ({ settings, onSubmit, loading }: PreChatFormProps) =
         <FormControl fullWidth sx={{ mb: 2 }} error={!!errors.department}>
           <InputLabel>Department</InputLabel>
           <Select
-            value={formData.department}
+            value={formData.department || ''}
             onChange={(e) => handleChange('department', e.target.value)}
             label="Department"
             startAdornment={<Business sx={{ color: 'action.active', mr: 1, ml: 1.5 }} />}
@@ -240,7 +240,7 @@ export const PreChatForm = ({ settings, onSubmit, loading }: PreChatFormProps) =
         multiline
         rows={4}
         label="How can we help you?"
-        value={formData.message}
+        value={formData.message || ''}
         onChange={(e) => handleChange('message', e.target.value)}
         error={!!errors.message}
         helperText={errors.message}

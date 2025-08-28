@@ -413,7 +413,7 @@ export const GuestChatInterface = ({ sessionId: initialSessionId, onClose, setti
                   fullWidth
                   size="small"
                   label="Name *"
-                  value={preChatData.name}
+                  value={preChatData.name || ''}
                   onChange={(e) => setPreChatData(prev => ({ ...prev, name: e.target.value }))}
                   error={!!preChatErrors.name}
                   helperText={preChatErrors.name}
@@ -426,7 +426,7 @@ export const GuestChatInterface = ({ sessionId: initialSessionId, onClose, setti
                   size="small"
                   type="email"
                   label="Email *"
-                  value={preChatData.email}
+                  value={preChatData.email || ''}
                   onChange={(e) => setPreChatData(prev => ({ ...prev, email: e.target.value }))}
                   error={!!preChatErrors.email}
                   helperText={preChatErrors.email}
@@ -438,7 +438,7 @@ export const GuestChatInterface = ({ sessionId: initialSessionId, onClose, setti
                   fullWidth
                   size="small"
                   label="Phone Number *"
-                  value={preChatData.phone}
+                  value={preChatData.phone || ''}
                   onChange={(e) => setPreChatData(prev => ({ ...prev, phone: e.target.value }))}
                   error={!!preChatErrors.phone}
                   helperText={preChatErrors.phone}
@@ -449,7 +449,7 @@ export const GuestChatInterface = ({ sessionId: initialSessionId, onClose, setti
                 <FormControl fullWidth size="small" error={!!preChatErrors.department}>
                   <InputLabel>Department *</InputLabel>
                   <Select
-                    value={preChatData.department}
+                    value={preChatData.department || ''}
                     label="Department *"
                     onChange={(e) => setPreChatData(prev => ({ ...prev, department: e.target.value }))}
                   >
@@ -467,7 +467,7 @@ export const GuestChatInterface = ({ sessionId: initialSessionId, onClose, setti
                 rows={3}
                 size="small"
                 label="How can we help you? *"
-                value={preChatData.message}
+                value={preChatData.message || ''}
                 onChange={(e) => setPreChatData(prev => ({ ...prev, message: e.target.value }))}
                 error={!!preChatErrors.message}
                 helperText={preChatErrors.message}
@@ -646,7 +646,7 @@ export const GuestChatInterface = ({ sessionId: initialSessionId, onClose, setti
               fullWidth
               size="small"
               placeholder="Type your message..."
-              value={inputMessage}
+              value={inputMessage || ''}
               onChange={(e) => {
                 setInputMessage(e.target.value);
                 handleTyping();
