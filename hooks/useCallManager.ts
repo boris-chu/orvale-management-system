@@ -162,6 +162,15 @@ export const useCallManager = ({
     // Play dialing sound
     playNotificationSound();
     
+    // Emit call invitation to Socket.io server
+    console.log('📞 CallManager: Sending call invitation to:', targetUser.username, callType);
+    socketClient.emit('call:invite', {
+      callId,
+      targetUserId: targetUser.username,
+      callType: callType,
+      offer: null // WebRTC offer will be created in WebRTCCall component
+    });
+    
     return callId;
   }, [currentUser, playNotificationSound]);
 
@@ -329,7 +338,11 @@ export const useCallManager = ({
     socketClient.addEventListener(componentId, 'call:incoming', (data) => {
       handleIncomingCall({
         callId: data.callId,
-        caller: data.caller,
+        caller: {
+          username: data.from,
+          display_name: data.fromName || data.from,
+          profile_picture: '' // Will be fetched separately if needed
+        },
         callType: data.callType,
         offer: data.offer
       });

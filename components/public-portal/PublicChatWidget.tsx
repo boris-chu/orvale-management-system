@@ -11,6 +11,7 @@ import {
   AccessTime, CheckCircle, Error, Minimize, Maximize
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
+import { publicPortalSocket } from '@/lib/public-portal-socket';
 
 interface PublicChatWidgetProps {
   enabledPages?: string[];
@@ -116,6 +117,62 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
     checkPageVisibility();
     checkSessionRecovery();
   }, []);
+
+  // Set up Socket.io connection when widget opens
+  useEffect(() => {
+    if (isOpen && settings?.enabled) {
+      const componentId = `public_chat_widget_${Date.now()}`;
+      
+      // Connect to public portal socket
+      publicPortalSocket.connect();
+
+      // Set up event listeners
+      publicPortalSocket.addEventListener(componentId, 'session:started', (data) => {
+        setSessionId(data.sessionId);
+        setQueuePosition(data.queuePosition);
+        console.log('Chat session started:', data);
+      });
+
+      publicPortalSocket.addEventListener(componentId, 'session:error', (data) => {
+        console.error('Session error:', data);
+        // Show error message to user
+      });
+
+      publicPortalSocket.addEventListener(componentId, 'queue:update', (data) => {
+        setQueuePosition(data.queuePosition);
+      });
+
+      publicPortalSocket.addEventListener(componentId, 'agent:assigned', (data) => {
+        setConnectedAgent(data.agentName);
+        setQueuePosition(null);
+        console.log('Agent assigned:', data);
+      });
+
+      publicPortalSocket.addEventListener(componentId, 'agent:message', (data) => {
+        setMessages(prev => [...prev, {
+          sender: 'agent',
+          text: data.message,
+          timestamp: data.timestamp,
+          id: data.messageId
+        }]);
+        setUnreadCount(prev => prev + 1);
+      });
+
+      publicPortalSocket.addEventListener(componentId, 'agent:typing', (data) => {
+        setAgentTyping(data.isTyping);
+      });
+
+      publicPortalSocket.addEventListener(componentId, 'message:delivered', (data) => {
+        // Update message status or show confirmation
+        console.log('Message delivered:', data);
+      });
+
+      // Cleanup
+      return () => {
+        publicPortalSocket.removeEventListeners(componentId);
+      };
+    }
+  }, [isOpen, settings?.enabled]);
 
   // Initialize widget position after settings load
   useEffect(() => {
@@ -415,6 +472,63 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
   const handleClose = () => {
     setIsOpen(false);
     setIsMinimized(false);
+  };
+
+  // Handle sending messages
+  const handleSendMessage = () => {
+    if (!inputMessage.trim() || !sessionId) return;
+
+    const message = inputMessage.trim();
+    
+    // Add optimistic message to UI
+    const newMessage = {
+      sender: 'guest',
+      text: message,
+      timestamp: new Date(),
+      id: Date.now()
+    };
+    setMessages(prev => [...prev, newMessage]);
+    
+    // Send via Socket.io
+    const success = publicPortalSocket.sendMessage(message);
+    if (!success) {
+      console.warn('Failed to send via Socket.io, trying HTTP fallback');
+      // TODO: Implement HTTP fallback
+    }
+    
+    // Clear input
+    setInputMessage('');
+  };
+
+  // Handle starting chat session (when pre-chat form data is available)
+  const startChatSession = (guestInfo: { name: string; email: string; phone?: string; department?: string }) => {
+    publicPortalSocket.startSession(guestInfo);
+  };
+
+  // Handle widget click
+  const handleWidgetClick = () => {
+    if (settings?.enabled) {
+      setIsOpen(true);
+      
+      // If no active session, we'll need to start one
+      // For now, use dummy data - in real implementation, show pre-chat form
+      if (!sessionId) {
+        const guestInfo = {
+          name: 'Guest User',
+          email: 'guest@example.com',
+          phone: '555-0123',
+          department: 'General Support'
+        };
+        startChatSession(guestInfo);
+      }
+      
+      // If there are messages, scroll to bottom
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+      }, 100);
+    }
   };
 
   // Handle minimize/maximize
@@ -877,14 +991,15 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                           onKeyPress={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
-                              // Handle send message
+                              handleSendMessage();
                             }
                           }}
-                          disabled={!connectedAgent && queuePosition === null}
+                          disabled={!sessionId}
                         />
                         <IconButton
                           color="primary"
-                          disabled={!inputMessage.trim() || (!connectedAgent && queuePosition === null)}
+                          disabled={!inputMessage.trim() || !sessionId}
+                          onClick={handleSendMessage}
                         >
                           <Send />
                         </IconButton>

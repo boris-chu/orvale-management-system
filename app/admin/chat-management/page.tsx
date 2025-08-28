@@ -1921,20 +1921,6 @@ export default function ChatManagementPage() {
             </div>
             
             <div className="flex items-center space-x-4">
-              <Badge variant={stats.socketio_status === 'connected' ? 'default' : 'destructive'}>
-                {stats.socketio_status === 'connected' ? (
-                  <>
-                    <Wifi className="h-3 w-3 mr-1" />
-                    Connected
-                  </>
-                ) : (
-                  <>
-                    <WifiOff className="h-3 w-3 mr-1" />
-                    Disconnected
-                  </>
-                )}
-              </Badge>
-
               {/* User Profile Section */}
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -2058,7 +2044,24 @@ export default function ChatManagementPage() {
                 <Settings className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">Connected</div>
+                <div className="flex items-center gap-3 mb-2">
+                  <Badge 
+                    variant={stats.socketio_status === 'connected' ? 'default' : 'destructive'}
+                    className="flex items-center gap-1"
+                  >
+                    {stats.socketio_status === 'connected' ? (
+                      <>
+                        <Wifi className="h-3 w-3" />
+                        Connected
+                      </>
+                    ) : (
+                      <>
+                        <WifiOff className="h-3 w-3" />
+                        Disconnected
+                      </>
+                    )}
+                  </Badge>
+                </div>
                 <p className="text-xs text-muted-foreground">Port: {stats.socketio_port}</p>
                 <p className="text-xs text-muted-foreground">Uptime: {stats.socketio_uptime}</p>
               </CardContent>

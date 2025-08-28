@@ -34,15 +34,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     let socketioUptime = '0m';
     
     try {
-      // Try to check if Socket.io server is running by making a connection test
-      // For now, we'll simulate this data - in production this would check actual Socket.io server
+      // Check if Socket.io server is running by hitting health endpoint
       const response = await fetch('http://localhost:3001/health', { 
         signal: AbortSignal.timeout(2000) 
       }).catch(() => null);
       
       if (response && response.ok) {
+        const healthData = await response.json();
         socketioStatus = 'connected';
-        socketioUptime = '2h 15m'; // This would be calculated from server start time
+        socketioUptime = healthData.uptimeFormatted || '0m';
       }
     } catch {
       // Socket.io server not running

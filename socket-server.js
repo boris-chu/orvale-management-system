@@ -29,8 +29,25 @@ const DEFAULT_MAX_CONNECTIONS_PER_USER = isDevelopment ? 10 : 5;
 const DEFAULT_MAX_CONNECTIONS_PER_IP = isDevelopment ? 25 : 15;
 const DEFAULT_MAX_TOTAL_CONNECTIONS = isDevelopment ? 500 : 200;
 
-// Create HTTP server and Socket.io instance
-const server = http.createServer();
+// Create HTTP server with health endpoint and Socket.io instance
+const server = http.createServer((req, res) => {
+  if (req.url === '/health' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'connected',
+      port: PORT,
+      uptime: Math.floor(process.uptime()),
+      uptimeFormatted: formatUptime(process.uptime()),
+      connections: io.engine.clientsCount || 0,
+      timestamp: new Date().toISOString()
+    }));
+    return;
+  }
+  
+  // For all other requests, return 404
+  res.writeHead(404, { 'Content-Type': 'text/plain' });
+  res.end('Not Found');
+});
 const io = new Server(server, {
   cors: {
     origin: "http://localhost:80",
@@ -49,6 +66,20 @@ const io = new Server(server, {
 // Database connection
 const db = new Database(DB_PATH);
 
+// Utility function to format uptime
+const formatUptime = (seconds) => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  } else if (minutes > 0) {
+    return `${minutes}m`;
+  } else {
+    return `${Math.floor(seconds)}s`;
+  }
+};
+
 // Connection tracking
 const connectionsByUser = new Map(); // userId -> Set of socket IDs
 const connectionsByIP = new Map();    // IP -> Set of socket IDs
@@ -58,6 +89,11 @@ let websocketUnlimitedMode = false;   // Admin override for connection limits
 // In-memory stores for active connections and presence
 const activeUsers = new Map(); // userId -> { socketId, displayName, lastActive, connections: [] }
 const roomUsers = new Map();   // roomId -> Set of userIds
+
+// Public portal specific stores
+const publicSessions = new Map(); // sessionId -> { socketId, guestName, email, startTime, agentId }
+const publicQueue = []; // Array of sessionIds waiting for agent
+const publicAgentAvailability = new Map(); // agentId -> { available, workMode, activeChats }
 
 // Load system settings for websocket unlimited mode
 const loadSystemSettings = () => {
@@ -646,21 +682,22 @@ io.on('connection', async (socket) => {
   socket.on('call:invite', (data) => {
     if (!authenticatedUser) return;
     
-    const { targetUserId, callType, offer } = data;
-    const callId = `${socket.userId}-${targetUserId}-${Date.now()}`;
+    const { callId, targetUserId, callType, offer } = data;
+    // Use the callId from client, or generate one if not provided
+    const finalCallId = callId || `${socket.userId}-${targetUserId}-${Date.now()}`;
     
     // Log call initiation
     db.run(
       `INSERT INTO call_logs (call_id, caller_id, receiver_id, call_type, status) 
        VALUES (?, ?, ?, ?, 'initiated')`,
-      [callId, socket.userId, targetUserId, callType]
+      [finalCallId, socket.userId, targetUserId, callType]
     );
     
     // Find target user's socket(s)
     const targetConnections = activeUsers.get(targetUserId)?.connections || [];
     targetConnections.forEach(connectionId => {
       io.to(connectionId).emit('call:incoming', {
-        callId,
+        callId: finalCallId,
         from: socket.userId,
         fromName: socket.userDisplayName,
         callType,
@@ -928,6 +965,215 @@ setInterval(loadPresenceSettings, 5 * 60 * 1000);
 // Run presence check every minute
 setInterval(checkAndUpdatePresence, 60 * 1000);
 console.log('✅ Built-in presence timeout management started');
+
+// === PUBLIC PORTAL NAMESPACE ===
+const publicPortalNamespace = io.of('/public-portal');
+console.log('🌐 Public portal namespace created at /public-portal');
+
+// Public portal connection handling
+publicPortalNamespace.on('connection', async (socket) => {
+  console.log(`🌐 Public portal connection: ${socket.id} from ${socket.handshake.address}`);
+  
+  // Handle guest authentication (no JWT required)
+  socket.on('guest:start_session', async (data) => {
+    const { name, email, phone, department, customFields } = data;
+    const sessionId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    try {
+      // Create session in database
+      db.run(
+        `INSERT INTO public_chat_sessions 
+         (session_id, guest_name, guest_email, guest_phone, department, custom_fields, start_time, status) 
+         VALUES (?, ?, ?, ?, ?, ?, datetime('now'), 'waiting')`,
+        [sessionId, name, email, phone, department, JSON.stringify(customFields || {})]
+      );
+      
+      // Track in memory
+      publicSessions.set(sessionId, {
+        socketId: socket.id,
+        guestName: name,
+        email: email,
+        startTime: new Date(),
+        status: 'waiting'
+      });
+      
+      // Add to queue
+      publicQueue.push(sessionId);
+      
+      // Store session ID on socket
+      socket.sessionId = sessionId;
+      socket.guestName = name;
+      
+      // Join session room
+      socket.join(`session:${sessionId}`);
+      
+      // Send confirmation
+      socket.emit('session:started', {
+        sessionId,
+        queuePosition: publicQueue.length,
+        estimatedWaitTime: publicQueue.length * 2 // 2 minutes per person estimate
+      });
+      
+      // Notify available agents
+      notifyAvailableAgents();
+      
+      console.log(`✅ Guest session started: ${sessionId} for ${name}`);
+    } catch (error) {
+      console.error('Failed to start guest session:', error);
+      socket.emit('session:error', { message: 'Failed to start chat session' });
+    }
+  });
+  
+  // Handle guest messages
+  socket.on('guest:message', async (data) => {
+    if (!socket.sessionId) {
+      socket.emit('error', { message: 'No active session' });
+      return;
+    }
+    
+    const { message, type = 'text' } = data;
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    try {
+      // Save message to database
+      db.run(
+        `INSERT INTO public_chat_messages 
+         (message_id, session_id, sender_type, sender_id, message_text, message_type, created_at) 
+         VALUES (?, ?, 'guest', ?, ?, ?, datetime('now'))`,
+        [messageId, socket.sessionId, socket.sessionId, message, type]
+      );
+      
+      // Get session info
+      const session = publicSessions.get(socket.sessionId);
+      if (session && session.agentId) {
+        // Forward to assigned agent
+        publicPortalNamespace.to(`agent:${session.agentId}`).emit('guest:message', {
+          sessionId: socket.sessionId,
+          messageId,
+          message,
+          type,
+          guestName: session.guestName,
+          timestamp: new Date()
+        });
+      }
+      
+      // Send delivery confirmation
+      socket.emit('message:delivered', { messageId });
+      
+    } catch (error) {
+      console.error('Failed to send guest message:', error);
+      socket.emit('message:error', { messageId, error: 'Failed to send message' });
+    }
+  });
+  
+  // Handle typing indicators
+  socket.on('guest:typing', (data) => {
+    if (!socket.sessionId) return;
+    
+    const session = publicSessions.get(socket.sessionId);
+    if (session && session.agentId) {
+      publicPortalNamespace.to(`agent:${session.agentId}`).emit('guest:typing', {
+        sessionId: socket.sessionId,
+        isTyping: data.isTyping
+      });
+    }
+  });
+  
+  // Handle disconnect
+  socket.on('disconnect', () => {
+    if (socket.sessionId) {
+      const session = publicSessions.get(socket.sessionId);
+      if (session) {
+        // Update status
+        db.run(
+          'UPDATE public_chat_sessions SET status = ?, end_time = datetime("now") WHERE session_id = ?',
+          ['disconnected', socket.sessionId]
+        );
+        
+        // Remove from queue if waiting
+        const queueIndex = publicQueue.indexOf(socket.sessionId);
+        if (queueIndex > -1) {
+          publicQueue.splice(queueIndex, 1);
+        }
+        
+        // Notify agent if assigned
+        if (session.agentId) {
+          publicPortalNamespace.to(`agent:${session.agentId}`).emit('guest:disconnected', {
+            sessionId: socket.sessionId,
+            guestName: session.guestName
+          });
+        }
+        
+        // Clean up after 5 minutes (for reconnection window)
+        setTimeout(() => {
+          publicSessions.delete(socket.sessionId);
+        }, 5 * 60 * 1000);
+      }
+    }
+    
+    console.log(`🌐 Public portal disconnection: ${socket.id}`);
+  });
+});
+
+// Helper function to notify available agents
+const notifyAvailableAgents = () => {
+  // Get all online agents with public chat permissions
+  publicPortalNamespace.emit('queue:update', {
+    queueLength: publicQueue.length,
+    waitingSessions: publicQueue.map(sessionId => {
+      const session = publicSessions.get(sessionId);
+      return {
+        sessionId,
+        guestName: session?.guestName || 'Guest',
+        waitTime: Math.floor((Date.now() - session?.startTime) / 1000) // seconds
+      };
+    })
+  });
+};
+
+// Agent-specific handlers (agents connect to same namespace with auth)
+publicPortalNamespace.use(async (socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (!token) {
+    // No token = guest user, allow
+    return next();
+  }
+  
+  try {
+    // Verify agent JWT token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const { userId, username, displayName } = decoded;
+    
+    // Check if user has public chat permissions
+    db.get(
+      `SELECT u.*, GROUP_CONCAT(rp.permission) as permissions
+       FROM users u 
+       LEFT JOIN role_permissions rp ON u.role_id = rp.role_id
+       WHERE u.username = ?
+       GROUP BY u.id`,
+      [username],
+      (err, user) => {
+        if (err || !user) {
+          return next(new Error('Authentication failed'));
+        }
+        
+        const permissions = user.permissions ? user.permissions.split(',') : [];
+        if (!permissions.includes('chat.public_queue') && user.role_id !== 1) {
+          return next(new Error('Insufficient permissions for public chat'));
+        }
+        
+        // Store user info on socket
+        socket.userId = userId;
+        socket.userDisplayName = displayName;
+        socket.isAgent = true;
+        
+        next();
+      }
+    );
+  } catch (error) {
+    next(new Error('Invalid token'));
+  }
+});
 
 // Start the server
 server.listen(PORT, () => {

@@ -33,6 +33,9 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { socketClient } from '@/lib/socket-client';
 import { useChatSettings } from '@/hooks/useChatSettings';
+import { useCallManager } from '@/hooks/useCallManager';
+import IncomingCallNotification from './IncomingCallNotification';
+import WebRTCCall from './WebRTCCall';
 
 // Helper function to safely format timestamps
 const safeFormatDistanceToNow = (timestamp: string | null | undefined, options: { addSuffix?: boolean } = {}) => {
@@ -108,6 +111,13 @@ export default function ChatWidget({
 
   // Get chat UI settings from admin
   const { settings: chatUISettings, loading: settingsLoading } = useChatSettings();
+  
+  // Initialize call manager for audio/video calls
+  const callManager = currentUser ? useCallManager({
+    currentUser,
+    enableNotifications: true,
+    enableRingtones: true
+  }) : null;
   
   // Debug logging for badge settings
   useEffect(() => {
@@ -212,6 +222,20 @@ export default function ChatWidget({
           // Find the other participant for DMs to get their presence status
           const otherParticipant = dm.participants?.find((p: any) => p.username !== currentUser?.username);
           const userWithPresence = userPresenceMap[otherParticipant?.username];
+          
+          // Debug logging for presence data
+          console.log('🔍 ChatWidget DM Processing:', {
+            dmId: dm.id,
+            dmDisplayName: dm.displayName,
+            otherParticipant: otherParticipant?.username,
+            userWithPresence: userWithPresence ? {
+              username: userWithPresence.username,
+              presenceStatus: userWithPresence.presence?.status,
+              profilePicture: userWithPresence.profile_picture
+            } : 'NOT_FOUND',
+            finalStatus: userWithPresence?.presence?.status || 'offline',
+            finalIsOnline: userWithPresence?.presence?.status === 'online' || false
+          });
           
           return {
             id: dm.id.toString(),
@@ -874,17 +898,53 @@ export default function ChatWidget({
                       <div>
                         <p className="text-sm font-medium">{selectedChat.displayName}</p>
                         <p className="text-xs text-gray-500">
-                          {selectedChat.type === 'dm' && selectedChat.status}
+                          {selectedChat.type === 'dm' && (
+                            selectedChat.status 
+                              ? selectedChat.status.charAt(0).toUpperCase() + selectedChat.status.slice(1).toLowerCase()
+                              : 'Offline'
+                          )}
                         </p>
                       </div>
                     </div>
                     
                     {selectedChat.type === 'dm' && (
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 w-6 p-0"
+                          onClick={() => {
+                            if (selectedChat && callManager) {
+                              const targetUser = {
+                                username: selectedChat.name,
+                                display_name: selectedChat.displayName,
+                                profile_picture: selectedChat.profile_picture || ''
+                              };
+                              callManager.startCall(targetUser, 'audio');
+                            }
+                          }}
+                          disabled={!callManager?.canMakeCalls('audio')}
+                          title="Start audio call"
+                        >
                           <Phone className="h-3 w-3" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 w-6 p-0"
+                          onClick={() => {
+                            if (selectedChat && callManager) {
+                              const targetUser = {
+                                username: selectedChat.name,
+                                display_name: selectedChat.displayName,
+                                profile_picture: selectedChat.profile_picture || ''
+                              };
+                              callManager.startCall(targetUser, 'video');
+                            }
+                          }}
+                          disabled={!callManager?.canMakeCalls('video')}
+                          title="Start video call"
+                        >
                           <Video className="h-3 w-3" />
                         </Button>
                       </div>
@@ -960,6 +1020,37 @@ export default function ChatWidget({
           </Card>
         </motion.div>
       </AnimatePresence>
+
+      {/* Call System Integration */}
+      {callManager && (
+        <>
+          {/* Incoming Call Notification */}
+          <IncomingCallNotification
+            open={!!callManager.incomingCall}
+            caller={callManager.incomingCall?.caller || { username: '', display_name: '', profile_picture: '' }}
+            callType={callManager.incomingCall?.callType || 'audio'}
+            onAccept={() => callManager.acceptCall(callManager.incomingCall?.callId || '')}
+            onReject={() => callManager.rejectCall(callManager.incomingCall?.callId || '')}
+            onTimeout={() => callManager.rejectCall(callManager.incomingCall?.callId || '', 'timeout')}
+          />
+
+          {/* Active Call Interface */}
+          {callManager.currentCall && currentUser && (
+            <WebRTCCall
+              open={callManager.isCallUIOpen}
+              onClose={callManager.closeCallUI}
+              callType={callManager.currentCall.type}
+              targetUser={callManager.currentCall.isIncoming 
+                ? callManager.currentCall.participants.caller 
+                : callManager.currentCall.participants.receiver}
+              currentUser={currentUser}
+              isIncoming={callManager.currentCall.isIncoming}
+              callId={callManager.currentCall.callId}
+              onCallEnd={(duration) => callManager.endCall(callManager.currentCall?.callId || '')}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }

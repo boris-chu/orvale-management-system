@@ -467,11 +467,41 @@ export default function ChatSidebar({
     return chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
   };
 
-  // Format time display
+  // Format time display - user-friendly format
   const formatTime = (timeString?: string) => {
     if (!timeString) return '';
-    // Simple format for now - can be enhanced with proper date formatting
-    return timeString;
+    
+    try {
+      const messageDate = new Date(timeString);
+      const now = new Date();
+      const diffInMinutes = Math.floor((now.getTime() - messageDate.getTime()) / (1000 * 60));
+      const diffInHours = Math.floor(diffInMinutes / 60);
+      const diffInDays = Math.floor(diffInHours / 24);
+      
+      // If it's from today, show time only
+      if (diffInDays === 0) {
+        if (diffInMinutes < 1) return 'now';
+        if (diffInMinutes < 60) return `${diffInMinutes}m`;
+        if (diffInHours < 24) return `${diffInHours}h`;
+      }
+      
+      // If it's from yesterday
+      if (diffInDays === 1) {
+        return 'yesterday';
+      }
+      
+      // If it's from this week (within 7 days)
+      if (diffInDays < 7) {
+        return messageDate.toLocaleDateString('en-US', { weekday: 'short' });
+      }
+      
+      // For older messages, show date
+      return messageDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      
+    } catch (error) {
+      console.warn('Invalid timestamp in ChatSidebar:', timeString);
+      return '';
+    }
   };
 
   const renderChatItem = (chat: ChatItem) => {
@@ -543,9 +573,12 @@ export default function ChatSidebar({
               </div>
               
               <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                <span className="text-xs text-gray-500">
-                  {formatTime(chat.lastMessageTime)}
-                </span>
+                {/* Hide timestamps for Direct Messages, show user-friendly format for channels/groups */}
+                {chat.type !== 'dm' && (
+                  <span className="text-xs text-gray-500">
+                    {formatTime(chat.lastMessageTime)}
+                  </span>
+                )}
                 {/* Unread Badge - Fixed Conditional Rendering */}
                 {(() => {
                   if (settingsLoading) return null;
