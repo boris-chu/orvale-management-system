@@ -18,33 +18,33 @@ export async function GET(request: NextRequest) {
           u.display_name,
           u.profile_picture,
           u.role,
-          swm.work_mode,
+          swm.current_mode as work_mode,
           up.status as presence_status,
-          up.last_activity
+          up.last_active
         FROM users u
         INNER JOIN staff_work_modes swm ON u.username = swm.username
-        LEFT JOIN user_presence up ON u.username = up.username
-        WHERE swm.work_mode IN ('ready', 'work_mode')
-          AND up.status IN ('online', 'away')
+        LEFT JOIN user_presence up ON u.username = up.user_id
+        WHERE swm.current_mode IN ('ready', 'work_mode')
+          AND (up.status IN ('online', 'away') OR up.status IS NULL)
           AND u.active = 1
-          AND swm.active = 1
-          AND (up.last_activity IS NULL OR datetime('now') < datetime(up.last_activity, '+30 minutes'))
+          AND (up.last_active IS NULL OR datetime('now') < datetime(up.last_active, '+30 minutes'))
         ORDER BY 
           CASE 
-            WHEN swm.work_mode = 'ready' THEN 1
-            WHEN swm.work_mode = 'work_mode' THEN 2
+            WHEN swm.current_mode = 'ready' THEN 1
+            WHEN swm.current_mode = 'work_mode' THEN 2
             ELSE 3
           END,
-          up.last_activity DESC
+          up.last_active DESC
         LIMIT 6`,
         (err, rows) => {
           db.close();
           
           if (err) {
-            console.error('Database error:', err);
+            console.error('Available agents database error:', err.message);
+            console.error('Full error:', err);
             resolve(NextResponse.json({ 
               success: false, 
-              error: 'Database error',
+              error: 'Database error: ' + err.message,
               agents: [],
               totalAvailable: 0 
             }, { status: 500 }));
