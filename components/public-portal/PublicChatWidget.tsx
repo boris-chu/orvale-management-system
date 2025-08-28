@@ -153,18 +153,27 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
       publicPortalSocket.addEventListener(componentId, 'session:started', (data) => {
         console.log('Chat session started:', data);
         setSessionId(data.sessionId);
-        setQueuePosition(data.queuePosition);
+        setQueuePosition(data.queuePosition || 1); // Default to position 1 if undefined
         setLoading(false);
         
         // Add system message about queue position
-        if (data.queuePosition > 0) {
+        const position = data.queuePosition || 1;
+        if (position > 1) {
           const queueMessage = {
             sender: 'system',
-            text: `You are position ${data.queuePosition} in queue. ${data.estimatedWaitTime ? `Estimated wait time: ${data.estimatedWaitTime} minutes.` : ''}`,
+            text: `You are position ${position} in queue. ${data.estimatedWaitTime ? `Estimated wait time: ${data.estimatedWaitTime} minutes.` : 'Please wait for the next available agent.'}`,
             timestamp: new Date(),
             id: Date.now()
           };
           setMessages(prev => [...prev, queueMessage]);
+        } else {
+          const connectingMessage = {
+            sender: 'system',
+            text: 'Connecting you with an available agent...',
+            timestamp: new Date(),
+            id: Date.now()
+          };
+          setMessages(prev => [...prev, connectingMessage]);
         }
       });
 
@@ -258,6 +267,25 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
         console.log('Agent availability changed:', data);
         // Refresh available agents list
         loadAvailableAgents();
+      });
+
+      // Handle connection errors
+      publicPortalSocket.addEventListener(componentId, 'connect_error', (error) => {
+        console.log('Chat connection issue detected');
+        setLoading(false);
+        
+        // Add user-friendly error message
+        const errorMessage = {
+          sender: 'system',
+          text: error.userMessage || 'Chat service is temporarily unavailable. Please try submitting a ticket instead.',
+          timestamp: new Date(),
+          id: Date.now(),
+          type: 'error'
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        
+        // Set offline status
+        setIsOnline(false);
       });
 
       // Cleanup
@@ -697,34 +725,71 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
       
       if (result.success) {
         // Session started successfully
-        setSessionId(result.session_id);
+        setSessionId(result.sessionId || result.session_id);
+        setQueuePosition(result.queuePosition || 1);
         setShowPreChatForm(false);
+        
+        // Add initial queue message
+        const position = result.queuePosition || 1;
+        const initialMessage = {
+          sender: 'system',
+          text: result.message || (position > 1 
+            ? `You are position ${position} in queue. ${result.estimatedWaitTime ? `Estimated wait time: ${result.estimatedWaitTime} minutes.` : 'Please wait for the next available agent.'}` 
+            : 'Connecting you with an available agent...'),
+          timestamp: new Date(),
+          id: Date.now()
+        };
+        setMessages(prev => [...prev, initialMessage]);
         
         // Initialize Socket.io connection with session
         const guestInfo = {
           name: preChatData.name,
           email: preChatData.email,
           phone: preChatData.phone,
-          department: preChatData.department
+          department: preChatData.department,
+          sessionId: result.sessionId || result.session_id
         };
         
         startChatSession(guestInfo);
         
-        // Add initial message to UI
-        setMessages([{
-          sender: 'guest',
-          text: preChatData.message,
-          timestamp: new Date(),
-          id: Date.now()
-        }]);
+        // Add user's initial message to chat
+        if (preChatData.message.trim()) {
+          const userMessage = {
+            sender: 'guest',
+            text: preChatData.message,
+            timestamp: new Date(),
+            id: Date.now() + 1
+          };
+          setMessages(prev => [...prev, userMessage]);
+        }
         
       } else {
         console.error('Failed to start chat session:', result.error);
-        // TODO: Show error message to user
+        
+        // Show user-friendly error message
+        const errorMessage = {
+          sender: 'system',
+          text: result.error === 'Chat is currently disabled' 
+            ? 'Chat support is currently unavailable. Please submit a ticket for assistance.'
+            : 'Unable to start chat session. Please try again or submit a ticket.',
+          timestamp: new Date(),
+          id: Date.now(),
+          type: 'error'
+        };
+        setMessages(prev => [...prev, errorMessage]);
       }
     } catch (error) {
       console.error('Error starting chat session:', error);
-      // TODO: Show error message to user
+      
+      // Show user-friendly error message
+      const errorMessage = {
+        sender: 'system',
+        text: 'Connection error. Please check your internet connection and try again, or submit a ticket for assistance.',
+        timestamp: new Date(),
+        id: Date.now(),
+        type: 'error'
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }
@@ -1332,12 +1397,15 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                       <Box sx={{ textAlign: 'center', my: 2 }}>
                         <Chip
                           icon={<AccessTime />}
-                          label={`Position in queue: ${queuePosition}`}
+                          label={`Position in queue: ${queuePosition || 1}`}
                           color="primary"
                           variant="outlined"
                         />
                         <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                          {settings?.queue_message || 'Please wait for the next available agent.'}
+                          {queuePosition && queuePosition > 1 
+                            ? (settings?.queue_message || 'Please wait for the next available agent.')
+                            : 'Connecting you with an agent...'
+                          }
                         </Typography>
                       </Box>
                     )}

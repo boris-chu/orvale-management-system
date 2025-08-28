@@ -86,9 +86,13 @@ class PublicPortalSocket {
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('❌ Public portal socket connection error:', error.message);
+      console.warn('🔌 Chat connection temporarily unavailable');
       this.isConnecting = false;
-      this.emitStoredEvent('connect_error', error);
+      this.emitStoredEvent('connect_error', { 
+        type: 'connection_error',
+        userMessage: 'Chat service is temporarily unavailable. Please try again in a moment.',
+        technicalError: error.message 
+      });
     });
 
     return this.socket;
