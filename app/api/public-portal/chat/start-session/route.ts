@@ -57,7 +57,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Check if chat is enabled
     const settingsResult = await dbGet(
-      'SELECT enabled FROM public_chat_settings WHERE id = 1'
+      'SELECT enabled FROM public_portal_widget_settings WHERE id = 1'
     ) as { enabled: number } | undefined;
 
     if (!settingsResult || !settingsResult.enabled) {
@@ -74,19 +74,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const sessionId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const recoveryToken = `token_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
 
-    // Create session in database
+    // Create session in database  
+    const sessionData = JSON.stringify({
+      phone: phone || null,
+      department: department || null,
+      initialMessage,
+      customFields: customFields || {}
+    });
+
     await dbRun(
       `INSERT INTO public_chat_sessions 
-       (session_id, guest_name, guest_email, guest_phone, department, 
-        custom_fields, recovery_token, start_time, status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), 'initializing')`,
+       (session_id, visitor_name, visitor_email, session_data, recovery_token, 
+        recovery_expires_at, status) 
+       VALUES (?, ?, ?, ?, ?, datetime('now', '+1 hour'), 'waiting')`,
       [
         sessionId,
         name,
         email,
-        phone || null,
-        department || null,
-        JSON.stringify(customFields || {}),
+        sessionData,
         recoveryToken
       ]
     );
@@ -95,7 +100,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const queueResult = await dbGet(
       `SELECT COUNT(*) as count FROM public_chat_sessions 
        WHERE status IN ('waiting', 'active') 
-       AND date(start_time) = date('now')`
+       AND date(created_at) = date('now')`
     ) as { count: number };
 
     const queuePosition = queueResult.count + 1;
@@ -103,9 +108,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Check for available agents
     const availableAgentsResult = await dbGet(
-      `SELECT COUNT(*) as count FROM public_queue_status 
-       WHERE work_mode IN ('available', 'auto') 
-       AND is_online = 1`
+      `SELECT COUNT(*) as count FROM staff_work_modes swm
+       INNER JOIN users u ON swm.username = u.username
+       WHERE swm.current_mode IN ('ready', 'work_mode') 
+       AND u.active = 1`
     ) as { count: number };
 
     const hasAvailableAgents = availableAgentsResult.count > 0;
