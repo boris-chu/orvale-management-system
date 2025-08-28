@@ -20,6 +20,7 @@ import {
 import { ColorPicker } from '@/components/shared/ColorPicker';
 import { motion, AnimatePresence } from 'framer-motion';
 import { socketClient } from '@/lib/socket-client';
+import { StaffWorkModeManager } from '@/components/public-portal/StaffWorkModeManager';
 
 interface StaffMember {
   id: string;
@@ -634,13 +635,29 @@ const PublicQueuePage = () => {
         <Paper 
           elevation={2}
           sx={{ 
-            width: 300, 
+            width: 400, 
             display: 'flex', 
             flexDirection: 'column',
             backgroundColor: themeColors.sidebar,
             borderRight: `1px solid ${themeColors.border}`
           }}
         >
+          {/* Staff Work Mode Manager */}
+          <Box sx={{ p: 2, borderBottom: `2px solid ${themeColors.accent}` }}>
+            <StaffWorkModeManager
+              staffInfo={{
+                id: currentStaff?.id || '',
+                name: currentStaff?.name || 'Unknown',
+                username: currentStaff?.id || ''
+              }}
+              onWorkModeChange={(newMode) => {
+                if (currentStaff) {
+                  setCurrentStaff(prev => prev ? { ...prev, status: newMode as any } : null);
+                  setWorkMode(newMode as any);
+                }
+              }}
+            />
+          </Box>
           {/* Staff Section (Top 40%) */}
           <Box sx={{ 
             height: '40%', 

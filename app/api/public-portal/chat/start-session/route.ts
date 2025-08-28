@@ -116,17 +116,63 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const hasAvailableAgents = availableAgentsResult.count > 0;
 
-    return NextResponse.json({
-      success: true,
-      sessionId,
-      recoveryToken,
-      queuePosition,
-      estimatedWaitTime,
-      hasAvailableAgents,
-      message: hasAvailableAgents 
-        ? 'Connecting you to an agent...' 
-        : 'All agents are currently busy. You are in queue.'
-    });
+    // Attempt auto-assignment if agents are available
+    let assignmentResult = null;
+    if (hasAvailableAgents) {
+      try {
+        console.log(`🎯 Attempting auto-assignment for session ${sessionId}`);
+        
+        const autoAssignResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:80'}/api/public-portal/chat/auto-assign`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sessionId,
+            priority: 'normal', // Could be enhanced to use actual priority from session data
+            department: department || null,
+            isEscalated: false
+          })
+        });
+
+        if (autoAssignResponse.ok) {
+          assignmentResult = await autoAssignResponse.json();
+          console.log(`✅ Auto-assignment result:`, assignmentResult.success ? 'Success' : 'No assignment');
+        } else {
+          console.log(`⚠️ Auto-assignment failed with status: ${autoAssignResponse.status}`);
+        }
+      } catch (error) {
+        console.error('Auto-assignment error:', error);
+      }
+    }
+
+    // Return response based on assignment result
+    if (assignmentResult?.success) {
+      return NextResponse.json({
+        success: true,
+        sessionId,
+        recoveryToken,
+        queuePosition: 0, // Assigned immediately
+        estimatedWaitTime: 0,
+        hasAvailableAgents: true,
+        assigned: true,
+        assignedAgent: assignmentResult.assignedTo,
+        message: assignmentResult.message || 'Connected to an agent!'
+      });
+    } else {
+      return NextResponse.json({
+        success: true,
+        sessionId,
+        recoveryToken,
+        queuePosition,
+        estimatedWaitTime,
+        hasAvailableAgents,
+        assigned: false,
+        message: assignmentResult?.message || (hasAvailableAgents 
+          ? 'All agents are currently busy. You are in queue.' 
+          : 'All agents are currently offline. You are in queue.')
+      });
+    }
 
   } catch (error) {
     console.error('Error starting chat session:', error);
