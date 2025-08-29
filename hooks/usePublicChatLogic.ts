@@ -263,8 +263,51 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
       });
 
       // Other socket event handlers...
+      publicPortalSocket.addEventListener(componentId, 'agent:message', (data) => {
+        console.log('📨 Agent message received:', data);
+        const newMessage = {
+          sender: 'agent' as const,
+          text: data.message,
+          timestamp: new Date(data.timestamp || Date.now()),
+          id: data.messageId || Date.now()
+        };
+        
+        setMessages(prev => {
+          const updatedMessages = [...prev, newMessage];
+          
+          // Update localStorage
+          if (settings?.session_recovery_enabled && sessionId) {
+            localStorage.setItem('public_chat_session', JSON.stringify({
+              id: sessionId,
+              timestamp: Date.now(),
+              messages: updatedMessages,
+              unreadCount: unreadCount,
+              guestName: preChatData.name,
+              guestEmail: preChatData.email,
+              guestPhone: preChatData.phone,
+              guestDepartment: preChatData.department
+            }));
+          }
+          
+          return updatedMessages;
+        });
+        
+        // Increase unread count if chat is minimized
+        if (isMinimized) {
+          setUnreadCount(prev => prev + 1);
+        }
+        
+        // Scroll to bottom
+        setTimeout(() => {
+          if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+          }
+        }, 100);
+      });
+
+      // Legacy support for old message_received events (backward compatibility)
       publicPortalSocket.addEventListener(componentId, 'message_received', (data) => {
-        console.log('Message received:', data);
+        console.log('📨 Legacy message_received event:', data);
         const newMessage = {
           sender: 'agent' as const,
           text: data.message,

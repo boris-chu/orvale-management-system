@@ -867,6 +867,10 @@ io.on('connection', async (socket) => {
       );
       
       // Send to guest in session via public portal namespace
+      console.log(`🎯 Emitting agent:message to session:${sessionId} in public portal namespace`);
+      console.log(`📊 Public portal namespace has ${publicPortalNamespace.sockets.size} sockets connected`);
+      console.log(`🏠 Session room session:${sessionId} has members:`, Array.from(publicPortalNamespace.adapter.rooms.get(`session:${sessionId}`) || []));
+      
       publicPortalNamespace.to(`session:${sessionId}`).emit('agent:message', {
         messageId,
         message,
@@ -1599,6 +1603,10 @@ publicPortalNamespace.on('connection', async (socket) => {
       );
       
       // Send to guest in session
+      console.log(`🎯 [Public Portal] Emitting agent:message to session:${sessionId}`);
+      console.log(`📊 Public portal namespace has ${publicPortalNamespace.sockets.size} sockets connected`);
+      console.log(`🏠 Session room session:${sessionId} has members:`, Array.from(publicPortalNamespace.adapter.rooms.get(`session:${sessionId}`) || []));
+      
       publicPortalNamespace.to(`session:${sessionId}`).emit('agent:message', {
         messageId,
         message,

@@ -183,6 +183,19 @@ const PublicQueuePage = () => {
     }
   }, [showUserMenu]);
 
+  // Handle page visibility changes - refresh queue when user returns to tab
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && realTimeEnabled) {
+        console.log('👁️ Page became visible - refreshing queue data');
+        loadRealQueueData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [realTimeEnabled]);
+
   const checkAuthentication = async () => {
     try {
       const token = localStorage.getItem('authToken');
@@ -301,25 +314,61 @@ const PublicQueuePage = () => {
         ));
       });
 
-      // Listen for public portal specific updates - but don't override, supplement
+      // Listen for public portal specific updates and refresh queue data
       publicPortalSocket.addEventListener(componentId, 'queue:update', (data) => {
-        console.log('📊 Public portal queue update (supplement only):', data);
-        // This is just for debugging/monitoring, don't update state to avoid duplicates
-        // The API data is the primary source, Socket.io events supplement it
+        console.log('📊 Public portal queue update - refreshing data:', data);
+        // Refresh queue data when Socket.io notifies us of changes
+        setTimeout(() => loadRealQueueData(), 100); // Small delay to ensure DB is updated
       });
 
       publicPortalSocket.addEventListener(componentId, 'session:started', (data) => {
-        console.log('New session started:', data);
-        // This will trigger a queue update
+        console.log('✅ New session started - refreshing queue:', data);
+        // Refresh queue data when new session starts
+        setTimeout(() => loadRealQueueData(), 100);
+      });
+
+      publicPortalSocket.addEventListener(componentId, 'session:ended', (data) => {
+        console.log('❌ Session ended - refreshing queue:', data);
+        // Refresh queue data when session ends
+        setTimeout(() => loadRealQueueData(), 100);
+      });
+
+      // Additional event listeners for comprehensive coverage
+      publicPortalSocket.addEventListener(componentId, 'session:assigned', (data) => {
+        console.log('👥 Session assigned to staff - refreshing queue:', data);
+        setTimeout(() => loadRealQueueData(), 100);
+      });
+
+      publicPortalSocket.addEventListener(componentId, 'session:returned_to_queue', (data) => {
+        console.log('🔄 Session returned to queue - refreshing queue:', data);
+        setTimeout(() => loadRealQueueData(), 100);
+      });
+
+      // Listen for socket connection status changes
+      publicPortalSocket.addEventListener(componentId, 'connect', () => {
+        console.log('🔌 Public portal socket connected - refreshing queue data');
+        setTimeout(() => loadRealQueueData(), 500); // Longer delay for connection setup
+      });
+
+      publicPortalSocket.addEventListener(componentId, 'disconnect', () => {
+        console.log('🔌 Public portal socket disconnected');
       });
 
       // Load real queue data from server
       loadRealQueueData();
 
+      // Set up periodic refresh to catch any missed socket events
+      // This ensures guests appear immediately even if socket events fail
+      const refreshInterval = setInterval(() => {
+        console.log('🔄 Periodic queue refresh...');
+        loadRealQueueData();
+      }, 5000); // Refresh every 5 seconds
+
       // Cleanup function
       return () => {
         socketClient.removeEventListeners(componentId);
         publicPortalSocket.removeEventListeners(componentId);
+        clearInterval(refreshInterval);
       };
     } catch (error) {
       console.error('Failed to initialize real-time updates:', error);
@@ -331,15 +380,28 @@ const PublicQueuePage = () => {
     
     try {
       const token = localStorage.getItem('authToken');
-      if (!token) return;
+      if (!token) {
+        console.log('❌ No auth token available for queue refresh');
+        return;
+      }
+
+      console.log('🔍 Loading real queue data...');
 
       // Load active guest sessions from server
       const guestResponse = await fetch('/api/public-portal/queue/guests', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
+      console.log('📡 Guest API response status:', guestResponse.status);
+
       if (guestResponse.ok) {
         const guestData = await guestResponse.json();
+        console.log('📊 Guest data received:', {
+          success: guestData.success,
+          guestCount: guestData.guests?.length || 0,
+          rawData: guestData
+        });
+        
         if (guestData.success && guestData.guests) {
           const realGuests: GuestSession[] = guestData.guests.map((guest: any) => ({
             id: guest.session_id,
@@ -366,8 +428,15 @@ const PublicQueuePage = () => {
             index === self.findIndex(g => g.id === guest.id)
           );
           
+          console.log('✅ Setting guest queue with', uniqueGuests.length, 'unique guests:', uniqueGuests.map(g => ({ id: g.id, name: g.guestName, status: g.status })));
           setGuestQueue(uniqueGuests);
+        } else {
+          console.log('❌ Invalid guest data format or no success flag');
         }
+      } else {
+        console.error('❌ Failed to load guest queue:', guestResponse.status, guestResponse.statusText);
+        const errorText = await guestResponse.text();
+        console.error('Error response:', errorText);
       }
 
       // Load active staff from server
@@ -938,6 +1007,19 @@ const PublicQueuePage = () => {
                   <Typography variant="subtitle1" fontWeight="bold" sx={{ flex: 1 }}>
                     Guest Queue ({guestQueue.length})
                   </Typography>
+                  <Tooltip title="Refresh queue data">
+                    <IconButton 
+                      size="small" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('🔄 Manual queue refresh triggered');
+                        loadRealQueueData();
+                      }}
+                      sx={{ color: themeColors.primary }}
+                    >
+                      <Refresh fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                   {guestQueueExpanded ? <ExpandLess /> : <ExpandMore />}
                 </Box>
               </Box>
