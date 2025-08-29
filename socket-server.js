@@ -1212,8 +1212,50 @@ publicPortalNamespace.on('connection', async (socket) => {
       if (recoverySessionId) {
         console.log(`🔄 Attempting session recovery for: ${recoverySessionId}`);
         
-        // Check if session exists and is within recovery window (10 minutes)
-        const existingSession = publicSessions.get(recoverySessionId);
+        // First check in-memory sessions
+        let existingSession = publicSessions.get(recoverySessionId);
+        
+        if (!existingSession) {
+          // Try to recover from database if not in memory (e.g., after server restart)
+          const dbSession = await new Promise((resolve) => {
+            db.get(
+              `SELECT session_id, visitor_name, visitor_email, visitor_phone, visitor_department, 
+                      status, assigned_to, created_at
+               FROM public_chat_sessions 
+               WHERE session_id = ? AND status IN ('waiting', 'active')`,
+              [recoverySessionId],
+              (err, row) => {
+                if (err) {
+                  console.error('Error recovering session from DB:', err);
+                  resolve(null);
+                } else {
+                  resolve(row);
+                }
+              }
+            );
+          });
+          
+          if (dbSession) {
+            // Reconstruct session from database
+            existingSession = {
+              sessionId: dbSession.session_id,
+              guestName: dbSession.visitor_name || name || 'Guest',
+              email: dbSession.visitor_email || email,
+              phone: dbSession.visitor_phone || phone,
+              department: dbSession.visitor_department || department,
+              socketId: socket.id,
+              createdAt: new Date(dbSession.created_at),
+              lastReconnect: new Date(),
+              agentId: dbSession.assigned_to,
+              status: dbSession.status
+            };
+            
+            // Add back to in-memory map
+            publicSessions.set(recoverySessionId, existingSession);
+            console.log(`📥 Recovered session from database: ${recoverySessionId} for ${existingSession.guestName}`);
+          }
+        }
+        
         if (existingSession) {
           // Restore session
           socket.sessionId = recoverySessionId;
@@ -1245,7 +1287,7 @@ publicPortalNamespace.on('connection', async (socket) => {
                 if (row && row.assigned_to) {
                   socket.emit('session:recovered', {
                     sessionId: recoverySessionId,
-                    status: 'connected',
+                    status: 'active',
                     agentId: row.assigned_to
                   });
                   console.log(`✅ Session recovered: ${recoverySessionId} connected to agent ${row.assigned_to}`);
@@ -1791,13 +1833,67 @@ publicPortalNamespace.use(async (socket, next) => {
   }
 });
 
+// Recover active sessions from database on startup
+async function recoverSessionsFromDatabase() {
+  return new Promise((resolve) => {
+    db.all(
+      `SELECT session_id, visitor_name, visitor_email, visitor_phone, visitor_department, 
+              status, assigned_to, created_at
+       FROM public_chat_sessions 
+       WHERE status IN ('waiting', 'active')
+       ORDER BY created_at ASC`,
+      [],
+      (err, rows) => {
+        if (err) {
+          console.error('Error recovering sessions from database:', err);
+          resolve();
+          return;
+        }
+        
+        let waitingCount = 0;
+        let activeCount = 0;
+        
+        rows.forEach(row => {
+          const session = {
+            sessionId: row.session_id,
+            guestName: row.visitor_name || 'Guest',
+            email: row.visitor_email,
+            phone: row.visitor_phone,
+            department: row.visitor_department,
+            socketId: null, // Will be set when guest reconnects
+            createdAt: new Date(row.created_at),
+            lastReconnect: null,
+            agentId: row.assigned_to,
+            status: row.status
+          };
+          
+          publicSessions.set(row.session_id, session);
+          
+          if (row.status === 'waiting') {
+            publicQueue.push(row.session_id);
+            waitingCount++;
+          } else if (row.status === 'active') {
+            activeCount++;
+          }
+        });
+        
+        console.log(`📥 Recovered ${waitingCount} waiting sessions and ${activeCount} active sessions from database`);
+        resolve();
+      }
+    );
+  });
+}
+
 // Start the server
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`🚀 Socket.io server running on port ${PORT}`);
   console.log(`🔗 CORS enabled for: http://localhost:80`);
   console.log(`💬 Ready to handle chat messages and WebRTC signaling`);
   console.log(`👥 Ready for user presence tracking with automatic timeouts`);
   console.log(`📞 Ready for audio/video call signaling`);
+  
+  // Recover sessions from database
+  await recoverSessionsFromDatabase();
 });
 
 // Graceful shutdown

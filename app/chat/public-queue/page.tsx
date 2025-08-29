@@ -503,7 +503,11 @@ const PublicQueuePage = () => {
     if (mins < 1) return `${seconds}s`;
     if (mins < 60) return `${mins}m`;
     const hours = Math.floor(mins / 60);
-    return `${hours}h ${mins % 60}m`;
+    if (hours < 24) return `${hours}h ${mins % 60}m`;
+    // For sessions older than 24 hours, show days
+    const days = Math.floor(hours / 24);
+    if (days === 1) return '1 day ago';
+    return `${days} days ago`;
   };
 
   const handleGuestClick = async (guest: GuestSession) => {
@@ -1361,6 +1365,38 @@ const MessagesDisplay = ({ sessionId, guestInfo }: MessagesDisplayProps) => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Load message history when component mounts
+  useEffect(() => {
+    const loadMessageHistory = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+
+        const response = await fetch(`/api/public-chat/messages/${sessionId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const formattedMessages = data.messages.map((msg: any) => ({
+            id: msg.id,
+            sender: msg.sender,
+            message: msg.message,
+            timestamp: new Date(msg.timestamp),
+            senderName: msg.senderName
+          }));
+          setMessages(formattedMessages);
+        }
+      } catch (error) {
+        console.error('Failed to load message history:', error);
+      }
+    };
+
+    loadMessageHistory();
+  }, [sessionId]);
+
   useEffect(() => {
     const componentId = `StaffMessages_${sessionId}_${Date.now()}`;
     
@@ -1774,7 +1810,11 @@ const formatWaitTime = (seconds: number) => {
   if (mins < 1) return `${seconds}s`;
   if (mins < 60) return `${mins}m`;
   const hours = Math.floor(mins / 60);
-  return `${hours}h ${mins % 60}m`;
+  if (hours < 24) return `${hours}h ${mins % 60}m`;
+  // For sessions older than 24 hours, show days
+  const days = Math.floor(hours / 24);
+  if (days === 1) return '1 day ago';
+  return `${days} days ago`;
 };
 
 export default PublicQueuePage;
