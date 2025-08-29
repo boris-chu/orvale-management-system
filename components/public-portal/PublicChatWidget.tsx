@@ -1562,6 +1562,15 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                           </>
                         )}
                         
+                        {/* DEBUG: Check if phone/dept values are accidentally rendered */}
+                        <Box sx={{ border: '1px solid yellow', p: 0.5, mb: 0.5 }} data-debug="suspicious-area">
+                          DEBUG: Phone req: {String(settings?.require_phone)} | Dept req: {String(settings?.require_department)}
+                        </Box>
+                        
+                        {/* POTENTIAL CULPRIT: These might be rendering "0" somehow */}
+                        {settings?.require_phone}
+                        {settings?.require_department}
+                        
                         <Box sx={{ border: '1px solid orange', p: 0.5, mb: 1 }} data-debug="form-container-end">
                           DEBUG: End of form fields container
                         </Box>
