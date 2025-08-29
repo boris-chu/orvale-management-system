@@ -39,6 +39,7 @@ interface GuestSession {
   id: string;
   guestName: string;
   waitTime: number; // in seconds
+  waitTimeFormatted?: string; // formatted time string
   priority: 'normal' | 'high' | 'urgent' | 'vip';
   status: 'waiting' | 'abandoned' | 'reconnected' | 'escalated';
   department?: string;
@@ -259,6 +260,7 @@ const PublicQueuePage = () => {
               id: data.sessionId,
               guestName: data.guestName || `Guest #${data.sessionId.slice(-3)}`,
               waitTime: 0,
+              waitTimeFormatted: '0s',
               priority: data.priority || 'normal',
               status: 'waiting',
               department: data.department || 'General Support',
@@ -285,22 +287,11 @@ const PublicQueuePage = () => {
         ));
       });
 
-      // Listen for public portal specific updates
+      // Listen for public portal specific updates - but don't override, supplement
       publicPortalSocket.addEventListener(componentId, 'queue:update', (data) => {
-        console.log('📊 Public portal queue update:', data);
-        if (data.waitingSessions) {
-          const updatedQueue: GuestSession[] = data.waitingSessions.map((session: any) => ({
-            id: session.sessionId,
-            guestName: session.guestName || `Guest #${session.sessionId.slice(-3)}`,
-            waitTime: session.waitTime || 0,
-            priority: session.priority || 'normal',
-            status: session.status || 'waiting',
-            department: session.department || 'General Support',
-            initialMessage: session.message || '',
-            joinedAt: new Date(Date.now() - (session.waitTime * 1000))
-          }));
-          setGuestQueue(updatedQueue);
-        }
+        console.log('📊 Public portal queue update (supplement only):', data);
+        // This is just for debugging/monitoring, don't update state to avoid duplicates
+        // The API data is the primary source, Socket.io events supplement it
       });
 
       publicPortalSocket.addEventListener(componentId, 'session:started', (data) => {
@@ -339,14 +330,21 @@ const PublicQueuePage = () => {
           const realGuests: GuestSession[] = guestData.guests.map((guest: any) => ({
             id: guest.session_id,
             guestName: guest.guest_name || `Guest #${guest.session_id.slice(-3)}`,
-            waitTime: Math.floor((Date.now() - new Date(guest.created_at).getTime()) / 1000),
+            waitTime: guest.wait_time_seconds || 0,
+            waitTimeFormatted: guest.wait_time_formatted || formatWaitTime(guest.wait_time_seconds || 0),
             priority: guest.priority || 'normal',
             status: guest.status || 'waiting',
             department: guest.department || 'General Support',
             initialMessage: guest.initial_message || '',
             joinedAt: new Date(guest.created_at)
           }));
-          setGuestQueue(realGuests);
+          
+          // Remove duplicates based on session_id
+          const uniqueGuests = realGuests.filter((guest, index, self) => 
+            index === self.findIndex(g => g.id === guest.id)
+          );
+          
+          setGuestQueue(uniqueGuests);
         }
       }
 
@@ -689,6 +687,13 @@ const PublicQueuePage = () => {
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <IconButton 
+            onClick={loadRealQueueData}
+            sx={{ color: 'white' }}
+          >
+            <Refresh />
+          </IconButton>
+          
+          <IconButton 
             onClick={() => setSettingsOpen(true)} 
             sx={{ color: 'white' }}
           >
@@ -913,7 +918,7 @@ const PublicQueuePage = () => {
                           secondary={
                             <>
                               <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
-                                Waiting: {formatWaitTime(guest.waitTime)}
+                                Waiting: {guest.waitTimeFormatted || formatWaitTime(guest.waitTime)}
                               </span>
                               <br />
                               <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
@@ -1386,22 +1391,18 @@ const MessagesDisplay = ({ sessionId, guestInfo }: MessagesDisplayProps) => {
   useEffect(() => {
     const componentId = `StaffMessages_${sessionId}_${Date.now()}`;
     
-    // Connect to public portal socket for staff-guest communication with auth token
+    // Use singleton socketClient for consistent connection
     const token = localStorage.getItem('authToken');
-    const socket = publicPortalSocket.connect({ 
-      name: 'Staff', 
-      email: 'staff@system', 
-      token 
-    });
-    setIsConnected(socket?.connected || false);
-    
-    // Notify the socket that staff has connected to this session
-    if (socket?.connected) {
-      publicPortalSocket.emit('staff:connect_to_session', { sessionId });
+    if (token) {
+      const socket = socketClient.connect(token);
+      setIsConnected(socket.connected);
+      
+      // Notify that staff connected to this session
+      socketClient.emit('staff:connect_to_session', { sessionId });
     }
 
-    // Set up event listeners for this session
-    publicPortalSocket.addEventListener(componentId, 'guest:message', (data) => {
+    // Set up event listeners for this session using singleton only
+    socketClient.addEventListener(componentId, 'guest:message', (data) => {
       if (data.sessionId === sessionId) {
         const newMessage: ChatMessage = {
           id: data.messageId || Date.now().toString(),
@@ -1414,8 +1415,8 @@ const MessagesDisplay = ({ sessionId, guestInfo }: MessagesDisplayProps) => {
       }
     });
 
-    // Listen for message confirmations when staff sends
-    publicPortalSocket.addEventListener(componentId, 'staff:message_sent', (data) => {
+    // Listen for message confirmations when staff sends - use singleton only
+    socketClient.addEventListener(componentId, 'staff:message_sent', (data) => {
       if (data.sessionId === sessionId) {
         const newMessage: ChatMessage = {
           id: data.messageId || Date.now().toString(),
@@ -1428,7 +1429,7 @@ const MessagesDisplay = ({ sessionId, guestInfo }: MessagesDisplayProps) => {
       }
     });
 
-    publicPortalSocket.addEventListener(componentId, 'guest:typing', (data) => {
+    socketClient.addEventListener(componentId, 'guest:typing', (data) => {
       if (data.sessionId === sessionId) {
         setIsTyping(data.isTyping);
       }
@@ -1436,10 +1437,10 @@ const MessagesDisplay = ({ sessionId, guestInfo }: MessagesDisplayProps) => {
 
     // Clean up
     return () => {
-      publicPortalSocket.removeEventListeners(componentId);
+      socketClient.removeEventListeners(componentId);
       // Notify that staff disconnected from session
-      if (publicPortalSocket.isConnected()) {
-        publicPortalSocket.emit('staff:disconnect_from_session', { sessionId });
+      if (socketClient.isConnected()) {
+        socketClient.emit('staff:disconnect_from_session', { sessionId });
       }
     };
   }, [sessionId, guestInfo.guestName]);
@@ -1607,25 +1608,25 @@ const MessageInput = ({ sessionId }: MessageInputProps) => {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Ensure connection with auth token for staff
+    const componentId = `MessageInput_${sessionId}_${Date.now()}`;
+    
+    // Use singleton socketClient instead of creating new connections
     const token = localStorage.getItem('authToken');
     if (token) {
-      publicPortalSocket.connect({ 
-        name: 'Staff', 
-        email: 'staff@system', 
-        token 
-      });
+      const socket = socketClient.connect(token);
+      setIsConnected(socket.connected);
+      
+      // Monitor connection status
+      const checkConnection = setInterval(() => {
+        setIsConnected(socketClient.isConnected());
+      }, 1000);
+
+      return () => {
+        clearInterval(checkConnection);
+        socketClient.removeEventListeners(componentId);
+      };
     }
-    
-    const socket = publicPortalSocket.getSocket();
-    setIsConnected(socket?.connected || false);
-
-    const checkConnection = setInterval(() => {
-      setIsConnected(publicPortalSocket.isConnected());
-    }, 1000);
-
-    return () => clearInterval(checkConnection);
-  }, []);
+  }, [sessionId]);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || !isConnected || isSending) return;
@@ -1638,17 +1639,14 @@ const MessageInput = ({ sessionId }: MessageInputProps) => {
     handleStopTyping();
 
     try {
-      // Send message via Socket.io
-      const success = publicPortalSocket.emit('staff:message', {
+      // Send message via singleton socketClient
+      socketClient.emit('staff:message', {
         sessionId,
         message: messageText,
         timestamp: new Date().toISOString()
       });
-
-      if (!success) {
-        console.warn('Failed to send message via Socket.io');
-        // Could implement HTTP fallback here
-      }
+      
+      console.log('Message sent via singleton socket');
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -1661,7 +1659,7 @@ const MessageInput = ({ sessionId }: MessageInputProps) => {
 
     if (!isTyping) {
       setIsTyping(true);
-      publicPortalSocket.emit('staff:typing', { sessionId, isTyping: true });
+      socketClient.emit('staff:typing', { sessionId, isTyping: true });
     }
 
     // Clear existing timeout
@@ -1678,7 +1676,7 @@ const MessageInput = ({ sessionId }: MessageInputProps) => {
   const handleStopTyping = () => {
     if (isTyping) {
       setIsTyping(false);
-      publicPortalSocket.emit('staff:typing', { sessionId, isTyping: false });
+      socketClient.emit('staff:typing', { sessionId, isTyping: false });
     }
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -1768,7 +1766,7 @@ const MessageInput = ({ sessionId }: MessageInputProps) => {
           onClick={() => {
             // TODO: Implement end chat functionality
             if (confirm('Are you sure you want to end this chat session?')) {
-              publicPortalSocket.emit('staff:end_session', { sessionId });
+              socketClient.emit('staff:end_session', { sessionId });
             }
           }}
         >

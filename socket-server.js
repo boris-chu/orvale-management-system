@@ -1186,8 +1186,18 @@ publicPortalNamespace.on('connection', async (socket) => {
       // Get session info
       const session = publicSessions.get(socket.sessionId);
       if (session && session.agentId) {
-        // Forward to assigned agent
+        // Forward to assigned agent via public portal namespace
         publicPortalNamespace.to(`agent:${session.agentId}`).emit('guest:message', {
+          sessionId: socket.sessionId,
+          messageId,
+          message,
+          type,
+          guestName: session.guestName,
+          timestamp: new Date()
+        });
+        
+        // ALSO emit to main namespace for singleton client
+        io.emit('guest:message', {
           sessionId: socket.sessionId,
           messageId,
           message,
@@ -1212,7 +1222,14 @@ publicPortalNamespace.on('connection', async (socket) => {
     
     const session = publicSessions.get(socket.sessionId);
     if (session && session.agentId) {
+      // Send via public portal namespace
       publicPortalNamespace.to(`agent:${session.agentId}`).emit('guest:typing', {
+        sessionId: socket.sessionId,
+        isTyping: data.isTyping
+      });
+      
+      // ALSO emit to main namespace for singleton client
+      io.emit('guest:typing', {
         sessionId: socket.sessionId,
         isTyping: data.isTyping
       });
@@ -1291,8 +1308,17 @@ publicPortalNamespace.on('connection', async (socket) => {
         timestamp: new Date()
       });
       
-      // Send confirmation to staff
+      // Send confirmation to staff via both namespaces
       socket.emit('staff:message_sent', { 
+        sessionId,
+        messageId, 
+        message,
+        timestamp: new Date(),
+        staffName: socket.userDisplayName 
+      });
+      
+      // ALSO emit to main namespace for singleton client
+      io.emit('staff:message_sent', {
         sessionId,
         messageId, 
         message,
