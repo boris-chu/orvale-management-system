@@ -154,21 +154,6 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
     };
   }, [settings, isOpen, sessionId, showPreChatForm, messages]);
 
-  // Debug form rendering - looking for "00" issue  
-  useEffect(() => {
-    if (showPreChatForm && settings) {
-      console.log('🔍 DEBUG - Form state when showing:', {
-        require_name: settings?.require_name,
-        require_email: settings?.require_email, 
-        require_phone: settings?.require_phone,
-        require_department: settings?.require_department,
-        preChatData,
-        settings_widget_position_x: settings?.widget_position_x,
-        settings_widget_position_y: settings?.widget_position_y,
-        any_zero_values: Object.entries(settings).filter(([key, value]) => value === 0 || value === '0').map(([key, value]) => ({ [key]: value }))
-      });
-    }
-  }, [showPreChatForm, settings, preChatData]);
 
   // Load widget settings on mount
   useEffect(() => {
@@ -1513,67 +1498,34 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
 
                       {/* Form Fields Container */}
                       <Box sx={{ '& > *': { mb: 2 } }}>
-                        <Box sx={{ border: '1px solid orange', p: 0.5, mb: 1 }} data-debug="form-container-start">
-                          DEBUG: Start of form fields container
-                        </Box>
-                        
                         {/* Name Field */}
                         {settings?.require_name && (
-                          <>
-                            <Box sx={{ border: '1px solid purple', p: 0.5, mb: 0.5 }} data-debug="before-name">
-                              DEBUG: Before Name field
-                            </Box>
-                            <TextField
-                              fullWidth
-                              size="small"
-                              label="Your Name *"
-                              value={preChatData.name || ''}
-                              onChange={(e) => setPreChatData(prev => ({ ...prev, name: e.target.value }))}
-                              error={!!preChatErrors.name}
-                              helperText={preChatErrors.name}
-                              autoComplete="off"
-                            />
-                            <Box sx={{ border: '1px solid purple', p: 0.5, mb: 0.5 }} data-debug="after-name">
-                              DEBUG: After Name field
-                            </Box>
-                          </>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Your Name *"
+                            value={preChatData.name || ''}
+                            onChange={(e) => setPreChatData(prev => ({ ...prev, name: e.target.value }))}
+                            error={!!preChatErrors.name}
+                            helperText={preChatErrors.name}
+                            autoComplete="off"
+                          />
                         )}
 
                         {/* Email Field */}
                         {settings?.require_email && (
-                          <>
-                            <Box sx={{ border: '1px solid green', p: 0.5, mb: 0.5 }} data-debug="before-email">
-                              DEBUG: Before Email field
-                            </Box>
-                            <TextField
-                              fullWidth
-                              size="small"
-                              type="email"
-                              label="Email Address *"
-                              value={preChatData.email || ''}
-                              onChange={(e) => setPreChatData(prev => ({ ...prev, email: e.target.value }))}
-                              error={!!preChatErrors.email}
-                              helperText={preChatErrors.email}
-                              autoComplete="off"
-                            />
-                            <Box sx={{ border: '1px solid green', p: 0.5, mb: 0.5 }} data-debug="after-email">
-                              DEBUG: After Email field
-                            </Box>
-                          </>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            type="email"
+                            label="Email Address *"
+                            value={preChatData.email || ''}
+                            onChange={(e) => setPreChatData(prev => ({ ...prev, email: e.target.value }))}
+                            error={!!preChatErrors.email}
+                            helperText={preChatErrors.email}
+                            autoComplete="off"
+                          />
                         )}
-                        
-                        {/* DEBUG: Check if phone/dept values are accidentally rendered */}
-                        <Box sx={{ border: '1px solid yellow', p: 0.5, mb: 0.5 }} data-debug="suspicious-area">
-                          DEBUG: Phone req: {String(settings?.require_phone)} | Dept req: {String(settings?.require_department)}
-                        </Box>
-                        
-                        {/* POTENTIAL CULPRIT: These might be rendering "0" somehow */}
-                        {settings?.require_phone}
-                        {settings?.require_department}
-                        
-                        <Box sx={{ border: '1px solid orange', p: 0.5, mb: 1 }} data-debug="form-container-end">
-                          DEBUG: End of form fields container
-                        </Box>
                       </Box>
 
                       {/* Phone Field - Should not render since require_phone is 0 */}
@@ -1611,11 +1563,6 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                       )}
 
 
-                      {/* DEBUG: Element before message field */}
-                      <Box sx={{ border: '1px solid red', p: 1, mb: 1 }} data-debug="before-message">
-                        DEBUG: This box is right before the message field. If you see "00" above this box, it's coming from above.
-                      </Box>
-                      
                       {/* Message Field */}
                       <TextField
                         fullWidth
@@ -1631,11 +1578,6 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         sx={{ mb: 3 }}
                         autoComplete="off"
                       />
-                      
-                      {/* DEBUG: Element after message field */}
-                      <Box sx={{ border: '1px solid blue', p: 1, mb: 1 }} data-debug="after-message">
-                        DEBUG: This box is right after the message field. If you see "00" below this box, it's coming from below.
-                      </Box>
 
                       {/* Submit Button */}
                       <Button
