@@ -824,7 +824,7 @@ io.on('connection', async (socket) => {
       
       // Update database
       db.run(
-        'UPDATE public_chat_sessions_enhanced SET assigned_to = ?, status = ? WHERE session_id = ?',
+        'UPDATE public_chat_sessions SET assigned_to = ?, status = ? WHERE session_id = ?',
         [socket.userId, 'active', sessionId]
       );
       
@@ -927,7 +927,7 @@ io.on('connection', async (socket) => {
       
       // Update database
       db.run(
-        'UPDATE public_chat_sessions_enhanced SET status = ?, assigned_to = NULL WHERE session_id = ? AND assigned_to = ?',
+        'UPDATE public_chat_sessions SET status = ?, assigned_to = NULL WHERE session_id = ? AND assigned_to = ?',
         ['waiting', sessionId, socket.userId]
       );
       
@@ -953,7 +953,7 @@ io.on('connection', async (socket) => {
       
       // Update database
       db.run(
-        'UPDATE public_chat_sessions_enhanced SET status = ?, ended_at = datetime("now") WHERE session_id = ?',
+        'UPDATE public_chat_sessions SET status = ?, ended_at = datetime("now") WHERE session_id = ?',
         ['ended', sessionId]
       );
       
@@ -1140,7 +1140,7 @@ console.log('🌐 Public portal namespace created at /public-portal');
 const loadWaitingSessionsFromDatabase = () => {
   db.all(
     `SELECT session_id, visitor_name, visitor_email, session_data, created_at 
-     FROM public_chat_sessions_enhanced 
+     FROM public_chat_sessions 
      WHERE status = 'waiting' 
      ORDER BY created_at ASC`,
     (err, rows) => {
@@ -1239,7 +1239,7 @@ publicPortalNamespace.on('connection', async (socket) => {
           } else {
             // Check if connected to agent
             db.get(
-              'SELECT assigned_to FROM public_chat_sessions_enhanced WHERE session_id = ?',
+              'SELECT assigned_to FROM public_chat_sessions WHERE session_id = ?',
               [recoverySessionId],
               (err, row) => {
                 if (row && row.assigned_to) {
@@ -1269,7 +1269,7 @@ publicPortalNamespace.on('connection', async (socket) => {
         // Check database for existing active sessions from same guest (by name and email)
         db.get(
           `SELECT session_id, status, created_at 
-           FROM public_chat_sessions_enhanced_enhanced 
+           FROM public_chat_sessions 
            WHERE visitor_name = ? AND visitor_email = ? 
            AND status IN ('waiting', 'active') 
            ORDER BY created_at DESC 
@@ -1361,7 +1361,7 @@ publicPortalNamespace.on('connection', async (socket) => {
         
         // Create session in database
         db.run(
-          `INSERT INTO public_chat_sessions_enhanced 
+          `INSERT INTO public_chat_sessions 
            (session_id, visitor_name, visitor_email, session_data, status) 
            VALUES (?, ?, ?, ?, 'waiting')`,
           [sessionId, name, email, JSON.stringify({
@@ -1514,7 +1514,7 @@ publicPortalNamespace.on('connection', async (socket) => {
       
       // Update database
       db.run(
-        'UPDATE public_chat_sessions_enhanced SET assigned_to = ?, status = ? WHERE session_id = ?',
+        'UPDATE public_chat_sessions SET assigned_to = ?, status = ? WHERE session_id = ?',
         [socket.userId, 'active', sessionId]
       );
       
@@ -1617,7 +1617,7 @@ publicPortalNamespace.on('connection', async (socket) => {
       
       // Update database
       db.run(
-        'UPDATE public_chat_sessions_enhanced SET status = ?, assigned_to = NULL WHERE session_id = ? AND assigned_to = ?',
+        'UPDATE public_chat_sessions SET status = ?, assigned_to = NULL WHERE session_id = ? AND assigned_to = ?',
         ['waiting', sessionId, socket.userId]
       );
       
@@ -1643,7 +1643,7 @@ publicPortalNamespace.on('connection', async (socket) => {
       
       // Update database
       db.run(
-        'UPDATE public_chat_sessions_enhanced SET status = ?, ended_at = datetime("now") WHERE session_id = ?',
+        'UPDATE public_chat_sessions SET status = ?, ended_at = datetime("now") WHERE session_id = ?',
         ['ended', sessionId]
       );
       
@@ -1668,7 +1668,7 @@ publicPortalNamespace.on('connection', async (socket) => {
       if (session) {
         // Update status
         db.run(
-          'UPDATE public_chat_sessions_enhanced SET status = ?, ended_at = datetime("now") WHERE session_id = ?',
+          'UPDATE public_chat_sessions SET status = ?, ended_at = datetime("now") WHERE session_id = ?',
           ['disconnected', socket.sessionId]
         );
         

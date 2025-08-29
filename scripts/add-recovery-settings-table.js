@@ -132,7 +132,7 @@ async function addRecoverySettingsTable() {
           recovery_duration_seconds INTEGER,
           timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           
-          FOREIGN KEY (session_id) REFERENCES public_chat_sessions_enhanced(session_id)
+          FOREIGN KEY (session_id) REFERENCES public_chat_sessions(session_id)
         )
       `;
       

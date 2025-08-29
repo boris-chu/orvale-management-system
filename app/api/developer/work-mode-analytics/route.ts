@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
           JOIN users u ON swm.username = u.username
           LEFT JOIN (
             SELECT staff_username, COUNT(*) as session_count
-            FROM public_chat_sessions_enhanced 
+            FROM public_chat_sessions 
             WHERE status = 'active' 
             GROUP BY staff_username
           ) active_sessions ON swm.username = active_sessions.staff_username

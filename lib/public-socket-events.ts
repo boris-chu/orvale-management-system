@@ -524,7 +524,7 @@ export class PublicPortalSocketEvents {
     
     return new Promise((resolve, reject) => {
       const sql = `
-        INSERT INTO public_chat_sessions_enhanced (
+        INSERT INTO public_chat_sessions (
           session_id, guest_name, guest_email, guest_phone, 
           department, initial_message, priority_level, status, 
           joined_at, custom_fields_json
@@ -589,7 +589,7 @@ export class PublicPortalSocketEvents {
     
     return new Promise((resolve, reject) => {
       const sql = `
-        UPDATE public_chat_sessions_enhanced 
+        UPDATE public_chat_sessions 
         SET status = ?, assigned_staff_id = ?, updated_at = CURRENT_TIMESTAMP
         WHERE session_id = ?
       `;

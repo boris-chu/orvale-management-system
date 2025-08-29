@@ -16,9 +16,9 @@ console.log('🗄️  Creating Public Portal Live Chat Database Tables...\n');
 
 const migrations = [
   {
-    name: 'Create public_chat_sessions_enhanced table',
+    name: 'Create public_chat_sessions table',
     sql: `
-      CREATE TABLE IF NOT EXISTS public_chat_sessions_enhanced (
+      CREATE TABLE IF NOT EXISTS public_chat_sessions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         session_id TEXT UNIQUE NOT NULL,
         visitor_name TEXT,
@@ -113,7 +113,7 @@ const migrations = [
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         
-        FOREIGN KEY (session_id) REFERENCES public_chat_sessions_enhanced(session_id),
+        FOREIGN KEY (session_id) REFERENCES public_chat_sessions(session_id),
         FOREIGN KEY (sender_id) REFERENCES users(username),
         FOREIGN KEY (reply_to_message_id) REFERENCES public_chat_messages(id)
       );
@@ -242,7 +242,7 @@ const migrations = [
         -- Timestamps
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         
-        FOREIGN KEY (session_id) REFERENCES public_chat_sessions_enhanced(session_id),
+        FOREIGN KEY (session_id) REFERENCES public_chat_sessions(session_id),
         FOREIGN KEY (staff_username) REFERENCES users(username),
         UNIQUE(session_id) -- One rating per session for fraud prevention
       );
@@ -313,7 +313,7 @@ const migrations = [
         event_data TEXT DEFAULT '{}', -- JSON with event details
         staff_username TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (session_id) REFERENCES public_chat_sessions_enhanced(session_id),
+        FOREIGN KEY (session_id) REFERENCES public_chat_sessions(session_id),
         FOREIGN KEY (staff_username) REFERENCES users(username)
       );
     `
@@ -333,7 +333,7 @@ const migrations = [
         expires_at TIMESTAMP, -- Auto-expire typing status
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (session_id) REFERENCES public_chat_sessions_enhanced(session_id),
+        FOREIGN KEY (session_id) REFERENCES public_chat_sessions(session_id),
         UNIQUE(session_id, user_type, user_id) -- One typing status per user per session
       );
     `
@@ -353,7 +353,7 @@ const migrations = [
         ip_address TEXT, -- For guest tracking
         user_agent TEXT, -- For guest tracking
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (session_id) REFERENCES public_chat_sessions_enhanced(session_id),
+        FOREIGN KEY (session_id) REFERENCES public_chat_sessions(session_id),
         FOREIGN KEY (message_id) REFERENCES public_chat_messages(id),
         UNIQUE(session_id, message_id, reader_type, reader_id) -- One receipt per reader per message
       );
@@ -473,10 +473,10 @@ const migrations = [
 
 // Create indexes for performance
 const indexes = [
-  'CREATE INDEX IF NOT EXISTS idx_public_chat_sessions_status ON public_chat_sessions_enhanced(status);',
-  'CREATE INDEX IF NOT EXISTS idx_public_chat_sessions_assigned_to ON public_chat_sessions_enhanced(assigned_to);',
-  'CREATE INDEX IF NOT EXISTS idx_public_chat_sessions_priority ON public_chat_sessions_enhanced(priority_level);',
-  'CREATE INDEX IF NOT EXISTS idx_public_chat_sessions_created_at ON public_chat_sessions_enhanced(created_at);',
+  'CREATE INDEX IF NOT EXISTS idx_public_chat_sessions_status ON public_chat_sessions(status);',
+  'CREATE INDEX IF NOT EXISTS idx_public_chat_sessions_assigned_to ON public_chat_sessions(assigned_to);',
+  'CREATE INDEX IF NOT EXISTS idx_public_chat_sessions_priority ON public_chat_sessions(priority_level);',
+  'CREATE INDEX IF NOT EXISTS idx_public_chat_sessions_created_at ON public_chat_sessions(created_at);',
   'CREATE INDEX IF NOT EXISTS idx_public_chat_messages_session_id ON public_chat_messages(session_id);',
   'CREATE INDEX IF NOT EXISTS idx_public_chat_messages_sender_type ON public_chat_messages(sender_type);',
   'CREATE INDEX IF NOT EXISTS idx_public_chat_messages_created_at ON public_chat_messages(created_at);',
@@ -529,7 +529,7 @@ async function runMigrations() {
     
     console.log('\n🎉 Public Portal Live Chat database setup completed successfully!');
     console.log('\n📊 Summary of tables created:');
-    console.log('   • public_chat_sessions_enhanced - Guest chat sessions with enhanced tracking');
+    console.log('   • public_chat_sessions - Guest chat sessions with enhanced tracking');
     console.log('   • public_chat_messages - All chat messages between guests and staff');
     console.log('   • public_portal_widget_settings - Admin configuration for the chat widget');
     console.log('   • public_chat_session_ratings - Customer satisfaction ratings');
