@@ -237,7 +237,7 @@ export async function PUT(request: NextRequest) {
         settings.widget_position || 'bottom-right',
         settings.widget_position_x || 0,
         settings.widget_position_y || 0,
-        null, // widget_icon disabled - no longer using icons
+        '', // widget_icon disabled - no longer using icons
         settings.widget_image || '',
         settings.widget_text || 'Chat with us',
         settings.widget_animation || 'pulse',
@@ -277,12 +277,21 @@ export async function PUT(request: NextRequest) {
         authResult.user.username
       ];
 
+      console.log('🔄 Executing SQL with', params.length, 'parameters');
+      console.log('📝 SQL:', widgetSql.replace(/\s+/g, ' ').substring(0, 200) + '...');
+      
       db.run(widgetSql, params, function(err) {
         db.close();
         
         if (err) {
-          console.error('Database error:', err);
-          resolve(NextResponse.json({ error: 'Database error' }, { status: 500 }));
+          console.error('❌ Database error details:', err);
+          console.error('📊 Parameters count:', params.length);
+          console.error('🔍 First few params:', params.slice(0, 10));
+          resolve(NextResponse.json({ 
+            error: 'Database error', 
+            details: err.message,
+            paramCount: params.length 
+          }, { status: 500 }));
           return;
         }
 
