@@ -67,6 +67,7 @@ const PublicPortalAdmin = () => {
     holidays: [] as any[],
     
     // Widget Appearance
+    widget_theme: 'classic', // Add theme option: classic, modern
     widget_shape: 'circle',
     widget_color: '#1976d2',
     widget_size: 'medium',
@@ -288,7 +289,34 @@ const PublicPortalAdmin = () => {
         if (data.delivery_status_icons) {
           data.delivery_status_icons = JSON.parse(data.delivery_status_icons);
         }
-        setSettings({ ...settings, ...data });
+        // Ensure boolean values are properly set (convert null/undefined to false)
+        const sanitizedData = {
+          ...data,
+          enabled: Boolean(data.enabled),
+          widget_theme: data.widget_theme || 'classic',
+          business_hours_enabled: data.business_hours_enabled ?? true,
+          ignore_business_hours: Boolean(data.ignore_business_hours),
+          require_name: data.require_name ?? true,
+          require_email: data.require_email ?? true,
+          require_phone: Boolean(data.require_phone),
+          require_department: Boolean(data.require_department),
+          show_agent_typing: data.show_agent_typing ?? true,
+          show_queue_position: data.show_queue_position ?? true,
+          enable_file_uploads: data.enable_file_uploads ?? true,
+          enable_screenshot_sharing: Boolean(data.enable_screenshot_sharing),
+          typing_indicators_enabled: data.typing_indicators_enabled ?? true,
+          show_staff_typing_to_guests: data.show_staff_typing_to_guests ?? true,
+          show_guest_typing_to_staff: data.show_guest_typing_to_staff ?? true,
+          read_receipts_enabled: data.read_receipts_enabled ?? true,
+          show_delivery_status: data.show_delivery_status ?? true,
+          show_guest_read_status_to_staff: data.show_guest_read_status_to_staff ?? true,
+          show_staff_read_status_to_guests: Boolean(data.show_staff_read_status_to_guests),
+          session_recovery_enabled: data.session_recovery_enabled ?? true,
+          auto_ticket_creation: data.auto_ticket_creation ?? true,
+          show_agent_avatars: data.show_agent_avatars ?? true,
+          agent_avatar_anonymity: data.agent_avatar_anonymity ?? true
+        };
+        setSettings({ ...settings, ...sanitizedData });
       }
 
       // Also load WebSocket settings
@@ -670,6 +698,19 @@ const PublicPortalAdmin = () => {
               />
               <CardContent className="space-y-4">
                 <Grid container spacing={3}>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Widget Theme</InputLabel>
+                      <Select
+                        value={settings.widget_theme}
+                        label="Widget Theme"
+                        onChange={(e) => updateSetting('widget_theme', e.target.value)}
+                      >
+                        <MenuItem value="classic">Classic</MenuItem>
+                        <MenuItem value="modern">Modern</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
                   <Grid size={{ xs: 12, md: 6 }}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Widget Shape</InputLabel>

@@ -46,6 +46,7 @@ interface WidgetSettings {
   timezone?: string;
   schedule_json?: string;
   holidays_json?: string;
+  widget_theme?: 'classic' | 'modern';
   widget_shape?: 'circle' | 'square' | 'rounded';
   widget_color?: string;
   widget_size?: 'small' | 'medium' | 'large';
@@ -123,6 +124,16 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
   const [availableAgents, setAvailableAgents] = useState<any[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
   
+  // Modern theme progressive form state
+  const [awaitingName, setAwaitingName] = useState(false);
+  const [awaitingEmail, setAwaitingEmail] = useState(false);
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
+  const [initialIssue, setInitialIssue] = useState('');
+  
+  // Staff avatar rotation for modern theme
+  const [displayedAgents, setDisplayedAgents] = useState<any[]>([]);
+  
   const widgetRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -176,6 +187,35 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
       return () => clearInterval(interval);
     }
   }, [isOpen, showPreChatForm]);
+
+  // Handle staff avatar rotation for modern theme
+  useEffect(() => {
+    if (settings?.widget_theme === 'modern' && availableAgents.length > 0) {
+      // Initially show first 3 agents
+      setDisplayedAgents(availableAgents.slice(0, 3));
+      
+      // If we have more than 3 agents, rotate them every 5 seconds
+      if (availableAgents.length > 3) {
+        const interval = setInterval(() => {
+          setDisplayedAgents(prev => {
+            const currentStart = availableAgents.findIndex(agent => agent.id === prev[0]?.id);
+            const nextStart = (currentStart + 1) % (availableAgents.length - 2);
+            return availableAgents.slice(nextStart, nextStart + 3);
+          });
+        }, 5000);
+        
+        return () => clearInterval(interval);
+      }
+    } else {
+      // Fallback: use first 3 agents or create mock data if none available
+      const fallbackAgents = availableAgents.length > 0 ? availableAgents.slice(0, 3) : [
+        { id: 1, displayName: 'IT Support', initials: 'IT', avatarColor: '#1976d2', isOnline: true },
+        { id: 2, displayName: 'Tech Support', initials: 'TS', avatarColor: '#388e3c', isOnline: true },
+        { id: 3, displayName: 'Help Desk', initials: 'HD', avatarColor: '#f57c00', isOnline: true }
+      ];
+      setDisplayedAgents(fallbackAgents);
+    }
+  }, [availableAgents, settings?.widget_theme]);
 
   // Set up Socket.io connection when widget opens
   useEffect(() => {
@@ -563,6 +603,7 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
       if (response.ok) {
         const data = await response.json();
         console.log('Widget settings loaded:', data);
+        console.log('🎨 Widget theme is:', data.widget_theme || 'NOT SET - defaulting to classic');
         setSettings(data);
         
         // Set online status based on enabled state and business hours
@@ -849,11 +890,11 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
 
   // Handle sending messages
   const handleSendMessage = () => {
-    if (!inputMessage.trim() || !sessionId) return;
+    if (!inputMessage.trim()) return;
 
     const message = inputMessage.trim();
     
-    // Add optimistic message to UI
+    // Add user message to UI first
     const newMessage = {
       sender: 'guest',
       text: message,
@@ -861,25 +902,154 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
       id: Date.now()
     };
     setMessages(prev => [...prev, newMessage]);
+    setInputMessage('');
     
-    // Send via Socket.io
-    const success = publicPortalSocket.sendMessage(message);
-    if (!success) {
-      console.warn('Failed to send via Socket.io, trying HTTP fallback');
-      // TODO: Implement HTTP fallback
+    // Handle progressive form collection for modern theme
+    if (handleProgressiveMessage(message)) {
+      // Progressive message was handled, don't send via socket
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+      }, 100);
+      return;
     }
     
-    // Stop typing indicator
-    publicPortalSocket.sendTyping(false);
-    setIsTyping(false);
+    // Normal message handling for established sessions
+    if (sessionId) {
+      // Send via Socket.io
+      const success = publicPortalSocket.sendMessage(message);
+      if (!success) {
+        console.warn('Failed to send via Socket.io, trying HTTP fallback');
+        // TODO: Implement HTTP fallback
+      }
+      
+      // Stop typing indicator
+      publicPortalSocket.sendTyping(false);
+      setIsTyping(false);
+    }
     
-    // Clear input and scroll to bottom
-    setInputMessage('');
+    // Scroll to bottom
     setTimeout(() => {
       if (chatContainerRef.current) {
         chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
       }
     }, 100);
+  };
+
+  // Handle progressive message collection for modern theme
+  const handleProgressiveMessage = (message: string) => {
+    if (settings?.widget_theme !== 'modern') return false;
+
+    // If waiting for name
+    if (awaitingName) {
+      setGuestName(message);
+      setAwaitingName(false);
+      setAwaitingEmail(true);
+      
+      // Add system message asking for email
+      const emailMessage = {
+        sender: 'system',
+        text: `Great, ${message}! And your email address?`,
+        timestamp: new Date(),
+        id: Date.now()
+      };
+      setMessages(prev => [...prev, emailMessage]);
+      return true;
+    }
+
+    // If waiting for email
+    if (awaitingEmail) {
+      if (!/\S+@\S+\.\S+/.test(message)) {
+        const errorMessage = {
+          sender: 'system',
+          text: 'Please enter a valid email address.',
+          timestamp: new Date(),
+          id: Date.now()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        return true;
+      }
+      
+      setGuestEmail(message);
+      setAwaitingEmail(false);
+      
+      // Now start the chat session with collected info
+      const completeMessage = {
+        sender: 'system',
+        text: 'Perfect! An agent will be with you shortly.',
+        timestamp: new Date(),
+        id: Date.now()
+      };
+      setMessages(prev => [...prev, completeMessage]);
+      
+      // Start session with collected info
+      handlePreChatSubmitProgressive();
+      return true;
+    }
+
+    // If no session yet and this is the first message (issue description)
+    if (!sessionId && !awaitingName && !awaitingEmail) {
+      setInitialIssue(message);
+      setAwaitingName(true);
+      
+      // Add system message asking for name
+      const nameMessage = {
+        sender: 'system',
+        text: 'Thanks! To help you better, may I get your name?',
+        timestamp: new Date(),
+        id: Date.now()
+      };
+      setMessages(prev => [...prev, nameMessage]);
+      return true;
+    }
+
+    return false;
+  };
+
+  // Handle pre-chat submission for progressive form
+  const handlePreChatSubmitProgressive = async () => {
+    setLoading(true);
+    
+    try {
+      const response = await fetch('/api/public-portal/chat/start-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          guest_info: {
+            name: guestName,
+            email: guestEmail,
+            phone: null,
+            department: null
+          },
+          initial_message: initialIssue
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setSessionId(result.sessionId || result.session_id);
+        setShowPreChatForm(false);
+        setLoading(false);
+        
+        // Initialize socket connection
+        const guestInfo = {
+          name: guestName,
+          email: guestEmail,
+          phone: '',
+          department: '',
+          sessionId: result.sessionId || result.session_id
+        };
+        
+        startChatSession(guestInfo);
+      }
+    } catch (error) {
+      console.error('Error starting progressive chat session:', error);
+      setLoading(false);
+    }
   };
 
   // Handle typing indicator
@@ -1054,9 +1224,21 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
       // Clear unread count when chat is opened
       setUnreadCount(0);
       
-      // If no active session, show pre-chat form
+      // For modern theme, skip pre-chat form and go straight to chat
       if (!sessionId) {
-        setShowPreChatForm(true);
+        if (settings?.widget_theme === 'modern') {
+          setShowPreChatForm(false);
+          // Add initial welcome message for modern theme
+          const welcomeMessage = {
+            sender: 'system',
+            text: settings?.welcome_message || 'Ask us anything, or share your feedback.',
+            timestamp: new Date(),
+            id: Date.now()
+          };
+          setMessages([welcomeMessage]);
+        } else {
+          setShowPreChatForm(true);
+        }
       }
       
       // If there are messages, scroll to bottom
@@ -1342,19 +1524,260 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
               zIndex: 10000
             }}
           >
-            <Paper
-              elevation={8}
-              sx={{
-                width: { xs: '90vw', sm: 380 },
-                maxWidth: 380,
-                height: isMinimized ? 60 : { xs: '80vh', sm: 600 },
-                maxHeight: 600,
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden'
-              }}
-            >
-              {/* Chat Header */}
+            {(console.log('🎨 Rendering theme:', settings?.widget_theme), settings?.widget_theme === 'modern') ? (
+              // Modern Theme Layout
+              <Paper
+                elevation={8}
+                sx={{
+                  width: { xs: '90vw', sm: 380 },
+                  maxWidth: 380,
+                  height: isMinimized ? 60 : { xs: '70vh', sm: 500 },
+                  maxHeight: 500,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  borderRadius: 3
+                }}
+              >
+                {/* Modern Header with Staff Avatars */}
+                <Box
+                  sx={{
+                    backgroundColor: 'white',
+                    p: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    borderBottom: '1px solid #f0f0f0'
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {/* Back Button */}
+                    <IconButton size="small" sx={{ color: '#666' }}>
+                      <Box sx={{ transform: 'rotate(180deg)' }}>→</Box>
+                    </IconButton>
+                    
+                    {/* Staff Avatars - Rotating */}
+                    <Box sx={{ display: 'flex', ml: 1 }}>
+                      {displayedAgents.map((agent, index) => (
+                        <motion.div
+                          key={`${agent.id}-${index}`}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.3, delay: index * 0.1 }}
+                        >
+                          <Avatar
+                            src={agent.profilePicture}
+                            sx={{
+                              width: 32,
+                              height: 32,
+                              ml: index > 0 ? -0.5 : 0,
+                              border: '2px solid white',
+                              backgroundColor: agent.profilePicture ? 'transparent' : (agent.avatarColor || '#8B4513')
+                            }}
+                          >
+                            {!agent.profilePicture && agent.initials}
+                          </Avatar>
+                        </motion.div>
+                      ))}
+                    </Box>
+                    
+                    {/* Title and Wait Time */}
+                    <Box sx={{ ml: 1 }}>
+                      <Typography variant="subtitle1" fontWeight="bold" sx={{ color: '#333' }}>
+                        IT Support
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <AccessTime sx={{ fontSize: 14, color: '#666' }} />
+                        <Typography variant="caption" sx={{ color: '#666' }}>
+                          {queuePosition && queuePosition > 1 ? (
+                            `~${Math.max(1, (queuePosition - 1) * 3)} min wait`
+                          ) : displayedAgents.length > 0 ? (
+                            'Available now'
+                          ) : (
+                            'Connecting...'
+                          )}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                  
+                  {/* Header Controls */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <IconButton size="small" sx={{ color: '#666' }}>
+                      <Box>⋯</Box>
+                    </IconButton>
+                    <IconButton size="small" onClick={handleClose} sx={{ color: '#666' }}>
+                      <Close fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </Box>
+
+                {/* Modern Chat Content */}
+                {!isMinimized && (
+                  <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'white' }}>
+                    {/* Messages Area */}
+                    <Box
+                      ref={chatContainerRef}
+                      sx={{
+                        flex: 1,
+                        overflow: 'auto',
+                        p: 3,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: messages.length === 0 ? 'center' : 'flex-start'
+                      }}
+                    >
+                      {messages.length === 0 ? (
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            textAlign: 'center', 
+                            color: '#666',
+                            fontSize: '16px'
+                          }}
+                        >
+                          Ask us anything, or share your feedback.
+                        </Typography>
+                      ) : (
+                        messages.map((message, index) => (
+                          <Box key={index} sx={{ mb: 2 }}>
+                            {message.sender === 'system' ? (
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  color: '#666',
+                                  textAlign: 'center',
+                                  mb: 1
+                                }}
+                              >
+                                {message.text}
+                              </Typography>
+                            ) : (
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  justifyContent: message.sender === 'guest' ? 'flex-end' : 'flex-start',
+                                }}
+                              >
+                                <Paper
+                                  sx={{
+                                    p: 2,
+                                    maxWidth: '70%',
+                                    backgroundColor: message.sender === 'guest' ? '#007bff' : '#f0f0f0',
+                                    color: message.sender === 'guest' ? 'white' : '#333',
+                                    borderRadius: 2
+                                  }}
+                                >
+                                  <Typography variant="body2">
+                                    {message.text}
+                                  </Typography>
+                                </Paper>
+                              </Box>
+                            )}
+                          </Box>
+                        ))
+                      )}
+                    </Box>
+
+                    {/* Modern Input Area */}
+                    <Box sx={{ p: 2 }}>
+                      <Paper
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          p: 1,
+                          border: '2px solid #ff9800',
+                          borderRadius: 6,
+                          backgroundColor: 'white'
+                        }}
+                      >
+                        <IconButton size="small" sx={{ color: '#666' }}>
+                          😊
+                        </IconButton>
+                        <IconButton size="small" sx={{ color: '#666' }}>
+                          GIF
+                        </IconButton>
+                        <IconButton size="small" sx={{ color: '#666' }}>
+                          📎
+                        </IconButton>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          placeholder="Message..."
+                          value={inputMessage}
+                          onChange={(e) => setInputMessage(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSendMessage();
+                            }
+                          }}
+                          variant="standard"
+                          InputProps={{
+                            disableUnderline: true
+                          }}
+                        />
+                        <IconButton size="small" sx={{ color: '#666' }}>
+                          🎤
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={handleSendMessage}
+                          disabled={!inputMessage.trim()}
+                          sx={{ 
+                            backgroundColor: !inputMessage.trim() ? '#f0f0f0' : '#007bff',
+                            color: !inputMessage.trim() ? '#666' : 'white',
+                            '&:hover': {
+                              backgroundColor: !inputMessage.trim() ? '#f0f0f0' : '#0056b3'
+                            }
+                          }}
+                        >
+                          <Send fontSize="small" />
+                        </IconButton>
+                      </Paper>
+                    </Box>
+                  </Box>
+                )}
+
+                {/* Modern Minimize Button */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: -25,
+                    right: 20,
+                    backgroundColor: '#ff9800',
+                    borderRadius: '50%',
+                    width: 50,
+                    height: 50,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                  }}
+                  onClick={toggleMinimize}
+                >
+                  <Box sx={{ color: 'white', fontSize: '20px', transform: isMinimized ? 'rotate(180deg)' : 'none' }}>
+                    ⌄
+                  </Box>
+                </Box>
+              </Paper>
+            ) : (
+              // Classic Theme Layout
+              <Paper
+                elevation={8}
+                sx={{
+                  width: { xs: '90vw', sm: 380 },
+                  maxWidth: 380,
+                  height: isMinimized ? 60 : { xs: '80vh', sm: 600 },
+                  maxHeight: 600,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden'
+                }}
+              >
+                {/* Chat Header */}
               <Box
                 sx={{
                   backgroundColor: settings?.status === 'online' ? 
@@ -1528,11 +1951,7 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         )}
                       </Box>
 
-                      <Box sx={{ border: '3px solid lime', p: 1, mb: 1 }}>
-                        🟢 FINAL DEBUG: If 00 appears ABOVE this green box, it's in the form container or email field area
-                      </Box>
-                      
-                      {/* Phone Field - Should not render since require_phone is 0 */}
+                      {/* Phone Field */}
                       {settings?.require_phone && (
                         <TextField
                           fullWidth
@@ -1548,7 +1967,7 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         />
                       )}
 
-                      {/* Department Field - Should not render */}
+                      {/* Department Field */}
                       {settings?.require_department && (
                         <FormControl fullWidth size="small" error={!!preChatErrors.department} sx={{ mb: 2 }}>
                           <InputLabel>Department *</InputLabel>
@@ -1566,12 +1985,7 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         </FormControl>
                       )}
 
-                      {/* CLEANED: Removed suspect area entirely */}
-
                       {/* Message Field */}
-                      <Box sx={{ color: 'red', fontSize: '12px', mb: 1 }}>
-                        🔧 TEMP: Code updated at {new Date().toLocaleTimeString()} - if you still see 00, there's a caching issue
-                      </Box>
                       <TextField
                         fullWidth
                         multiline
@@ -1807,7 +2221,8 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                   )}
                 </Box>
               </Collapse>
-            </Paper>
+              </Paper>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

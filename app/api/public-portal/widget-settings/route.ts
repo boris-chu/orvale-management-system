@@ -65,6 +65,7 @@ export async function GET(request: NextRequest) {
             timezone: row.timezone,
             schedule_json: row.schedule_json,
             holidays_json: row.holidays_json,
+            widget_theme: row.widget_theme,
             widget_shape: row.widget_shape,
             widget_color: row.widget_color,
             widget_size: row.widget_size,

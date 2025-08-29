@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
                 sunday: { enabled: false, open: '09:00', close: '17:00' }
               }),
               holidays_json: JSON.stringify([]),
+              widget_theme: 'classic',
               widget_shape: 'circle',
               widget_color: '#1976d2',
               widget_size: 'medium',
@@ -195,7 +196,7 @@ export async function PUT(request: NextRequest) {
       const widgetSql = `
         INSERT OR REPLACE INTO public_portal_widget_settings (
           id, enabled, business_hours_enabled, ignore_business_hours, timezone, schedule_json, holidays_json,
-          widget_shape, widget_color, widget_size, widget_position, widget_position_x, widget_position_y, widget_icon, widget_image, widget_text,
+          widget_theme, widget_shape, widget_color, widget_size, widget_position, widget_position_x, widget_position_y, widget_icon, widget_image, widget_text,
           widget_animation, animation_duration, animation_delay,
           welcome_message, offline_message, business_hours_message, queue_message, staff_disconnect_message,
           require_name, require_email, require_phone, require_department, custom_fields_json,
@@ -209,7 +210,7 @@ export async function PUT(request: NextRequest) {
           updated_by, updated_at
         ) VALUES (
           1, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?,
           ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?,
@@ -231,6 +232,7 @@ export async function PUT(request: NextRequest) {
         settings.timezone || 'America/New_York',
         settings.schedule_json || '{}',
         settings.holidays_json || '[]',
+        settings.widget_theme || 'classic',
         settings.widget_shape || 'circle',
         settings.widget_color || '#1976d2',
         settings.widget_size || 'medium',
