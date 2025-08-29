@@ -101,10 +101,15 @@ export async function GET(request: NextRequest) {
           
           -- Get assigned staff info if any
           u.display_name as assigned_staff_name,
-          u.profile_picture as assigned_staff_avatar
+          u.profile_picture as assigned_staff_avatar,
+          
+          -- Get previously assigned staff info for badge display
+          u2.display_name as previously_assigned_staff_name,
+          u2.profile_picture as previously_assigned_staff_avatar
           
         FROM public_chat_sessions pcs
         LEFT JOIN users u ON pcs.assigned_to = u.username
+        LEFT JOIN users u2 ON pcs.previously_assigned_to = u2.username
         WHERE pcs.status IN ('waiting', 'active')
         ORDER BY 
           CASE pcs.status
@@ -166,6 +171,11 @@ export async function GET(request: NextRequest) {
               assigned_to: row.assigned_to,
               assigned_staff_name: row.assigned_staff_name,
               assigned_staff_avatar: row.assigned_staff_avatar,
+              
+              // Previously assigned info (for badge display)
+              previously_assigned_to: row.previously_assigned_to,
+              previously_assigned_staff_name: row.previously_assigned_staff_name,
+              previously_assigned_staff_avatar: row.previously_assigned_staff_avatar,
               
               // Additional metadata
               browser_info: sessionData.browser_info || null,

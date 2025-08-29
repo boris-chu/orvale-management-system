@@ -925,9 +925,9 @@ io.on('connection', async (socket) => {
       session.agentId = null;
       session.agentName = null;
       
-      // Update database
+      // Update database - store previous assignment for badge display
       db.run(
-        'UPDATE public_chat_sessions SET status = ?, assigned_to = NULL WHERE session_id = ? AND assigned_to = ?',
+        'UPDATE public_chat_sessions SET status = ?, previously_assigned_to = assigned_to, assigned_to = NULL WHERE session_id = ? AND assigned_to = ?',
         ['waiting', sessionId, socket.userId]
       );
       
@@ -1657,9 +1657,9 @@ publicPortalNamespace.on('connection', async (socket) => {
       session.agentId = null;
       session.agentName = null;
       
-      // Update database
+      // Update database - store previous assignment for badge display
       db.run(
-        'UPDATE public_chat_sessions SET status = ?, assigned_to = NULL WHERE session_id = ? AND assigned_to = ?',
+        'UPDATE public_chat_sessions SET status = ?, previously_assigned_to = assigned_to, assigned_to = NULL WHERE session_id = ? AND assigned_to = ?',
         ['waiting', sessionId, socket.userId]
       );
       

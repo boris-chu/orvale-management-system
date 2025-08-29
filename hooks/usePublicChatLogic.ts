@@ -869,14 +869,64 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
     }
   };
 
-  // Handle close chat
-  const handleClose = () => {
+  // Handle close chat - return to queue instead of ending session
+  const handleClose = async () => {
     setIsOpen(false);
     setIsMinimized(false);
-    // Clear messages to prevent error message accumulation
-    setMessages([]);
-    // Reset session state
-    setSessionId(null);
+    
+    // If we have an active session, return to queue instead of ending it
+    if (sessionId) {
+      try {
+        console.log('🔄 Returning chat session to queue instead of ending:', sessionId);
+        
+        const response = await fetch('/api/public-portal/chat/return-to-queue', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sessionId
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log('✅ Session returned to queue:', result.message);
+          
+          // Show a message to the guest that they've been returned to queue
+          const queueMessage = {
+            sender: 'system' as const,
+            text: 'You have been returned to the queue. Close this window and reopen it to see your queue position, or wait for an agent to reconnect.',
+            timestamp: new Date(),
+            id: Date.now()
+          };
+          
+          // Add the queue message but don't clear other messages
+          setMessages(prev => [...prev, queueMessage]);
+          
+          // Keep session ID so user can recover their position
+          // Don't reset sessionId here - let them recover their queue position
+          
+        } else {
+          console.error('Failed to return to queue:', result.error);
+          // Fallback: end session normally
+          setSessionId(null);
+          setMessages([]);
+        }
+        
+      } catch (error) {
+        console.error('Error returning session to queue:', error);
+        // Fallback: end session normally
+        setSessionId(null);
+        setMessages([]);
+      }
+    } else {
+      // No active session, just clear UI state
+      setMessages([]);
+      setSessionId(null);
+    }
+    
     setShowPreChatForm(false);
   };
 

@@ -42,10 +42,18 @@ interface GuestSession {
   waitTime: number; // in seconds
   waitTimeFormatted?: string; // formatted time string
   priority: 'normal' | 'high' | 'urgent' | 'vip';
-  status: 'waiting' | 'abandoned' | 'reconnected' | 'escalated';
+  status: 'waiting' | 'abandoned' | 'reconnected' | 'escalated' | 'active';
   department?: string;
   initialMessage?: string;
   joinedAt: Date;
+  // Assignment information for badge display
+  assignedTo?: string;
+  assignedStaffName?: string;
+  assignedStaffAvatar?: string;
+  // Previously assigned information for returned sessions
+  previouslyAssignedTo?: string;
+  previouslyAssignedStaffName?: string;
+  previouslyAssignedStaffAvatar?: string;
 }
 
 interface FloatableChat {
@@ -342,7 +350,15 @@ const PublicQueuePage = () => {
             status: guest.status || 'waiting',
             department: guest.department || 'General Support',
             initialMessage: guest.initial_message || '',
-            joinedAt: new Date(guest.created_at)
+            joinedAt: new Date(guest.created_at),
+            // Assignment information
+            assignedTo: guest.assigned_to,
+            assignedStaffName: guest.assigned_staff_name,
+            assignedStaffAvatar: guest.assigned_staff_avatar,
+            // Previously assigned information for badge display
+            previouslyAssignedTo: guest.previously_assigned_to,
+            previouslyAssignedStaffName: guest.previously_assigned_staff_name,
+            previouslyAssignedStaffAvatar: guest.previously_assigned_staff_avatar
           }));
           
           // Remove duplicates based on session_id
@@ -976,7 +992,7 @@ const PublicQueuePage = () => {
                       >
                         <ListItemText
                           primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                               <Typography variant="body2" fontWeight="medium">
                                 {getPriorityIcon(guest.priority, guest.status)} {guest.guestName}
                               </Typography>
@@ -986,6 +1002,36 @@ const PublicQueuePage = () => {
                                   size="small" 
                                   color="error" 
                                   variant="outlined"
+                                  sx={{ fontSize: 10, height: 18 }}
+                                />
+                              )}
+                              {guest.status === 'active' && guest.assignedStaffName && (
+                                <Chip 
+                                  label={`With ${guest.assignedStaffName}`}
+                                  size="small" 
+                                  color="success" 
+                                  variant="outlined"
+                                  avatar={guest.assignedStaffAvatar ? 
+                                    <Avatar src={guest.assignedStaffAvatar} sx={{ width: 16, height: 16 }} /> : 
+                                    <Avatar sx={{ width: 16, height: 16, fontSize: '0.6rem' }}>
+                                      {guest.assignedStaffName.charAt(0)}
+                                    </Avatar>
+                                  }
+                                  sx={{ fontSize: 10, height: 18 }}
+                                />
+                              )}
+                              {guest.status === 'waiting' && guest.previouslyAssignedStaffName && (
+                                <Chip 
+                                  label={`Previously: ${guest.previouslyAssignedStaffName}`}
+                                  size="small" 
+                                  color="info" 
+                                  variant="outlined"
+                                  avatar={guest.previouslyAssignedStaffAvatar ? 
+                                    <Avatar src={guest.previouslyAssignedStaffAvatar} sx={{ width: 16, height: 16 }} /> : 
+                                    <Avatar sx={{ width: 16, height: 16, fontSize: '0.6rem' }}>
+                                      {guest.previouslyAssignedStaffName.charAt(0)}
+                                    </Avatar>
+                                  }
                                   sx={{ fontSize: 10, height: 18 }}
                                 />
                               )}
