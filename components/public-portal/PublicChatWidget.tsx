@@ -1527,8 +1527,9 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         )}
                       </Box>
 
-                      {/* Phone Field - Should not render */}
-                      {settings?.require_phone && (
+                      {/* Phone Field Debug - This should NOT render since require_phone is 0 */}
+                      {console.log('🔍 Phone field check:', settings?.require_phone, 'Type:', typeof settings?.require_phone)}
+                      {settings?.require_phone && settings?.require_phone !== 0 && (
                         <TextField
                           fullWidth
                           size="small"
