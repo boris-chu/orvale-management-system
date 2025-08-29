@@ -87,17 +87,17 @@ export async function GET(request: NextRequest) {
           -- Get department from session data
           json_extract(pcs.session_data, '$.department') as department,
           
-          -- Calculate priority based on wait time and session data
+          -- Calculate priority based on wait time and session data (using UNIX timestamps)
           CASE 
             WHEN json_extract(pcs.session_data, '$.priority') = 'urgent' THEN 'urgent'
             WHEN json_extract(pcs.session_data, '$.priority') = 'high' THEN 'high'
             WHEN json_extract(pcs.session_data, '$.vip') = 1 THEN 'vip'
-            WHEN (julianday('now') - julianday(pcs.created_at)) * 24 * 60 > 15 THEN 'high'
+            WHEN (strftime('%s', 'now') - strftime('%s', pcs.created_at)) > 900 THEN 'high'  -- 15 minutes = 900 seconds
             ELSE 'normal'
           END as priority,
           
-          -- Calculate wait time in seconds (ensure it's never negative)
-          CAST(MAX(0, (julianday('now') - julianday(pcs.created_at)) * 24 * 60 * 60) AS INTEGER) as wait_time_seconds,
+          -- Calculate wait time in seconds using UNIX timestamp (more reliable)
+          CAST(MAX(0, (strftime('%s', 'now') - strftime('%s', pcs.created_at))) AS INTEGER) as wait_time_seconds,
           
           -- Get assigned staff info if any
           u.display_name as assigned_staff_name,
@@ -149,6 +149,13 @@ export async function GET(request: NextRequest) {
               console.warn('Failed to parse session data for session:', row.session_id);
             }
 
+            // Debug time calculations
+            console.log(`⏱️ Time calc for ${row.session_id}:`, {
+              created_at: row.created_at,
+              wait_time_seconds: row.wait_time_seconds,
+              formatted: formatWaitTime(row.wait_time_seconds)
+            });
+
             return {
               id: row.session_id,
               session_id: row.session_id,
@@ -160,7 +167,7 @@ export async function GET(request: NextRequest) {
               
               status: row.status,
               priority: row.priority,
-              wait_time_seconds: row.wait_time_seconds,
+              wait_time_seconds: Math.max(0, row.wait_time_seconds || 0), // Ensure positive
               queue_position: row.queue_position,
               
               created_at: row.created_at,
@@ -220,19 +227,31 @@ export async function GET(request: NextRequest) {
 
 // Helper functions
 function formatWaitTime(seconds: number): string {
-  // Handle negative or invalid values
-  if (seconds < 0 || !seconds || isNaN(seconds)) return '0s';
+  // Handle negative, null, undefined, or invalid values
+  if (!seconds || seconds < 0 || isNaN(seconds) || !isFinite(seconds)) {
+    return '0s';
+  }
   
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 1) return `${seconds}s`;
+  // Ensure we have a positive integer
+  const validSeconds = Math.max(0, Math.floor(seconds));
+  
+  const minutes = Math.floor(validSeconds / 60);
+  if (minutes < 1) return `${validSeconds}s`;
   if (minutes < 60) return `${minutes}m`;
+  
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ${minutes % 60}m`;
+  const remainingMinutes = minutes % 60;
+  if (hours < 24) {
+    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+  }
   
   // For sessions older than 24 hours, show days
   const days = Math.floor(hours / 24);
-  if (days === 1) return '1 day ago';
-  return `${days} days ago`;
+  const remainingHours = hours % 24;
+  if (days === 1) {
+    return remainingHours > 0 ? `1 day ${remainingHours}h` : '1 day';
+  }
+  return remainingHours > 0 ? `${days} days ${remainingHours}h` : `${days} days`;
 }
 
 function getPriorityEmoji(priority: string, status: string): string {

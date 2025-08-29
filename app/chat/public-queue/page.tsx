@@ -535,7 +535,11 @@ const PublicQueuePage = () => {
 
   const updateWaitTimes = () => {
     setGuestQueue(prev => prev.map(guest => {
-      const waitTimeSeconds = Math.floor((Date.now() - guest.joinedAt.getTime()) / 1000);
+      // Calculate time based on original created timestamp to avoid drift
+      const createdTime = guest.joinedAt.getTime();
+      const currentTime = Date.now();
+      const waitTimeSeconds = Math.max(0, Math.floor((currentTime - createdTime) / 1000));
+      
       return {
         ...guest,
         waitTime: waitTimeSeconds,
@@ -589,17 +593,6 @@ const PublicQueuePage = () => {
     }
   };
 
-  const formatWaitTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    if (mins < 1) return `${seconds}s`;
-    if (mins < 60) return `${mins}m`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ${mins % 60}m`;
-    // For sessions older than 24 hours, show days
-    const days = Math.floor(hours / 24);
-    if (days === 1) return '1 day ago';
-    return `${days} days ago`;
-  };
 
   const handleGuestClick = async (guest: GuestSession) => {
     console.log('🔍 Guest Click Debug:', {
@@ -2048,15 +2041,31 @@ const MessageInput = ({ sessionId }: MessageInputProps) => {
 
 // Helper function (defined outside component to avoid redefinition)
 const formatWaitTime = (seconds: number) => {
-  const mins = Math.floor(seconds / 60);
-  if (mins < 1) return `${seconds}s`;
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ${mins % 60}m`;
+  // Handle negative, null, undefined, or invalid values
+  if (!seconds || seconds < 0 || isNaN(seconds) || !isFinite(seconds)) {
+    return '0s';
+  }
+  
+  // Ensure we have a positive integer
+  const validSeconds = Math.max(0, Math.floor(seconds));
+  
+  const minutes = Math.floor(validSeconds / 60);
+  if (minutes < 1) return `${validSeconds}s`;
+  if (minutes < 60) return `${minutes}m`;
+  
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours < 24) {
+    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+  }
+  
   // For sessions older than 24 hours, show days
   const days = Math.floor(hours / 24);
-  if (days === 1) return '1 day ago';
-  return `${days} days ago`;
+  const remainingHours = hours % 24;
+  if (days === 1) {
+    return remainingHours > 0 ? `1 day ${remainingHours}h` : '1 day';
+  }
+  return remainingHours > 0 ? `${days} days ${remainingHours}h` : `${days} days`;
 };
 
 export default PublicQueuePage;
