@@ -304,6 +304,9 @@ const PublicPortalAdmin = () => {
     setSaving(true);
     try {
       const token = localStorage.getItem('authToken');
+      
+      console.log('🔄 Saving settings:', settings);
+      
       const response = await fetch('/api/admin/public-portal/settings', {
         method: 'PUT',
         headers: { 
@@ -322,13 +325,20 @@ const PublicPortalAdmin = () => {
         })
       });
       
+      const result = await response.json();
+      console.log('💾 Save response:', result);
+      
       if (response.ok) {
         // Show success animation
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2000); // Hide success after 2 seconds
+      } else {
+        console.error('❌ Save failed:', result);
+        alert(`Failed to save settings: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Failed to save settings:', error);
+      console.error('❌ Failed to save settings:', error);
+      alert(`Failed to save settings: ${error.message || 'Network error'}`);
     } finally {
       setSaving(false);
     }
@@ -817,82 +827,9 @@ const PublicPortalAdmin = () => {
                   placeholder="Chat with us"
                 />
 
-                {/* Widget Icon Selection */}
+                {/* Widget Image Upload */}
                 <Box className="space-y-2">
-                  <Typography variant="subtitle2">Widget Icon</Typography>
-                  
-                  {/* Emoji Icons */}
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    Emoji Icons
-                  </Typography>
-                  <Grid container spacing={2}>
-                    {[
-                      { id: 'chat', icon: '💬', label: 'Chat Bubble' },
-                      { id: 'support', icon: '🎧', label: 'Headset' },
-                      { id: 'help', icon: '❓', label: 'Question Mark' },
-                      { id: 'message', icon: '✉️', label: 'Envelope' },
-                      { id: 'phone', icon: '📞', label: 'Phone' },
-                      { id: 'user', icon: '👤', label: 'User' },
-                      { id: 'team', icon: '👥', label: 'Team' },
-                      { id: 'star', icon: '⭐', label: 'Star' },
-                      { id: 'heart', icon: '❤️', label: 'Heart' },
-                      { id: 'info', icon: 'ℹ️', label: 'Information' },
-                      { id: 'settings', icon: '⚙️', label: 'Settings' },
-                      { id: 'bell', icon: '🔔', label: 'Bell' }
-                    ].map((iconOption) => (
-                      <Grid size={{ xs: 4, sm: 3, md: 2 }} key={iconOption.id}>
-                        <Box
-                          sx={{
-                            p: 2,
-                            border: 2,
-                            borderColor: settings.widget_icon === iconOption.id ? 'primary.main' : 'divider',
-                            borderRadius: 2,
-                            textAlign: 'center',
-                            cursor: 'pointer',
-                            backgroundColor: settings.widget_icon === iconOption.id ? 'primary.50' : 'transparent',
-                            '&:hover': {
-                              borderColor: 'primary.main',
-                              backgroundColor: 'primary.50'
-                            }
-                          }}
-                          onClick={() => updateSetting('widget_icon', iconOption.id)}
-                        >
-                          <Box sx={{ fontSize: '24px', mb: 1 }}>{iconOption.icon}</Box>
-                          <Typography variant="caption" display="block">
-                            {iconOption.label}
-                          </Typography>
-                        </Box>
-                      </Grid>
-                    ))}
-                  </Grid>
-
-                  {/* SVG Icons */}
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 3, mb: 1 }}>
-                    SVG Message Icons
-                  </Typography>
-                  <Grid container spacing={2}>
-                    {[
-                      { 
-                        id: 'svg_chat_bubble', 
-                        label: 'Chat Bubble',
-                        svg: (
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
-                          </svg>
-                        )
-                      },
-                      { 
-                        id: 'svg_chat_outline', 
-                        label: 'Chat Outline',
-                        svg: (
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                          </svg>
-                        )
-                      },
-                      { 
-                        id: 'svg_message_circle', 
-                        label: 'Message Circle',
+                  <Typography variant="subtitle2">Custom Widget Image (Optional)</Typography>
                         svg: (
                           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.54 0 3-.35 4.31-.99L22 22l-1.01-5.69C21.65 15 22 13.54 22 12c0-5.52-4.48-10-10-10z"/>
