@@ -1538,7 +1538,12 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         />
                       )}
 
-                      {/* Phone Field */}
+                      {/* Phone Field - DEBUG */}
+                      {console.log('🐛 Phone field render check:', {
+                        require_phone: settings?.require_phone,
+                        phone_value: preChatData.phone,
+                        should_render: Boolean(settings?.require_phone)
+                      })}
                       {settings?.require_phone && (
                         <TextField
                           fullWidth
@@ -1576,16 +1581,42 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         try {
                           const customFields = settings?.custom_fields_json ? JSON.parse(settings.custom_fields_json) : [];
                           console.log('🐛 Parsed custom fields:', customFields);
-                          return customFields.length > 0 ? (
-                            <div style={{ background: 'yellow', padding: '10px', marginBottom: '10px' }}>
-                              DEBUG: {customFields.length} custom fields found
-                            </div>
-                          ) : null;
+                          
+                          // Render any custom fields that might exist
+                          return customFields.map((field: any) => {
+                            console.log('🐛 Rendering custom field:', field);
+                            if (field.type === 'text') {
+                              return (
+                                <div key={field.id} style={{ background: 'yellow', padding: '5px', marginBottom: '5px' }}>
+                                  DEBUG CUSTOM FIELD: {field.label}
+                                  <TextField
+                                    fullWidth
+                                    size="small"
+                                    label={field.label}
+                                    value={preChatData[field.id] || ''}
+                                    onChange={(e) => setPreChatData(prev => ({ ...prev, [field.id]: e.target.value }))}
+                                    sx={{ mt: 1 }}
+                                  />
+                                </div>
+                              );
+                            }
+                            return null;
+                          });
                         } catch (e) {
                           console.log('🐛 Custom fields parse error:', e);
                           return null;
                         }
                       })()}
+                      
+                      {/* DEBUG: Show all form fields being rendered */}
+                      <div style={{ background: 'lightblue', padding: '10px', marginBottom: '10px', fontSize: '12px' }}>
+                        DEBUG RENDERED FIELDS:<br/>
+                        Name: {settings?.require_name ? 'YES' : 'NO'}<br/>
+                        Email: {settings?.require_email ? 'YES' : 'NO'}<br/>
+                        Phone: {settings?.require_phone ? 'YES' : 'NO'}<br/>
+                        Department: {settings?.require_department ? 'YES' : 'NO'}<br/>
+                        Custom fields: {settings?.custom_fields_json}<br/>
+                      </div>
 
                       {/* Message Field */}
                       <TextField
