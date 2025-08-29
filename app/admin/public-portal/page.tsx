@@ -830,49 +830,46 @@ const PublicPortalAdmin = () => {
                 {/* Widget Image Upload */}
                 <Box className="space-y-2">
                   <Typography variant="subtitle2">Custom Widget Image (Optional)</Typography>
-                        svg: (
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.54 0 3-.35 4.31-.99L22 22l-1.01-5.69C21.65 15 22 13.54 22 12c0-5.52-4.48-10-10-10z"/>
-                          </svg>
-                        )
-                      },
-                      { 
-                        id: 'svg_message_square', 
-                        label: 'Message Square',
-                        svg: (
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                            <path d="M8 10h8M8 14h6"/>
-                          </svg>
-                        )
-                      },
-                      { 
-                        id: 'svg_speech_bubble', 
-                        label: 'Speech Bubble',
-                        svg: (
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 2.98.97 4.29L1 23l6.71-1.97C9.02 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/>
-                          </svg>
-                        )
-                      },
-                      { 
-                        id: 'svg_help_circle', 
-                        label: 'Help Circle',
-                        svg: (
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-                            <point cx="12" cy="17"/>
-                          </svg>
-                        )
-                      },
-                      { 
-                        id: 'svg_support', 
-                        label: 'Support',
-                        svg: (
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M11 15h2v2h-2v-2zm0-8h2v6h-2V7zm1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-                          </svg>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Upload an image to replace the widget button. Image will be displayed as a "brooch" style within the widget shape.
+                  </Typography>
+                  
+                  {settings.widget_image && (
+                    <Box sx={{ mb: 2 }}>
+                      <Box
+                        sx={{
+                          width: 64,
+                          height: 64,
+                          borderRadius: settings.widget_shape === 'circle' ? '50%' : '8px',
+                          backgroundColor: settings.widget_color || '#1976d2',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <img
+                          src={settings.widget_image}
+                          alt="Widget Preview"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      </Box>
+                    </Box>
+                  )}
+                  
+                  {/* Upload Area */}
+                  {!settings.widget_image && (
+                    <Box
+                      sx={{ 
+                        position: 'relative',
+                        width: '100%',
+                        height: 200,
+                        border: '2px dashed #ccc',
+                        borderRadius: 2,
                         )
                       },
                       { 
