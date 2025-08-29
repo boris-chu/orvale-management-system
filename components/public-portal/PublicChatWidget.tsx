@@ -93,10 +93,28 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
     };
   }, [settings, isOpen, sessionId, showPreChatForm, messages, checkSessionRecovery]);
 
-  // Handle drag functionality
+  // Enhanced drag functionality with movement threshold
   useEffect(() => {
+    const DRAG_THRESHOLD = 5; // pixels
+
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) {
+        const initialMousePos = (window as any).initialMousePos || { x: e.clientX, y: e.clientY };
+        
+        // Check if we've moved beyond the threshold
+        if (!(window as any).hasDraggedBeyondThreshold) {
+          const deltaX = Math.abs(e.clientX - initialMousePos.x);
+          const deltaY = Math.abs(e.clientY - initialMousePos.y);
+          
+          if (deltaX < DRAG_THRESHOLD && deltaY < DRAG_THRESHOLD) {
+            return; // Haven't moved enough to be considered dragging
+          }
+          
+          (window as any).hasDraggedBeyondThreshold = true;
+          document.body.style.cursor = 'grabbing';
+          document.body.style.userSelect = 'none';
+        }
+
         const newX = e.clientX - dragOffset.x;
         const newY = e.clientY - dragOffset.y;
         
@@ -111,24 +129,34 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
       }
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
       if (isDragging) {
         setIsDragging(false);
-        // Save position to localStorage for persistence
-        if (settings?.widget_position === 'custom') {
-          localStorage.setItem('widget_custom_position', JSON.stringify(widgetPosition));
+        
+        // If we didn't drag beyond threshold, treat as a click
+        if (!(window as any).hasDraggedBeyondThreshold) {
+          // Trigger widget click
+          handleWidgetClick();
+        } else {
+          // Save position to localStorage for persistence
+          if (settings?.widget_position === 'custom') {
+            localStorage.setItem('widget_custom_position', JSON.stringify(widgetPosition));
+          }
         }
+        
+        // Reset flags
+        (window as any).hasDraggedBeyondThreshold = false;
+        (window as any).initialMousePos = null;
       }
+      
+      // Reset cursor and selection
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
     };
 
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'grabbing';
-      document.body.style.userSelect = 'none';
-    } else {
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
     }
 
     return () => {
@@ -137,7 +165,7 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-  }, [isDragging, dragOffset, widgetPosition, settings, setIsDragging, setWidgetPosition]);
+  }, [isDragging, dragOffset, widgetPosition, settings, setIsDragging, setWidgetPosition, handleWidgetClick]);
 
   // Get widget size dimensions
   const getWidgetSize = () => {
@@ -239,29 +267,30 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
     }
   };
 
-  // Handle widget click with drag prevention
+  // Handle widget click (drag prevention is handled in mouseUp)
   const handleWidgetClickWithDrag = (e: React.MouseEvent) => {
-    // Don't open chat if user was dragging
-    if (isDragging) {
-      e.preventDefault();
-      return;
+    // Only trigger click if position is not 'custom' or if chat is already open
+    const position = settings?.widget?.position || settings?.widget_position;
+    if (position !== 'custom' || isOpen) {
+      handleWidgetClick();
     }
-    
-    // Call the main widget click handler
-    handleWidgetClick();
+    // For custom position with closed chat, drag logic handles click vs drag
   };
 
   // Handle drag start
   const handleMouseDown = (e: React.MouseEvent) => {
     const position = settings?.widget?.position || settings?.widget_position;
     if (position === 'custom' && !isOpen) {
-      e.preventDefault();
       const rect = e.currentTarget.getBoundingClientRect();
       setDragOffset({
         x: e.clientX - rect.left,
         y: e.clientY - rect.top
       });
       setIsDragging(true);
+      
+      // Store initial position for threshold detection
+      (window as any).initialMousePos = { x: e.clientX, y: e.clientY };
+      (window as any).hasDraggedBeyondThreshold = false;
     }
   };
 
