@@ -25,6 +25,7 @@ import { socketClient } from '@/lib/socket-client';
 import { StaffWorkModeManager } from '@/components/public-portal/StaffWorkModeManager';
 import { publicPortalSocket } from '@/lib/public-portal-socket';
 import { UserAvatar } from '@/components/UserAvatar';
+import { StaffTicketModal } from '@/components/StaffTicketModal';
 
 interface StaffMember {
   id: string;
@@ -131,6 +132,14 @@ const PublicQueuePage = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [realTimeEnabled, setRealTimeEnabled] = useState(false);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  
+  // Staff Ticket Modal state
+  const [staffTicketModalOpen, setStaffTicketModalOpen] = useState(false);
+  const [ticketModalContext, setTicketModalContext] = useState<{
+    guestInfo: GuestSession;
+    chatMessages: any[];
+    sessionId: string;
+  } | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [guestQueueExpanded, setGuestQueueExpanded] = useState(true);
@@ -671,6 +680,20 @@ const PublicQueuePage = () => {
   const handleStaffClick = (staff: StaffMember) => {
     // Send internal message or collaboration request
     console.log('Contact staff member:', staff.name);
+  };
+
+  const handleCreateTicketFromChat = (sessionId: string, guestInfo: GuestSession, chatMessages?: any[]) => {
+    console.log('🎫 Creating ticket from chat session:', sessionId);
+    
+    // Set the context for the modal
+    setTicketModalContext({
+      guestInfo,
+      chatMessages: chatMessages || [],
+      sessionId
+    });
+    
+    // Open the modal
+    setStaffTicketModalOpen(true);
   };
 
   const updateWorkMode = async (newMode: 'ready' | 'work_mode' | 'ticketing_mode' | 'away') => {
@@ -1305,6 +1328,7 @@ const PublicQueuePage = () => {
                     isFocused: c.sessionId === chat.sessionId
                   })));
                 }}
+                onCreateTicket={handleCreateTicketFromChat}
               />
             ))}
           </AnimatePresence>
@@ -1410,6 +1434,63 @@ const PublicQueuePage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Staff Ticket Modal for creating tickets from chat */}
+      <StaffTicketModal
+        open={staffTicketModalOpen}
+        onOpenChange={setStaffTicketModalOpen}
+        defaultValues={ticketModalContext ? {
+          title: `Chat Session: ${ticketModalContext.guestInfo.guestName}`,
+          description: `Chat session with ${ticketModalContext.guestInfo.guestName}.\n\nInitial message: ${ticketModalContext.guestInfo.initialMessage}\n\nDepartment: ${ticketModalContext.guestInfo.department}`,
+          userDisplayName: ticketModalContext.guestInfo.guestName,
+          userEmail: `${ticketModalContext.guestInfo.guestName.toLowerCase().replace(/\s+/g, '.')}@guest.com`, // Generate placeholder email
+          submittedBy: ticketModalContext.guestInfo.guestName,
+          priority: ticketModalContext.guestInfo.priority === 'urgent' ? 'urgent' : 
+                   ticketModalContext.guestInfo.priority === 'high' ? 'high' : 'medium',
+          category: 'General Support', // Default category
+          requestType: 'Other', // Default request type
+          status: 'open'
+        } : undefined}
+        onSubmit={async (ticketData) => {
+          console.log('🎫 Creating chat-sourced ticket with CS- prefix:', ticketData);
+          
+          // Add chat source information to ticket data
+          const chatTicketData = {
+            ...ticketData,
+            ticketSource: 'chat_sourced' as const,
+            createdByStaff: currentUser?.username || 'Unknown Staff'
+          };
+          
+          try {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch('/api/staff/tickets', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify(chatTicketData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+              console.log('✅ Chat-sourced ticket created successfully:', result.ticketId);
+              alert(`Ticket created successfully: ${result.ticketId}`);
+              
+              // Close modal after successful submission
+              setStaffTicketModalOpen(false);
+              setTicketModalContext(null);
+            } else {
+              console.error('❌ Failed to create ticket:', result.error);
+              alert('Failed to create ticket: ' + result.error);
+            }
+          } catch (error) {
+            console.error('❌ Error creating ticket:', error);
+            alert('Error creating ticket. Please try again.');
+          }
+        }}
+      />
     </Box>
   );
 };
@@ -1420,9 +1501,10 @@ interface FloatableChatWindowProps {
   onClose: () => void;
   onMinimize: () => void;
   onFocus: () => void;
+  onCreateTicket: (sessionId: string, guestInfo: GuestSession, chatMessages?: any[]) => void;
 }
 
-const FloatableChatWindow = ({ chat, onClose, onMinimize, onFocus }: FloatableChatWindowProps) => {
+const FloatableChatWindow = ({ chat, onClose, onMinimize, onFocus, onCreateTicket }: FloatableChatWindowProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [position, setPosition] = useState(chat.position);
@@ -1572,7 +1654,11 @@ const FloatableChatWindow = ({ chat, onClose, onMinimize, onFocus }: FloatableCh
             </Box>
 
             {/* Input Area with Action Buttons */}
-            <MessageInput sessionId={chat.sessionId} />
+            <MessageInput 
+              sessionId={chat.sessionId} 
+              guestInfo={chat.guestInfo}
+              onCreateTicket={onCreateTicket}
+            />
           </Box>
         )}
       </Paper>
@@ -1860,9 +1946,11 @@ const MessagesDisplay = ({ sessionId, guestInfo }: MessagesDisplayProps) => {
 // Message Input Component for Staff
 interface MessageInputProps {
   sessionId: string;
+  guestInfo: GuestSession;
+  onCreateTicket: (sessionId: string, guestInfo: GuestSession, chatMessages?: any[]) => void;
 }
 
-const MessageInput = ({ sessionId }: MessageInputProps) => {
+const MessageInput = ({ sessionId, guestInfo, onCreateTicket }: MessageInputProps) => {
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -2000,8 +2088,8 @@ const MessageInput = ({ sessionId }: MessageInputProps) => {
             variant="outlined"
             sx={{ fontSize: '0.75rem' }}
             onClick={() => {
-              // TODO: Implement create ticket functionality
-              console.log('Create ticket for session:', sessionId);
+              // Open StaffTicketModal with chat context
+              onCreateTicket(sessionId, guestInfo);
             }}
           >
             Create Ticket

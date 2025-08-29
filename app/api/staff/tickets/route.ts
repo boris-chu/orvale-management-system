@@ -36,7 +36,7 @@ interface StaffTicketData {
   assignedTeam: string;
   assignedTo: string;
   attachments?: any[];
-  ticketSource: 'staff_created';
+  ticketSource: 'staff_created' | 'chat_sourced';
   createdByStaff?: string;
   submittedDate?: string;
 }
@@ -118,7 +118,7 @@ const formatSequenceNumber = (sequence: number): string => {
 };
 
 // Generate staff ticket ID using the same sequence as regular tickets
-async function generateStaffTicketId(teamId?: string): Promise<string> {
+async function generateStaffTicketId(teamId?: string, source: 'staff' | 'chat' = 'staff'): Promise<string> {
   try {
     const now = new Date();
     const dateStr = now.toISOString().slice(2, 10).replace(/-/g, ''); // YYMMDD format
@@ -130,14 +130,16 @@ async function generateStaffTicketId(teamId?: string): Promise<string> {
     const sequence = await getNextSequenceForTeam(targetTeamId, dateStr);
     const formattedSequence = formatSequenceNumber(sequence);
     
-    // Use 'SF' prefix for staff tickets instead of team prefix
-    return `SF-${dateStr}-${formattedSequence}`;
+    // Use different prefixes based on source: 'SF-' for staff tickets, 'CS-' for chat-sourced
+    const prefix = source === 'chat' ? 'CS' : 'SF';
+    return `${prefix}-${dateStr}-${formattedSequence}`;
     
   } catch (error) {
     console.error('Error generating staff ticket ID:', error);
     // Fallback to timestamp-based ID
     const timestamp = Date.now();
-    return `SF-${timestamp}`;
+    const prefix = source === 'chat' ? 'CS' : 'SF';
+    return `${prefix}-${timestamp}`;
   }
 }
 
@@ -248,8 +250,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate ticket ID
-    const ticketId = await generateStaffTicketId(ticketData.assignedTeam);
+    // Generate ticket ID with appropriate prefix based on source
+    const source = ticketData.ticketSource === 'chat_sourced' ? 'chat' : 'staff';
+    const ticketId = await generateStaffTicketId(ticketData.assignedTeam, source);
     
     // Prepare ticket data
     const now = new Date().toISOString();
@@ -318,7 +321,7 @@ export async function POST(request: NextRequest) {
       finalAssignedTeam || 'HELPDESK',
       ticketData.assignedTo || null,
       createdByStaff,
-      'staff_created',
+      ticketData.ticketSource || 'staff_created',
       now
     ]);
 
@@ -356,7 +359,7 @@ export async function POST(request: NextRequest) {
       }),
       JSON.stringify({
         created_by_staff: createdByStaff,
-        ticket_source: 'staff_created',
+        ticket_source: ticketData.ticketSource || 'staff_created',
         original_user: ticketData.submittedBy,
       })
     ]);
