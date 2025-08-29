@@ -17,7 +17,7 @@ import {
   NotificationsActive, VolumeUp, ChatBubble, Phone, Email,
   Refresh, Warning, CheckCircle, Error, Speed, Timer,
   TrendingUp, Security, RestoreFromTrash, PriorityHigh,
-  ArrowBack, SupportAgent, People, ChatBubbleOutline
+  ArrowBack, SupportAgent, People, ChatBubbleOutline, Save
 } from '@mui/icons-material';
 import { ColorPicker } from '@/components/shared/ColorPicker';
 import OnlinePresenceTracker from '@/components/shared/OnlinePresenceTracker';
@@ -870,158 +870,29 @@ const PublicPortalAdmin = () => {
                         height: 200,
                         border: '2px dashed #ccc',
                         borderRadius: 2,
-                        )
-                      },
-                      { 
-                        id: 'svg_headset', 
-                        label: 'Headset',
-                        svg: (
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h3c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z"/>
-                          </svg>
-                        )
-                      },
-                      { 
-                        id: 'svg_mail', 
-                        label: 'Mail',
-                        svg: (
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                            <polyline points="22,6 12,13 2,6"/>
-                          </svg>
-                        )
-                      },
-                      { 
-                        id: 'svg_phone', 
-                        label: 'Phone',
-                        svg: (
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
-                          </svg>
-                        )
-                      },
-                      { 
-                        id: 'svg_users', 
-                        label: 'Users',
-                        svg: (
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                            <circle cx="9" cy="7" r="4"/>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                          </svg>
-                        )
-                      },
-                      { 
-                        id: 'svg_info', 
-                        label: 'Info',
-                        svg: (
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-                          </svg>
-                        )
-                      }
-                    ].map((iconOption) => (
-                      <Grid size={{ xs: 4, sm: 3, md: 2 }} key={iconOption.id}>
-                        <Box
-                          sx={{
-                            p: 2,
-                            border: 2,
-                            borderColor: settings.widget_icon === iconOption.id ? 'primary.main' : 'divider',
-                            borderRadius: 2,
-                            textAlign: 'center',
-                            cursor: 'pointer',
-                            backgroundColor: settings.widget_icon === iconOption.id ? 'primary.50' : 'transparent',
-                            '&:hover': {
-                              borderColor: 'primary.main',
-                              backgroundColor: 'primary.50'
-                            }
-                          }}
-                          onClick={() => updateSetting('widget_icon', iconOption.id)}
-                        >
-                          <Box sx={{ mb: 1, color: settings.widget_color || '#1976d2' }}>
-                            {iconOption.svg}
-                          </Box>
-                          <Typography variant="caption" display="block">
-                            {iconOption.label}
-                          </Typography>
-                        </Box>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Box>
-
-                {/* Widget Image Upload */}
-                <Box className="space-y-2">
-                  <Typography variant="subtitle2">Custom Widget Image (Optional)</Typography>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Upload an image to replace the widget button. Image will be displayed as a "brooch" style within the widget shape.
-                  </Typography>
-                  
-                  {settings.widget_image && (
-                    <Box sx={{ mb: 2 }}>
-                      <Box
-                        sx={{
-                          width: 64,
-                          height: 64,
-                          borderRadius: settings.widget_shape === 'circle' ? '50%' : '8px',
-                          backgroundColor: settings.widget_color || '#1976d2',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          position: 'relative',
-                          overflow: 'hidden'
-                        }}
-                      >
-                        <img
-                          src={settings.widget_image}
-                          alt="Widget Preview"
-                          style={{
-                            width: '80%',
-                            height: '80%',
-                            borderRadius: settings.widget_shape === 'circle' ? '50%' : '4px',
-                            objectFit: 'cover'
-                          }}
-                        />
-                      </Box>
-                      <Button
-                        size="small"
-                        onClick={() => updateSetting('widget_image', '')}
-                        startIcon={<Delete />}
-                        color="error"
-                        sx={{ mt: 1 }}
-                      >
-                        Remove Image
-                      </Button>
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          borderColor: '#1976d2'
+                        }
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        Click to upload widget image
+                      </Typography>
                     </Box>
                   )}
 
-                  <input
-                    type="file"
-                    id="widget-image-upload"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                          updateSetting('widget_image', event.target?.result as string);
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Widget Image URL (optional)"
+                    value={settings.widget_image || ''}
+                    onChange={(e) => updateSetting('widget_image', e.target.value)}
+                    placeholder="https://example.com/image.png"
                   />
-                  <label htmlFor="widget-image-upload">
-                    <Button
-                      component="span"
-                      variant="outlined"
-                      startIcon={<Add />}
-                      size="small"
-                    >
-                      {settings.widget_image ? 'Change Image' : 'Upload Image'}
-                    </Button>
-                  </label>
                   
                   {!settings.widget_image && (
                     <Typography variant="caption" color="text.secondary" display="block">
@@ -1033,1258 +904,139 @@ const PublicPortalAdmin = () => {
                 <TextField
                   fullWidth
                   size="small"
-                  label="Widget Image URL (optional)"
-                  value={settings.widget_image || ''}
-                  onChange={(e) => updateSetting('widget_image', e.target.value)}
-                  placeholder="https://example.com/logo.png"
-                />
-              </CardContent>
-            </Card>
+                  label="Widget Animation"
+                  select
+                  value={settings.widget_animation || 'pulse'}
+                  onChange={(e) => updateSetting('widget_animation', e.target.value)}
+                >
+                  <MenuItem value="none">No Animation</MenuItem>
+                  <MenuItem value="pulse">Pulse</MenuItem>
+                  <MenuItem value="bounce">Bounce</MenuItem>
+                  <MenuItem value="shake">Shake</MenuItem>
+                  <MenuItem value="glow">Glow</MenuItem>
+                </TextField>
 
-            {/* Animation Settings */}
-            <Card>
-              <CardHeader title="Animation Settings" />
-              <CardContent className="space-y-4">
-                <Grid container spacing={3}>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Animation Type</InputLabel>
-                      <Select
-                        value={settings.widget_animation}
-                        label="Animation Type"
-                        onChange={(e) => updateSetting('widget_animation', e.target.value)}
-                      >
-                        <MenuItem value="none">None</MenuItem>
-                        <MenuItem value="bounce">Bounce</MenuItem>
-                        <MenuItem value="pulse">Pulse</MenuItem>
-                        <MenuItem value="shake">Shake</MenuItem>
-                        <MenuItem value="glow">Glow</MenuItem>
-                        <MenuItem value="slide-in">Slide In</MenuItem>
-                        <MenuItem value="rotation">Rotation</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <Box className="space-y-2">
-                      <Typography variant="subtitle2">Animation Duration (ms)</Typography>
-                      <Slider
-                        value={settings.animation_duration}
-                        onChange={(e, newValue) => updateSetting('animation_duration', newValue)}
-                        min={500}
-                        max={5000}
-                        step={100}
-                        valueLabelDisplay="auto"
-                        marks={[
-                          { value: 1000, label: '1s' },
-                          { value: 2000, label: '2s' },
-                          { value: 3000, label: '3s' }
-                        ]}
-                      />
-                    </Box>
-                  </Grid>
-                </Grid>
-                <Box className="space-y-2">
-                  <Typography variant="subtitle2">Animation Delay (ms)</Typography>
+                {/* Animation Duration Slider */}
+                <Box>
+                  <Typography variant="body2" gutterBottom>
+                    Animation Duration: {settings.animation_duration}ms
+                  </Typography>
                   <Slider
-                    value={settings.animation_delay}
-                    onChange={(e, newValue) => updateSetting('animation_delay', newValue)}
-                    min={0}
-                    max={10000}
-                    step={500}
+                    value={settings.animation_duration}
+                    onChange={(e, newValue) => updateSetting('animation_duration', newValue)}
+                    min={500}
+                    max={5000}
+                    step={100}
                     valueLabelDisplay="auto"
                     marks={[
-                      { value: 0, label: '0s' },
-                      { value: 5000, label: '5s' },
-                      { value: 10000, label: '10s' }
+                      { value: 1000, label: '1s' },
+                      { value: 2000, label: '2s' },
+                      { value: 3000, label: '3s' }
                     ]}
                   />
                 </Box>
-              </CardContent>
-            </Card>
-
-            {/* Widget Preview */}
-            <Card>
-              <CardHeader title="Widget Preview" />
-              <CardContent>
-                <Box 
-                  sx={{ 
-                    position: 'relative',
-                    width: '100%',
-                    height: 200,
-                    border: '2px dashed #ccc',
-                    borderRadius: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: '#f8f9fa'
-                  }}
-                >
-                  <Typography color="text.secondary">
-                    Widget preview will appear here
-                  </Typography>
-                  
-                  {/* Live Widget Preview */}
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      bottom: 16,
-                      right: 16,
-                      width: settings.widget_size === 'large' ? 80 : settings.widget_size === 'medium' ? 64 : 48,
-                      height: settings.widget_size === 'large' ? 80 : settings.widget_size === 'medium' ? 64 : 48,
-                      backgroundColor: settings.widget_color === 'transparent' ? 'rgba(255, 255, 255, 0.1)' : settings.widget_color,
-                      backdropFilter: settings.widget_color === 'transparent' ? 'blur(10px)' : 'none',
-                      border: settings.widget_color === 'transparent' ? '1px solid rgba(255, 255, 255, 0.2)' : 'none',
-                      borderRadius: settings.widget_shape === 'circle' ? '50%' : settings.widget_shape === 'rounded' ? 2 : 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'scale(1.05)'
-                      }
-                    }}
-                  >
-                    {/* Widget Content Preview */}
-                    {settings.widget_image ? (
-                      /* Image Preview */
-                      <Box
-                        sx={{
-                          width: '80%',
-                          height: '80%',
-                          borderRadius: settings.widget_shape === 'circle' ? '50%' : '6px',
-                          overflow: 'hidden',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                          border: '2px solid rgba(255, 255, 255, 0.3)'
-                        }}
-                      >
-                        <img 
-                          src={settings.widget_image} 
-                          alt="Widget Preview"
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                      </Box>
-                    ) : (() => {
-                      // Preview icon logic
-                      const iconSize = (settings.widget_size === 'large' ? 80 : settings.widget_size === 'medium' ? 64 : 48) * 0.5;
-                      
-                      // SVG icons for preview
-                      const previewSvgIcons: { [key: string]: JSX.Element } = {
-                        'svg_chat_bubble': (
-                          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
-                          </svg>
-                        ),
-                        'svg_chat_outline': (
-                          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                          </svg>
-                        ),
-                        'svg_message_circle': (
-                          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.54 0 3-.35 4.31-.99L22 22l-1.01-5.69C21.65 15 22 13.54 22 12c0-5.52-4.48-10-10-10z"/>
-                          </svg>
-                        ),
-                        'svg_message_square': (
-                          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                            <path d="M8 10h8M8 14h6"/>
-                          </svg>
-                        )
-                        // Add more as needed...
-                      };
-
-                      // Emoji icons
-                      const previewEmojiIcons: { [key: string]: string } = {
-                        'chat': '💬', 'support': '🎧', 'help': '❓', 'message': '✉️',
-                        'phone': '📞', 'user': '👤', 'team': '👥', 'star': '⭐',
-                        'heart': '❤️', 'info': 'ℹ️', 'settings': '⚙️', 'bell': '🔔'
-                      };
-                      
-                      // Show selected icon or default
-                      if (settings.widget_icon && settings.widget_icon.startsWith('svg_') && previewSvgIcons[settings.widget_icon]) {
-                        return (
-                          <Box sx={{ color: settings.widget_color === 'transparent' ? '#333' : 'white' }}>
-                            {previewSvgIcons[settings.widget_icon]}
-                          </Box>
-                        );
-                      } else if (settings.widget_icon && previewEmojiIcons[settings.widget_icon]) {
-                        return (
-                          <span style={{ fontSize: iconSize * 0.8 }}>
-                            {previewEmojiIcons[settings.widget_icon]}
-                          </span>
-                        );
-                      } else {
-                        // Default chat bubble
-                        return <ChatBubbleOutline sx={{ color: settings.widget_color === 'transparent' ? '#333' : 'white', fontSize: iconSize }} />;
-                      }
-                    })()}
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Box>
-        </TabPanel>
-
-        {/* Business Hours Tab */}
-        <TabPanel value={activeTab} index={1}>
-          <Box p={3} className="space-y-6">
-            <Card>
-              <CardHeader
-                title={
-                  <Typography variant="h6" className="flex items-center gap-2">
-                    <Business className="w-5 h-5" />
-                    Business Hours Configuration
-                  </Typography>
-                }
-              />
-              <CardContent className="space-y-4">
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={settings.business_hours_enabled}
-                      onChange={(e) => updateSetting('business_hours_enabled', e.target.checked)}
-                    />
-                  }
-                  label="Enable Business Hours (widget only available during business hours)"
-                />
-
-                {settings.business_hours_enabled && (
-                  <>
-                    <FormControl size="small" className="min-w-48">
-                      <InputLabel>Timezone</InputLabel>
-                      <Select
-                        value={settings.timezone}
-                        label="Timezone"
-                        onChange={(e) => updateSetting('timezone', e.target.value)}
-                      >
-                        <MenuItem value="America/New_York">Eastern Time</MenuItem>
-                        <MenuItem value="America/Chicago">Central Time</MenuItem>
-                        <MenuItem value="America/Denver">Mountain Time</MenuItem>
-                        <MenuItem value="America/Los_Angeles">Pacific Time</MenuItem>
-                      </Select>
-                    </FormControl>
-
-                    <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>Weekly Schedule</Typography>
-                    
-                    {Object.entries(settings.schedule).map(([day, daySettings]) => (
-                      <Card key={day} variant="outlined">
-                        <CardContent>
-                          <Grid container spacing={2} alignItems="center">
-                            <Grid size={2}>
-                              <FormControlLabel
-                                control={
-                                  <Switch 
-                                    checked={daySettings.enabled}
-                                    onChange={(e) => updateSchedule(day, 'enabled', e.target.checked)}
-                                  />
-                                }
-                                label={day.charAt(0).toUpperCase() + day.slice(1)}
-                              />
-                            </Grid>
-                            {daySettings.enabled && (
-                              <>
-                                <Grid size={3}>
-                                  <TextField
-                                    type="time"
-                                    size="small"
-                                    label="Open"
-                                    value={daySettings.open}
-                                    onChange={(e) => updateSchedule(day, 'open', e.target.value)}
-                                    InputLabelProps={{ shrink: true }}
-                                  />
-                                </Grid>
-                                <Grid size={3}>
-                                  <TextField
-                                    type="time"
-                                    size="small"
-                                    label="Close"
-                                    value={daySettings.close}
-                                    onChange={(e) => updateSchedule(day, 'close', e.target.value)}
-                                    InputLabelProps={{ shrink: true }}
-                                  />
-                                </Grid>
-                              </>
-                            )}
-                          </Grid>
-                        </CardContent>
-                      </Card>
-                    ))}
-
-                    <Box className="flex justify-between items-center mt-4">
-                      <Typography variant="h6">Holidays</Typography>
-                      <Button
-                        variant="outlined"
-                        startIcon={<Add />}
-                        onClick={() => setHolidayDialogOpen(true)}
-                      >
-                        Add Holiday
-                      </Button>
-                    </Box>
-
-                    <List>
-                      {settings.holidays.map((holiday: any, index: number) => (
-                        <ListItem key={index}>
-                          <ListItemText
-                            primary={holiday.name}
-                            secondary={holiday.date}
-                          />
-                          <ListItemSecondaryAction>
-                            <IconButton edge="end" onClick={() => {
-                              const newHolidays = [...settings.holidays];
-                              newHolidays.splice(index, 1);
-                              updateSetting('holidays', newHolidays);
-                            }}>
-                              <Delete />
-                            </IconButton>
-                          </ListItemSecondaryAction>
-                        </ListItem>
-                      ))}
-                    </List>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </Box>
-        </TabPanel>
-
-        {/* Messages & Text Tab */}
-        <TabPanel value={activeTab} index={2}>
-          <Box p={3} className="space-y-6">
-            <Card>
-              <CardHeader title="Customizable Messages" />
-              <CardContent className="space-y-4">
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
-                  label="Welcome Message"
-                  value={settings.welcome_message || ''}
-                  onChange={(e) => updateSetting('welcome_message', e.target.value)}
-                  placeholder="Hi! How can we help you today?"
-                />
-                
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
-                  label="Offline Message"
-                  value={settings.offline_message || ''}
-                  onChange={(e) => updateSetting('offline_message', e.target.value)}
-                  placeholder="We are currently offline. Please submit a ticket."
-                />
-                
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
-                  label="Business Hours Message"
-                  value={settings.business_hours_message || ''}
-                  onChange={(e) => updateSetting('business_hours_message', e.target.value)}
-                  placeholder="Live chat available Monday-Friday, 7:00 AM - 6:00 PM EST."
-                />
-                
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
-                  label="Queue Message"
-                  value={settings.queue_message || ''}
-                  onChange={(e) => updateSetting('queue_message', e.target.value)}
-                  placeholder="You are in queue. Please wait for the next available agent."
-                />
-                
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
-                  label="Staff Disconnect Message"
-                  value={settings.staff_disconnect_message || ''}
-                  onChange={(e) => updateSetting('staff_disconnect_message', e.target.value)}
-                  placeholder="Your support agent has been disconnected. We are connecting you with another agent."
-                />
-              </CardContent>
-            </Card>
-          </Box>
-        </TabPanel>
-
-        {/* Functionality Tab */}
-        <TabPanel value={activeTab} index={3}>
-          <Box p={3} className="space-y-6">
-            {/* Pre-chat Form */}
-            <Card>
-              <CardHeader title="Pre-chat Form Settings" />
-              <CardContent className="space-y-4">
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={settings.require_name}
-                      onChange={(e) => updateSetting('require_name', e.target.checked)}
-                    />
-                  }
-                  label="Require visitor name"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={settings.require_email}
-                      onChange={(e) => updateSetting('require_email', e.target.checked)}
-                    />
-                  }
-                  label="Require visitor email"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={settings.require_phone}
-                      onChange={(e) => updateSetting('require_phone', e.target.checked)}
-                    />
-                  }
-                  label="Require visitor phone number"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={settings.require_department}
-                      onChange={(e) => updateSetting('require_department', e.target.checked)}
-                    />
-                  }
-                  label="Require department selection"
-                />
-              </CardContent>
-            </Card>
-
-            {/* Chat Features */}
-            <Card>
-              <CardHeader title="Chat Features" />
-              <CardContent className="space-y-4">
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={settings.show_agent_typing}
-                      onChange={(e) => updateSetting('show_agent_typing', e.target.checked)}
-                    />
-                  }
-                  label="Show agent typing indicators"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={settings.show_queue_position}
-                      onChange={(e) => updateSetting('show_queue_position', e.target.checked)}
-                    />
-                  }
-                  label="Show queue position to visitors"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={settings.enable_file_uploads}
-                      onChange={(e) => updateSetting('enable_file_uploads', e.target.checked)}
-                    />
-                  }
-                  label="Enable file uploads"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={settings.enable_screenshot_sharing}
-                      onChange={(e) => updateSetting('enable_screenshot_sharing', e.target.checked)}
-                    />
-                  }
-                  label="Enable screenshot sharing"
-                />
-
-                {settings.enable_file_uploads && (
-                  <>
-                    <TextField
-                      type="number"
-                      size="small"
-                      label="Max File Size (MB)"
-                      value={settings.max_file_size_mb || 5}
-                      onChange={(e) => updateSetting('max_file_size_mb', parseInt(e.target.value))}
-                      inputProps={{ min: 1, max: 50 }}
-                    />
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Session Settings */}
-            <Card>
-              <CardHeader title="Session & Recovery" />
-              <CardContent className="space-y-4">
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={settings.session_recovery_enabled}
-                      onChange={(e) => updateSetting('session_recovery_enabled', e.target.checked)}
-                    />
-                  }
-                  label="Enable session recovery"
-                />
-                
-                {settings.session_recovery_enabled && (
-                  <TextField
-                    type="number"
-                    size="small"
-                    label="Session Recovery Time (minutes)"
-                    value={settings.session_recovery_minutes || 10}
-                    onChange={(e) => updateSetting('session_recovery_minutes', parseInt(e.target.value))}
-                    inputProps={{ min: 1, max: 30 }}
-                  />
-                )}
-
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={settings.auto_ticket_creation}
-                      onChange={(e) => updateSetting('auto_ticket_creation', e.target.checked)}
-                    />
-                  }
-                  label="Auto-create tickets from chat sessions"
-                />
-              </CardContent>
-            </Card>
-          </Box>
-        </TabPanel>
-
-        {/* Communication Tab */}
-        <TabPanel value={activeTab} index={4}>
-          <Box p={3} className="space-y-6">
-            {/* Include the typing detection and read receipts UI from the documentation */}
-            {/* This would be the content from Public_Portal_Typing_ReadReceipts_AdminUI.md */}
-            <Card>
-              <CardHeader
-                title={
-                  <Typography variant="h6" className="flex items-center gap-2">
-                    <Message className="w-5 h-5" />
-                    Communication Features
-                  </Typography>
-                }
-              />
-              <CardContent>
-                <Typography variant="body2" color="text.secondary">
-                  Configure typing indicators, read receipts, and other communication features
-                </Typography>
-                <Box mt={2}>
-                  <Alert severity="info">
-                    Communication features configuration panel will be implemented here based on the detailed specifications.
-                  </Alert>
-                </Box>
-              </CardContent>
-            </Card>
-          </Box>
-        </TabPanel>
-
-        {/* Recovery & Disconnects Tab */}
-        <TabPanel value={activeTab} index={5}>
-          <Box p={3} className="space-y-6">
-            {/* Auto-Requeue Settings */}
-            <Card>
-              <CardHeader
-                title={
-                  <Typography variant="h6" className="flex items-center gap-2">
-                    <RestoreFromTrash className="w-5 h-5" />
-                    Auto-Requeue Settings
-                  </Typography>
-                }
-              />
-              <CardContent className="space-y-4">
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={settings.auto_requeue_enabled}
-                      onChange={(e) => updateSetting('auto_requeue_enabled', e.target.checked)}
-                    />
-                  }
-                  label="Enable automatic requeue when staff disconnects"
-                />
-
-                {settings.auto_requeue_enabled && (
-                  <>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Requeue Position Strategy</InputLabel>
-                      <Select
-                        value={settings.requeue_position}
-                        label="Requeue Position Strategy"
-                        onChange={(e) => updateSetting('requeue_position', e.target.value)}
-                      >
-                        <MenuItem value="front">Front of Queue (Highest Priority)</MenuItem>
-                        <MenuItem value="priority_boost">Priority Boost (Recommended)</MenuItem>
-                        <MenuItem value="original">Original Position</MenuItem>
-                        <MenuItem value="end">End of Queue</MenuItem>
-                      </Select>
-                    </FormControl>
-
-                    <Box className="space-y-2">
-                      <Typography variant="subtitle2">Priority Boost Amount</Typography>
-                      <Slider
-                        value={settings.priority_boost_amount}
-                        onChange={(e, newValue) => updateSetting('priority_boost_amount', newValue)}
-                        min={0}
-                        max={3}
-                        step={1}
-                        valueLabelDisplay="auto"
-                        marks={[
-                          { value: 0, label: 'None' },
-                          { value: 1, label: '+1 Level' },
-                          { value: 2, label: '+2 Levels' },
-                          { value: 3, label: 'Max Priority' }
-                        ]}
-                      />
-                      <Typography variant="caption" color="text.secondary">
-                        How many priority levels to boost (Normal → High → Urgent → VIP)
-                      </Typography>
-                    </Box>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Staff Disconnect Detection */}
-            <Card>
-              <CardHeader
-                title={
-                  <Typography variant="h6" className="flex items-center gap-2">
-                    <Timer className="w-5 h-5" />
-                    Staff Disconnect Detection
-                  </Typography>
-                }
-              />
-              <CardContent className="space-y-4">
-                <Grid container spacing={3}>
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      size="small"
-                      label="Disconnect Timeout (seconds)"
-                      value={settings.staff_disconnect_timeout || 30}
-                      onChange={(e) => updateSetting('staff_disconnect_timeout', parseInt(e.target.value))}
-                      inputProps={{ min: 10, max: 300 }}
-                      helperText="Time before considering staff disconnected"
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      size="small"
-                      label="Grace Period (seconds)"
-                      value={settings.grace_period_seconds || 60}
-                      onChange={(e) => updateSetting('grace_period_seconds', parseInt(e.target.value))}
-                      inputProps={{ min: 30, max: 300 }}
-                      helperText="Time to wait for staff reconnection"
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 4 }}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      size="small"
-                      label="Auto-Reassign Timeout (seconds)"
-                      value={settings.auto_reassign_after_seconds || 300}
-                      onChange={(e) => updateSetting('auto_reassign_after_seconds', parseInt(e.target.value))}
-                      inputProps={{ min: 60, max: 600 }}
-                      helperText="Max time before forcing reassignment"
-                    />
-                  </Grid>
-                </Grid>
-
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  <Typography variant="body2">
-                    <strong>Flow:</strong> Staff disconnect detected → Grace period → Auto-requeue with priority boost → Auto-reassign timeout → Force end session
-                  </Typography>
-                </Alert>
-              </CardContent>
-            </Card>
-
-            {/* Guest Notifications */}
-            <Card>
-              <CardHeader
-                title={
-                  <Typography variant="h6" className="flex items-center gap-2">
-                    <NotificationsActive className="w-5 h-5" />
-                    Guest Notification Settings
-                  </Typography>
-                }
-              />
-              <CardContent className="space-y-4">
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={settings.notify_guest_on_staff_disconnect}
-                      onChange={(e) => updateSetting('notify_guest_on_staff_disconnect', e.target.checked)}
-                    />
-                  }
-                  label="Notify guests when their agent disconnects"
-                />
-
-                {settings.notify_guest_on_staff_disconnect && (
-                  <>
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={2}
-                      label="Staff Disconnect Message"
-                      value={settings.staff_disconnect_message || ''}
-                      onChange={(e) => updateSetting('staff_disconnect_message', e.target.value)}
-                      placeholder="Your support agent has been disconnected. We are connecting you with another agent."
-                      helperText="Message shown to guest when staff disconnects"
-                    />
-
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={2}
-                      label="Reassignment Message"
-                      value={settings.reassignment_message || ''}
-                      onChange={(e) => updateSetting('reassignment_message', e.target.value)}
-                      placeholder="You have been connected with a new support agent."
-                      helperText="Message shown when guest is connected to new staff"
-                    />
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Escalation Settings */}
-            <Card>
-              <CardHeader
-                title={
-                  <Typography variant="h6" className="flex items-center gap-2">
-                    <PriorityHigh className="w-5 h-5" />
-                    Escalation & Priority Management
-                  </Typography>
-                }
-              />
-              <CardContent className="space-y-4">
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={settings.escalate_on_multiple_disconnects}
-                      onChange={(e) => updateSetting('escalate_on_multiple_disconnects', e.target.checked)}
-                    />
-                  }
-                  label="Escalate sessions after multiple staff disconnects"
-                />
-
-                {settings.escalate_on_multiple_disconnects && (
-                  <Grid container spacing={3}>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        type="number"
-                        size="small"
-                        label="Max Disconnects Before Escalation"
-                        value={settings.max_disconnects_before_escalation || 3}
-                        onChange={(e) => updateSetting('max_disconnects_before_escalation', parseInt(e.target.value))}
-                        inputProps={{ min: 1, max: 5 }}
-                        helperText="Number of disconnects that trigger escalation"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <FormControl fullWidth size="small">
-                        <InputLabel>Escalation Priority Level</InputLabel>
-                        <Select
-                          value={settings.escalation_priority}
-                          label="Escalation Priority Level"
-                          onChange={(e) => updateSetting('escalation_priority', e.target.value)}
-                        >
-                          <MenuItem value="urgent">Urgent</MenuItem>
-                          <MenuItem value="vip">VIP</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                  </Grid>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Session Abandonment */}
-            <Card>
-              <CardHeader
-                title={
-                  <Typography variant="h6" className="flex items-center gap-2">
-                    <Warning className="w-5 h-5" />
-                    Session Abandonment Detection
-                  </Typography>
-                }
-              />
-              <CardContent className="space-y-4">
-                <TextField
-                  fullWidth
-                  type="number"
-                  size="small"
-                  label="Guest Inactivity Timeout (minutes)"
-                  value={settings.guest_inactivity_timeout || 30}
-                  onChange={(e) => updateSetting('guest_inactivity_timeout', parseInt(e.target.value))}
-                  inputProps={{ min: 5, max: 60 }}
-                  helperText="Minutes of guest inactivity before considering session abandoned"
-                />
-
-                <FormControlLabel
-                  control={
-                    <Switch 
-                      checked={settings.auto_end_abandoned_sessions}
-                      onChange={(e) => updateSetting('auto_end_abandoned_sessions', e.target.checked)}
-                    />
-                  }
-                  label="Automatically end abandoned sessions"
-                />
-
-                <Alert severity="warning">
-                  <Typography variant="body2">
-                    <strong>Caution:</strong> Abandoned sessions are automatically closed to free up staff resources. Guests can always start a new chat session.
-                  </Typography>
-                </Alert>
-              </CardContent>
-            </Card>
-
-            {/* Recovery Statistics Preview */}
-            <Card>
-              <CardHeader
-                title={
-                  <Typography variant="h6" className="flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5" />
-                    Recovery Statistics (Live Preview)
-                  </Typography>
-                }
-              />
-              <CardContent>
-                <Grid container spacing={2}>
-                  <Grid size={{ xs: 6, md: 3 }}>
-                    <Box textAlign="center">
-                      <Typography variant="h4" color="primary">24</Typography>
-                      <Typography variant="caption">Sessions Recovered Today</Typography>
-                    </Box>
-                  </Grid>
-                  <Grid size={{ xs: 6, md: 3 }}>
-                    <Box textAlign="center">
-                      <Typography variant="h4" color="success.main">89%</Typography>
-                      <Typography variant="caption">Recovery Success Rate</Typography>
-                    </Box>
-                  </Grid>
-                  <Grid size={{ xs: 6, md: 3 }}>
-                    <Box textAlign="center">
-                      <Typography variant="h4" color="warning.main">3.2m</Typography>
-                      <Typography variant="caption">Avg Recovery Time</Typography>
-                    </Box>
-                  </Grid>
-                  <Grid size={{ xs: 6, md: 3 }}>
-                    <Box textAlign="center">
-                      <Typography variant="h4" color="info.main">5</Typography>
-                      <Typography variant="caption">Staff Disconnects Today</Typography>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-          </Box>
-        </TabPanel>
-
-        {/* Analytics Tab */}
-        {/* Staff Work Modes Tab */}
-        <TabPanel value={activeTab} index={6}>
-          <Box p={3}>
-            {/* Permission Check */}
-            {(!currentUser?.permissions?.includes('public_portal.manage_work_modes') && 
-              !currentUser?.permissions?.includes('admin.system_settings')) ? (
-              <Alert severity="warning" sx={{ mb: 3 }}>
-                <Typography variant="body2">
-                  You need "public_portal.manage_work_modes" permission to access this section.
-                </Typography>
-              </Alert>
-            ) : (
-              <Box className="space-y-6">
-                {/* Work Mode System Settings */}
-                <Card>
-                  <CardHeader
-                    title={
-                      <Typography variant="h6" className="flex items-center gap-2">
-                        <Settings />
-                        Work Mode System Settings
-                      </Typography>
-                    }
-                  />
-                  <CardContent>
-                    <Grid container spacing={3}>
-                      {/* Auto Assignment */}
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              checked={settings.work_mode_auto_assignment_enabled}
-                              onChange={(e) => updateSetting('work_mode_auto_assignment_enabled', e.target.checked)}
-                            />
-                          }
-                          label="Enable Automatic Chat Assignment"
-                        />
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          Automatically assign new chats to available staff
-                        </Typography>
-                      </Grid>
-
-                      {/* Queue Timeout */}
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                          label="Max Queue Time (minutes)"
-                          type="number"
-                          value={settings.work_mode_max_queue_time_minutes || 30}
-                          onChange={(e) => updateSetting('work_mode_max_queue_time_minutes', parseInt(e.target.value))}
-                          helperText="Time before escalating unassigned chats"
-                          fullWidth
-                        />
-                      </Grid>
-
-                      {/* Escalation */}
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              checked={settings.work_mode_escalate_unassigned}
-                              onChange={(e) => updateSetting('work_mode_escalate_unassigned', e.target.checked)}
-                            />
-                          }
-                          label="Escalate Unassigned Chats"
-                        />
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          Escalate chats that remain unassigned after timeout
-                        </Typography>
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-
-                {/* Work Mode Auto-Accept Settings */}
-                <Card>
-                  <CardHeader
-                    title={
-                      <Typography variant="h6" className="flex items-center gap-2">
-                        <ChatBubbleOutline />
-                        Auto-Accept Chat Settings
-                      </Typography>
-                    }
-                  />
-                  <CardContent>
-                    <Grid container spacing={3}>
-                      <Grid size={{ xs: 12, md: 4 }}>
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              checked={settings.work_mode_ready_auto_accept}
-                              onChange={(e) => updateSetting('work_mode_ready_auto_accept', e.target.checked)}
-                            />
-                          }
-                          label={
-                            <Box>
-                              <Typography variant="body2">🟢 Ready Mode</Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                Auto-accept new chats
-                              </Typography>
-                            </Box>
-                          }
-                        />
-                      </Grid>
-
-                      <Grid size={{ xs: 12, md: 4 }}>
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              checked={settings.work_mode_work_auto_accept}
-                              onChange={(e) => updateSetting('work_mode_work_auto_accept', e.target.checked)}
-                            />
-                          }
-                          label={
-                            <Box>
-                              <Typography variant="body2">🟡 Work Mode</Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                Manual chat acceptance
-                              </Typography>
-                            </Box>
-                          }
-                        />
-                      </Grid>
-
-                      <Grid size={{ xs: 12, md: 4 }}>
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              checked={settings.work_mode_ticketing_auto_accept}
-                              onChange={(e) => updateSetting('work_mode_ticketing_auto_accept', e.target.checked)}
-                            />
-                          }
-                          label={
-                            <Box>
-                              <Typography variant="body2">🔵 Ticketing Mode</Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                Focus on tickets, no chats
-                              </Typography>
-                            </Box>
-                          }
-                        />
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-
-                {/* Work Mode Timeout Settings */}
-                <Card>
-                  <CardHeader
-                    title={
-                      <Typography variant="h6" className="flex items-center gap-2">
-                        <AccessTime />
-                        Auto-Timeout Settings
-                      </Typography>
-                    }
-                  />
-                  <CardContent>
-                    <Grid container spacing={3}>
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                          label="Break Timeout (minutes)"
-                          type="number"
-                          value={settings.work_mode_break_timeout_minutes || 15}
-                          onChange={(e) => updateSetting('work_mode_break_timeout_minutes', parseInt(e.target.value))}
-                          helperText="Automatically change from 'Break' to 'Away' after timeout"
-                          fullWidth
-                        />
-                      </Grid>
-
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                          label="Away Timeout (minutes)"
-                          type="number"
-                          value={settings.work_mode_away_timeout_minutes || 30}
-                          onChange={(e) => updateSetting('work_mode_away_timeout_minutes', parseInt(e.target.value))}
-                          helperText="Time before marking inactive staff as 'Away'"
-                          fullWidth
-                        />
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-
-                {/* Work Mode Descriptions */}
-                <Card>
-                  <CardHeader
-                    title={
-                      <Typography variant="h6" className="flex items-center gap-2">
-                        <Edit />
-                        Customize Work Mode Labels & Descriptions
-                      </Typography>
-                    }
-                  />
-                  <CardContent>
-                    <Grid container spacing={3}>
-                      {Object.entries(settings.work_mode_descriptions || {}).map(([mode, description]) => (
-                        <Grid size={{ xs: 12, md: 6 }} key={mode}>
-                          <TextField
-                            label={`${mode.charAt(0).toUpperCase() + mode.slice(1).replace('_', ' ')} Description`}
-                            value={(description as string) || ''}
-                            onChange={(e) => updateSetting('work_mode_descriptions', {
-                              ...(settings.work_mode_descriptions || {}),
-                              [mode]: e.target.value
-                            })}
-                            multiline
-                            rows={2}
-                            fullWidth
-                            helperText={`Description shown to staff for ${mode.replace('_', ' ')} mode`}
-                          />
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </CardContent>
-                </Card>
               </Box>
-            )}
+            </Box>
+
+            {/* Messages Section */}
+            <Box className="space-y-6">
+              <Typography variant="h6">Messages</Typography>
+              
+              <TextField
+                fullWidth
+                multiline
+                rows={2}
+                label="Welcome Message"
+                value={settings.welcome_message || ''}
+                onChange={(e) => updateSetting('welcome_message', e.target.value)}
+                placeholder="Hi! How can we help you today?"
+              />
+              
+              <TextField
+                fullWidth
+                multiline
+                rows={2}
+                label="Offline Message"
+                value={settings.offline_message || ''}
+                onChange={(e) => updateSetting('offline_message', e.target.value)}
+                placeholder="We are currently offline. Please submit a ticket."
+              />
+              
+              <TextField
+                fullWidth
+                multiline
+                rows={2}
+                label="Business Hours Message"
+                value={settings.business_hours_message || ''}
+                onChange={(e) => updateSetting('business_hours_message', e.target.value)}
+                placeholder="Live chat available Monday-Friday, 7:00 AM - 6:00 PM EST."
+              />
+            </Box>
           </Box>
         </TabPanel>
 
-        {/* Analytics Tab */}
-        {/* WebSocket Management Tab */}
-        <TabPanel value={activeTab} index={7}>
-          <Box sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Speed /> WebSocket Connection Management
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Configure WebSocket connection limits and admin bypass settings for chat functionality.
-            </Typography>
-
-            <Card sx={{ mb: 3 }}>
-              <CardHeader title="Connection Limits Override" />
-              <CardContent>
-                <Alert severity="warning" sx={{ mb: 3 }}>
-                  <Typography variant="body2">
-                    <strong>⚠️ Developer/Admin Setting</strong><br />
-                    Enabling unlimited mode bypasses all WebSocket connection limits. Use with caution.
-                  </Typography>
-                </Alert>
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.websocket_unlimited_mode}
-                      onChange={(e) => updateWebSocketSetting('websocket_unlimited_mode', e.target.checked)}
-                      color="warning"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body1" component="span" sx={{ fontWeight: 'bold' }}>
-                        {settings.websocket_unlimited_mode ? '🌍 Unlimited Connections ENABLED' : '🔒 Connection Limits ACTIVE'}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" component="div">
-                        {settings.websocket_unlimited_mode 
-                          ? 'All WebSocket connection limits are bypassed. Perfect for testing and development.'
-                          : 'Standard connection limits apply: 10 per user, 25 per IP, 500 total in development.'
-                        }
-                      </Typography>
-                    </Box>
-                  }
-                  sx={{ alignItems: 'flex-start', mb: 2 }}
-                />
-
-                <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-                  Current Connection Limits
-                </Typography>
-                <List>
-                  <ListItem>
-                    <ListItemText
-                      primary="Per User Limit"
-                      secondary={`${settings.websocket_unlimited_mode ? '∞ (Unlimited)' : '10 connections'} per authenticated user`}
-                    />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemText
-                      primary="Per IP Limit"
-                      secondary={`${settings.websocket_unlimited_mode ? '∞ (Unlimited)' : '25 connections'} per IP address`}
-                    />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemText
-                      primary="Total Server Limit"
-                      secondary={`${settings.websocket_unlimited_mode ? '∞ (Unlimited)' : '500 total'} concurrent connections`}
-                    />
-                  </ListItem>
-                </List>
-
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  <Typography variant="body2">
-                    <strong>💡 When to use unlimited mode:</strong><br />
-                    • Development and testing scenarios<br />
-                    • Debugging connection issues<br />
-                    • High-traffic production environments with sufficient server resources<br />
-                    • Global 24/7 support with many concurrent users
-                  </Typography>
-                </Alert>
-              </CardContent>
-            </Card>
-          </Box>
-        </TabPanel>
-
-        <TabPanel value={activeTab} index={8}>
-          <Box p={3} className="space-y-6">
-            <Card>
-              <CardHeader title="Analytics & Reporting" />
-              <CardContent>
-                <Typography variant="body2" color="text.secondary">
-                  Chat analytics and performance metrics will be displayed here
-                </Typography>
-              </CardContent>
-            </Card>
-          </Box>
-        </TabPanel>
-      </Paper>
+        {/* Additional tabs would go here */}
+        
+        </Paper>
+      </Box>
 
       {/* Save Button */}
-      <Box mt={4} className="flex justify-end">
-        <motion.div
-          animate={saveSuccess ? { scale: [1, 1.05, 1] } : {}}
-          transition={{ duration: 0.3 }}
-        >
-          <Button 
-            variant="contained" 
-            onClick={saveSettings}
-            disabled={saving || saveSuccess}
-            size="large"
-            className="px-8"
-            sx={{
-              backgroundColor: saveSuccess ? '#4caf50' : undefined,
-              color: saveSuccess ? 'white' : undefined,
-              '&:hover': {
-                backgroundColor: saveSuccess ? '#45a049' : undefined,
-              },
-              transition: 'all 0.3s ease-in-out',
-              position: 'relative',
-              overflow: 'hidden'
-            }}
-            startIcon={
-              saving ? (
-                <CircularProgress size={20} color="inherit" />
+      <motion.div
+        animate={saveSuccess ? { scale: [1, 1.05, 1] } : {}}
+        transition={{ duration: 0.3 }}
+        style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1000 }}
+      >
+        <Button
+          variant="contained"
+          size="large"
+          onClick={saveSettings}
+          disabled={saving || saveSuccess}
+          sx={{
+            minWidth: 200,
+            py: 1.5,
+            backgroundColor: saveSuccess ? '#4caf50' : undefined,
+            color: saveSuccess ? 'white' : undefined,
+            '&:hover': {
+              backgroundColor: saveSuccess ? '#45a049' : undefined,
+            }
+          }}
+          startIcon={
+            <AnimatePresence mode="wait">
+              {saving ? (
+                <CircularProgress
+                  key="loading"
+                  size={20}
+                  color="inherit"
+                />
               ) : saveSuccess ? (
                 <motion.div
+                  key="success"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ delay: 0.1, type: 'spring' }}
+                  exit={{ scale: 0 }}
                 >
                   <CheckCircle />
                 </motion.div>
               ) : (
-                <Settings />
-              )
-            }
-          >
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={saving ? 'saving' : saveSuccess ? 'success' : 'default'}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                {saving ? 'Saving...' : saveSuccess ? 'Saved Successfully!' : 'Save All Settings'}
-              </motion.span>
+                <Save
+                  key={saving ? 'saving' : saveSuccess ? 'success' : 'default'}
+                />
+              )}
             </AnimatePresence>
-          </Button>
-        </motion.div>
-      </Box>
-
-      {/* Color Picker Dialog */}
-      <Dialog open={colorPickerOpen} onClose={() => setColorPickerOpen(false)}>
-        <DialogTitle>Choose Widget Color</DialogTitle>
-        <DialogContent>
-          <ColorPicker
-            color={settings.widget_color}
-            onChange={(color) => updateSetting('widget_color', color)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setColorPickerOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Profile Edit Modal */}
-      <ProfileEditModal
-        open={showProfileModal}
-        onOpenChange={setShowProfileModal}
-        user={currentUser}
-        onProfileUpdate={(updatedUser) => {
-          setCurrentUser(updatedUser);
-          localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-        }}
-      />
-      </Box>
+          }
+        >
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={saving ? 'saving' : saveSuccess ? 'success' : 'default'}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {saving ? 'Saving...' : saveSuccess ? 'Saved Successfully!' : 'Save All Settings'}
+            </motion.span>
+          </AnimatePresence>
+        </Button>
+      </motion.div>
     </div>
   );
 };
