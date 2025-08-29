@@ -1497,6 +1497,14 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
 
                       {/* Form Fields Container */}
                       <Box sx={{ '& > *': { mb: 2 } }}>
+                        {console.log('🔍 DEBUG - Form render:', { 
+                          require_name: settings?.require_name,
+                          require_email: settings?.require_email,
+                          require_phone: settings?.require_phone,
+                          require_department: settings?.require_department,
+                          preChatData: preChatData
+                        })}
+                        
                         {/* Name Field */}
                         {settings?.require_name && (
                           <TextField
@@ -1527,38 +1535,50 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         )}
                       </Box>
 
-                      {/* Phone Field Debug - This should NOT render since require_phone is 0 */}
-                      {console.log('🔍 Phone field check:', settings?.require_phone, 'Type:', typeof settings?.require_phone)}
-                      {settings?.require_phone && settings?.require_phone !== 0 && (
-                        <TextField
-                          fullWidth
-                          size="small"
-                          type="tel"
-                          label="Phone Number *"
-                          value={preChatData.phone || ''}
-                          onChange={(e) => setPreChatData(prev => ({ ...prev, phone: e.target.value }))}
-                          error={!!preChatErrors.phone}
-                          helperText={preChatErrors.phone}
-                          sx={{ mb: 2 }}
-                        />
+                      {/* Phone Field - Should not render since require_phone is 0 */}
+                      {settings?.require_phone && (
+                        <>
+                          {console.log('🔍 DEBUG - Phone field rendering!', { 
+                            require_phone: settings.require_phone,
+                            phone_value: preChatData.phone
+                          })}
+                          <TextField
+                            fullWidth
+                            size="small"
+                            type="tel"
+                            label="Phone Number *"
+                            value={preChatData.phone || ''}
+                            onChange={(e) => setPreChatData(prev => ({ ...prev, phone: e.target.value }))}
+                            error={!!preChatErrors.phone}
+                            helperText={preChatErrors.phone}
+                            sx={{ mb: 2 }}
+                            autoComplete="off"
+                          />
+                        </>
                       )}
 
                       {/* Department Field - Should not render */}
                       {settings?.require_department && (
-                        <FormControl fullWidth size="small" error={!!preChatErrors.department} sx={{ mb: 2 }}>
-                          <InputLabel>Department *</InputLabel>
-                          <Select
-                            value={preChatData.department || ''}
-                            label="Department *"
-                            onChange={(e) => setPreChatData(prev => ({ ...prev, department: e.target.value }))}
-                          >
-                            <MenuItem value="">Select Department</MenuItem>
-                            <MenuItem value="general">General Support</MenuItem>
-                            <MenuItem value="technical">Technical Support</MenuItem>
-                            <MenuItem value="billing">Billing</MenuItem>
-                            <MenuItem value="sales">Sales</MenuItem>
-                          </Select>
-                        </FormControl>
+                        <>
+                          {console.log('🔍 DEBUG - Department field rendering!', { 
+                            require_department: settings.require_department,
+                            department_value: preChatData.department
+                          })}
+                          <FormControl fullWidth size="small" error={!!preChatErrors.department} sx={{ mb: 2 }}>
+                            <InputLabel>Department *</InputLabel>
+                            <Select
+                              value={preChatData.department || ''}
+                              label="Department *"
+                              onChange={(e) => setPreChatData(prev => ({ ...prev, department: e.target.value }))}
+                            >
+                              <MenuItem value="">Select Department</MenuItem>
+                              <MenuItem value="general">General Support</MenuItem>
+                              <MenuItem value="technical">Technical Support</MenuItem>
+                              <MenuItem value="billing">Billing</MenuItem>
+                              <MenuItem value="sales">Sales</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </>
                       )}
 
 

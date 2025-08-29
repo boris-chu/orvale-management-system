@@ -234,7 +234,7 @@ export async function PUT(request: NextRequest) {
         settings.widget_shape || 'circle',
         settings.widget_color || '#1976d2',
         settings.widget_size || 'medium',
-        settings.widget_position || 'bottom-right',
+        settings.widget_position === 'custom' ? 'bottom-right' : (settings.widget_position || 'bottom-right'), // Map custom to bottom-right for DB constraint
         settings.widget_position_x || 0,
         settings.widget_position_y || 0,
         '', // widget_icon disabled - no longer using icons
