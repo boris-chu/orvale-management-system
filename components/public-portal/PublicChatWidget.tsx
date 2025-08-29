@@ -125,13 +125,47 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
   const widgetRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
+  // Debug helper - expose to window for console testing
+  useEffect(() => {
+    (window as any).debugChatWidget = {
+      checkLocalStorage: () => {
+        const session = localStorage.getItem('public_chat_session');
+        console.log('📱 Current localStorage session:', session);
+        return session;
+      },
+      checkSessionRecovery: () => {
+        console.log('🔄 Manual session recovery check');
+        checkSessionRecovery();
+      },
+      checkSettings: () => {
+        console.log('⚙️ Current settings:', settings);
+        return settings;
+      },
+      getCurrentState: () => {
+        console.log('📊 Current widget state:', {
+          isOpen,
+          sessionId,
+          showPreChatForm,
+          messages,
+          settings: settings?.session_recovery_enabled
+        });
+      }
+    };
+  }, [settings, isOpen, sessionId, showPreChatForm, messages]);
+
   // Load widget settings on mount
   useEffect(() => {
     loadWidgetSettings();
     checkPageVisibility();
-    checkSessionRecovery();
     loadAvailableAgents();
   }, []);
+
+  // Check session recovery after settings are loaded
+  useEffect(() => {
+    if (settings) {
+      checkSessionRecovery();
+    }
+  }, [settings]);
 
   // Refresh agents periodically while widget is open
   useEffect(() => {
@@ -148,6 +182,23 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
       
       // Connect to public portal socket
       publicPortalSocket.connect();
+      
+      // Check for automatic session recovery
+      const recoverySessionId = sessionStorage.getItem('recovery_session_id');
+      const recoveryGuestInfo = sessionStorage.getItem('recovery_guest_info');
+      
+      if (recoverySessionId && recoveryGuestInfo && sessionId) {
+        console.log('🔄 Auto-attempting session recovery for:', recoverySessionId);
+        try {
+          const guestInfo = JSON.parse(recoveryGuestInfo);
+          startChatSession(guestInfo); // This will handle the recovery internally
+        } catch (error) {
+          console.error('Failed to parse recovery guest info:', error);
+          sessionStorage.removeItem('recovery_session_id');
+          sessionStorage.removeItem('recovery_guest_info');
+          setLoading(false);
+        }
+      }
 
       // Set up event listeners
       publicPortalSocket.addEventListener(componentId, 'session:started', (data) => {
@@ -155,6 +206,28 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
         setSessionId(data.sessionId);
         setQueuePosition(data.queuePosition || 1); // Default to position 1 if undefined
         setLoading(false);
+        
+        // Store session for recovery
+        if (settings?.session_recovery_enabled) {
+          const sessionData = {
+            id: data.sessionId,
+            timestamp: Date.now(),
+            messages: messages,
+            unreadCount: unreadCount,
+            guestName: preChatData.name,
+            guestEmail: preChatData.email,
+            guestPhone: preChatData.phone,
+            guestDepartment: preChatData.department
+          };
+          console.log('💾 Saving session to localStorage:', sessionData);
+          localStorage.setItem('public_chat_session', JSON.stringify(sessionData));
+          console.log('✅ Session saved to localStorage');
+        } else {
+          console.log('❌ Session recovery disabled, not saving to localStorage');
+        }
+        
+        // Clear pre-chat form and show chat interface
+        setShowPreChatForm(false);
         
         // Add system message about queue position
         const position = data.queuePosition || 1;
@@ -165,7 +238,26 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
             timestamp: new Date(),
             id: Date.now()
           };
-          setMessages(prev => [...prev, queueMessage]);
+          setMessages(prev => {
+            const updatedMessages = [...prev, queueMessage];
+            
+            // Update localStorage with new messages
+            if (settings?.session_recovery_enabled) {
+              console.log('💾 Updating localStorage with new message');
+              localStorage.setItem('public_chat_session', JSON.stringify({
+                id: data.sessionId,
+                timestamp: Date.now(),
+                messages: updatedMessages,
+                unreadCount: unreadCount,
+                guestName: preChatData.name,
+                guestEmail: preChatData.email,
+                guestPhone: preChatData.phone,
+                guestDepartment: preChatData.department
+              }));
+            }
+            
+            return updatedMessages;
+          });
         } else {
           const connectingMessage = {
             sender: 'system',
@@ -173,7 +265,26 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
             timestamp: new Date(),
             id: Date.now()
           };
-          setMessages(prev => [...prev, connectingMessage]);
+          setMessages(prev => {
+            const updatedMessages = [...prev, connectingMessage];
+            
+            // Update localStorage with new messages
+            if (settings?.session_recovery_enabled) {
+              console.log('💾 Updating localStorage with new message');
+              localStorage.setItem('public_chat_session', JSON.stringify({
+                id: data.sessionId,
+                timestamp: Date.now(),
+                messages: updatedMessages,
+                unreadCount: unreadCount,
+                guestName: preChatData.name,
+                guestEmail: preChatData.email,
+                guestPhone: preChatData.phone,
+                guestDepartment: preChatData.department
+              }));
+            }
+            
+            return updatedMessages;
+          });
         }
       });
 
@@ -203,6 +314,23 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
           id: Date.now()
         };
         setMessages(prev => [...prev, updateMessage]);
+      });
+
+      // Listen for individual queue position updates
+      publicPortalSocket.addEventListener(componentId, 'queue:position_update', (data) => {
+        console.log('Queue position update:', data);
+        if (data.queuePosition) {
+          setQueuePosition(data.queuePosition);
+          
+          // Add position update message
+          const positionMessage = {
+            sender: 'system',
+            text: `Queue position updated: ${data.queuePosition}. ${data.estimatedWaitTime ? `Estimated wait time: ${data.estimatedWaitTime} minutes.` : ''}`,
+            timestamp: new Date(),
+            id: Date.now()
+          };
+          setMessages(prev => [...prev, positionMessage]);
+        }
       });
 
       publicPortalSocket.addEventListener(componentId, 'agent:assigned', (data) => {
@@ -260,6 +388,49 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
           id: Date.now()
         };
         setMessages(prev => [...prev, endMessage]);
+        
+        // Clear session from localStorage when ended
+        localStorage.removeItem('public_chat_session');
+      });
+
+      // Handle session recovery
+      publicPortalSocket.addEventListener(componentId, 'session:recovered', (data) => {
+        console.log('✅ Session recovered successfully:', data);
+        setSessionId(data.sessionId);
+        setLoading(false);
+        setShowPreChatForm(false);
+        
+        if (data.status === 'waiting') {
+          setQueuePosition(data.queuePosition);
+          setConnectedAgent(null);
+          
+          const recoveryMessage = {
+            sender: 'system',
+            text: `Welcome back! You are in position ${data.queuePosition} in the queue. ${data.estimatedWaitTime ? `Estimated wait time: ${data.estimatedWaitTime} minutes.` : ''}`,
+            timestamp: new Date(),
+            id: Date.now()
+          };
+          setMessages(prev => [...prev, recoveryMessage]);
+        } else if (data.status === 'connected') {
+          setQueuePosition(null);
+          setConnectedAgent(data.agentName || 'Support Agent');
+          
+          const recoveryMessage = {
+            sender: 'system',
+            text: `Welcome back! You are still connected with your support agent. How can they continue to help you?`,
+            timestamp: new Date(),
+            id: Date.now()
+          };
+          setMessages(prev => [...prev, recoveryMessage]);
+        }
+        
+        // Update stored session
+        localStorage.setItem('public_chat_session', JSON.stringify({
+          id: data.sessionId,
+          timestamp: Date.now(),
+          messages: messages,
+          unreadCount: unreadCount
+        }));
       });
 
       // Listen for agent availability updates
@@ -274,15 +445,27 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
         console.log('Chat connection issue detected');
         setLoading(false);
         
-        // Add user-friendly error message
-        const errorMessage = {
-          sender: 'system',
-          text: error.userMessage || 'Chat service is temporarily unavailable. Please try submitting a ticket instead.',
-          timestamp: new Date(),
-          id: Date.now(),
-          type: 'error'
-        };
-        setMessages(prev => [...prev, errorMessage]);
+        // Only add error message if we don't already have one
+        setMessages(prev => {
+          const hasErrorMessage = prev.some(msg => 
+            msg.sender === 'system' && 
+            msg.type === 'error' && 
+            msg.text.includes('Chat service is temporarily unavailable')
+          );
+          
+          if (!hasErrorMessage) {
+            const errorMessage = {
+              sender: 'system',
+              text: error.userMessage || 'Chat service is temporarily unavailable. Please try submitting a ticket instead.',
+              timestamp: new Date(),
+              id: Date.now(),
+              type: 'error'
+            };
+            return [...prev, errorMessage];
+          }
+          
+          return prev;
+        });
         
         // Set offline status
         setIsOnline(false);
@@ -374,12 +557,16 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
   // Load settings from API
   const loadWidgetSettings = async () => {
     try {
-      const response = await fetch('/api/public-portal/widget-status');
+      const response = await fetch('/api/public-portal/widget-settings');
       if (response.ok) {
         const data = await response.json();
         console.log('Widget settings loaded:', data);
         setSettings(data);
-        setIsOnline(data.status === 'online');
+        
+        // Set online status based on enabled state and business hours
+        const isWidgetOnline = data.enabled && data.status === 'online';
+        setIsOnline(isWidgetOnline);
+        console.log('🟢 Widget online status:', isWidgetOnline, '| Status:', data.status, '| Enabled:', data.enabled, '| Ignore hours:', data.ignore_business_hours);
         
         // Parse JSON fields if they exist
         if (data.schedule_json) {
@@ -410,21 +597,60 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
 
   // Check for existing session to recover
   const checkSessionRecovery = () => {
-    if (!settings?.session_recovery_enabled) return;
+    console.log('🔍 Checking session recovery...');
+    console.log('Settings:', settings);
+    console.log('Session recovery enabled:', settings?.session_recovery_enabled);
+    
+    if (!settings?.session_recovery_enabled) {
+      console.log('❌ Session recovery is disabled');
+      return;
+    }
     
     const storedSession = localStorage.getItem('public_chat_session');
+    console.log('📱 Stored session from localStorage:', storedSession);
+    
     if (storedSession) {
-      const session = JSON.parse(storedSession);
-      const sessionAge = Date.now() - session.timestamp;
-      const maxAge = settings.session_recovery_minutes * 60 * 1000;
-      
-      if (sessionAge < maxAge) {
-        setSessionId(session.id);
-        setMessages(session.messages || []);
-        setUnreadCount(session.unreadCount || 0);
-      } else {
+      try {
+        const session = JSON.parse(storedSession);
+        const sessionAge = Date.now() - session.timestamp;
+        const maxAge = (settings.session_recovery_minutes || 10) * 60 * 1000;
+        
+        console.log('⏱️ Session age:', Math.round(sessionAge / 1000), 'seconds');
+        console.log('⏳ Max age allowed:', Math.round(maxAge / 1000), 'seconds');
+        
+        if (sessionAge < maxAge) {
+          console.log('🔄 Found recoverable session:', session.id);
+          
+          // Restore UI state immediately
+          setSessionId(session.id);
+          setMessages(session.messages || []);
+          setUnreadCount(session.unreadCount || 0);
+          setIsOpen(true); // Auto-open chat widget
+          setShowPreChatForm(false); // Skip pre-chat form
+          setLoading(true); // Show loading while attempting recovery
+          
+          // Set flag to attempt recovery on socket connection
+          sessionStorage.setItem('recovery_session_id', session.id);
+          sessionStorage.setItem('recovery_guest_info', JSON.stringify({
+            name: session.guestName || 'Guest',
+            email: session.guestEmail || '',
+            phone: session.guestPhone || '',
+            department: session.guestDepartment || ''
+          }));
+          
+          console.log('✅ Session recovery state restored');
+        } else {
+          console.log('❌ Session expired, removing from storage');
+          localStorage.removeItem('public_chat_session');
+          sessionStorage.removeItem('recovery_session_id');
+          sessionStorage.removeItem('recovery_guest_info');
+        }
+      } catch (error) {
+        console.error('❌ Error parsing stored session:', error);
         localStorage.removeItem('public_chat_session');
       }
+    } else {
+      console.log('📭 No stored session found');
     }
   };
 
@@ -612,6 +838,11 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
   const handleClose = () => {
     setIsOpen(false);
     setIsMinimized(false);
+    // Clear messages to prevent error message accumulation
+    setMessages([]);
+    // Reset session state
+    setSessionId(null);
+    setShowPreChatForm(false);
   };
 
   // Handle sending messages
@@ -797,7 +1028,20 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
 
   // Handle starting chat session (when pre-chat form data is available)
   const startChatSession = (guestInfo: { name: string; email: string; phone?: string; department?: string }) => {
-    publicPortalSocket.startSession(guestInfo);
+    // Check if we have a recovery session ID
+    const recoverySessionId = sessionStorage.getItem('recovery_session_id');
+    
+    if (recoverySessionId) {
+      console.log('🔄 Attempting session recovery with ID:', recoverySessionId);
+      sessionStorage.removeItem('recovery_session_id'); // Clear after use
+      
+      publicPortalSocket.startSession({
+        ...guestInfo,
+        recoverySessionId
+      });
+    } else {
+      publicPortalSocket.startSession(guestInfo);
+    }
   };
 
   // Handle widget click
@@ -1337,11 +1581,15 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                           '&:hover': { 
                             backgroundColor: settings?.widget?.color || settings?.widget_color || '#1976d2',
                             opacity: 0.9 
+                          },
+                          '&:disabled': {
+                            backgroundColor: '#ccc',
+                            color: '#666'
                           }
                         }}
                         startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
                       >
-                        {loading ? 'Starting Chat...' : 'Start Chat'}
+                        {!isOnline ? 'Chat Offline' : loading ? 'Starting Chat...' : 'Start Chat'}
                       </Button>
 
                       {!isOnline && (

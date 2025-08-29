@@ -783,7 +783,7 @@ const PublicPortalAdmin = () => {
                           type="number"
                           size="small"
                           label="X Position (Left)"
-                          value={settings.widget_position_x}
+                          value={settings.widget_position_x || 0}
                           onChange={(e) => updateSetting('widget_position_x', parseInt(e.target.value) || 0)}
                           inputProps={{ min: 0, max: 2000 }}
                           helperText="Distance from left edge"
@@ -795,7 +795,7 @@ const PublicPortalAdmin = () => {
                           type="number"
                           size="small"
                           label="Y Position (Top)"
-                          value={settings.widget_position_y}
+                          value={settings.widget_position_y || 0}
                           onChange={(e) => updateSetting('widget_position_y', parseInt(e.target.value) || 0)}
                           inputProps={{ min: 0, max: 2000 }}
                           helperText="Distance from top edge"
@@ -1575,7 +1575,7 @@ const PublicPortalAdmin = () => {
                       type="number"
                       size="small"
                       label="Max File Size (MB)"
-                      value={settings.max_file_size_mb}
+                      value={settings.max_file_size_mb || 5}
                       onChange={(e) => updateSetting('max_file_size_mb', parseInt(e.target.value))}
                       inputProps={{ min: 1, max: 50 }}
                     />
@@ -1603,7 +1603,7 @@ const PublicPortalAdmin = () => {
                     type="number"
                     size="small"
                     label="Session Recovery Time (minutes)"
-                    value={settings.session_recovery_minutes}
+                    value={settings.session_recovery_minutes || 10}
                     onChange={(e) => updateSetting('session_recovery_minutes', parseInt(e.target.value))}
                     inputProps={{ min: 1, max: 30 }}
                   />
@@ -1734,7 +1734,7 @@ const PublicPortalAdmin = () => {
                       type="number"
                       size="small"
                       label="Disconnect Timeout (seconds)"
-                      value={settings.staff_disconnect_timeout}
+                      value={settings.staff_disconnect_timeout || 30}
                       onChange={(e) => updateSetting('staff_disconnect_timeout', parseInt(e.target.value))}
                       inputProps={{ min: 10, max: 300 }}
                       helperText="Time before considering staff disconnected"
@@ -1746,7 +1746,7 @@ const PublicPortalAdmin = () => {
                       type="number"
                       size="small"
                       label="Grace Period (seconds)"
-                      value={settings.grace_period_seconds}
+                      value={settings.grace_period_seconds || 60}
                       onChange={(e) => updateSetting('grace_period_seconds', parseInt(e.target.value))}
                       inputProps={{ min: 30, max: 300 }}
                       helperText="Time to wait for staff reconnection"
@@ -1758,7 +1758,7 @@ const PublicPortalAdmin = () => {
                       type="number"
                       size="small"
                       label="Auto-Reassign Timeout (seconds)"
-                      value={settings.auto_reassign_after_seconds}
+                      value={settings.auto_reassign_after_seconds || 300}
                       onChange={(e) => updateSetting('auto_reassign_after_seconds', parseInt(e.target.value))}
                       inputProps={{ min: 60, max: 600 }}
                       helperText="Max time before forcing reassignment"
@@ -1852,7 +1852,7 @@ const PublicPortalAdmin = () => {
                         type="number"
                         size="small"
                         label="Max Disconnects Before Escalation"
-                        value={settings.max_disconnects_before_escalation}
+                        value={settings.max_disconnects_before_escalation || 3}
                         onChange={(e) => updateSetting('max_disconnects_before_escalation', parseInt(e.target.value))}
                         inputProps={{ min: 1, max: 5 }}
                         helperText="Number of disconnects that trigger escalation"
@@ -1892,7 +1892,7 @@ const PublicPortalAdmin = () => {
                   type="number"
                   size="small"
                   label="Guest Inactivity Timeout (minutes)"
-                  value={settings.guest_inactivity_timeout}
+                  value={settings.guest_inactivity_timeout || 30}
                   onChange={(e) => updateSetting('guest_inactivity_timeout', parseInt(e.target.value))}
                   inputProps={{ min: 5, max: 60 }}
                   helperText="Minutes of guest inactivity before considering session abandoned"
@@ -2005,7 +2005,7 @@ const PublicPortalAdmin = () => {
                         <TextField
                           label="Max Queue Time (minutes)"
                           type="number"
-                          value={settings.work_mode_max_queue_time_minutes}
+                          value={settings.work_mode_max_queue_time_minutes || 30}
                           onChange={(e) => updateSetting('work_mode_max_queue_time_minutes', parseInt(e.target.value))}
                           helperText="Time before escalating unassigned chats"
                           fullWidth
@@ -2119,7 +2119,7 @@ const PublicPortalAdmin = () => {
                         <TextField
                           label="Break Timeout (minutes)"
                           type="number"
-                          value={settings.work_mode_break_timeout_minutes}
+                          value={settings.work_mode_break_timeout_minutes || 15}
                           onChange={(e) => updateSetting('work_mode_break_timeout_minutes', parseInt(e.target.value))}
                           helperText="Automatically change from 'Break' to 'Away' after timeout"
                           fullWidth
@@ -2130,7 +2130,7 @@ const PublicPortalAdmin = () => {
                         <TextField
                           label="Away Timeout (minutes)"
                           type="number"
-                          value={settings.work_mode_away_timeout_minutes}
+                          value={settings.work_mode_away_timeout_minutes || 30}
                           onChange={(e) => updateSetting('work_mode_away_timeout_minutes', parseInt(e.target.value))}
                           helperText="Time before marking inactive staff as 'Away'"
                           fullWidth

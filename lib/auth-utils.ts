@@ -99,7 +99,7 @@ export async function getUserPermissions(role: string): Promise<string[]> {
 
     // Get all permissions for this role
     const permissions = await getAsync(
-      `SELECT GROUP_CONCAT(rp.permission) as permissions
+      `SELECT GROUP_CONCAT(rp.permission_id) as permissions
        FROM role_permissions rp 
        WHERE rp.role_id = ?`,
       [roleData.id]

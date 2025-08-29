@@ -29,6 +29,8 @@ class PublicPortalSocket {
   private eventListeners = new Map<string, Map<string, Function>>();
   private sessionId: string | null = null;
   private reconnectTimer: NodeJS.Timeout | null = null;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 3; // Reduced to prevent infinite errors
 
   /**
    * Connect to the public portal namespace
@@ -56,6 +58,7 @@ class PublicPortalSocket {
     this.socket.on('connect', () => {
       console.log('✅ Public portal socket connected');
       this.isConnecting = false;
+      this.reconnectAttempts = 0; // Reset attempts on successful connection
 
       // If we have guest info, start a session
       if (guestInfo) {
@@ -94,11 +97,20 @@ class PublicPortalSocket {
     this.socket.on('connect_error', (error) => {
       console.warn('🔌 Chat connection temporarily unavailable');
       this.isConnecting = false;
-      this.emitStoredEvent('connect_error', { 
-        type: 'connection_error',
-        userMessage: 'Chat service is temporarily unavailable. Please try again in a moment.',
-        technicalError: error.message 
-      });
+      this.reconnectAttempts++;
+      
+      // Only emit error if we haven't exceeded max attempts
+      if (this.reconnectAttempts <= this.maxReconnectAttempts) {
+        this.emitStoredEvent('connect_error', { 
+          type: 'connection_error',
+          userMessage: 'Chat service is temporarily unavailable. Please try submitting a ticket instead.',
+          technicalError: error.message 
+        });
+      } else {
+        console.warn('🚫 Max reconnection attempts reached, stopping error emission');
+        // Stop trying to reconnect after max attempts
+        this.socket?.disconnect();
+      }
     });
 
     return this.socket;
@@ -113,6 +125,7 @@ class PublicPortalSocket {
     phone?: string; 
     department?: string;
     customFields?: Record<string, any>;
+    recoverySessionId?: string;
   }) {
     if (!this.socket?.connected) {
       console.error('Cannot start session: socket not connected');

@@ -970,54 +970,184 @@ console.log('✅ Built-in presence timeout management started');
 const publicPortalNamespace = io.of('/public-portal');
 console.log('🌐 Public portal namespace created at /public-portal');
 
+// Load existing waiting sessions from database into memory on server startup
+const loadWaitingSessionsFromDatabase = () => {
+  db.all(
+    `SELECT session_id, visitor_name, visitor_email, session_data, created_at 
+     FROM public_chat_sessions 
+     WHERE status = 'waiting' 
+     ORDER BY created_at ASC`,
+    (err, rows) => {
+      if (err) {
+        console.error('❌ Error loading waiting sessions from database:', err);
+        return;
+      }
+      
+      if (rows && rows.length > 0) {
+        console.log(`📋 Loading ${rows.length} waiting sessions from database...`);
+        
+        rows.forEach(row => {
+          // Add to queue
+          if (!publicQueue.includes(row.session_id)) {
+            publicQueue.push(row.session_id);
+          }
+          
+          // Add to memory sessions
+          const sessionData = row.session_data ? JSON.parse(row.session_data) : {};
+          publicSessions.set(row.session_id, {
+            socketId: null, // No socket connected yet
+            guestName: row.visitor_name,
+            email: row.visitor_email,
+            startTime: new Date(row.created_at),
+            status: 'waiting',
+            phone: sessionData.phone || null,
+            department: sessionData.department || null
+          });
+          
+          console.log(`  ✅ Loaded session: ${row.session_id} (${row.visitor_name}) - Position ${publicQueue.indexOf(row.session_id) + 1}`);
+        });
+        
+        console.log(`📊 Queue initialized with ${publicQueue.length} waiting sessions`);
+        
+        // Notify staff of current queue state
+        setTimeout(() => {
+          notifyAvailableAgents();
+        }, 1000); // Delay to ensure server is fully initialized
+      } else {
+        console.log('📋 No waiting sessions found in database');
+      }
+    }
+  );
+};
+
+// Load waiting sessions on startup
+loadWaitingSessionsFromDatabase();
+
 // Public portal connection handling
 publicPortalNamespace.on('connection', async (socket) => {
   console.log(`🌐 Public portal connection: ${socket.id} from ${socket.handshake.address}`);
+  console.log(`🔑 Auth token present: ${socket.handshake.auth?.token ? 'Yes' : 'No'}`);
+  
+  // If this is a staff connection (has auth token), send immediate queue update
+  if (socket.handshake.auth?.token) {
+    console.log(`👤 Staff connected: ${socket.id}, sending queue update`);
+    setTimeout(() => {
+      console.log(`📤 Sending queue update to staff: ${publicQueue.length} sessions`);
+      notifyAvailableAgents();
+    }, 500); // Short delay to ensure connection is established
+  }
   
   // Handle guest authentication (no JWT required)
   socket.on('guest:start_session', async (data) => {
-    const { name, email, phone, department, customFields } = data;
-    const sessionId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const { name, email, phone, department, customFields, recoverySessionId } = data;
     
     try {
-      // Create session in database
-      db.run(
-        `INSERT INTO public_chat_sessions 
-         (session_id, guest_name, guest_email, guest_phone, department, custom_fields, start_time, status) 
-         VALUES (?, ?, ?, ?, ?, ?, datetime('now'), 'waiting')`,
-        [sessionId, name, email, phone, department, JSON.stringify(customFields || {})]
-      );
+      // Check for session recovery first
+      if (recoverySessionId) {
+        console.log(`🔄 Attempting session recovery for: ${recoverySessionId}`);
+        
+        // Check if session exists and is within recovery window (10 minutes)
+        const existingSession = publicSessions.get(recoverySessionId);
+        if (existingSession) {
+          // Restore session
+          socket.sessionId = recoverySessionId;
+          socket.guestName = existingSession.guestName;
+          socket.join(`session:${recoverySessionId}`);
+          
+          // Update session with new socket
+          existingSession.socketId = socket.id;
+          existingSession.lastReconnect = new Date();
+          
+          // Check if still in queue or already connected to agent
+          const queuePosition = publicQueue.indexOf(recoverySessionId);
+          if (queuePosition > -1) {
+            // Still in queue - send current position
+            socket.emit('session:recovered', {
+              sessionId: recoverySessionId,
+              queuePosition: queuePosition + 1,
+              estimatedWaitTime: (queuePosition + 1) * 2,
+              status: 'waiting'
+            });
+            
+            console.log(`✅ Session recovered: ${recoverySessionId} at position ${queuePosition + 1}`);
+          } else {
+            // Check if connected to agent
+            db.get(
+              'SELECT assigned_to FROM public_chat_sessions WHERE session_id = ?',
+              [recoverySessionId],
+              (err, row) => {
+                if (row && row.assigned_to) {
+                  socket.emit('session:recovered', {
+                    sessionId: recoverySessionId,
+                    status: 'connected',
+                    agentId: row.assigned_to
+                  });
+                  console.log(`✅ Session recovered: ${recoverySessionId} connected to agent ${row.assigned_to}`);
+                } else {
+                  // Session expired, create new one
+                  createNewGuestSession();
+                }
+              }
+            );
+          }
+          return;
+        } else {
+          console.log(`❌ Recovery session ${recoverySessionId} not found or expired`);
+        }
+      }
       
-      // Track in memory
-      publicSessions.set(sessionId, {
-        socketId: socket.id,
-        guestName: name,
-        email: email,
-        startTime: new Date(),
-        status: 'waiting'
-      });
+      // Create new session
+      createNewGuestSession();
       
-      // Add to queue
-      publicQueue.push(sessionId);
+      function createNewGuestSession() {
+        const sessionId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Create session in database
+        db.run(
+          `INSERT INTO public_chat_sessions 
+           (session_id, visitor_name, visitor_email, session_data, status) 
+           VALUES (?, ?, ?, ?, 'waiting')`,
+          [sessionId, name, email, JSON.stringify({
+            phone: phone || null,
+            department: department || null,
+            customFields: customFields || {}
+          })]
+        );
+        
+        // Track in memory
+        publicSessions.set(sessionId, {
+          socketId: socket.id,
+          guestName: name,
+          email: email,
+          startTime: new Date(),
+          status: 'waiting'
+        });
+        
+        // Add to queue
+        publicQueue.push(sessionId);
+        
+        // Store session ID on socket
+        socket.sessionId = sessionId;
+        socket.guestName = name;
+        
+        // Join session room
+        socket.join(`session:${sessionId}`);
+        
+        // Send confirmation with correct queue position
+        const actualPosition = publicQueue.indexOf(sessionId) + 1; // 1-based position
+        socket.emit('session:started', {
+          sessionId,
+          queuePosition: actualPosition,
+          estimatedWaitTime: actualPosition * 2 // 2 minutes per person estimate
+        });
+        
+        // Notify available agents and update guest positions
+        notifyAvailableAgents();
+        notifyGuestPositions();
+        
+        console.log(`✅ Guest session started: ${sessionId} for ${name}`);
+      }
       
-      // Store session ID on socket
-      socket.sessionId = sessionId;
-      socket.guestName = name;
-      
-      // Join session room
-      socket.join(`session:${sessionId}`);
-      
-      // Send confirmation
-      socket.emit('session:started', {
-        sessionId,
-        queuePosition: publicQueue.length,
-        estimatedWaitTime: publicQueue.length * 2 // 2 minutes per person estimate
-      });
-      
-      // Notify available agents
-      notifyAvailableAgents();
-      
-      console.log(`✅ Guest session started: ${sessionId} for ${name}`);
     } catch (error) {
       console.error('Failed to start guest session:', error);
       socket.emit('session:error', { message: 'Failed to start chat session' });
@@ -1038,9 +1168,9 @@ publicPortalNamespace.on('connection', async (socket) => {
       // Save message to database
       db.run(
         `INSERT INTO public_chat_messages 
-         (message_id, session_id, sender_type, sender_id, message_text, message_type, created_at) 
-         VALUES (?, ?, 'guest', ?, ?, ?, datetime('now'))`,
-        [messageId, socket.sessionId, socket.sessionId, message, type]
+         (session_id, sender_type, sender_id, sender_name, message_text, message_type) 
+         VALUES (?, 'guest', ?, ?, ?, ?)`,
+        [socket.sessionId, socket.sessionId, socket.guestName || 'Guest', message, type || 'text']
       );
       
       // Get session info
@@ -1100,7 +1230,7 @@ publicPortalNamespace.on('connection', async (socket) => {
       
       // Update database
       db.run(
-        'UPDATE public_chat_sessions SET assigned_agent_id = ?, status = ?, agent_assigned_at = datetime("now") WHERE session_id = ?',
+        'UPDATE public_chat_sessions SET assigned_to = ?, status = ? WHERE session_id = ?',
         [socket.userId, 'active', sessionId]
       );
       
@@ -1108,6 +1238,12 @@ publicPortalNamespace.on('connection', async (socket) => {
       const queueIndex = publicQueue.indexOf(sessionId);
       if (queueIndex > -1) {
         publicQueue.splice(queueIndex, 1);
+        
+        // Notify remaining guests of updated positions
+        notifyGuestPositions();
+        
+        // Notify staff of updated queue
+        notifyAvailableAgents();
       }
       
       // Notify guest that agent connected
@@ -1131,9 +1267,9 @@ publicPortalNamespace.on('connection', async (socket) => {
       // Save message to database
       db.run(
         `INSERT INTO public_chat_messages 
-         (message_id, session_id, sender_type, sender_id, message_text, message_type, created_at) 
-         VALUES (?, ?, 'staff', ?, ?, 'text', datetime('now'))`,
-        [messageId, sessionId, socket.userId, message]
+         (session_id, sender_type, sender_id, sender_name, message_text, message_type) 
+         VALUES (?, 'staff', ?, ?, ?, 'text')`,
+        [sessionId, socket.userId, socket.userDisplayName || 'Staff', message]
       );
       
       // Send to guest in session
@@ -1188,7 +1324,7 @@ publicPortalNamespace.on('connection', async (socket) => {
       
       // Update database
       db.run(
-        'UPDATE public_chat_sessions SET status = ? WHERE session_id = ? AND assigned_agent_id = ?',
+        'UPDATE public_chat_sessions SET status = ?, assigned_to = NULL WHERE session_id = ? AND assigned_to = ?',
         ['waiting', sessionId, socket.userId]
       );
       
@@ -1214,7 +1350,7 @@ publicPortalNamespace.on('connection', async (socket) => {
       
       // Update database
       db.run(
-        'UPDATE public_chat_sessions SET status = ?, end_time = datetime("now") WHERE session_id = ?',
+        'UPDATE public_chat_sessions SET status = ?, ended_at = datetime("now") WHERE session_id = ?',
         ['ended', sessionId]
       );
       
@@ -1239,7 +1375,7 @@ publicPortalNamespace.on('connection', async (socket) => {
       if (session) {
         // Update status
         db.run(
-          'UPDATE public_chat_sessions SET status = ?, end_time = datetime("now") WHERE session_id = ?',
+          'UPDATE public_chat_sessions SET status = ?, ended_at = datetime("now") WHERE session_id = ?',
           ['disconnected', socket.sessionId]
         );
         
@@ -1247,6 +1383,12 @@ publicPortalNamespace.on('connection', async (socket) => {
         const queueIndex = publicQueue.indexOf(socket.sessionId);
         if (queueIndex > -1) {
           publicQueue.splice(queueIndex, 1);
+          
+          // Notify remaining guests of updated positions
+          notifyGuestPositions();
+          
+          // Notify staff of updated queue
+          notifyAvailableAgents();
         }
         
         // Notify agent if assigned
@@ -1257,10 +1399,11 @@ publicPortalNamespace.on('connection', async (socket) => {
           });
         }
         
-        // Clean up after 5 minutes (for reconnection window)
+        // Clean up after 10 minutes (for reconnection window)
         setTimeout(() => {
           publicSessions.delete(socket.sessionId);
-        }, 5 * 60 * 1000);
+          console.log(`🧹 Cleaned up session ${socket.sessionId} after 10 minutes`);
+        }, 10 * 60 * 1000); // 10 minutes
       }
     }
     
@@ -1274,17 +1417,32 @@ publicPortalNamespace.on('connection', async (socket) => {
   });
 });
 
+// Helper function to notify guests of their updated queue positions
+const notifyGuestPositions = () => {
+  publicQueue.forEach((sessionId, index) => {
+    const position = index + 1; // 1-based position
+    const estimatedWaitTime = position * 2; // 2 minutes per person
+    
+    // Emit to specific guest session room
+    publicPortalNamespace.to(`session:${sessionId}`).emit('queue:position_update', {
+      queuePosition: position,
+      estimatedWaitTime: estimatedWaitTime
+    });
+  });
+};
+
 // Helper function to notify available agents
 const notifyAvailableAgents = () => {
   // Get all online agents with public chat permissions
   publicPortalNamespace.emit('queue:update', {
     queueLength: publicQueue.length,
-    waitingSessions: publicQueue.map(sessionId => {
+    waitingSessions: publicQueue.map((sessionId, index) => {
       const session = publicSessions.get(sessionId);
       return {
         sessionId,
         guestName: session?.guestName || 'Guest',
-        waitTime: Math.floor((Date.now() - session?.startTime) / 1000) // seconds
+        waitTime: Math.floor((Date.now() - session?.startTime) / 1000), // seconds
+        queuePosition: index + 1 // Add position to staff display
       };
     })
   });

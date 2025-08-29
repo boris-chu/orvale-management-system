@@ -194,7 +194,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
     // Update session status
     await dbRun(
       `UPDATE public_chat_sessions 
-       SET status = 'ended', end_time = datetime('now') 
+       SET status = 'ended', ended_at = datetime('now') 
        WHERE session_id = ?`,
       [sessionId]
     );

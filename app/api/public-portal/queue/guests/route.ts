@@ -13,15 +13,40 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check permissions
-    if (!authResult.user.permissions?.includes('public_portal.manage_queue') && 
-        !authResult.user.permissions?.includes('admin.system_settings')) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    // Check permissions - Admin role bypass or specific permissions
+    console.log('🔍 Guest Queue API - Permission Debug:');
+    console.log('  User:', authResult.user.username);
+    console.log('  Role:', authResult.user.role);
+    console.log('  Permissions Count:', authResult.user.permissions?.length || 0);
+    
+    // Admin role has all permissions automatically
+    if (authResult.user.role === 'admin') {
+      console.log('✅ Admin role - bypassing permission check');
+    } else {
+      // Check specific permissions for non-admin users
+      const hasManageQueue = authResult.user.permissions?.includes('public_portal.manage_queue');
+      const hasSystemSettings = authResult.user.permissions?.includes('admin.system_settings');
+      
+      console.log('  Has manage_queue:', hasManageQueue);
+      console.log('  Has system_settings:', hasSystemSettings);
+      
+      if (!hasManageQueue && !hasSystemSettings) {
+        console.log('❌ Permission denied - missing required permissions');
+        return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+      }
     }
+    
+    console.log('✅ Permission check passed');
 
-    // Optional: Check if user has real-time permission
-    const hasRealTimePermission = authResult.user.permissions?.includes('public_portal.view_realtime_queue') ||
-                                 authResult.user.permissions?.includes('admin.system_settings');
+    // Check if user has real-time permission - Admin bypass
+    let hasRealTimePermission = false;
+    if (authResult.user.role === 'admin') {
+      hasRealTimePermission = true;
+      console.log('✅ Admin role - has all real-time permissions');
+    } else {
+      hasRealTimePermission = authResult.user.permissions?.includes('public_portal.view_realtime_queue') ||
+                             authResult.user.permissions?.includes('admin.system_settings');
+    }
 
     if (!hasRealTimePermission) {
       return NextResponse.json({ 
@@ -51,7 +76,7 @@ export async function GET(request: NextRequest) {
           -- Get the initial message from session data or first chat message
           COALESCE(
             json_extract(pcs.session_data, '$.initial_message'),
-            (SELECT pcm.message_content 
+            (SELECT pcm.message_text 
              FROM public_chat_messages pcm 
              WHERE pcm.session_id = pcs.session_id 
                AND pcm.sender_type = 'guest'

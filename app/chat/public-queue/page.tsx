@@ -15,13 +15,15 @@ import {
   Settings, ColorLens, Message, Phone, VideoCall,
   PersonAdd, SwapHoriz, Assignment, NoteAdd,
   Minimize, Maximize, Close, DragIndicator,
-  ChatBubbleOutline, Support, Queue, People, Send
+  ChatBubbleOutline, Support, Queue, People, Send,
+  LogoutOutlined
 } from '@mui/icons-material';
 import { ColorPicker } from '@/components/shared/ColorPicker';
 import { motion, AnimatePresence } from 'framer-motion';
 import { socketClient } from '@/lib/socket-client';
 import { StaffWorkModeManager } from '@/components/public-portal/StaffWorkModeManager';
 import { publicPortalSocket } from '@/lib/public-portal-socket';
+import { UserAvatar } from '@/components/UserAvatar';
 
 interface StaffMember {
   id: string;
@@ -119,6 +121,8 @@ const PublicQueuePage = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [realTimeEnabled, setRealTimeEnabled] = useState(false);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const workspaceRef = useRef<HTMLDivElement>(null);
   const chatWindowRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -148,6 +152,20 @@ const PublicQueuePage = () => {
     }
   }, [realTimeEnabled, loading, authError]);
 
+  // Handle click outside user menu
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (showUserMenu) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showUserMenu]);
+
   const checkAuthentication = async () => {
     try {
       const token = localStorage.getItem('authToken');
@@ -174,6 +192,9 @@ const PublicQueuePage = () => {
         
         // Store user permissions for real-time features
         setUserPermissions(user.permissions || []);
+        
+        // Store current user data
+        setCurrentUser(user);
         
         // Check if user has real-time permission
         const hasRealTimePermission = user.permissions?.includes('public_portal.view_realtime_queue') || 
@@ -655,42 +676,124 @@ const PublicQueuePage = () => {
         </Box>
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          {/* Work Mode Selector */}
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <Select
-              value={workMode}
-              onChange={(e) => updateWorkMode(e.target.value as any)}
-              sx={{ 
-                backgroundColor: 'rgba(255,255,255,0.1)', 
-                color: 'white',
-                '& .MuiSelect-icon': { color: 'white' },
-                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' }
-              }}
-            >
-              <MenuItem value="ready">
-                🟢 {workModeSettings?.ready || 'Ready'}
-              </MenuItem>
-              <MenuItem value="work_mode">
-                🟡 {workModeSettings?.work_mode || 'Work Mode'}
-              </MenuItem>
-              <MenuItem value="ticketing_mode">
-                🔵 {workModeSettings?.ticketing_mode || 'Ticketing Mode'}
-              </MenuItem>
-              <MenuItem value="away">
-                🟠 {workModeSettings?.away || 'Away'}
-              </MenuItem>
-              <MenuItem value="break">
-                ⏸️ {workModeSettings?.break || 'Break'}
-              </MenuItem>
-            </Select>
-          </FormControl>
-
           <IconButton 
             onClick={() => setSettingsOpen(true)} 
             sx={{ color: 'white' }}
           >
             <Settings />
           </IconButton>
+          
+          {/* User Profile Avatar */}
+          {currentUser && (
+            <Box sx={{ position: 'relative' }}>
+              <Tooltip title="User Menu">
+                <IconButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowUserMenu(!showUserMenu);
+                  }}
+                  sx={{ 
+                    padding: 0.5,
+                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
+                  }}
+                >
+                  <UserAvatar 
+                    user={{...currentUser, username: currentUser?.username}}
+                    size="md"
+                    enableRealTimePresence={true}
+                    sx={{
+                      border: '2px solid rgba(255,255,255,0.3)',
+                      '&:hover': { borderColor: 'rgba(255,255,255,0.8)' }
+                    }}
+                  />
+                </IconButton>
+              </Tooltip>
+
+              {/* User Menu Dropdown */}
+              <AnimatePresence>
+                {showUserMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      marginTop: 8,
+                      width: 250,
+                      zIndex: 1300
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Paper
+                      elevation={8}
+                      sx={{
+                        borderRadius: 2,
+                        overflow: 'hidden',
+                        border: '1px solid',
+                        borderColor: 'divider'
+                      }}
+                    >
+                      {/* User Info Section */}
+                      <Box sx={{ 
+                        p: 2, 
+                        backgroundColor: 'grey.50',
+                        borderBottom: '1px solid',
+                        borderColor: 'divider'
+                      }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <UserAvatar 
+                            user={{...currentUser, username: currentUser?.username}}
+                            size="md"
+                            enableRealTimePresence={false}
+                          />
+                          <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Typography variant="body2" fontWeight="bold" noWrap>
+                              {currentUser?.display_name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" noWrap>
+                              {currentUser?.email}
+                            </Typography>
+                            <Box sx={{ mt: 0.5 }}>
+                              <Chip 
+                                label={currentUser?.role || 'User'} 
+                                size="small" 
+                                color="primary" 
+                                variant="outlined"
+                                sx={{ fontSize: '0.7rem', height: 20 }}
+                              />
+                            </Box>
+                          </Box>
+                        </Box>
+                      </Box>
+
+                      {/* Menu Actions */}
+                      <Box sx={{ p: 1 }}>
+                        <Button
+                          fullWidth
+                          startIcon={<LogoutOutlined />}
+                          onClick={() => {
+                            localStorage.removeItem('authToken');
+                            localStorage.removeItem('currentUser');
+                            window.location.href = '/';
+                          }}
+                          sx={{ 
+                            justifyContent: 'flex-start',
+                            color: 'error.main',
+                            '&:hover': { backgroundColor: 'error.lighter' },
+                            py: 1
+                          }}
+                        >
+                          Sign Out
+                        </Button>
+                      </Box>
+                    </Paper>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Box>
+          )}
         </Box>
       </Paper>
 
@@ -766,15 +869,15 @@ const PublicQueuePage = () => {
                       </Typography>
                     }
                     secondary={
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
+                      <>
+                        <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
                           {getStatusLabel(staff.status)} • {staff.activeChats}/{staff.maxChats} chats
-                        </Typography>
+                        </span>
                         <br />
-                        <Typography variant="caption" color="text.secondary">
+                        <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
                           {staff.department}
-                        </Typography>
-                      </Box>
+                        </span>
+                      </>
                     }
                   />
                 </ListItem>
@@ -782,102 +885,122 @@ const PublicQueuePage = () => {
             </List>
           </Box>
 
-          {/* Queue Section (Bottom 60%) */}
-          <Box sx={{ 
-            height: '60%',
-            p: 2,
-            overflow: 'auto'
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Queue sx={{ fontSize: 20, color: themeColors.primary }} />
-              <Typography variant="subtitle1" fontWeight="bold">
-                Guest Queue ({guestQueue.length})
-              </Typography>
-            </Box>
-
-            <List dense>
-              {guestQueue.map((guest) => (
-                <ListItem 
-                  key={guest.id}
-                  sx={{ 
-                    cursor: 'pointer',
-                    borderRadius: 1,
-                    mb: 1,
-                    p: 1.5,
-                    border: `1px solid ${themeColors.border}`,
-                    borderLeft: `4px solid ${
-                      guest.status === 'abandoned' ? '#f44336' :
-                      guest.priority === 'urgent' ? '#ff5722' :
-                      guest.priority === 'high' ? '#ff9800' :
-                      guest.priority === 'vip' ? '#9c27b0' : 'transparent'
-                    }`,
-                    '&:hover': { 
-                      backgroundColor: themeColors.secondary,
-                      transform: 'translateX(4px)',
-                      transition: 'all 0.2s ease'
-                    }
-                  }}
-                  onClick={() => handleGuestClick(guest)}
-                >
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" fontWeight="medium">
-                          {getPriorityIcon(guest.priority, guest.status)} {guest.guestName}
-                        </Typography>
-                        {guest.status === 'abandoned' && (
-                          <Chip 
-                            label="Abandoned" 
-                            size="small" 
-                            color="error" 
-                            variant="outlined"
-                            sx={{ fontSize: 10, height: 18 }}
-                          />
-                        )}
-                      </Box>
-                    }
-                    secondary={
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
-                          Waiting: {formatWaitTime(guest.waitTime)}
-                        </Typography>
-                        <br />
-                        <Typography variant="caption" color="text.secondary">
-                          {guest.department}
-                        </Typography>
-                        {guest.initialMessage && (
-                          <>
-                            <br />
-                            <Typography 
-                              variant="caption" 
-                              color="text.secondary"
-                              sx={{ 
-                                display: 'block',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                maxWidth: '200px'
-                              }}
-                            >
-                              "{guest.initialMessage}"
-                            </Typography>
-                          </>
-                        )}
-                      </Box>
-                    }
-                  />
-                </ListItem>
-              ))}
-            </List>
-
-            {guestQueue.length === 0 && (
-              <Box sx={{ textAlign: 'center', mt: 4, color: 'text.secondary' }}>
-                <Typography variant="body2">
-                  No guests in queue
+          {/* Queue Section (Bottom 60%) - Only show if user has real-time queue permission */}
+          {realTimeEnabled ? (
+            <Box sx={{ 
+              height: '60%',
+              p: 2,
+              overflow: 'auto'
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Queue sx={{ fontSize: 20, color: themeColors.primary }} />
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Guest Queue ({guestQueue.length})
                 </Typography>
               </Box>
-            )}
-          </Box>
+
+              <List dense>
+                {guestQueue.map((guest) => (
+                  <ListItem 
+                    key={guest.id}
+                    sx={{ 
+                      cursor: 'pointer',
+                      borderRadius: 1,
+                      mb: 1,
+                      p: 1.5,
+                      border: `1px solid ${themeColors.border}`,
+                      borderLeft: `4px solid ${
+                        guest.status === 'abandoned' ? '#f44336' :
+                        guest.priority === 'urgent' ? '#ff5722' :
+                        guest.priority === 'high' ? '#ff9800' :
+                        guest.priority === 'vip' ? '#9c27b0' : 'transparent'
+                      }`,
+                      '&:hover': { 
+                        backgroundColor: themeColors.secondary,
+                        transform: 'translateX(4px)',
+                        transition: 'all 0.2s ease'
+                      }
+                    }}
+                    onClick={() => handleGuestClick(guest)}
+                  >
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2" fontWeight="medium">
+                            {getPriorityIcon(guest.priority, guest.status)} {guest.guestName}
+                          </Typography>
+                          {guest.status === 'abandoned' && (
+                            <Chip 
+                              label="Abandoned" 
+                              size="small" 
+                              color="error" 
+                              variant="outlined"
+                              sx={{ fontSize: 10, height: 18 }}
+                            />
+                          )}
+                        </Box>
+                      }
+                      secondary={
+                        <>
+                          <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
+                            Waiting: {formatWaitTime(guest.waitTime)}
+                          </span>
+                          <br />
+                          <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
+                            {guest.department}
+                          </span>
+                          {guest.initialMessage && (
+                            <>
+                              <br />
+                              <span 
+                                style={{ 
+                                  fontSize: '0.75rem', 
+                                  color: 'rgba(0, 0, 0, 0.6)',
+                                  display: 'block',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  maxWidth: '200px'
+                                }}
+                              >
+                                "{guest.initialMessage}"
+                              </span>
+                            </>
+                          )}
+                        </>
+                      }
+                    />
+                  </ListItem>
+                ))}
+              </List>
+
+              {guestQueue.length === 0 && (
+                <Box sx={{ textAlign: 'center', mt: 4, color: 'text.secondary' }}>
+                  <Typography variant="body2">
+                    No guests in queue
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          ) : (
+            // Show message when user doesn't have queue viewing permission
+            <Box sx={{ 
+              height: '60%',
+              p: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Alert severity="info" sx={{ maxWidth: 300 }}>
+                <Typography variant="body2" fontWeight="medium">
+                  Guest Queue Access Restricted
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  You need the "public_portal.view_realtime_queue" permission to view the guest queue.
+                </Typography>
+              </Alert>
+            </Box>
+          )}
         </Paper>
 
         {/* Main Workspace */}
@@ -1185,40 +1308,8 @@ const FloatableChatWindow = ({ chat, onClose, onMinimize, onFocus }: FloatableCh
               <MessagesDisplay sessionId={chat.sessionId} guestInfo={chat.guestInfo} />
             </Box>
 
-            {/* Input Area */}
+            {/* Input Area with Action Buttons */}
             <MessageInput sessionId={chat.sessionId} />
-              
-              {/* Action Buttons */}
-              <Box sx={{ display: 'flex', gap: 1, mt: 1, justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    size="small"
-                    startIcon={<Assignment />}
-                    variant="outlined"
-                    sx={{ fontSize: '0.75rem' }}
-                  >
-                    Create Ticket
-                  </Button>
-                  <Button
-                    size="small"
-                    startIcon={<SwapHoriz />}
-                    variant="outlined"
-                    sx={{ fontSize: '0.75rem' }}
-                  >
-                    Transfer
-                  </Button>
-                </Box>
-                
-                <Button
-                  size="small"
-                  color="error"
-                  variant="text"
-                  sx={{ fontSize: '0.75rem' }}
-                >
-                  End Chat
-                </Button>
-              </Box>
-            </Box>
           </Box>
         )}
       </Paper>

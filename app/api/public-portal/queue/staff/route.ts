@@ -13,15 +13,40 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check permissions
-    if (!authResult.user.permissions?.includes('public_portal.manage_queue') && 
-        !authResult.user.permissions?.includes('admin.system_settings')) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    // Check permissions - Admin role bypass or specific permissions
+    console.log('🔍 Staff Queue API - Permission Debug:');
+    console.log('  User:', authResult.user.username);
+    console.log('  Role:', authResult.user.role);
+    console.log('  Permissions Count:', authResult.user.permissions?.length || 0);
+    
+    // Admin role has all permissions automatically
+    if (authResult.user.role === 'admin') {
+      console.log('✅ Admin role - bypassing permission check');
+    } else {
+      // Check specific permissions for non-admin users
+      const hasManageQueue = authResult.user.permissions?.includes('public_portal.manage_queue');
+      const hasSystemSettings = authResult.user.permissions?.includes('admin.system_settings');
+      
+      console.log('  Has manage_queue:', hasManageQueue);
+      console.log('  Has system_settings:', hasSystemSettings);
+      
+      if (!hasManageQueue && !hasSystemSettings) {
+        console.log('❌ Permission denied - missing required permissions');
+        return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+      }
     }
+    
+    console.log('✅ Permission check passed');
 
-    // Optional: Check if user has real-time permission
-    const hasRealTimePermission = authResult.user.permissions?.includes('public_portal.view_realtime_queue') ||
-                                 authResult.user.permissions?.includes('admin.system_settings');
+    // Check if user has real-time permission - Admin bypass
+    let hasRealTimePermission = false;
+    if (authResult.user.role === 'admin') {
+      hasRealTimePermission = true;
+      console.log('✅ Admin role - has all real-time permissions');
+    } else {
+      hasRealTimePermission = authResult.user.permissions?.includes('public_portal.view_realtime_queue') ||
+                             authResult.user.permissions?.includes('admin.system_settings');
+    }
 
     if (!hasRealTimePermission) {
       return NextResponse.json({ 
@@ -37,10 +62,10 @@ export async function GET(request: NextRequest) {
       // Get active staff members with their work modes and online presence
       db.all(
         `SELECT DISTINCT
-          u.user_id,
+          u.id as user_id,
           u.username,
           u.display_name,
-          u.department,
+          u.team_id as department,
           u.role,
           u.profile_picture,
           swm.current_mode as work_mode,
@@ -114,7 +139,7 @@ export async function GET(request: NextRequest) {
                   user_id: member.user_id,
                   username: member.username,
                   display_name: member.display_name || member.username,
-                  department: member.department || 'Support',
+                  department: member.department || member.team_id || 'Support',
                   role: member.role,
                   profile_picture: member.profile_picture,
                   work_mode: member.work_mode,

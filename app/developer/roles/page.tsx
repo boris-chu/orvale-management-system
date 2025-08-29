@@ -571,6 +571,18 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     name: 'Change Work Mode', 
     category: 'Public Portal', 
     description: 'Change own work mode status\n• Set availability\n• Control chat acceptance\n• Personal status management\n• Basic staff control' 
+  },
+  { 
+    id: 'public_portal.view_realtime_queue', 
+    name: 'View Real-time Queue', 
+    category: 'Public Portal', 
+    description: 'View real-time guest queue and staff status\n• Live queue monitoring\n• Real-time updates\n• Staff activity tracking\n• Queue position visibility' 
+  },
+  { 
+    id: 'public_portal.manage_work_modes', 
+    name: 'Manage Work Modes', 
+    category: 'Public Portal', 
+    description: 'Manage work mode configurations and settings\n• Configure work mode rules\n• Set auto-assignment limits\n• Manage mode descriptions\n• System-wide work mode control' 
   }
 ];
 

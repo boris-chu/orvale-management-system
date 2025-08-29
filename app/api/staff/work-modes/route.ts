@@ -18,16 +18,7 @@ export async function GET(request: NextRequest) {
     return new Promise((resolve) => {
       // Get user's current work mode, creating default if doesn't exist
       db.get(`
-        SELECT 
-          swm.*,
-          swms.work_mode_descriptions,
-          swms.auto_assignment_enabled,
-          swms.ready_mode_auto_accept,
-          swms.work_mode_auto_accept,
-          swms.ticketing_mode_auto_accept
-        FROM staff_work_modes swm
-        CROSS JOIN staff_work_mode_settings swms
-        WHERE swm.username = ?
+        SELECT * FROM staff_work_modes WHERE username = ?
       `, [authResult.user.username], (err, row) => {
         if (err) {
           db.close();
@@ -40,9 +31,9 @@ export async function GET(request: NextRequest) {
           // Create default work mode for user
           db.run(`
             INSERT INTO staff_work_modes (
-              user_id, username, work_mode, auto_accept_chats
-            ) VALUES (?, ?, 'away', 0)
-          `, [authResult.user.id, authResult.user.username], function(insertErr) {
+              username, current_mode, auto_assign_enabled
+            ) VALUES (?, 'offline', 1)
+          `, [authResult.user.username], function(insertErr) {
             if (insertErr) {
               db.close();
               console.error('Error creating default work mode:', insertErr);
@@ -54,23 +45,15 @@ export async function GET(request: NextRequest) {
             db.close();
             resolve(NextResponse.json({
               id: this.lastID,
-              user_id: authResult.user.id,
               username: authResult.user.username,
-              work_mode: 'away',
-              status_message: '',
-              auto_accept_chats: 0,
+              current_mode: 'offline',
+              auto_assign_enabled: true,
               max_concurrent_chats: 3,
-              work_mode_descriptions: JSON.stringify({
-                ready: "Available for new chats",
-                work_mode: "Focused work - manual chat accept", 
-                ticketing_mode: "Ticket work - no new chats",
-                away: "Not available",
-                break: "On break - return soon"
-              }),
-              auto_assignment_enabled: true,
-              ready_mode_auto_accept: true,
-              work_mode_auto_accept: false,
-              ticketing_mode_auto_accept: false
+              accept_vip_chats: true,
+              accept_escalated_chats: true,
+              preferred_departments: '[]',
+              auto_offline_after_minutes: 30,
+              work_mode_timeout_enabled: true
             }));
           });
         } else {
@@ -94,11 +77,11 @@ export async function PUT(request: NextRequest) {
     }
 
     const data = await request.json();
-    const { work_mode, status_message, auto_accept_chats, max_concurrent_chats } = data;
+    const { current_mode, auto_assign_enabled, max_concurrent_chats, accept_vip_chats, accept_escalated_chats } = data;
 
     // Validate work mode
-    const validModes = ['ready', 'work_mode', 'ticketing_mode', 'away', 'break'];
-    if (work_mode && !validModes.includes(work_mode)) {
+    const validModes = ['ready', 'work_mode', 'ticketing_mode', 'offline'];
+    if (current_mode && !validModes.includes(current_mode)) {
       return NextResponse.json({ error: 'Invalid work mode' }, { status: 400 });
     }
 
@@ -107,25 +90,26 @@ export async function PUT(request: NextRequest) {
     return new Promise((resolve) => {
       // First get current mode for history tracking
       db.get(
-        'SELECT work_mode FROM staff_work_modes WHERE username = ?',
+        'SELECT current_mode FROM staff_work_modes WHERE username = ?',
         [authResult.user.username],
-        (err, currentRow) => {
-          const oldMode = currentRow?.work_mode || 'away';
+        (err, currentRow: any) => {
+          const oldMode = currentRow?.current_mode || 'offline';
 
           // Update or create work mode
           db.run(`
             INSERT OR REPLACE INTO staff_work_modes (
-              user_id, username, work_mode, status_message, 
-              auto_accept_chats, max_concurrent_chats, 
-              last_activity, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+              username, current_mode, auto_assign_enabled, 
+              max_concurrent_chats, accept_vip_chats, accept_escalated_chats,
+              last_activity, updated_at, mode_changed_at, mode_changed_by
+            ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)
           `, [
-            authResult.user.id,
             authResult.user.username,
-            work_mode || 'away',
-            status_message || '',
-            auto_accept_chats !== undefined ? auto_accept_chats : 1,
-            max_concurrent_chats || 3
+            current_mode || 'offline',
+            auto_assign_enabled !== undefined ? auto_assign_enabled : true,
+            max_concurrent_chats || 3,
+            accept_vip_chats !== undefined ? accept_vip_chats : true,
+            accept_escalated_chats !== undefined ? accept_escalated_chats : true,
+            authResult.user.username
           ], function(updateErr) {
             if (updateErr) {
               db.close();
@@ -134,31 +118,13 @@ export async function PUT(request: NextRequest) {
               return;
             }
 
-            // Log mode change to history if mode changed
-            if (work_mode && work_mode !== oldMode) {
-              db.run(`
-                INSERT INTO staff_work_mode_history (
-                  username, old_mode, new_mode, changed_at
-                ) VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-              `, [authResult.user.username, oldMode, work_mode], (historyErr) => {
-                // Don't fail if history logging fails, just log error
-                if (historyErr) {
-                  console.error('Error logging work mode history:', historyErr);
-                }
-                db.close();
-                resolve(NextResponse.json({ 
-                  success: true, 
-                  message: 'Work mode updated successfully',
-                  work_mode: work_mode || oldMode
-                }));
-              });
-            } else {
-              db.close();
-              resolve(NextResponse.json({ 
-                success: true, 
-                message: 'Work mode settings updated successfully'
-              }));
-            }
+            // No history logging for now - just respond with success
+            db.close();
+            resolve(NextResponse.json({ 
+              success: true, 
+              message: 'Work mode updated successfully',
+              current_mode: current_mode || oldMode
+            }));
           });
         }
       );

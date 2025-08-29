@@ -27,10 +27,41 @@ export async function GET(request: NextRequest) {
             return;
           }
 
+          // Calculate chat status based on business hours
+          let chatStatus = 'online';
+          let statusMessage = '';
+          let outsideHours = false;
+
+          // Check business hours if enabled and not overridden
+          if (row.business_hours_enabled && !row.ignore_business_hours) {
+            const now = new Date();
+            const schedule = row.schedule_json ? JSON.parse(row.schedule_json) : {};
+            const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
+            const daySchedule = schedule[dayOfWeek];
+
+            if (!daySchedule || !daySchedule.enabled) {
+              chatStatus = 'outside_hours';
+              statusMessage = row.business_hours_message || 'Live chat is currently outside business hours';
+              outsideHours = true;
+            } else {
+              // Check if current time is within business hours
+              const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+              if (currentTime < daySchedule.open || currentTime > daySchedule.close) {
+                chatStatus = 'outside_hours';
+                statusMessage = row.business_hours_message || 'Live chat is currently outside business hours';
+                outsideHours = true;
+              }
+            }
+          }
+
           // Return public-safe settings (exclude internal fields)
           const publicSettings = {
             enabled: row.enabled,
+            status: chatStatus,
+            message: statusMessage,
+            outsideBusinessHours: outsideHours,
             business_hours_enabled: row.business_hours_enabled,
+            ignore_business_hours: row.ignore_business_hours,
             timezone: row.timezone,
             schedule_json: row.schedule_json,
             holidays_json: row.holidays_json,
@@ -40,6 +71,7 @@ export async function GET(request: NextRequest) {
             widget_position: row.widget_position,
             widget_position_x: row.widget_position_x,
             widget_position_y: row.widget_position_y,
+            widget_icon: row.widget_icon,
             widget_image: row.widget_image,
             widget_text: row.widget_text,
             widget_animation: row.widget_animation,
