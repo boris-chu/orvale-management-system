@@ -443,10 +443,14 @@ const PublicQueuePage = () => {
   };
 
   const updateWaitTimes = () => {
-    setGuestQueue(prev => prev.map(guest => ({
-      ...guest,
-      waitTime: Math.floor((Date.now() - guest.joinedAt.getTime()) / 1000)
-    })));
+    setGuestQueue(prev => prev.map(guest => {
+      const waitTimeSeconds = Math.floor((Date.now() - guest.joinedAt.getTime()) / 1000);
+      return {
+        ...guest,
+        waitTime: waitTimeSeconds,
+        waitTimeFormatted: formatWaitTime(waitTimeSeconds)
+      };
+    }));
   };
 
   const getStatusIcon = (status: string) => {
