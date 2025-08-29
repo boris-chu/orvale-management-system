@@ -1517,6 +1517,7 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                           onChange={(e) => setPreChatData(prev => ({ ...prev, name: e.target.value }))}
                           error={!!preChatErrors.name}
                           helperText={preChatErrors.name}
+                          autoComplete="off"
                           sx={{ mb: 2 }}
                         />
                       )}
@@ -1532,6 +1533,7 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                           onChange={(e) => setPreChatData(prev => ({ ...prev, email: e.target.value }))}
                           error={!!preChatErrors.email}
                           helperText={preChatErrors.email}
+                          autoComplete="off"
                           sx={{ mb: 2 }}
                         />
                       )}
@@ -1568,6 +1570,22 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                           </Select>
                         </FormControl>
                       )}
+
+                      {/* Custom Fields Debug */}
+                      {(() => {
+                        try {
+                          const customFields = settings?.custom_fields_json ? JSON.parse(settings.custom_fields_json) : [];
+                          console.log('🐛 Parsed custom fields:', customFields);
+                          return customFields.length > 0 ? (
+                            <div style={{ background: 'yellow', padding: '10px', marginBottom: '10px' }}>
+                              DEBUG: {customFields.length} custom fields found
+                            </div>
+                          ) : null;
+                        } catch (e) {
+                          console.log('🐛 Custom fields parse error:', e);
+                          return null;
+                        }
+                      })()}
 
                       {/* Message Field */}
                       <TextField
