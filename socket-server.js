@@ -1145,6 +1145,16 @@ publicPortalNamespace.on('connection', async (socket) => {
         notifyAvailableAgents();
         notifyGuestPositions();
         
+        // Notify main socket clients of new guest
+        io.emit('public_queue:guest_joined', {
+          sessionId,
+          guestName: name,
+          priority: 'normal',
+          department: department || 'General Support',
+          message: customFields?.initialMessage || '',
+          waitTime: 0
+        });
+        
         console.log(`✅ Guest session started: ${sessionId} for ${name}`);
       }
       
@@ -1389,6 +1399,12 @@ publicPortalNamespace.on('connection', async (socket) => {
           
           // Notify staff of updated queue
           notifyAvailableAgents();
+          
+          // Notify main socket clients of guest leaving
+          io.emit('public_queue:guest_left', {
+            sessionId: socket.sessionId,
+            guestName: session.guestName
+          });
         }
         
         // Notify agent if assigned

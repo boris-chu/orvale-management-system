@@ -3529,3 +3529,666 @@ Staff queue database error: SQLITE_ERROR: no such column: u.department
  GET /api/public-portal/available-agents 200 in 20ms
  GET /api/public-portal/staff/active-chats 200 in 29ms
  GET /api/public-portal/available-agents 200 in 18ms
+ GET /api/public-portal/staff/active-chats 200 in 24ms
+ GET /api/public-portal/available-agents 200 in 31ms
+ GET /api/public-portal/staff/active-chats 200 in 28ms
+ GET /api/public-portal/available-agents 200 in 23ms
+ GET /api/public-portal/staff/active-chats 200 in 25ms
+ GET /api/public-portal/available-agents 200 in 21ms
+ GET /api/public-portal/staff/active-chats 200 in 31ms
+ GET /api/public-portal/available-agents 200 in 22ms
+ GET /api/public-portal/staff/active-chats 200 in 28ms
+ GET /api/public-portal/available-agents 200 in 29ms
+ ✓ Compiled in 505ms (3217 modules)
+ ✓ Compiled in 203ms (3217 modules)
+ ✓ Compiled /api/staff/work-modes in 216ms (1764 modules)
+🔍 Token found in Authorization header
+✅ Token verified for user ID: 185
+✅ User found in database: e603876
+🔧 Raw user.login_preferences from database: {}
+🔍 Fetching permissions for user role: admin
+✅ Database permissions found: 105
+🔑 User permissions: [
+  'admin.maintenance_override',
+  'admin.manage_categories',
+  'admin.manage_chat_channels',
+  'admin.manage_chat_settings',
+  'admin.manage_data'
+] ...
+✅ User with permissions created, permission count: 105
+🔧 Final user object login_preferences: {}
+ GET /api/staff/work-modes 200 in 363ms
+ GET /api/public-portal/staff/active-chats 200 in 363ms
+ GET /api/public-portal/available-agents 200 in 25ms
+ GET / 200 in 175ms
+ ✓ Compiled /api/maintenance/status in 363ms (1770 modules)
+🚀 checkMaintenanceStatus called
+📋 Querying system settings...
+✅ System settings query complete: [
+  { setting_key: 'enableMaintenance', setting_value: 'false' },
+  {
+    setting_key: 'maintenanceMessage',
+    setting_value: '"System is under maintenance. Please try again later. Okay"'
+  }
+]
+📋 Querying portal settings...
+✅ Portal settings query complete: [
+  {
+    settings_json: '{"form_fields":{"name_required":true,"email_required":true,"phone_required":true,"employee_number_required":true,"office_required":true,"section_required":true,"location_required":true,"priority_enabled":true,"attachments_enabled":true,"max_attachments":5,"max_file_size":10,"allowed_file_types":["pdf","doc","docx","txt","jpg","png","gif"]},"display":{"portal_title":"DPSS IT Support Portal","portal_description":"Submit your IT support requests and track their progress","theme_color":"#2563eb","logo_url":"/support.ico","show_category_descriptions":true,"show_estimated_response_time":true,"enable_dark_mode":false,"items_per_page":10},"notifications":{"send_confirmation_email":true,"send_status_updates":true,"send_completion_notification":true,"email_template_confirmation":"Thank you for submitting your support request. Your ticket ID is {{ticket_id}}.","email_template_status_update":"Your support request {{ticket_id}} status has been updated to: {{status}}.","email_template_completion":"Your support request {{ticket_id}} has been completed.","sla_response_time_hours":24,"sla_resolution_time_hours":72,"escalation_enabled":true,"escalation_threshold_hours":48},"integrations":{"enable_api_access":false,"api_rate_limit":100,"webhook_url":"","enable_webhook":false,"external_knowledge_base_url":"","enable_chat_support":false,"enable_remote_assistance":false},"security":{"enable_captcha":false,"enable_file_scanning":true,"allowed_domains":[],"blocked_domains":[],"enable_ip_restrictions":false,"allowed_ip_ranges":[],"session_timeout_minutes":30,"max_login_attempts":5,"enable_audit_logging":true},"user_experience":{"enable_form_data_caching":true,"form_cache_duration_days":30,"enable_auto_save_drafts":true,"enable_form_progress_indicator":true,"enable_smart_form_completion":false},"advanced":{"enable_auto_assignment":true,"enable_smart_routing":false,"enable_duplicate_detection":true,"auto_close_resolved_after_days":7,"enable_satisfaction_survey":true,"enable_knowledge_base_suggestions":false,"enable_priority_escalation":true,"portal_maintenance_mode":false,"portal_maintenance_message":"The DPSS IT Support Portal is currently under maintenance. Please try again later or contact IT support directly.","portal_maintenance_contact":"","portal_maintenance_estimated_end":"","allow_queue_access_during_maintenance":true,"show_system_status_page":true}}'
+  }
+]
+📋 Portal settings converted: [
+  { setting_key: 'maintenance_mode', setting_value: undefined },
+  { setting_key: 'maintenance_message', setting_value: undefined },
+  { setting_key: 'portal_maintenance_theme', setting_value: undefined },
+  { setting_key: 'portal_estimated_return', setting_value: undefined },
+  { setting_key: 'portal_emergency_contact', setting_value: undefined }
+]
+🔧 Parsing system settings...
+🔍 parseMaintenanceSettings system - settings object: {
+  enableMaintenance: false,
+  maintenanceMessage: 'System is under maintenance. Please try again later. Okay'
+}
+🔍 parseMaintenanceSettings system - enabledKey: enableMaintenance, value: false (type: boolean), enabled: false
+✅ System config parsed: {
+  enabled: false,
+  config: {
+    message: 'System is under maintenance. Please try again later.',
+    theme: undefined,
+    adminOverride: true,
+    showRefreshButton: true,
+    logChanges: true
+  }
+}
+🔧 Parsing portal settings...
+🔍 parseMaintenanceSettings portal - settings object: {
+  maintenance_mode: undefined,
+  maintenance_message: undefined,
+  portal_maintenance_theme: undefined,
+  portal_estimated_return: undefined,
+  portal_emergency_contact: undefined
+}
+🔍 parseMaintenanceSettings portal - enabledKey: maintenance_mode, value: undefined (type: undefined), enabled: false
+✅ Portal config parsed: {
+  enabled: false,
+  config: {
+    message: 'System is under maintenance. Please try again later.',
+    theme: undefined,
+    adminOverride: true,
+    showRefreshButton: true,
+    logChanges: true
+  }
+}
+🔍 System settings raw: [
+  { setting_key: 'enableMaintenance', setting_value: 'false' },
+  {
+    setting_key: 'maintenanceMessage',
+    setting_value: '"System is under maintenance. Please try again later. Okay"'
+  }
+]
+🔍 System config parsed: {
+  enabled: false,
+  config: {
+    message: 'System is under maintenance. Please try again later.',
+    theme: undefined,
+    adminOverride: true,
+    showRefreshButton: true,
+    logChanges: true
+  }
+}
+🔍 Portal settings raw: [
+  { setting_key: 'maintenance_mode', setting_value: undefined },
+  { setting_key: 'maintenance_message', setting_value: undefined },
+  { setting_key: 'portal_maintenance_theme', setting_value: undefined },
+  { setting_key: 'portal_estimated_return', setting_value: undefined },
+  { setting_key: 'portal_emergency_contact', setting_value: undefined }
+]
+🔍 Portal config parsed: {
+  enabled: false,
+  config: {
+    message: 'System is under maintenance. Please try again later.',
+    theme: undefined,
+    adminOverride: true,
+    showRefreshButton: true,
+    logChanges: true
+  }
+}
+🔍 Final maintenance status: { isSystemMaintenance: false, isPortalMaintenance: false }
+🔍 Maintenance API Debug: {
+  isSystemMaintenance: false,
+  isPortalMaintenance: false,
+  effectiveMode: 'none',
+  hasSystemConfig: true,
+  hasPortalConfig: true
+}
+❌ No token provided in request
+ GET /api/maintenance/status 200 in 398ms
+ ✓ Compiled /api/chat/widget-settings in 169ms (1772 modules)
+ ✓ Compiled (1774 modules)
+ GET /api/public-portal/widget-settings 200 in 367ms
+ GET /api/public-portal/widget-settings 200 in 369ms
+ GET /api/public-portal/available-agents 200 in 369ms
+ GET /api/public-portal/available-agents 200 in 369ms
+ GET /api/chat/widget-settings 200 in 372ms
+ GET /api/public-portal/widget-settings 200 in 373ms
+ GET /api/public-portal/widget-settings 200 in 21ms
+ GET /api/chat/widget-settings 200 in 21ms
+ ✓ Compiled /api/system/init in 238ms (1779 modules)
+🚀 Initializing Orvale Management System services...
+🔧 Backup scheduler disabled in development mode
+   Use /developer/settings to create manual backups
+✅ App services initialization completed
+ POST /api/system/init 200 in 401ms
+ GET /api/public-portal/available-agents 200 in 298ms
+ GET /api/public-portal/available-agents 200 in 300ms
+ GET /api/public-portal/staff/active-chats 200 in 36ms
+ GET / 200 in 189ms
+🚀 checkMaintenanceStatus called
+📋 Querying system settings...
+✅ System settings query complete: [
+  { setting_key: 'enableMaintenance', setting_value: 'false' },
+  {
+    setting_key: 'maintenanceMessage',
+    setting_value: '"System is under maintenance. Please try again later. Okay"'
+  }
+]
+📋 Querying portal settings...
+✅ Portal settings query complete: [
+  {
+    settings_json: '{"form_fields":{"name_required":true,"email_required":true,"phone_required":true,"employee_number_required":true,"office_required":true,"section_required":true,"location_required":true,"priority_enabled":true,"attachments_enabled":true,"max_attachments":5,"max_file_size":10,"allowed_file_types":["pdf","doc","docx","txt","jpg","png","gif"]},"display":{"portal_title":"DPSS IT Support Portal","portal_description":"Submit your IT support requests and track their progress","theme_color":"#2563eb","logo_url":"/support.ico","show_category_descriptions":true,"show_estimated_response_time":true,"enable_dark_mode":false,"items_per_page":10},"notifications":{"send_confirmation_email":true,"send_status_updates":true,"send_completion_notification":true,"email_template_confirmation":"Thank you for submitting your support request. Your ticket ID is {{ticket_id}}.","email_template_status_update":"Your support request {{ticket_id}} status has been updated to: {{status}}.","email_template_completion":"Your support request {{ticket_id}} has been completed.","sla_response_time_hours":24,"sla_resolution_time_hours":72,"escalation_enabled":true,"escalation_threshold_hours":48},"integrations":{"enable_api_access":false,"api_rate_limit":100,"webhook_url":"","enable_webhook":false,"external_knowledge_base_url":"","enable_chat_support":false,"enable_remote_assistance":false},"security":{"enable_captcha":false,"enable_file_scanning":true,"allowed_domains":[],"blocked_domains":[],"enable_ip_restrictions":false,"allowed_ip_ranges":[],"session_timeout_minutes":30,"max_login_attempts":5,"enable_audit_logging":true},"user_experience":{"enable_form_data_caching":true,"form_cache_duration_days":30,"enable_auto_save_drafts":true,"enable_form_progress_indicator":true,"enable_smart_form_completion":false},"advanced":{"enable_auto_assignment":true,"enable_smart_routing":false,"enable_duplicate_detection":true,"auto_close_resolved_after_days":7,"enable_satisfaction_survey":true,"enable_knowledge_base_suggestions":false,"enable_priority_escalation":true,"portal_maintenance_mode":false,"portal_maintenance_message":"The DPSS IT Support Portal is currently under maintenance. Please try again later or contact IT support directly.","portal_maintenance_contact":"","portal_maintenance_estimated_end":"","allow_queue_access_during_maintenance":true,"show_system_status_page":true}}'
+  }
+]
+📋 Portal settings converted: [
+  { setting_key: 'maintenance_mode', setting_value: undefined },
+  { setting_key: 'maintenance_message', setting_value: undefined },
+  { setting_key: 'portal_maintenance_theme', setting_value: undefined },
+  { setting_key: 'portal_estimated_return', setting_value: undefined },
+  { setting_key: 'portal_emergency_contact', setting_value: undefined }
+]
+🔧 Parsing system settings...
+🔍 parseMaintenanceSettings system - settings object: {
+  enableMaintenance: false,
+  maintenanceMessage: 'System is under maintenance. Please try again later. Okay'
+}
+🔍 parseMaintenanceSettings system - enabledKey: enableMaintenance, value: false (type: boolean), enabled: false
+✅ System config parsed: {
+  enabled: false,
+  config: {
+    message: 'System is under maintenance. Please try again later.',
+    theme: undefined,
+    adminOverride: true,
+    showRefreshButton: true,
+    logChanges: true
+  }
+}
+🔧 Parsing portal settings...
+🔍 parseMaintenanceSettings portal - settings object: {
+  maintenance_mode: undefined,
+  maintenance_message: undefined,
+  portal_maintenance_theme: undefined,
+  portal_estimated_return: undefined,
+  portal_emergency_contact: undefined
+}
+🔍 parseMaintenanceSettings portal - enabledKey: maintenance_mode, value: undefined (type: undefined), enabled: false
+✅ Portal config parsed: {
+  enabled: false,
+  config: {
+    message: 'System is under maintenance. Please try again later.',
+    theme: undefined,
+    adminOverride: true,
+    showRefreshButton: true,
+    logChanges: true
+  }
+}
+🔍 System settings raw: [
+  { setting_key: 'enableMaintenance', setting_value: 'false' },
+  {
+    setting_key: 'maintenanceMessage',
+    setting_value: '"System is under maintenance. Please try again later. Okay"'
+  }
+]
+🔍 System config parsed: {
+  enabled: false,
+  config: {
+    message: 'System is under maintenance. Please try again later.',
+    theme: undefined,
+    adminOverride: true,
+    showRefreshButton: true,
+    logChanges: true
+  }
+}
+🔍 Portal settings raw: [
+  { setting_key: 'maintenance_mode', setting_value: undefined },
+  { setting_key: 'maintenance_message', setting_value: undefined },
+  { setting_key: 'portal_maintenance_theme', setting_value: undefined },
+  { setting_key: 'portal_estimated_return', setting_value: undefined },
+  { setting_key: 'portal_emergency_contact', setting_value: undefined }
+]
+🔍 Portal config parsed: {
+  enabled: false,
+  config: {
+    message: 'System is under maintenance. Please try again later.',
+    theme: undefined,
+    adminOverride: true,
+    showRefreshButton: true,
+    logChanges: true
+  }
+}
+🔍 Final maintenance status: { isSystemMaintenance: false, isPortalMaintenance: false }
+🔍 Maintenance API Debug: {
+  isSystemMaintenance: false,
+  isPortalMaintenance: false,
+  effectiveMode: 'none',
+  hasSystemConfig: true,
+  hasPortalConfig: true
+}
+❌ No token provided in request
+ GET /api/maintenance/status 200 in 20ms
+ GET /api/public-portal/available-agents 200 in 22ms
+ GET /api/chat/widget-settings 200 in 35ms
+ GET /api/chat/widget-settings 200 in 33ms
+ GET /api/public-portal/available-agents 200 in 35ms
+ GET /api/public-portal/available-agents 200 in 29ms
+ GET /api/public-portal/available-agents 200 in 34ms
+ POST /api/system/init 200 in 34ms
+ GET /api/public-portal/staff/active-chats 200 in 332ms
+ GET /api/public-portal/available-agents 200 in 24ms
+ GET /api/public-portal/staff/active-chats 200 in 30ms
+ ✓ Compiled in 854ms (3229 modules)
+ GET /api/public-portal/available-agents 200 in 53ms
+ GET /api/public-portal/staff/active-chats 200 in 39ms
+ ✓ Compiled in 389ms (3215 modules)
+ ✓ Compiled in 231ms (3215 modules)
+ ✓ Compiled /api/auth/user in 173ms (1763 modules)
+🔍 Token found in Authorization header
+✅ Token verified for user ID: 185
+✅ User found in database: e603876
+🔧 Raw user.login_preferences from database: {}
+🔍 Fetching permissions for user role: admin
+✅ Database permissions found: 105
+🔑 User permissions: [
+  'admin.maintenance_override',
+  'admin.manage_categories',
+  'admin.manage_chat_channels',
+  'admin.manage_chat_settings',
+  'admin.manage_data'
+] ...
+✅ User with permissions created, permission count: 105
+🔧 Final user object login_preferences: {}
+ GET /api/auth/user 200 in 238ms
+ ✓ Compiled /api/staff/work-modes in 113ms (1765 modules)
+🔍 Token found in Authorization header
+✅ Token verified for user ID: 185
+✅ User found in database: e603876
+🔧 Raw user.login_preferences from database: {}
+🔍 Fetching permissions for user role: admin
+✅ Database permissions found: 105
+🔑 User permissions: [
+  'admin.maintenance_override',
+  'admin.manage_categories',
+  'admin.manage_chat_channels',
+  'admin.manage_chat_settings',
+  'admin.manage_data'
+] ...
+✅ User with permissions created, permission count: 105
+🔧 Final user object login_preferences: {}
+ GET /api/staff/work-modes 200 in 167ms
+🔍 Token found in Authorization header
+✅ Token verified for user ID: 185
+✅ User found in database: e603876
+🔧 Raw user.login_preferences from database: {}
+🔍 Fetching permissions for user role: admin
+✅ Database permissions found: 105
+🔑 User permissions: [
+  'admin.maintenance_override',
+  'admin.manage_categories',
+  'admin.manage_chat_channels',
+  'admin.manage_chat_settings',
+  'admin.manage_data'
+] ...
+✅ User with permissions created, permission count: 105
+🔧 Final user object login_preferences: {}
+ GET /api/staff/work-modes 200 in 25ms
+ ✓ Compiled /api/public-portal/queue/guests in 194ms (1767 modules)
+🔍 Token found in Authorization header
+✅ Token verified for user ID: 185
+✅ User found in database: e603876
+🔧 Raw user.login_preferences from database: {}
+🔍 Fetching permissions for user role: admin
+✅ Database permissions found: 105
+🔑 User permissions: [
+  'admin.maintenance_override',
+  'admin.manage_categories',
+  'admin.manage_chat_channels',
+  'admin.manage_chat_settings',
+  'admin.manage_data'
+] ...
+✅ User with permissions created, permission count: 105
+🔧 Final user object login_preferences: {}
+🔍 Guest Queue API - Permission Debug:
+  User: e603876
+  Role: admin
+  Permissions Count: 0
+✅ Admin role - bypassing permission check
+✅ Permission check passed
+✅ Admin role - has all real-time permissions
+ GET /api/public-portal/staff/active-chats 200 in 430ms
+ GET /api/staff/work-modes 200 in 411ms
+ GET /api/public-portal/queue/guests 200 in 432ms
+ GET /api/public-portal/staff/active-chats 200 in 13ms
+ ✓ Compiled /api/public-portal/queue/staff in 113ms (1769 modules)
+🔍 Staff Queue API - Permission Debug:
+  User: e603876
+  Role: admin
+  Permissions Count: 0
+✅ Admin role - bypassing permission check
+✅ Permission check passed
+✅ Admin role - has all real-time permissions
+ GET /api/public-portal/queue/staff 200 in 147ms
+ GET /api/public-portal/available-agents 200 in 30ms
+ GET /api/public-portal/staff/active-chats 200 in 24ms
+ GET /api/public-portal/available-agents 200 in 21ms
+ GET /api/public-portal/staff/active-chats 200 in 21ms
+ ✓ Compiled in 729ms (3228 modules)
+ GET /api/public-portal/available-agents 200 in 31ms
+ GET /api/public-portal/staff/active-chats 200 in 51ms
+ GET /api/public-portal/available-agents 200 in 21ms
+ GET /api/public-portal/staff/active-chats 200 in 36ms
+ GET /api/public-portal/available-agents 200 in 51ms
+ GET /api/public-portal/staff/active-chats 200 in 28ms
+ GET /api/public-portal/available-agents 200 in 26ms
+ ✓ Compiled in 505ms (3219 modules)
+ GET /api/public-portal/staff/active-chats 200 in 49ms
+ ✓ Compiled in 303ms (3219 modules)
+ ✓ Compiled in 235ms (3219 modules)
+ ✓ Compiled in 257ms (3219 modules)
+ GET /api/public-portal/available-agents 200 in 35ms
+ ✓ Compiled /api/public-portal/chat/start-session in 353ms (3221 modules)
+🔍 Start session request body: {
+  "guest_info": {
+    "name": "Sophia Clark",
+    "email": "SophiaClark@dpss.lacounty.gov",
+    "phone": null,
+    "department": null
+  },
+  "initial_message": "The App Freezes When I Switch Tabs"
+}
+📝 Extracted data: {
+  name: 'Sophia Clark',
+  email: 'SophiaClark@dpss.lacounty.gov',
+  phone: null,
+  department: null,
+  initialMessage: 'The App Freezes When I Switch Tabs'
+}
+🎯 Attempting auto-assignment for session guest_1756444707299_ag3s983rk
+ ✓ Compiled /api/public-portal/chat/auto-assign in 185ms (3223 modules)
+🎯 Auto-assignment request for session guest_1756444707299_ag3s983rk (normal, any dept, escalated: false)
+📋 Found 3 available staff members
+ POST /api/public-portal/chat/auto-assign 500 in 207ms
+⚠️ Auto-assignment failed with status: 500
+ POST /api/public-portal/chat/start-session 200 in 600ms
+ GET /api/public-portal/staff/active-chats 200 in 37ms
+ GET /api/public-portal/staff/active-chats 200 in 22ms
+ GET /api/public-portal/staff/active-chats 200 in 23ms
+ GET /api/public-portal/staff/active-chats 200 in 26ms
+ GET /chat/public-queue 200 in 225ms
+ ✓ Compiled /api/auth/user in 488ms (1767 modules)
+ ✓ Compiled (1769 modules)
+🔍 Token found in Authorization header
+✅ Token verified for user ID: 185
+🚀 checkMaintenanceStatus called
+📋 Querying system settings...
+✅ User found in database: e603876
+🔧 Raw user.login_preferences from database: {}
+🔍 Fetching permissions for user role: admin
+✅ System settings query complete: [
+  { setting_key: 'enableMaintenance', setting_value: 'false' },
+  {
+    setting_key: 'maintenanceMessage',
+    setting_value: '"System is under maintenance. Please try again later. Okay"'
+  }
+]
+📋 Querying portal settings...
+✅ Database permissions found: 105
+🔑 User permissions: [
+  'admin.maintenance_override',
+  'admin.manage_categories',
+  'admin.manage_chat_channels',
+  'admin.manage_chat_settings',
+  'admin.manage_data'
+] ...
+✅ User with permissions created, permission count: 105
+🔧 Final user object login_preferences: {}
+ GET /api/auth/user 200 in 775ms
+✅ Portal settings query complete: [
+  {
+    settings_json: '{"form_fields":{"name_required":true,"email_required":true,"phone_required":true,"employee_number_required":true,"office_required":true,"section_required":true,"location_required":true,"priority_enabled":true,"attachments_enabled":true,"max_attachments":5,"max_file_size":10,"allowed_file_types":["pdf","doc","docx","txt","jpg","png","gif"]},"display":{"portal_title":"DPSS IT Support Portal","portal_description":"Submit your IT support requests and track their progress","theme_color":"#2563eb","logo_url":"/support.ico","show_category_descriptions":true,"show_estimated_response_time":true,"enable_dark_mode":false,"items_per_page":10},"notifications":{"send_confirmation_email":true,"send_status_updates":true,"send_completion_notification":true,"email_template_confirmation":"Thank you for submitting your support request. Your ticket ID is {{ticket_id}}.","email_template_status_update":"Your support request {{ticket_id}} status has been updated to: {{status}}.","email_template_completion":"Your support request {{ticket_id}} has been completed.","sla_response_time_hours":24,"sla_resolution_time_hours":72,"escalation_enabled":true,"escalation_threshold_hours":48},"integrations":{"enable_api_access":false,"api_rate_limit":100,"webhook_url":"","enable_webhook":false,"external_knowledge_base_url":"","enable_chat_support":false,"enable_remote_assistance":false},"security":{"enable_captcha":false,"enable_file_scanning":true,"allowed_domains":[],"blocked_domains":[],"enable_ip_restrictions":false,"allowed_ip_ranges":[],"session_timeout_minutes":30,"max_login_attempts":5,"enable_audit_logging":true},"user_experience":{"enable_form_data_caching":true,"form_cache_duration_days":30,"enable_auto_save_drafts":true,"enable_form_progress_indicator":true,"enable_smart_form_completion":false},"advanced":{"enable_auto_assignment":true,"enable_smart_routing":false,"enable_duplicate_detection":true,"auto_close_resolved_after_days":7,"enable_satisfaction_survey":true,"enable_knowledge_base_suggestions":false,"enable_priority_escalation":true,"portal_maintenance_mode":false,"portal_maintenance_message":"The DPSS IT Support Portal is currently under maintenance. Please try again later or contact IT support directly.","portal_maintenance_contact":"","portal_maintenance_estimated_end":"","allow_queue_access_during_maintenance":true,"show_system_status_page":true}}'
+  }
+]
+📋 Portal settings converted: [
+  { setting_key: 'maintenance_mode', setting_value: undefined },
+  { setting_key: 'maintenance_message', setting_value: undefined },
+  { setting_key: 'portal_maintenance_theme', setting_value: undefined },
+  { setting_key: 'portal_estimated_return', setting_value: undefined },
+  { setting_key: 'portal_emergency_contact', setting_value: undefined }
+]
+🔧 Parsing system settings...
+🔍 parseMaintenanceSettings system - settings object: {
+  enableMaintenance: false,
+  maintenanceMessage: 'System is under maintenance. Please try again later. Okay'
+}
+🔍 parseMaintenanceSettings system - enabledKey: enableMaintenance, value: false (type: boolean), enabled: false
+✅ System config parsed: {
+  enabled: false,
+  config: {
+    message: 'System is under maintenance. Please try again later.',
+    theme: undefined,
+    adminOverride: true,
+    showRefreshButton: true,
+    logChanges: true
+  }
+}
+🔧 Parsing portal settings...
+🔍 parseMaintenanceSettings portal - settings object: {
+  maintenance_mode: undefined,
+  maintenance_message: undefined,
+  portal_maintenance_theme: undefined,
+  portal_estimated_return: undefined,
+  portal_emergency_contact: undefined
+}
+🔍 parseMaintenanceSettings portal - enabledKey: maintenance_mode, value: undefined (type: undefined), enabled: false
+✅ Portal config parsed: {
+  enabled: false,
+  config: {
+    message: 'System is under maintenance. Please try again later.',
+    theme: undefined,
+    adminOverride: true,
+    showRefreshButton: true,
+    logChanges: true
+  }
+}
+🔍 System settings raw: [
+  { setting_key: 'enableMaintenance', setting_value: 'false' },
+  {
+    setting_key: 'maintenanceMessage',
+    setting_value: '"System is under maintenance. Please try again later. Okay"'
+  }
+]
+🔍 System config parsed: {
+  enabled: false,
+  config: {
+    message: 'System is under maintenance. Please try again later.',
+    theme: undefined,
+    adminOverride: true,
+    showRefreshButton: true,
+    logChanges: true
+  }
+}
+🔍 Portal settings raw: [
+  { setting_key: 'maintenance_mode', setting_value: undefined },
+  { setting_key: 'maintenance_message', setting_value: undefined },
+  { setting_key: 'portal_maintenance_theme', setting_value: undefined },
+  { setting_key: 'portal_estimated_return', setting_value: undefined },
+  { setting_key: 'portal_emergency_contact', setting_value: undefined }
+]
+🔍 Portal config parsed: {
+  enabled: false,
+  config: {
+    message: 'System is under maintenance. Please try again later.',
+    theme: undefined,
+    adminOverride: true,
+    showRefreshButton: true,
+    logChanges: true
+  }
+}
+🔍 Final maintenance status: { isSystemMaintenance: false, isPortalMaintenance: false }
+🔍 Maintenance API Debug: {
+  isSystemMaintenance: false,
+  isPortalMaintenance: false,
+  effectiveMode: 'none',
+  hasSystemConfig: true,
+  hasPortalConfig: true
+}
+❌ No token provided in request
+ GET /api/maintenance/status 200 in 778ms
+🔍 Token found in Authorization header
+✅ Token verified for user ID: 185
+✅ User found in database: e603876
+🔧 Raw user.login_preferences from database: {}
+🔍 Fetching permissions for user role: admin
+✅ Database permissions found: 105
+🔑 User permissions: [
+  'admin.maintenance_override',
+  'admin.manage_categories',
+  'admin.manage_chat_channels',
+  'admin.manage_chat_settings',
+  'admin.manage_data'
+] ...
+✅ User with permissions created, permission count: 105
+🔧 Final user object login_preferences: {}
+ GET /api/auth/user 200 in 19ms
+ ✓ Compiled /api/staff/work-modes in 129ms (1771 modules)
+ ✓ Compiled /api/system/init in 0ms (1775 modules)
+ ✓ Compiled in 0ms (1780 modules)
+ ✓ Compiled in 1ms (1780 modules)
+🔍 Token found in Authorization header
+✅ Token verified for user ID: 185
+✅ User found in database: e603876
+🔧 Raw user.login_preferences from database: {}
+🔍 Fetching permissions for user role: admin
+ GET /api/chat/widget-settings 200 in 751ms
+✅ Database permissions found: 105
+🔑 User permissions: [
+  'admin.maintenance_override',
+  'admin.manage_categories',
+  'admin.manage_chat_channels',
+  'admin.manage_chat_settings',
+  'admin.manage_data'
+] ...
+✅ User with permissions created, permission count: 105
+🔧 Final user object login_preferences: {}
+ GET /api/auth/user 200 in 732ms
+ ✓ Compiled in 0ms (1780 modules)
+🔍 Token found in Authorization header
+✅ Token verified for user ID: 185
+✅ User found in database: e603876
+🔧 Raw user.login_preferences from database: {}
+🔍 Fetching permissions for user role: admin
+ GET /api/public-portal/widget-settings 200 in 902ms
+✅ Database permissions found: 105
+🔑 User permissions: [
+  'admin.maintenance_override',
+  'admin.manage_categories',
+  'admin.manage_chat_channels',
+  'admin.manage_chat_settings',
+  'admin.manage_data'
+] ...
+✅ User with permissions created, permission count: 105
+🔧 Final user object login_preferences: {}
+ GET /api/staff/work-modes 200 in 886ms
+ ✓ Compiled /api/public-portal/queue/guests in 0ms (1780 modules)
+🚀 Initializing Orvale Management System services...
+🔧 Backup scheduler disabled in development mode
+   Use /developer/settings to create manual backups
+✅ App services initialization completed
+ POST /api/system/init 200 in 869ms
+ ✓ Compiled in 1ms (1782 modules)
+ ✓ Compiled in 0ms (1782 modules)
+ GET /api/chat/widget-settings 200 in 766ms
+ ✓ Compiled in 1ms (1782 modules)
+🔍 Token found in Authorization header
+✅ Token verified for user ID: 185
+✅ User found in database: e603876
+🔧 Raw user.login_preferences from database: {}
+🔍 Fetching permissions for user role: admin
+✅ Database permissions found: 105
+🔑 User permissions: [
+  'admin.maintenance_override',
+  'admin.manage_categories',
+  'admin.manage_chat_channels',
+  'admin.manage_chat_settings',
+  'admin.manage_data'
+] ...
+✅ User with permissions created, permission count: 105
+🔧 Final user object login_preferences: {}
+ GET /api/staff/work-modes 200 in 768ms
+ GET /api/public-portal/staff/active-chats 200 in 752ms
+ ✓ Compiled in 1ms (1782 modules)
+🔍 Guest Queue API - Permission Debug:
+  User: e603876
+  Role: admin
+  Permissions Count: 0
+✅ Admin role - bypassing permission check
+✅ Permission check passed
+✅ Admin role - has all real-time permissions
+ GET /api/public-portal/queue/guests 200 in 892ms
+ ✓ Compiled /api/public-portal/queue/staff in 0ms (1782 modules)
+ ✓ Compiled in 1ms (1784 modules)
+🔍 Token found in Authorization header
+✅ Token verified for user ID: 185
+✅ User found in database: e603876
+🔧 Raw user.login_preferences from database: {}
+🔍 Fetching permissions for user role: admin
+✅ Database permissions found: 105
+🔑 User permissions: [
+  'admin.maintenance_override',
+  'admin.manage_categories',
+  'admin.manage_chat_channels',
+  'admin.manage_chat_settings',
+  'admin.manage_data'
+] ...
+✅ User with permissions created, permission count: 105
+🔧 Final user object login_preferences: {}
+ GET /api/staff/work-modes 200 in 733ms
+🔍 Staff Queue API - Permission Debug:
+  User: e603876
+  Role: admin
+  Permissions Count: 0
+✅ Admin role - bypassing permission check
+✅ Permission check passed
+✅ Admin role - has all real-time permissions
+ GET /api/public-portal/staff/active-chats 200 in 731ms
+ GET /api/public-portal/queue/staff 200 in 589ms
+🔍 Token found in Authorization header
+✅ Token verified for user ID: 185
+✅ User found in database: e603876
+🔧 Raw user.login_preferences from database: {}
+🔍 Fetching permissions for user role: admin
+✅ Database permissions found: 105
+🔑 User permissions: [
+  'admin.maintenance_override',
+  'admin.manage_categories',
+  'admin.manage_chat_channels',
+  'admin.manage_chat_settings',
+  'admin.manage_data'
+] ...
+✅ User with permissions created, permission count: 105
+🔧 Final user object login_preferences: {}
+ GET /api/staff/work-modes 200 in 14ms
+ GET /api/public-portal/staff/active-chats 200 in 37ms
+ GET /api/public-portal/staff/active-chats 200 in 34ms
+ GET /api/public-portal/staff/active-chats 200 in 31ms
+ GET /api/public-portal/staff/active-chats 200 in 32ms
+ ✓ Compiled in 662ms (3217 modules)
+ GET /api/public-portal/staff/active-chats 200 in 56ms
+ GET /api/public-portal/staff/active-chats 200 in 17ms

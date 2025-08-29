@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react';
 import {
   Box, Card, CardContent, Typography, FormControl, InputLabel,
   Select, MenuItem, Switch, FormControlLabel, TextField, Button,
-  Chip, Avatar, Alert, CircularProgress, Divider
+  Chip, Avatar, Alert, CircularProgress, Divider, Tabs, Tab, Paper
 } from '@mui/material';
 import {
   Circle, Person, AccessTime, Chat, Assignment,
-  Notifications, Settings, Save, Refresh
+  Notifications, Settings, Save, Refresh, AutoAwesome, Groups
 } from '@mui/icons-material';
 
 interface WorkModeSettings {
@@ -31,6 +31,7 @@ interface StaffWorkModeManagerProps {
 }
 
 export const StaffWorkModeManager = ({ staffInfo, onWorkModeChange }: StaffWorkModeManagerProps) => {
+  const [activeTab, setActiveTab] = useState(0);
   const [workModeSettings, setWorkModeSettings] = useState<WorkModeSettings>({
     current_mode: 'away',
     auto_assign_enabled: true,
@@ -223,103 +224,105 @@ export const StaffWorkModeManager = ({ staffInfo, onWorkModeChange }: StaffWorkM
 
   return (
     <Card>
-      <CardContent>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Person />
-            Work Mode Settings
-          </Typography>
-          
-          {/* Current Status Display */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
-            <Avatar sx={{ backgroundColor: currentMode.color, width: 40, height: 40 }}>
-              <Typography variant="h6">{currentMode.icon}</Typography>
-            </Avatar>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="subtitle1" fontWeight="bold">
-                {currentMode.label}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {currentMode.description}
-              </Typography>
-              {workModeSettings.status_message && (
-                <Typography variant="caption" color="text.secondary">
-                  "{workModeSettings.status_message}"
-                </Typography>
-              )}
-            </Box>
-            <Box sx={{ textAlign: 'right' }}>
-              <Chip
-                icon={<Chat />}
-                label={`${activeChatCount}/${workModeSettings.max_concurrent_chats} chats`}
-                color={activeChatCount >= workModeSettings.max_concurrent_chats ? 'error' : 'primary'}
-                size="small"
-              />
-            </Box>
+      <CardContent sx={{ p: 1 }}>
+        {/* Current Status Display */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+          <Avatar sx={{ backgroundColor: currentMode.color, width: 32, height: 32 }}>
+            <Typography variant="body2">{currentMode.icon}</Typography>
+          </Avatar>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="subtitle2" fontWeight="bold">
+              {currentMode.label}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {activeChatCount}/{workModeSettings.max_concurrent_chats} chats
+            </Typography>
           </Box>
-
-          {/* Availability Alert */}
-          {activeChatCount >= workModeSettings.max_concurrent_chats && (
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              You have reached your maximum concurrent chat limit. New chats will not be auto-assigned until you complete current ones.
-            </Alert>
-          )}
         </Box>
 
-        {/* Work Mode Selection */}
-        <Box sx={{ mb: 3 }}>
-          <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-            <InputLabel>Work Mode</InputLabel>
-            <Select
-              value={workModeSettings.current_mode}
+        {/* Tabs */}
+        <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+          <Tabs
+            value={activeTab}
+            onChange={(e, newValue) => setActiveTab(newValue)}
+            variant="fullWidth"
+            sx={{
+              minHeight: 40,
+              '& .MuiTab-root': {
+                minHeight: 40,
+                fontSize: '0.75rem',
+                padding: '8px 12px'
+              }
+            }}
+          >
+            <Tab 
+              icon={<Person sx={{ fontSize: 16 }} />} 
               label="Work Mode"
-              onChange={(e) => handleModeChange(e.target.value)}
-            >
-              {Object.entries(workModes).map(([key, mode]) => (
-                <MenuItem key={key} value={key}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <span>{mode.icon}</span>
-                    <span>{mode.label}</span>
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              iconPosition="start" 
+            />
+            <Tab 
+              icon={<AutoAwesome sx={{ fontSize: 16 }} />} 
+              label="Chat Settings"
+              iconPosition="start" 
+            />
+          </Tabs>
+        </Paper>
 
-          <TextField
-            fullWidth
-            size="small"
-            label="Status Message (Optional)"
-            value={workModeSettings.status_message}
-            onChange={(e) => setWorkModeSettings(prev => ({ ...prev, status_message: e.target.value }))}
-            placeholder="Let your team know what you're working on..."
-            sx={{ mb: 2 }}
-          />
-        </Box>
+        {/* Tab Panels */}
+        {activeTab === 0 && (
+          <Box>
+            {/* Work Mode Selection */}
+            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+              <InputLabel>Work Mode</InputLabel>
+              <Select
+                value={workModeSettings.current_mode}
+                label="Work Mode"
+                onChange={(e) => handleModeChange(e.target.value)}
+              >
+                {Object.entries(workModes).map(([key, mode]) => (
+                  <MenuItem key={key} value={key}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <span>{mode.icon}</span>
+                      <span>{mode.label}</span>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-        <Divider sx={{ my: 2 }} />
+            <TextField
+              fullWidth
+              size="small"
+              label="Status Message (Optional)"
+              value={workModeSettings.status_message}
+              onChange={(e) => setWorkModeSettings(prev => ({ ...prev, status_message: e.target.value }))}
+              placeholder="Let your team know what you're working on..."
+              sx={{ mb: 2 }}
+            />
 
-        {/* Chat Settings */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" gutterBottom>
-            Chat Assignment Settings
-          </Typography>
-          
-          <FormControlLabel
-            control={
-              <Switch
-                checked={workModeSettings.auto_assign_enabled}
-                onChange={(e) => setWorkModeSettings(prev => ({ ...prev, auto_assign_enabled: e.target.checked }))}
-                disabled={workModeSettings.current_mode === 'offline' || workModeSettings.current_mode === 'break'}
-              />
-            }
-            label="Auto-assign new chats"
-            sx={{ mb: 1, display: 'block' }}
-          />
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              {currentMode.description}
+            </Typography>
+          </Box>
+        )}
 
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        {activeTab === 1 && (
+          <Box>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={workModeSettings.auto_assign_enabled}
+                  onChange={(e) => setWorkModeSettings(prev => ({ ...prev, auto_assign_enabled: e.target.checked }))}
+                  disabled={workModeSettings.current_mode === 'offline'}
+                />
+              }
+              label="Auto-assign new chats"
+              sx={{ mb: 2, display: 'block' }}
+            />
+
             <TextField
               type="number"
+              fullWidth
               label="Max Concurrent Chats"
               value={workModeSettings.max_concurrent_chats}
               onChange={(e) => setWorkModeSettings(prev => ({ 
@@ -328,57 +331,49 @@ export const StaffWorkModeManager = ({ staffInfo, onWorkModeChange }: StaffWorkM
               }))}
               size="small"
               inputProps={{ min: 1, max: 10 }}
-              sx={{ flex: 1 }}
+              sx={{ mb: 2 }}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={workModeSettings.accept_vip_chats}
+                  onChange={(e) => setWorkModeSettings(prev => ({ ...prev, accept_vip_chats: e.target.checked }))}
+                />
+              }
+              label="Accept VIP chats"
+              sx={{ mb: 1, display: 'block' }}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={workModeSettings.accept_escalated_chats}
+                  onChange={(e) => setWorkModeSettings(prev => ({ ...prev, accept_escalated_chats: e.target.checked }))}
+                />
+              }
+              label="Accept escalated chats"
+              sx={{ mb: 2, display: 'block' }}
             />
           </Box>
+        )}
 
-          <FormControlLabel
-            control={
-              <Switch
-                checked={workModeSettings.accept_vip_chats}
-                onChange={(e) => setWorkModeSettings(prev => ({ ...prev, accept_vip_chats: e.target.checked }))}
-              />
-            }
-            label="Accept VIP chats"
-            sx={{ mb: 1, display: 'block' }}
-          />
-
-          <FormControlLabel
-            control={
-              <Switch
-                checked={workModeSettings.accept_escalated_chats}
-                onChange={(e) => setWorkModeSettings(prev => ({ ...prev, accept_escalated_chats: e.target.checked }))}
-              />
-            }
-            label="Accept escalated chats"
-            sx={{ mb: 1, display: 'block' }}
-          />
-        </Box>
-
-        {/* Action Buttons */}
-        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* Action Buttons & Status */}
+        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between', alignItems: 'center', mt: 2, pt: 1, borderTop: 1, borderColor: 'divider' }}>
           <Typography variant="caption" color="text.secondary">
             {lastUpdated ? `Last updated: ${lastUpdated.toLocaleTimeString()}` : ''}
           </Typography>
           
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              size="small"
-              onClick={loadWorkModeSettings}
-              startIcon={<Refresh />}
-            >
-              Refresh
-            </Button>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={saveWorkModeSettings}
-              disabled={saving}
-              startIcon={saving ? <CircularProgress size={16} /> : <Save />}
-            >
-              {saving ? 'Saving...' : 'Save Settings'}
-            </Button>
-          </Box>
+          <Button
+            variant="contained"
+            size="small"
+            onClick={saveWorkModeSettings}
+            disabled={saving}
+            startIcon={saving ? <CircularProgress size={14} /> : <Save />}
+            sx={{ fontSize: '0.75rem' }}
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
         </Box>
       </CardContent>
     </Card>

@@ -16,7 +16,7 @@ import {
   PersonAdd, SwapHoriz, Assignment, NoteAdd,
   Minimize, Maximize, Close, DragIndicator,
   ChatBubbleOutline, Support, Queue, People, Send,
-  LogoutOutlined
+  LogoutOutlined, ExpandMore, ExpandLess
 } from '@mui/icons-material';
 import { ColorPicker } from '@/components/shared/ColorPicker';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -123,6 +123,8 @@ const PublicQueuePage = () => {
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [guestQueueExpanded, setGuestQueueExpanded] = useState(true);
+  const [staffOnlineExpanded, setStaffOnlineExpanded] = useState(true);
 
   const workspaceRef = useRef<HTMLDivElement>(null);
   const chatWindowRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -204,13 +206,13 @@ const PublicQueuePage = () => {
         setCurrentStaff({
           id: user.user_id?.toString() || user.username,
           name: user.display_name || user.username,
-          status: 'away',
+          status: 'offline', // Will be updated by loadWorkMode
           activeChats: 0,
           maxChats: 3,
           department: user.department || 'Support'
         });
         
-        // Load work mode
+        // Load work mode (this will update the status)
         await loadWorkMode();
         
         setLoading(false);
@@ -285,16 +287,16 @@ const PublicQueuePage = () => {
 
       // Listen for public portal specific updates
       publicPortalSocket.addEventListener(componentId, 'queue:update', (data) => {
-        console.log('Public portal queue update:', data);
+        console.log('📊 Public portal queue update:', data);
         if (data.waitingSessions) {
           const updatedQueue: GuestSession[] = data.waitingSessions.map((session: any) => ({
             id: session.sessionId,
             guestName: session.guestName || `Guest #${session.sessionId.slice(-3)}`,
             waitTime: session.waitTime || 0,
-            priority: 'normal',
-            status: 'waiting',
-            department: 'General Support',
-            initialMessage: '',
+            priority: session.priority || 'normal',
+            status: session.status || 'waiting',
+            department: session.department || 'General Support',
+            initialMessage: session.message || '',
             joinedAt: new Date(Date.now() - (session.waitTime * 1000))
           }));
           setGuestQueue(updatedQueue);
@@ -397,11 +399,13 @@ const PublicQueuePage = () => {
           console.error('Error parsing work mode descriptions:', e);
         }
         
-        // Update current staff status
+        // Update current staff status and work mode
+        const currentMode = data.current_mode || 'away';
+        setWorkMode(currentMode);
         if (currentStaff) {
           setCurrentStaff(prev => prev ? { 
             ...prev, 
-            status: data.work_mode || 'away',
+            status: currentMode,
             maxChats: data.max_concurrent_chats || 3
           } : null);
         }
@@ -501,8 +505,16 @@ const PublicQueuePage = () => {
   };
 
   const handleGuestClick = async (guest: GuestSession) => {
-    if (!currentStaff || currentStaff.status !== 'ready') {
-      alert('You must be in "Ready" mode to handle chats.');
+    console.log('🔍 Guest Click Debug:', {
+      workMode,
+      currentStaffStatus: currentStaff?.status,
+      currentStaffId: currentStaff?.id,
+      guestId: guest.id
+    });
+    
+    // Check work mode instead of currentStaff.status for more reliable state
+    if (workMode !== 'ready') {
+      alert(`You must be in "Ready" mode to handle chats. Current mode: ${workMode}`);
       return;
     }
 
@@ -811,7 +823,7 @@ const PublicQueuePage = () => {
           }}
         >
           {/* Staff Work Mode Manager */}
-          <Box sx={{ p: 2, borderBottom: `2px solid ${themeColors.accent}` }}>
+          <Box sx={{ borderBottom: `2px solid ${themeColors.accent}` }}>
             <StaffWorkModeManager
               staffInfo={{
                 id: currentStaff?.id || '',
@@ -826,172 +838,206 @@ const PublicQueuePage = () => {
               }}
             />
           </Box>
-          {/* Staff Section (Top 40%) */}
-          <Box sx={{ 
-            height: '40%', 
-            borderBottom: `2px solid ${themeColors.accent}`,
-            p: 2
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <People sx={{ fontSize: 20, color: themeColors.primary }} />
-              <Typography variant="subtitle1" fontWeight="bold">
-                Staff Online ({staffMembers.filter(s => s.status !== 'offline').length})
-              </Typography>
-            </Box>
-            
-            <List dense sx={{ maxHeight: 'calc(100% - 40px)', overflow: 'auto' }}>
-              {staffMembers.filter(staff => staff.status !== 'offline').map((staff) => (
-                <ListItem 
-                  key={staff.id}
-                  sx={{ 
-                    cursor: 'pointer',
-                    borderRadius: 1,
-                    mb: 0.5,
-                    '&:hover': { backgroundColor: themeColors.secondary }
-                  }}
-                  onClick={() => handleStaffClick(staff)}
-                >
-                  <ListItemAvatar>
-                    <Badge 
-                      overlap="circular" 
-                      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                      badgeContent={getStatusIcon(staff.status)}
-                    >
-                      <Avatar sx={{ width: 32, height: 32 }}>
-                        {staff.name.substring(0, 2).toUpperCase()}
-                      </Avatar>
-                    </Badge>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={
-                      <Typography variant="body2" fontWeight="medium">
-                        {staff.name}
-                      </Typography>
-                    }
-                    secondary={
-                      <>
-                        <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
-                          {getStatusLabel(staff.status)} • {staff.activeChats}/{staff.maxChats} chats
-                        </span>
-                        <br />
-                        <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
-                          {staff.department}
-                        </span>
-                      </>
-                    }
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Box>
 
-          {/* Queue Section (Bottom 60%) - Only show if user has real-time queue permission */}
-          {realTimeEnabled ? (
-            <Box sx={{ 
-              height: '60%',
-              p: 2,
-              overflow: 'auto'
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <Queue sx={{ fontSize: 20, color: themeColors.primary }} />
-                <Typography variant="subtitle1" fontWeight="bold">
-                  Guest Queue ({guestQueue.length})
-                </Typography>
+          {/* Guest Queue Section (Top Priority) - Only show if user has real-time queue permission */}
+          {realTimeEnabled && (
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              {/* Guest Queue Header */}
+              <Box 
+                sx={{ 
+                  p: 2, 
+                  borderBottom: `1px solid ${themeColors.border}`,
+                  cursor: 'pointer',
+                  '&:hover': { backgroundColor: themeColors.secondary }
+                }}
+                onClick={() => setGuestQueueExpanded(!guestQueueExpanded)}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Queue sx={{ fontSize: 20, color: themeColors.primary }} />
+                  <Typography variant="subtitle1" fontWeight="bold" sx={{ flex: 1 }}>
+                    Guest Queue ({guestQueue.length})
+                  </Typography>
+                  {guestQueueExpanded ? <ExpandLess /> : <ExpandMore />}
+                </Box>
               </Box>
 
-              <List dense>
-                {guestQueue.map((guest) => (
-                  <ListItem 
-                    key={guest.id}
-                    sx={{ 
-                      cursor: 'pointer',
-                      borderRadius: 1,
-                      mb: 1,
-                      p: 1.5,
-                      border: `1px solid ${themeColors.border}`,
-                      borderLeft: `4px solid ${
-                        guest.status === 'abandoned' ? '#f44336' :
-                        guest.priority === 'urgent' ? '#ff5722' :
-                        guest.priority === 'high' ? '#ff9800' :
-                        guest.priority === 'vip' ? '#9c27b0' : 'transparent'
-                      }`,
-                      '&:hover': { 
-                        backgroundColor: themeColors.secondary,
-                        transform: 'translateX(4px)',
-                        transition: 'all 0.2s ease'
-                      }
-                    }}
-                    onClick={() => handleGuestClick(guest)}
-                  >
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="body2" fontWeight="medium">
-                            {getPriorityIcon(guest.priority, guest.status)} {guest.guestName}
-                          </Typography>
-                          {guest.status === 'abandoned' && (
-                            <Chip 
-                              label="Abandoned" 
-                              size="small" 
-                              color="error" 
-                              variant="outlined"
-                              sx={{ fontSize: 10, height: 18 }}
-                            />
-                          )}
-                        </Box>
-                      }
-                      secondary={
-                        <>
-                          <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
-                            Waiting: {formatWaitTime(guest.waitTime)}
-                          </span>
-                          <br />
-                          <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
-                            {guest.department}
-                          </span>
-                          {guest.initialMessage && (
+              {/* Guest Queue Content */}
+              {guestQueueExpanded && (
+                <Box sx={{ 
+                  flex: guestQueue.length > 0 ? 1 : 0,
+                  minHeight: guestQueue.length > 0 ? '200px' : 'auto',
+                  overflow: 'auto',
+                  p: 1
+                }}>
+                  <List dense>
+                    {guestQueue.map((guest) => (
+                      <ListItem 
+                        key={guest.id}
+                        sx={{ 
+                          cursor: 'pointer',
+                          borderRadius: 1,
+                          mb: 1,
+                          p: 1.5,
+                          border: `1px solid ${themeColors.border}`,
+                          borderLeft: `4px solid ${
+                            guest.status === 'abandoned' ? '#f44336' :
+                            guest.priority === 'urgent' ? '#ff5722' :
+                            guest.priority === 'high' ? '#ff9800' :
+                            guest.priority === 'vip' ? '#9c27b0' : 'transparent'
+                          }`,
+                          '&:hover': { 
+                            backgroundColor: themeColors.secondary,
+                            transform: 'translateX(4px)',
+                            transition: 'all 0.2s ease'
+                          }
+                        }}
+                        onClick={() => handleGuestClick(guest)}
+                      >
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" fontWeight="medium">
+                                {getPriorityIcon(guest.priority, guest.status)} {guest.guestName}
+                              </Typography>
+                              {guest.status === 'abandoned' && (
+                                <Chip 
+                                  label="Abandoned" 
+                                  size="small" 
+                                  color="error" 
+                                  variant="outlined"
+                                  sx={{ fontSize: 10, height: 18 }}
+                                />
+                              )}
+                            </Box>
+                          }
+                          secondary={
                             <>
-                              <br />
-                              <span 
-                                style={{ 
-                                  fontSize: '0.75rem', 
-                                  color: 'rgba(0, 0, 0, 0.6)',
-                                  display: 'block',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  maxWidth: '200px'
-                                }}
-                              >
-                                "{guest.initialMessage}"
+                              <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
+                                Waiting: {formatWaitTime(guest.waitTime)}
                               </span>
+                              <br />
+                              <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
+                                {guest.department}
+                              </span>
+                              {guest.initialMessage && (
+                                <>
+                                  <br />
+                                  <span 
+                                    style={{ 
+                                      fontSize: '0.75rem', 
+                                      color: 'rgba(0, 0, 0, 0.6)',
+                                      display: 'block',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                      maxWidth: '200px'
+                                    }}
+                                  >
+                                    "{guest.initialMessage}"
+                                  </span>
+                                </>
+                              )}
                             </>
-                          )}
-                        </>
-                      }
-                    />
-                  </ListItem>
-                ))}
-              </List>
+                          }
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
 
-              {guestQueue.length === 0 && (
-                <Box sx={{ textAlign: 'center', mt: 4, color: 'text.secondary' }}>
-                  <Typography variant="body2">
-                    No guests in queue
-                  </Typography>
+                  {guestQueue.length === 0 && (
+                    <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                      <Typography variant="body2">
+                        No guests in queue
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
               )}
             </Box>
-          ) : (
-            // Show message when user doesn't have queue viewing permission
-            <Box sx={{ 
-              height: '60%',
-              p: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Alert severity="info" sx={{ maxWidth: 300 }}>
+          )}
+
+          {/* Staff Online Section */}
+          <Box sx={{ flex: realTimeEnabled ? 0 : 1, display: 'flex', flexDirection: 'column' }}>
+            {/* Staff Online Header */}
+            <Box 
+              sx={{ 
+                p: 2, 
+                borderTop: realTimeEnabled ? `1px solid ${themeColors.border}` : 'none',
+                borderBottom: `1px solid ${themeColors.border}`,
+                cursor: 'pointer',
+                '&:hover': { backgroundColor: themeColors.secondary }
+              }}
+              onClick={() => setStaffOnlineExpanded(!staffOnlineExpanded)}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <People sx={{ fontSize: 20, color: themeColors.primary }} />
+                <Typography variant="subtitle1" fontWeight="bold" sx={{ flex: 1 }}>
+                  Staff Online ({staffMembers.filter(s => s.status !== 'offline').length})
+                </Typography>
+                {staffOnlineExpanded ? <ExpandLess /> : <ExpandMore />}
+              </Box>
+            </Box>
+
+            {/* Staff Online Content */}
+            {staffOnlineExpanded && (
+              <Box sx={{ 
+                flex: 1,
+                minHeight: '200px',
+                overflow: 'auto',
+                p: 1
+              }}>
+                <List dense>
+                  {staffMembers.filter(staff => staff.status !== 'offline').map((staff) => (
+                    <ListItem 
+                      key={staff.id}
+                      sx={{ 
+                        cursor: 'pointer',
+                        borderRadius: 1,
+                        mb: 0.5,
+                        '&:hover': { backgroundColor: themeColors.secondary }
+                      }}
+                      onClick={() => handleStaffClick(staff)}
+                    >
+                      <ListItemAvatar>
+                        <Badge 
+                          overlap="circular" 
+                          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                          badgeContent={getStatusIcon(staff.status)}
+                        >
+                          <Avatar sx={{ width: 32, height: 32 }}>
+                            {staff.name.substring(0, 2).toUpperCase()}
+                          </Avatar>
+                        </Badge>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Typography variant="body2" fontWeight="medium">
+                            {staff.name}
+                          </Typography>
+                        }
+                        secondary={
+                          <>
+                            <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
+                              {getStatusLabel(staff.status)} • {staff.activeChats}/{staff.maxChats} chats
+                            </span>
+                            <br />
+                            <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
+                              {staff.department}
+                            </span>
+                          </>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
+            )}
+          </Box>
+
+          {/* No Permission Message for Guest Queue */}
+          {!realTimeEnabled && (
+            <Box sx={{ p: 2 }}>
+              <Alert severity="info">
                 <Typography variant="body2" fontWeight="medium">
                   Guest Queue Access Restricted
                 </Typography>
