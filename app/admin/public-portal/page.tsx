@@ -935,8 +935,8 @@ const PublicPortalAdmin = () => {
                     ]}
                   />
                 </Box>
-              </Box>
-            </Box>
+              </CardContent>
+            </Card>
 
             {/* Messages Section */}
             <Box className="space-y-6">
