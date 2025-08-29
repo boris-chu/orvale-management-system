@@ -1009,6 +1009,11 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
 
   // Handle pre-chat submission for progressive form
   const handlePreChatSubmitProgressive = async () => {
+    console.log('🚀 Starting progressive chat session with:', {
+      name: guestName,
+      email: guestEmail,
+      initialIssue: initialIssue
+    });
     setLoading(true);
     
     try {
@@ -1028,27 +1033,88 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
         })
       });
 
+      console.log('📡 Start session response status:', response.status);
+      
+      if (!response.ok) {
+        console.error('❌ Start session failed:', response.status, response.statusText);
+      }
+
       const result = await response.json();
+      console.log('📦 Start session result:', result);
       
       if (result.success) {
         setSessionId(result.sessionId || result.session_id);
         setShowPreChatForm(false);
         setLoading(false);
         
-        // Initialize socket connection
+        // Add initial message from user
+        const userInitialMessage = {
+          sender: 'guest',
+          text: initialIssue,
+          timestamp: new Date(),
+          id: Date.now() + 1
+        };
+        setMessages(prev => [...prev, userInitialMessage]);
+        
+        // Add queue position message if needed
+        const position = result.queuePosition || 1;
+        if (position > 1) {
+          const queueMessage = {
+            sender: 'system',
+            text: `You are position ${position} in queue. ${result.estimatedWaitTime ? `Estimated wait time: ${result.estimatedWaitTime} minutes.` : 'Please wait for the next available agent.'}`,
+            timestamp: new Date(),
+            id: Date.now() + 2
+          };
+          setMessages(prev => [...prev, queueMessage]);
+        }
+        
+        setQueuePosition(position);
+        
+        // Initialize socket connection with session ID
         const guestInfo = {
           name: guestName,
           email: guestEmail,
-          phone: '',
-          department: '',
+          phone: null,
+          department: null,
           sessionId: result.sessionId || result.session_id
         };
         
+        console.log('🔌 Starting socket session with guestInfo:', guestInfo);
         startChatSession(guestInfo);
+      } else {
+        // Show error but keep widget open
+        console.error('Failed to start chat session:', result.error);
+        const errorMessage = {
+          sender: 'system',
+          text: result.error === 'Chat is currently disabled' 
+            ? 'Chat support is currently unavailable. Please try again later.'
+            : 'Unable to connect. Please refresh and try again.',
+          timestamp: new Date(),
+          id: Date.now(),
+          type: 'error'
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        setLoading(false);
+        
+        // Reset progressive form state so user can try again
+        setAwaitingName(false);
+        setAwaitingEmail(false);
       }
     } catch (error) {
       console.error('Error starting progressive chat session:', error);
+      const errorMessage = {
+        sender: 'system',
+        text: 'Connection error. Please check your internet and try again.',
+        timestamp: new Date(),
+        id: Date.now(),
+        type: 'error'
+      };
+      setMessages(prev => [...prev, errorMessage]);
       setLoading(false);
+      
+      // Reset progressive form state
+      setAwaitingName(false);
+      setAwaitingEmail(false);
     }
   };
 
