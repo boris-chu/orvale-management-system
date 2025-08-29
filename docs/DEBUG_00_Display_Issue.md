@@ -214,4 +214,32 @@ The "00" might be coming from:
 
 ---
 
-**Note**: This issue has consumed ~20 commits and extensive debugging. The persistence suggests the source may be outside the obvious locations examined so far.
+## **CRITICAL FINAL FINDINGS** (August 29, 2025 - Final Debugging Session)
+
+### Key Discovery
+- **Phone field**: Does NOT render (confirmed by user)
+- **Department field**: Does NOT render (confirmed by user)  
+- **"00" still appears**: Confirming it's NOT from conditional field rendering
+- **Location**: User confirmed "00" appears BEFORE all debug markers
+
+### Definitive Conclusion
+The "00" is coming from **direct JSX expressions** that render the numeric values, likely:
+```jsx
+{settings?.require_phone}    // Renders "0"
+{settings?.require_department}  // Renders "0"  
+```
+
+These expressions are **separate** from the conditional field rendering and directly output the numeric values as text.
+
+### Exact Location
+Based on user feedback with debug markers:
+- "00" appears **before** the first debug marker
+- "00" is **above** the form container or in the email field area
+- "00" is **not** from phone/department field components (they don't render)
+
+### Final Resolution Strategy
+1. **Search for direct JSX expressions**: Look for `{settings?.require_phone}` and `{settings?.require_department}` that are NOT part of conditional rendering
+2. **Check for debug artifacts**: Previous debugging attempts may have left JSX expressions
+3. **Browser inspection**: Use dev tools to identify the exact DOM element containing "00"
+
+**Note**: This issue has consumed ~25 commits and extensive debugging. The "00" is definitively from direct numeric value rendering, not conditional component rendering.

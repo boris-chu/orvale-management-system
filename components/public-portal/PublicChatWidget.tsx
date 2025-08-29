@@ -1528,6 +1528,10 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         )}
                       </Box>
 
+                      <Box sx={{ border: '3px solid lime', p: 1, mb: 1 }}>
+                        🟢 FINAL DEBUG: If 00 appears ABOVE this green box, it's in the form container or email field area
+                      </Box>
+                      
                       {/* Phone Field - Should not render since require_phone is 0 */}
                       {settings?.require_phone && (
                         <TextField
