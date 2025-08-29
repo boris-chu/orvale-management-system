@@ -1513,34 +1513,58 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
 
                       {/* Form Fields Container */}
                       <Box sx={{ '& > *': { mb: 2 } }}>
+                        <Box sx={{ border: '1px solid orange', p: 0.5, mb: 1 }} data-debug="form-container-start">
+                          DEBUG: Start of form fields container
+                        </Box>
+                        
                         {/* Name Field */}
                         {settings?.require_name && (
-                          <TextField
-                            fullWidth
-                            size="small"
-                            label="Your Name *"
-                            value={preChatData.name || ''}
-                            onChange={(e) => setPreChatData(prev => ({ ...prev, name: e.target.value }))}
-                            error={!!preChatErrors.name}
-                            helperText={preChatErrors.name}
-                            autoComplete="off"
-                          />
+                          <>
+                            <Box sx={{ border: '1px solid purple', p: 0.5, mb: 0.5 }} data-debug="before-name">
+                              DEBUG: Before Name field
+                            </Box>
+                            <TextField
+                              fullWidth
+                              size="small"
+                              label="Your Name *"
+                              value={preChatData.name || ''}
+                              onChange={(e) => setPreChatData(prev => ({ ...prev, name: e.target.value }))}
+                              error={!!preChatErrors.name}
+                              helperText={preChatErrors.name}
+                              autoComplete="off"
+                            />
+                            <Box sx={{ border: '1px solid purple', p: 0.5, mb: 0.5 }} data-debug="after-name">
+                              DEBUG: After Name field
+                            </Box>
+                          </>
                         )}
 
                         {/* Email Field */}
                         {settings?.require_email && (
-                          <TextField
-                            fullWidth
-                            size="small"
-                            type="email"
-                            label="Email Address *"
-                            value={preChatData.email || ''}
-                            onChange={(e) => setPreChatData(prev => ({ ...prev, email: e.target.value }))}
-                            error={!!preChatErrors.email}
-                            helperText={preChatErrors.email}
-                            autoComplete="off"
-                          />
+                          <>
+                            <Box sx={{ border: '1px solid green', p: 0.5, mb: 0.5 }} data-debug="before-email">
+                              DEBUG: Before Email field
+                            </Box>
+                            <TextField
+                              fullWidth
+                              size="small"
+                              type="email"
+                              label="Email Address *"
+                              value={preChatData.email || ''}
+                              onChange={(e) => setPreChatData(prev => ({ ...prev, email: e.target.value }))}
+                              error={!!preChatErrors.email}
+                              helperText={preChatErrors.email}
+                              autoComplete="off"
+                            />
+                            <Box sx={{ border: '1px solid green', p: 0.5, mb: 0.5 }} data-debug="after-email">
+                              DEBUG: After Email field
+                            </Box>
+                          </>
                         )}
+                        
+                        <Box sx={{ border: '1px solid orange', p: 0.5, mb: 1 }} data-debug="form-container-end">
+                          DEBUG: End of form fields container
+                        </Box>
                       </Box>
 
                       {/* Phone Field - Should not render since require_phone is 0 */}
