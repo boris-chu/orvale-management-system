@@ -119,10 +119,6 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
     message: ''
   });
 
-  // Debug logging for form data
-  useEffect(() => {
-    console.log('🐛 PreChatData state:', preChatData);
-  }, [preChatData]);
   const [preChatErrors, setPreChatErrors] = useState<{ [key: string]: string }>({});
   const [availableAgents, setAvailableAgents] = useState<any[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
@@ -1414,14 +1410,6 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         {settings?.welcome_message || 'Please fill out the form below to get started.'}
                       </Typography>
 
-                      {/* Debug field visibility */}
-                      {console.log('🐛 Field visibility:', {
-                        require_name: settings?.require_name,
-                        require_email: settings?.require_email,
-                        require_phone: settings?.require_phone,
-                        require_department: settings?.require_department,
-                        custom_fields: settings?.custom_fields_json
-                      })}
 
                       {/* Available Agents Display */}
                       {settings?.show_agent_avatars && availableAgents.length > 0 && (
@@ -1507,43 +1495,39 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         </Box>
                       )}
 
-                      {/* Name Field */}
-                      {settings?.require_name && (
-                        <TextField
-                          fullWidth
-                          size="small"
-                          label="Your Name *"
-                          value={preChatData.name || ''}
-                          onChange={(e) => setPreChatData(prev => ({ ...prev, name: e.target.value }))}
-                          error={!!preChatErrors.name}
-                          helperText={preChatErrors.name}
-                          autoComplete="off"
-                          sx={{ mb: 2 }}
-                        />
-                      )}
+                      {/* Form Fields Container */}
+                      <Box sx={{ '& > *': { mb: 2 } }}>
+                        {/* Name Field */}
+                        {settings?.require_name && (
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Your Name *"
+                            value={preChatData.name || ''}
+                            onChange={(e) => setPreChatData(prev => ({ ...prev, name: e.target.value }))}
+                            error={!!preChatErrors.name}
+                            helperText={preChatErrors.name}
+                            autoComplete="off"
+                          />
+                        )}
 
-                      {/* Email Field */}
-                      {settings?.require_email && (
-                        <TextField
-                          fullWidth
-                          size="small"
-                          type="email"
-                          label="Email Address *"
-                          value={preChatData.email || ''}
-                          onChange={(e) => setPreChatData(prev => ({ ...prev, email: e.target.value }))}
-                          error={!!preChatErrors.email}
-                          helperText={preChatErrors.email}
-                          autoComplete="off"
-                          sx={{ mb: 2 }}
-                        />
-                      )}
+                        {/* Email Field */}
+                        {settings?.require_email && (
+                          <TextField
+                            fullWidth
+                            size="small"
+                            type="email"
+                            label="Email Address *"
+                            value={preChatData.email || ''}
+                            onChange={(e) => setPreChatData(prev => ({ ...prev, email: e.target.value }))}
+                            error={!!preChatErrors.email}
+                            helperText={preChatErrors.email}
+                            autoComplete="off"
+                          />
+                        )}
+                      </Box>
 
-                      {/* Phone Field - DEBUG */}
-                      {console.log('🐛 Phone field render check:', {
-                        require_phone: settings?.require_phone,
-                        phone_value: preChatData.phone,
-                        should_render: Boolean(settings?.require_phone)
-                      })}
+                      {/* Phone Field - Should not render */}
                       {settings?.require_phone && (
                         <TextField
                           fullWidth
@@ -1558,7 +1542,7 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         />
                       )}
 
-                      {/* Department Field */}
+                      {/* Department Field - Should not render */}
                       {settings?.require_department && (
                         <FormControl fullWidth size="small" error={!!preChatErrors.department} sx={{ mb: 2 }}>
                           <InputLabel>Department *</InputLabel>
@@ -1576,47 +1560,6 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         </FormControl>
                       )}
 
-                      {/* Custom Fields Debug */}
-                      {(() => {
-                        try {
-                          const customFields = settings?.custom_fields_json ? JSON.parse(settings.custom_fields_json) : [];
-                          console.log('🐛 Parsed custom fields:', customFields);
-                          
-                          // Render any custom fields that might exist
-                          return customFields.map((field: any) => {
-                            console.log('🐛 Rendering custom field:', field);
-                            if (field.type === 'text') {
-                              return (
-                                <div key={field.id} style={{ background: 'yellow', padding: '5px', marginBottom: '5px' }}>
-                                  DEBUG CUSTOM FIELD: {field.label}
-                                  <TextField
-                                    fullWidth
-                                    size="small"
-                                    label={field.label}
-                                    value={preChatData[field.id] || ''}
-                                    onChange={(e) => setPreChatData(prev => ({ ...prev, [field.id]: e.target.value }))}
-                                    sx={{ mt: 1 }}
-                                  />
-                                </div>
-                              );
-                            }
-                            return null;
-                          });
-                        } catch (e) {
-                          console.log('🐛 Custom fields parse error:', e);
-                          return null;
-                        }
-                      })()}
-                      
-                      {/* DEBUG: Show all form fields being rendered */}
-                      <div style={{ background: 'lightblue', padding: '10px', marginBottom: '10px', fontSize: '12px' }}>
-                        DEBUG RENDERED FIELDS:<br/>
-                        Name: {settings?.require_name ? 'YES' : 'NO'}<br/>
-                        Email: {settings?.require_email ? 'YES' : 'NO'}<br/>
-                        Phone: {settings?.require_phone ? 'YES' : 'NO'}<br/>
-                        Department: {settings?.require_department ? 'YES' : 'NO'}<br/>
-                        Custom fields: {settings?.custom_fields_json}<br/>
-                      </div>
 
                       {/* Message Field */}
                       <TextField
