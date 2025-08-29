@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Box, Paper, Typography, Grid, Card, CardContent,
   Avatar, Badge, Chip, IconButton, Button, Divider,
@@ -152,6 +152,25 @@ const PublicQueuePage = () => {
 
   const workspaceRef = useRef<HTMLDivElement>(null);
   const chatWindowRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  // Memoized default values for StaffTicketModal to prevent infinite re-renders
+  const ticketModalDefaultValues = useMemo(() => {
+    if (!ticketModalContext) return undefined;
+    
+    return {
+      title: `Chat Session: ${ticketModalContext.guestInfo.guestName}`,
+      description: `Chat session with ${ticketModalContext.guestInfo.guestName}.\n\nInitial message: ${ticketModalContext.guestInfo.initialMessage}\n\nDepartment: ${ticketModalContext.guestInfo.department}`,
+      userDisplayName: ticketModalContext.guestInfo.guestName,
+      userEmail: `${ticketModalContext.guestInfo.guestName.toLowerCase().replace(/\s+/g, '.')}@guest.com`,
+      submittedBy: ticketModalContext.guestInfo.guestName,
+      priority: ticketModalContext.guestInfo.priority === 'urgent' ? 'urgent' : 
+               ticketModalContext.guestInfo.priority === 'high' ? 'high' : 'medium',
+      category: '', // Let user select category first
+      requestType: '', // Let user select request type after category
+      status: 'pending', // Use 'pending' instead of 'open'
+      assignedTeam: currentUser?.team_id || 'ITTS_Region7' // Assign to current user's team
+    };
+  }, [ticketModalContext, currentUser?.team_id]);
 
   useEffect(() => {
     checkAuthentication();
@@ -1439,18 +1458,7 @@ const PublicQueuePage = () => {
       <StaffTicketModal
         open={staffTicketModalOpen}
         onOpenChange={setStaffTicketModalOpen}
-        defaultValues={ticketModalContext ? {
-          title: `Chat Session: ${ticketModalContext.guestInfo.guestName}`,
-          description: `Chat session with ${ticketModalContext.guestInfo.guestName}.\n\nInitial message: ${ticketModalContext.guestInfo.initialMessage}\n\nDepartment: ${ticketModalContext.guestInfo.department}`,
-          userDisplayName: ticketModalContext.guestInfo.guestName,
-          userEmail: `${ticketModalContext.guestInfo.guestName.toLowerCase().replace(/\s+/g, '.')}@guest.com`, // Generate placeholder email
-          submittedBy: ticketModalContext.guestInfo.guestName,
-          priority: ticketModalContext.guestInfo.priority === 'urgent' ? 'urgent' : 
-                   ticketModalContext.guestInfo.priority === 'high' ? 'high' : 'medium',
-          category: 'General Support', // Default category
-          requestType: 'Other', // Default request type
-          status: 'open'
-        } : undefined}
+        defaultValues={ticketModalDefaultValues}
         onSubmit={async (ticketData) => {
           console.log('🎫 Creating chat-sourced ticket with CS- prefix:', ticketData);
           

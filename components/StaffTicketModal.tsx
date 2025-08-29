@@ -238,14 +238,51 @@ export function StaffTicketModal({
 
   // Load initial data
   useEffect(() => {
+    console.log('🔄 [StaffTicketModal] useEffect triggered - Dependencies:', {
+      open,
+      hasDefaultValues: !!defaultValues,
+      currentUser: currentUser?.username,
+      defaultValuesKeys: defaultValues ? Object.keys(defaultValues) : []
+    });
+    
     if (open) {
+      console.log('📂 [StaffTicketModal] Modal opened - Loading data...');
+      
+      // Reset form first to prevent state pollution
+      console.log('🧹 [StaffTicketModal] Resetting form data...');
+      setFormData({
+        title: '',
+        category: '',
+        requestType: '',
+        subcategory: '',
+        subSubcategory: '',
+        description: '',
+        priority: 'medium',
+        submittedBy: '',
+        userDisplayName: '',
+        userEmail: '',
+        userEmployeeNumber: '',
+        userPhone: '',
+        userLocation: '',
+        userCubicleRoom: '',
+        userOffice: '',
+        userBureau: '',
+        userDivision: '',
+        userSection: '',
+        status: 'pending',
+        assignedTeam: '',
+        assignedTo: '',
+        attachments: []
+      });
+      
       loadCategories();
       loadTeams();
       loadUsers();
       loadOrganizationData();
       
-      // Apply default values if provided
+      // Apply default values AFTER reset
       if (defaultValues) {
+        console.log('📝 [StaffTicketModal] Applying default values:', defaultValues);
         setFormData(prev => ({ ...prev, ...defaultValues }));
       }
       
@@ -256,25 +293,40 @@ export function StaffTicketModal({
         createdByStaff: currentUser?.display_name || 'Unknown Staff',
         ticketSource: 'Staff Created'
       });
+    } else {
+      // Modal closed - additional cleanup
+      console.log('🚪 [StaffTicketModal] Modal closed - Cleaning up...');
     }
   }, [open, defaultValues, currentUser]);
 
   const loadCategories = async () => {
+    console.log('🎫 [StaffTicketModal] loadCategories() called');
     try {
       const token = localStorage.getItem('authToken');
+      console.log('🔑 [StaffTicketModal] Auth token exists:', !!token);
+      
       const response = await fetch('/api/ticket-data/categories', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
+      console.log('📡 [StaffTicketModal] Categories API response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('📋 [StaffTicketModal] Categories loaded:', {
+          categories: data.categories?.length || 0,
+          requestTypes: Object.keys(data.requestTypes || {}).length,
+          subcategories: Object.keys(data.subcategories || {}).length
+        });
         setCategories(data.categories);
         setRequestTypes(data.requestTypes);
         setSubcategories(data.subcategories);
       } else {
-        console.error('Failed to load categories');
+        console.error('❌ [StaffTicketModal] Failed to load categories - Status:', response.status);
+        const errorText = await response.text();
+        console.error('❌ [StaffTicketModal] Error response:', errorText);
         toast({
           title: 'Warning',
           description: 'Failed to load ticket categories',
@@ -282,7 +334,7 @@ export function StaffTicketModal({
         });
       }
     } catch (error) {
-      console.error('Failed to load categories:', error);
+      console.error('❌ [StaffTicketModal] Failed to load categories:', error);
       toast({
         title: 'Warning',
         description: 'Failed to load ticket categories',
