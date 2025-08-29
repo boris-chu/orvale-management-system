@@ -237,7 +237,7 @@ export async function PUT(request: NextRequest) {
         settings.widget_position || 'bottom-right',
         settings.widget_position_x || 0,
         settings.widget_position_y || 0,
-        settings.widget_icon || 'chat',
+        null, // widget_icon disabled - no longer using icons
         settings.widget_image || '',
         settings.widget_text || 'Chat with us',
         settings.widget_animation || 'pulse',
