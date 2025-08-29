@@ -1562,15 +1562,7 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         </FormControl>
                       )}
 
-                      <Box sx={{ border: '2px solid purple', p: 1, mb: 1 }}>
-                        🟣 MARKER A: Before suspicious area
-                      </Box>
-                      
-                      {/* SUSPECT AREA - where 00 might be coming from */}
-                      
-                      <Box sx={{ border: '2px solid orange', p: 1, mb: 1 }}>  
-                        🟠 MARKER B: After suspicious area
-                      </Box>
+                      {/* CLEANED: Removed suspect area entirely */}
 
                       {/* Message Field */}
                       <Box sx={{ color: 'red', fontSize: '12px', mb: 1 }}>
