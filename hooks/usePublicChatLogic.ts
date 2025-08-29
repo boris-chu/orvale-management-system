@@ -38,7 +38,7 @@ interface ChatMessage {
   text: string;
   timestamp: Date;
   id: number;
-  type?: string;
+  type?: 'text' | 'error' | 'success' | 'info';
 }
 
 interface PreChatData {
@@ -472,7 +472,8 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
         sender: 'system' as const,
         text: `Great, ${message}! And your email address?`,
         timestamp: new Date(),
-        id: Date.now()
+        id: Date.now(),
+        type: 'info' as const
       };
       setMessages(prev => [...prev, emailMessage]);
       return true;
@@ -483,9 +484,10 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
       if (!/\S+@\S+\.\S+/.test(message)) {
         const errorMessage = {
           sender: 'system' as const,
-          text: 'Please enter a valid email address.',
+          text: '❌ Please enter a valid email address (example: user@domain.com)',
           timestamp: new Date(),
-          id: Date.now()
+          id: Date.now(),
+          type: 'error' as const
         };
         setMessages(prev => [...prev, errorMessage]);
         return true;
@@ -497,9 +499,10 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
       // Now start the chat session with collected info
       const completeMessage = {
         sender: 'system' as const,
-        text: 'Perfect! An agent will be with you shortly.',
+        text: '✅ Perfect! An agent will be with you shortly.',
         timestamp: new Date(),
-        id: Date.now()
+        id: Date.now(),
+        type: 'success' as const
       };
       setMessages(prev => [...prev, completeMessage]);
       
@@ -518,7 +521,8 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
         sender: 'system' as const,
         text: 'Thanks! To help you better, may I get your name?',
         timestamp: new Date(),
-        id: Date.now()
+        id: Date.now(),
+        type: 'info' as const
       };
       setMessages(prev => [...prev, nameMessage]);
       return true;

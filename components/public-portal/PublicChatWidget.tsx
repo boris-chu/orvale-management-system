@@ -569,16 +569,39 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                         messages.map((message, index) => (
                           <Box key={index} sx={{ mb: 2 }}>
                             {message.sender === 'system' ? (
-                              <Typography 
-                                variant="body2" 
-                                sx={{ 
-                                  color: '#666',
-                                  textAlign: 'center',
-                                  mb: 1
+                              <Paper
+                                sx={{
+                                  p: 1.5,
+                                  mb: 1,
+                                  backgroundColor: 
+                                    message.type === 'error' ? '#ffebee' :
+                                    message.type === 'success' ? '#e8f5e8' :
+                                    message.type === 'info' ? '#e3f2fd' :
+                                    '#f5f5f5',
+                                  border: `1px solid ${
+                                    message.type === 'error' ? '#ffcdd2' :
+                                    message.type === 'success' ? '#c8e6c9' :
+                                    message.type === 'info' ? '#bbdefb' :
+                                    '#e0e0e0'
+                                  }`,
+                                  borderRadius: 2,
+                                  textAlign: 'center'
                                 }}
                               >
-                                {message.text}
-                              </Typography>
+                                <Typography 
+                                  variant="body2" 
+                                  sx={{ 
+                                    color: 
+                                      message.type === 'error' ? '#d32f2f' :
+                                      message.type === 'success' ? '#2e7d32' :
+                                      message.type === 'info' ? '#1976d2' :
+                                      '#666',
+                                    fontWeight: message.type === 'error' ? 'medium' : 'normal'
+                                  }}
+                                >
+                                  {message.text}
+                                </Typography>
+                              </Paper>
                             ) : (
                               <Box
                                 sx={{
@@ -870,9 +893,19 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                                     label={message.text}
                                     size="small"
                                     sx={{ 
-                                      backgroundColor: '#e3f2fd',
-                                      color: '#1976d2',
-                                      fontSize: '0.75rem'
+                                      backgroundColor: 
+                                        message.type === 'error' ? '#ffebee' :
+                                        message.type === 'success' ? '#e8f5e8' :
+                                        message.type === 'info' ? '#e3f2fd' :
+                                        '#e3f2fd',
+                                      color: 
+                                        message.type === 'error' ? '#d32f2f' :
+                                        message.type === 'success' ? '#2e7d32' :
+                                        message.type === 'info' ? '#1976d2' :
+                                        '#1976d2',
+                                      fontSize: '0.75rem',
+                                      fontWeight: message.type === 'error' ? 'medium' : 'normal',
+                                      border: message.type === 'error' ? '1px solid #ffcdd2' : 'none'
                                     }}
                                   />
                                 </Box>
