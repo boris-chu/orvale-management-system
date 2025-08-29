@@ -1079,6 +1079,159 @@ publicPortalNamespace.on('connection', async (socket) => {
     }
   });
   
+  // === STAFF/AGENT EVENT HANDLERS ===
+  
+  // Handle staff connecting to a session
+  socket.on('staff:connect_to_session', async (data) => {
+    if (!socket.isAgent) return;
+    
+    const { sessionId } = data;
+    const session = publicSessions.get(sessionId);
+    
+    if (session && !session.agentId) {
+      // Assign agent to session
+      session.agentId = socket.userId;
+      session.agentName = socket.userDisplayName;
+      session.status = 'active';
+      
+      // Join agent room for this session
+      socket.join(`agent:${socket.userId}`);
+      socket.join(`session:${sessionId}`);
+      
+      // Update database
+      db.run(
+        'UPDATE public_chat_sessions SET assigned_agent_id = ?, status = ?, agent_assigned_at = datetime("now") WHERE session_id = ?',
+        [socket.userId, 'active', sessionId]
+      );
+      
+      // Remove from queue
+      const queueIndex = publicQueue.indexOf(sessionId);
+      if (queueIndex > -1) {
+        publicQueue.splice(queueIndex, 1);
+      }
+      
+      // Notify guest that agent connected
+      publicPortalNamespace.to(`session:${sessionId}`).emit('agent:assigned', {
+        agentId: socket.userId,
+        agentName: socket.userDisplayName
+      });
+      
+      console.log(`✅ Agent ${socket.userDisplayName} connected to session ${sessionId}`);
+    }
+  });
+  
+  // Handle staff messages to guests
+  socket.on('staff:message', async (data) => {
+    if (!socket.isAgent) return;
+    
+    const { sessionId, message } = data;
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    try {
+      // Save message to database
+      db.run(
+        `INSERT INTO public_chat_messages 
+         (message_id, session_id, sender_type, sender_id, message_text, message_type, created_at) 
+         VALUES (?, ?, 'staff', ?, ?, 'text', datetime('now'))`,
+        [messageId, sessionId, socket.userId, message]
+      );
+      
+      // Send to guest in session
+      publicPortalNamespace.to(`session:${sessionId}`).emit('agent:message', {
+        messageId,
+        message,
+        type: 'text',
+        staffName: socket.userDisplayName,
+        timestamp: new Date()
+      });
+      
+      // Send confirmation to staff
+      socket.emit('staff:message_sent', { 
+        sessionId,
+        messageId, 
+        message,
+        timestamp: new Date(),
+        staffName: socket.userDisplayName 
+      });
+      
+      console.log(`📤 Staff message: ${socket.userDisplayName} -> session ${sessionId}`);
+      
+    } catch (error) {
+      console.error('Failed to send staff message:', error);
+      socket.emit('message:error', { messageId, error: 'Failed to send message' });
+    }
+  });
+  
+  // Handle staff typing indicators
+  socket.on('staff:typing', (data) => {
+    if (!socket.isAgent) return;
+    
+    const { sessionId, isTyping } = data;
+    
+    // Send typing indicator to guest
+    publicPortalNamespace.to(`session:${sessionId}`).emit('agent:typing', {
+      isTyping
+    });
+  });
+  
+  // Handle staff disconnecting from session
+  socket.on('staff:disconnect_from_session', (data) => {
+    if (!socket.isAgent) return;
+    
+    const { sessionId } = data;
+    const session = publicSessions.get(sessionId);
+    
+    if (session && session.agentId === socket.userId) {
+      // Remove agent assignment
+      session.agentId = null;
+      session.agentName = null;
+      
+      // Update database
+      db.run(
+        'UPDATE public_chat_sessions SET status = ? WHERE session_id = ? AND assigned_agent_id = ?',
+        ['waiting', sessionId, socket.userId]
+      );
+      
+      // Put back in queue if guest is still connected
+      if (!publicQueue.includes(sessionId)) {
+        publicQueue.push(sessionId);
+      }
+      
+      console.log(`🔌 Agent ${socket.userDisplayName} disconnected from session ${sessionId}`);
+    }
+  });
+  
+  // Handle staff ending session
+  socket.on('staff:end_session', (data) => {
+    if (!socket.isAgent) return;
+    
+    const { sessionId } = data;
+    const session = publicSessions.get(sessionId);
+    
+    if (session && session.agentId === socket.userId) {
+      // Update session status
+      session.status = 'ended';
+      
+      // Update database
+      db.run(
+        'UPDATE public_chat_sessions SET status = ?, end_time = datetime("now") WHERE session_id = ?',
+        ['ended', sessionId]
+      );
+      
+      // Notify guest
+      publicPortalNamespace.to(`session:${sessionId}`).emit('session:ended', {
+        reason: 'Session ended by support agent'
+      });
+      
+      // Clean up memory
+      setTimeout(() => {
+        publicSessions.delete(sessionId);
+      }, 5000);
+      
+      console.log(`✅ Session ${sessionId} ended by ${socket.userDisplayName}`);
+    }
+  });
+
   // Handle disconnect
   socket.on('disconnect', () => {
     if (socket.sessionId) {
@@ -1111,7 +1264,13 @@ publicPortalNamespace.on('connection', async (socket) => {
       }
     }
     
-    console.log(`🌐 Public portal disconnection: ${socket.id}`);
+    // Handle agent disconnect
+    if (socket.isAgent) {
+      console.log(`🌐 Agent disconnection: ${socket.userDisplayName} (${socket.id})`);
+      // TODO: Handle agent disconnect - reassign sessions, update availability
+    } else {
+      console.log(`🌐 Public portal disconnection: ${socket.id}`);
+    }
   });
 });
 

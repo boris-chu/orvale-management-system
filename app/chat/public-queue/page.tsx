@@ -15,12 +15,13 @@ import {
   Settings, ColorLens, Message, Phone, VideoCall,
   PersonAdd, SwapHoriz, Assignment, NoteAdd,
   Minimize, Maximize, Close, DragIndicator,
-  ChatBubbleOutline, Support, Queue, People
+  ChatBubbleOutline, Support, Queue, People, Send
 } from '@mui/icons-material';
 import { ColorPicker } from '@/components/shared/ColorPicker';
 import { motion, AnimatePresence } from 'framer-motion';
 import { socketClient } from '@/lib/socket-client';
 import { StaffWorkModeManager } from '@/components/public-portal/StaffWorkModeManager';
+import { publicPortalSocket } from '@/lib/public-portal-socket';
 
 interface StaffMember {
   id: string;
@@ -215,11 +216,16 @@ const PublicQueuePage = () => {
     if (!token) return;
 
     try {
-      // Connect to Socket.io for real-time updates
+      // Connect to both main socket and public portal socket for full coverage
       const socket = socketClient.connect(token);
+      const publicSocket = publicPortalSocket.connect({ 
+        name: 'Staff', 
+        email: 'staff@system', 
+        token 
+      });
       const componentId = 'PublicQueue_' + Date.now();
 
-      // Listen for queue updates
+      // Listen for general queue updates on main socket
       socketClient.addEventListener(componentId, 'public_queue:guest_joined', (data) => {
         console.log('Guest joined queue:', data);
         setGuestQueue(prev => {
@@ -256,12 +262,36 @@ const PublicQueuePage = () => {
         ));
       });
 
+      // Listen for public portal specific updates
+      publicPortalSocket.addEventListener(componentId, 'queue:update', (data) => {
+        console.log('Public portal queue update:', data);
+        if (data.waitingSessions) {
+          const updatedQueue: GuestSession[] = data.waitingSessions.map((session: any) => ({
+            id: session.sessionId,
+            guestName: session.guestName || `Guest #${session.sessionId.slice(-3)}`,
+            waitTime: session.waitTime || 0,
+            priority: 'normal',
+            status: 'waiting',
+            department: 'General Support',
+            initialMessage: '',
+            joinedAt: new Date(Date.now() - (session.waitTime * 1000))
+          }));
+          setGuestQueue(updatedQueue);
+        }
+      });
+
+      publicPortalSocket.addEventListener(componentId, 'session:started', (data) => {
+        console.log('New session started:', data);
+        // This will trigger a queue update
+      });
+
       // Load real queue data from server
       loadRealQueueData();
 
       // Cleanup function
       return () => {
         socketClient.removeEventListeners(componentId);
+        publicPortalSocket.removeEventListeners(componentId);
       };
     } catch (error) {
       console.error('Failed to initialize real-time updates:', error);
@@ -449,7 +479,7 @@ const PublicQueuePage = () => {
     return `${hours}h ${mins % 60}m`;
   };
 
-  const handleGuestClick = (guest: GuestSession) => {
+  const handleGuestClick = async (guest: GuestSession) => {
     if (!currentStaff || currentStaff.status !== 'ready') {
       alert('You must be in "Ready" mode to handle chats.');
       return;
@@ -477,6 +507,41 @@ const PublicQueuePage = () => {
     // Update staff status
     if (currentStaff) {
       setCurrentStaff(prev => prev ? { ...prev, activeChats: prev.activeChats + 1 } : null);
+    }
+
+    // Notify Socket.io server about session assignment
+    if (realTimeEnabled && publicPortalSocket.isConnected()) {
+      try {
+        // Use the session assignment API for database update
+        const token = localStorage.getItem('authToken');
+        const response = await fetch('/api/public-portal/chat/auto-assign', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            sessionId: guest.id,
+            priority: guest.priority || 'normal',
+            department: guest.department || null,
+            isEscalated: false,
+            forceAssign: currentStaff.id // Force assign to current staff
+          })
+        });
+
+        if (response.ok) {
+          console.log(`✅ Session ${guest.id} assigned to ${currentStaff.name}`);
+        } else {
+          console.error('Failed to assign session via API');
+        }
+      } catch (error) {
+        console.error('Error assigning session:', error);
+      }
+      
+      // Also notify via Socket.io for real-time updates
+      publicPortalSocket.emit('staff:connect_to_session', {
+        sessionId: guest.id
+      });
     }
   };
 
@@ -1116,36 +1181,12 @@ const FloatableChatWindow = ({ chat, onClose, onMinimize, onFocus }: FloatableCh
                 </Box>
               )}
 
-              {/* Placeholder for real-time messages */}
-              <Box sx={{ textAlign: 'center', mt: 2, opacity: 0.6 }}>
-                <Typography variant="body2" color="text.secondary">
-                  💬 Real-time messaging will be connected here
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Session ID: {chat.sessionId}
-                </Typography>
-              </Box>
+              {/* Live messages display */}
+              <MessagesDisplay sessionId={chat.sessionId} guestInfo={chat.guestInfo} />
             </Box>
 
             {/* Input Area */}
-            <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', backgroundColor: '#fff' }}>
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <TextField
-                  size="small"
-                  fullWidth
-                  placeholder="Type your message..."
-                  variant="outlined"
-                  disabled // Will enable when Socket.io is connected
-                  sx={{ flex: 1 }}
-                />
-                <IconButton 
-                  size="small" 
-                  color="primary"
-                  disabled // Will enable when Socket.io is connected
-                >
-                  <Send fontSize="small" />
-                </IconButton>
-              </Box>
+            <MessageInput sessionId={chat.sessionId} />
               
               {/* Action Buttons */}
               <Box sx={{ display: 'flex', gap: 1, mt: 1, justifyContent: 'space-between' }}>
@@ -1182,6 +1223,422 @@ const FloatableChatWindow = ({ chat, onClose, onMinimize, onFocus }: FloatableCh
         )}
       </Paper>
     </motion.div>
+  );
+};
+
+// Messages Display Component for Staff Chat
+interface MessagesDisplayProps {
+  sessionId: string;
+  guestInfo: GuestSession;
+}
+
+interface ChatMessage {
+  id: string;
+  sender: 'guest' | 'staff' | 'system';
+  message: string;
+  timestamp: Date;
+  senderName?: string;
+}
+
+const MessagesDisplay = ({ sessionId, guestInfo }: MessagesDisplayProps) => {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const componentId = `StaffMessages_${sessionId}_${Date.now()}`;
+    
+    // Connect to public portal socket for staff-guest communication with auth token
+    const token = localStorage.getItem('authToken');
+    const socket = publicPortalSocket.connect({ 
+      name: 'Staff', 
+      email: 'staff@system', 
+      token 
+    });
+    setIsConnected(socket?.connected || false);
+    
+    // Notify the socket that staff has connected to this session
+    if (socket?.connected) {
+      publicPortalSocket.emit('staff:connect_to_session', { sessionId });
+    }
+
+    // Set up event listeners for this session
+    publicPortalSocket.addEventListener(componentId, 'guest:message', (data) => {
+      if (data.sessionId === sessionId) {
+        const newMessage: ChatMessage = {
+          id: data.messageId || Date.now().toString(),
+          sender: 'guest',
+          message: data.message,
+          timestamp: new Date(data.timestamp || Date.now()),
+          senderName: guestInfo.guestName
+        };
+        setMessages(prev => [...prev, newMessage]);
+      }
+    });
+
+    // Listen for message confirmations when staff sends
+    publicPortalSocket.addEventListener(componentId, 'staff:message_sent', (data) => {
+      if (data.sessionId === sessionId) {
+        const newMessage: ChatMessage = {
+          id: data.messageId || Date.now().toString(),
+          sender: 'staff',
+          message: data.message,
+          timestamp: new Date(data.timestamp || Date.now()),
+          senderName: data.staffName || 'Staff'
+        };
+        setMessages(prev => [...prev, newMessage]);
+      }
+    });
+
+    publicPortalSocket.addEventListener(componentId, 'guest:typing', (data) => {
+      if (data.sessionId === sessionId) {
+        setIsTyping(data.isTyping);
+      }
+    });
+
+    // Clean up
+    return () => {
+      publicPortalSocket.removeEventListeners(componentId);
+      // Notify that staff disconnected from session
+      if (publicPortalSocket.isConnected()) {
+        publicPortalSocket.emit('staff:disconnect_from_session', { sessionId });
+      }
+    };
+  }, [sessionId, guestInfo.guestName]);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  return (
+    <Box 
+      sx={{ 
+        flex: 1, 
+        overflow: 'auto',
+        p: 1,
+        backgroundColor: '#fafafa',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1
+      }}
+    >
+      {/* Connection Status */}
+      {!isConnected && (
+        <Box sx={{ textAlign: 'center', py: 1 }}>
+          <Chip 
+            label="Connecting to chat..."
+            size="small"
+            color="warning"
+            icon={<CircularProgress size={12} />}
+          />
+        </Box>
+      )}
+
+      {/* System message: Staff connected */}
+      <Box sx={{ textAlign: 'center', my: 1 }}>
+        <Chip 
+          label={`You are now chatting with ${guestInfo.guestName}`}
+          size="small"
+          sx={{ backgroundColor: '#e3f2fd', color: '#1976d2' }}
+        />
+      </Box>
+
+      {/* Initial guest message if exists */}
+      {guestInfo.initialMessage && messages.length === 0 && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 1 }}>
+          <Paper 
+            sx={{ 
+              p: 1, 
+              maxWidth: '70%',
+              backgroundColor: '#fff',
+              border: '1px solid #e0e0e0'
+            }}
+          >
+            <Typography variant="body2" sx={{ mb: 0.5 }}>
+              <strong>{guestInfo.guestName}:</strong>
+            </Typography>
+            <Typography variant="body2">
+              {guestInfo.initialMessage}
+            </Typography>
+            <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mt: 0.5 }}>
+              {guestInfo.joinedAt.toLocaleTimeString()}
+            </Typography>
+          </Paper>
+        </Box>
+      )}
+
+      {/* Messages */}
+      {messages.map((message) => (
+        <Box
+          key={message.id}
+          sx={{
+            display: 'flex',
+            justifyContent: message.sender === 'staff' ? 'flex-end' : 
+                           message.sender === 'guest' ? 'flex-start' : 'center',
+            mb: 1
+          }}
+        >
+          {message.sender === 'system' ? (
+            <Chip 
+              label={message.message}
+              size="small"
+              sx={{ backgroundColor: '#e3f2fd', color: '#1976d2' }}
+            />
+          ) : (
+            <Paper
+              sx={{
+                p: 1.5,
+                maxWidth: '70%',
+                backgroundColor: message.sender === 'staff' ? '#1976d2' : '#fff',
+                color: message.sender === 'staff' ? 'white' : 'text.primary',
+                border: message.sender === 'guest' ? '1px solid #e0e0e0' : 'none'
+              }}
+            >
+              {message.sender === 'guest' && (
+                <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
+                  {message.senderName}
+                </Typography>
+              )}
+              <Typography variant="body2">
+                {message.message}
+              </Typography>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  opacity: 0.7, 
+                  display: 'block', 
+                  mt: 0.5,
+                  color: message.sender === 'staff' ? 'rgba(255,255,255,0.7)' : 'text.secondary'
+                }}
+              >
+                {message.timestamp.toLocaleTimeString()}
+              </Typography>
+            </Paper>
+          )}
+        </Box>
+      ))}
+
+      {/* Typing indicator */}
+      {isTyping && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
+          <Typography variant="caption" color="text.secondary">
+            {guestInfo.guestName} is typing...
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            {[0, 1, 2].map(i => (
+              <motion.div
+                key={i}
+                animate={{ opacity: [0, 1, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.5 }}
+              >
+                <Box sx={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: 'text.secondary' }} />
+              </motion.div>
+            ))}
+          </Box>
+        </Box>
+      )}
+
+      {/* Empty state for new chats */}
+      {messages.length === 0 && !guestInfo.initialMessage && (
+        <Box sx={{ textAlign: 'center', mt: 2, opacity: 0.6 }}>
+          <Typography variant="body2" color="text.secondary">
+            💬 Chat session started
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Say hello to get the conversation going!
+          </Typography>
+        </Box>
+      )}
+
+      <div ref={messagesEndRef} />
+    </Box>
+  );
+};
+
+// Message Input Component for Staff
+interface MessageInputProps {
+  sessionId: string;
+}
+
+const MessageInput = ({ sessionId }: MessageInputProps) => {
+  const [inputMessage, setInputMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Ensure connection with auth token for staff
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      publicPortalSocket.connect({ 
+        name: 'Staff', 
+        email: 'staff@system', 
+        token 
+      });
+    }
+    
+    const socket = publicPortalSocket.getSocket();
+    setIsConnected(socket?.connected || false);
+
+    const checkConnection = setInterval(() => {
+      setIsConnected(publicPortalSocket.isConnected());
+    }, 1000);
+
+    return () => clearInterval(checkConnection);
+  }, []);
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || !isConnected || isSending) return;
+
+    setIsSending(true);
+    const messageText = inputMessage.trim();
+    setInputMessage('');
+    
+    // Stop typing indicator
+    handleStopTyping();
+
+    try {
+      // Send message via Socket.io
+      const success = publicPortalSocket.emit('staff:message', {
+        sessionId,
+        message: messageText,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!success) {
+        console.warn('Failed to send message via Socket.io');
+        // Could implement HTTP fallback here
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleTyping = () => {
+    if (!isConnected) return;
+
+    if (!isTyping) {
+      setIsTyping(true);
+      publicPortalSocket.emit('staff:typing', { sessionId, isTyping: true });
+    }
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set new timeout to stop typing
+    typingTimeoutRef.current = setTimeout(() => {
+      handleStopTyping();
+    }, 3000);
+  };
+
+  const handleStopTyping = () => {
+    if (isTyping) {
+      setIsTyping(false);
+      publicPortalSocket.emit('staff:typing', { sessionId, isTyping: false });
+    }
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  return (
+    <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', backgroundColor: '#fff' }}>
+      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+        <TextField
+          size="small"
+          fullWidth
+          placeholder={isConnected ? "Type your message..." : "Connecting..."}
+          variant="outlined"
+          value={inputMessage}
+          onChange={(e) => {
+            setInputMessage(e.target.value);
+            handleTyping();
+          }}
+          onKeyDown={handleKeyDown}
+          disabled={!isConnected || isSending}
+          sx={{ flex: 1 }}
+        />
+        <IconButton 
+          size="small" 
+          color="primary"
+          onClick={handleSendMessage}
+          disabled={!inputMessage.trim() || !isConnected || isSending}
+        >
+          {isSending ? (
+            <CircularProgress size={16} />
+          ) : (
+            <Send fontSize="small" />
+          )}
+        </IconButton>
+      </Box>
+      
+      {/* Connection status */}
+      {!isConnected && (
+        <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
+          Not connected to chat service
+        </Typography>
+      )}
+      
+      {/* Action Buttons */}
+      <Box sx={{ display: 'flex', gap: 1, mt: 1, justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            size="small"
+            startIcon={<Assignment />}
+            variant="outlined"
+            sx={{ fontSize: '0.75rem' }}
+            onClick={() => {
+              // TODO: Implement create ticket functionality
+              console.log('Create ticket for session:', sessionId);
+            }}
+          >
+            Create Ticket
+          </Button>
+          <Button
+            size="small"
+            startIcon={<SwapHoriz />}
+            variant="outlined"
+            sx={{ fontSize: '0.75rem' }}
+            onClick={() => {
+              // TODO: Implement transfer functionality
+              console.log('Transfer session:', sessionId);
+            }}
+          >
+            Transfer
+          </Button>
+        </Box>
+        
+        <Button
+          size="small"
+          color="error"
+          variant="text"
+          sx={{ fontSize: '0.75rem' }}
+          onClick={() => {
+            // TODO: Implement end chat functionality
+            if (confirm('Are you sure you want to end this chat session?')) {
+              publicPortalSocket.emit('staff:end_session', { sessionId });
+            }
+          }}
+        >
+          End Chat
+        </Button>
+      </Box>
+    </Box>
   );
 };
 

@@ -16,6 +16,11 @@ interface PublicSocketEvents {
   'message:error': (data: { messageId: string; error: string }) => void;
   'session:ended': (data: { reason: string }) => void;
   'guest:disconnected': (data: { sessionId: string }) => void;
+  // Staff-side events
+  'guest:message': (data: { sessionId: string; messageId: string; message: string; timestamp: Date }) => void;
+  'staff:message': (data: { sessionId: string; messageId: string; message: string; timestamp: Date; staffName: string }) => void;
+  'guest:typing': (data: { sessionId: string; isTyping: boolean }) => void;
+  'staff:typing': (data: { sessionId: string; isTyping: boolean }) => void;
 }
 
 class PublicPortalSocket {
@@ -29,7 +34,7 @@ class PublicPortalSocket {
    * Connect to the public portal namespace
    * @param guestInfo Guest information for starting a session
    */
-  connect(guestInfo?: { name: string; email: string; phone?: string; department?: string }) {
+  connect(guestInfo?: { name: string; email: string; phone?: string; department?: string; token?: string }) {
     if (this.socket?.connected || this.isConnecting) {
       console.log('🌐 Public portal socket already connected or connecting');
       return this.socket;
@@ -43,7 +48,8 @@ class PublicPortalSocket {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      auth: guestInfo?.token ? { token: guestInfo.token } : {}
     });
 
     // Set up connection event handlers
@@ -183,6 +189,26 @@ class PublicPortalSocket {
    */
   getSessionId(): string | null {
     return this.sessionId;
+  }
+
+  /**
+   * Get the underlying socket instance
+   */
+  getSocket(): Socket | null {
+    return this.socket;
+  }
+
+  /**
+   * Emit a generic event
+   */
+  emit(event: string, data?: any): boolean {
+    if (!this.socket?.connected) {
+      console.error('Cannot emit event: socket not connected');
+      return false;
+    }
+
+    this.socket.emit(event, data);
+    return true;
   }
 
   /**
