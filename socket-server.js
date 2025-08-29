@@ -807,6 +807,171 @@ io.on('connection', async (socket) => {
 
   // === DISCONNECTION HANDLING ===
   
+  // === PUBLIC PORTAL MESSAGE HANDLERS (for main namespace staff) ===
+  
+  // Handle staff connecting to a public portal session from main namespace
+  socket.on('staff:connect_to_session', async (data) => {
+    if (!authenticatedUser) return;
+    
+    const { sessionId } = data;
+    const session = publicSessions.get(sessionId);
+    
+    if (session && !session.agentId) {
+      // Assign agent to session
+      session.agentId = socket.userId;
+      session.agentName = socket.userDisplayName;
+      session.status = 'active';
+      
+      // Update database
+      db.run(
+        'UPDATE public_chat_sessions SET assigned_to = ?, status = ? WHERE session_id = ?',
+        [socket.userId, 'active', sessionId]
+      );
+      
+      // Remove from queue
+      const queueIndex = publicQueue.indexOf(sessionId);
+      if (queueIndex > -1) {
+        publicQueue.splice(queueIndex, 1);
+        
+        // Notify remaining guests of updated positions
+        notifyGuestPositions();
+        
+        // Notify staff of updated queue
+        notifyAvailableAgents();
+      }
+      
+      // Notify guest that agent connected
+      publicPortalNamespace.to(`session:${sessionId}`).emit('agent:assigned', {
+        agentId: socket.userId,
+        agentName: socket.userDisplayName
+      });
+      
+      console.log(`✅ Main namespace agent ${socket.userDisplayName} connected to session ${sessionId}`);
+    }
+  });
+  
+  // Handle staff messages to guests from main namespace
+  socket.on('staff:message', async (data) => {
+    if (!authenticatedUser) return;
+    
+    const { sessionId, message } = data;
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    try {
+      // Save message to database
+      db.run(
+        `INSERT INTO public_chat_messages 
+         (session_id, sender_type, sender_id, sender_name, message_text, message_type) 
+         VALUES (?, 'staff', ?, ?, ?, 'text')`,
+        [sessionId, socket.userId, socket.userDisplayName || 'Staff', message]
+      );
+      
+      // Send to guest in session via public portal namespace
+      publicPortalNamespace.to(`session:${sessionId}`).emit('agent:message', {
+        messageId,
+        message,
+        type: 'text',
+        staffName: socket.userDisplayName,
+        timestamp: new Date()
+      });
+      
+      // Send confirmation to staff via main namespace
+      socket.emit('staff:message_sent', { 
+        sessionId,
+        messageId, 
+        message,
+        timestamp: new Date(),
+        staffName: socket.userDisplayName 
+      });
+      
+      // ALSO emit to main namespace for other staff to see
+      io.emit('staff:message_sent', {
+        sessionId,
+        messageId, 
+        message,
+        timestamp: new Date(),
+        staffName: socket.userDisplayName 
+      });
+      
+      console.log(`📤 Main namespace staff message: ${socket.userDisplayName} -> session ${sessionId}`);
+      
+    } catch (error) {
+      console.error('Failed to send staff message from main namespace:', error);
+      socket.emit('message:error', { messageId, error: 'Failed to send message' });
+    }
+  });
+  
+  // Handle staff typing indicators from main namespace
+  socket.on('staff:typing', (data) => {
+    if (!authenticatedUser) return;
+    
+    const { sessionId, isTyping } = data;
+    
+    // Send typing indicator to guest via public portal namespace
+    publicPortalNamespace.to(`session:${sessionId}`).emit('agent:typing', {
+      isTyping
+    });
+  });
+  
+  // Handle staff disconnecting from session from main namespace
+  socket.on('staff:disconnect_from_session', (data) => {
+    if (!authenticatedUser) return;
+    
+    const { sessionId } = data;
+    const session = publicSessions.get(sessionId);
+    
+    if (session && session.agentId === socket.userId) {
+      // Remove agent assignment
+      session.agentId = null;
+      session.agentName = null;
+      
+      // Update database
+      db.run(
+        'UPDATE public_chat_sessions SET status = ?, assigned_to = NULL WHERE session_id = ? AND assigned_to = ?',
+        ['waiting', sessionId, socket.userId]
+      );
+      
+      // Put back in queue if guest is still connected
+      if (!publicQueue.includes(sessionId)) {
+        publicQueue.push(sessionId);
+      }
+      
+      console.log(`🔌 Main namespace agent ${socket.userDisplayName} disconnected from session ${sessionId}`);
+    }
+  });
+  
+  // Handle staff ending session from main namespace
+  socket.on('staff:end_session', (data) => {
+    if (!authenticatedUser) return;
+    
+    const { sessionId } = data;
+    const session = publicSessions.get(sessionId);
+    
+    if (session && session.agentId === socket.userId) {
+      // Update session status
+      session.status = 'ended';
+      
+      // Update database
+      db.run(
+        'UPDATE public_chat_sessions SET status = ?, ended_at = datetime("now") WHERE session_id = ?',
+        ['ended', sessionId]
+      );
+      
+      // Notify guest
+      publicPortalNamespace.to(`session:${sessionId}`).emit('session:ended', {
+        reason: 'Session ended by support agent'
+      });
+      
+      // Clean up memory
+      setTimeout(() => {
+        publicSessions.delete(sessionId);
+        console.log(`🗑️ Session ${sessionId} cleaned up from memory`);
+      }, 10 * 60 * 1000); // 10 minutes
+      
+      console.log(`🔚 Main namespace staff ended session ${sessionId}`);
+    }
+  });
+
   socket.on('disconnect', () => {
     // Untrack connection first
     untrackConnection(socket, socket.userId || null);
@@ -866,6 +1031,7 @@ io.on('connection', async (socket) => {
       console.log(`Unauthenticated socket disconnected: ${socket.id}`);
     }
   });
+
 });
 
 // Periodic cleanup of stale presence data
@@ -1096,8 +1262,99 @@ publicPortalNamespace.on('connection', async (socket) => {
         }
       }
       
-      // Create new session
-      createNewGuestSession();
+      // Check for existing active session for this guest before creating new one
+      checkForExistingSession();
+      
+      function checkForExistingSession() {
+        // Check database for existing active sessions from same guest (by name and email)
+        db.get(
+          `SELECT session_id, status, created_at 
+           FROM public_chat_sessions 
+           WHERE visitor_name = ? AND visitor_email = ? 
+           AND status IN ('waiting', 'active') 
+           ORDER BY created_at DESC 
+           LIMIT 1`,
+          [name, email],
+          (err, existingRow) => {
+            if (err) {
+              console.error('Error checking for existing session:', err);
+              createNewGuestSession();
+              return;
+            }
+            
+            if (existingRow) {
+              // Found existing session - check if it's recent (within 30 minutes)
+              const existingTime = new Date(existingRow.created_at);
+              const timeDiff = Date.now() - existingTime.getTime();
+              const thirtyMinutes = 30 * 60 * 1000;
+              
+              if (timeDiff < thirtyMinutes) {
+                // Reuse existing session
+                const existingSessionId = existingRow.session_id;
+                
+                console.log(`♻️ Reusing existing session ${existingSessionId} for ${name} (created ${Math.floor(timeDiff / 1000)}s ago)`);
+                
+                // Update existing session with new socket
+                socket.sessionId = existingSessionId;
+                socket.guestName = name;
+                socket.join(`session:${existingSessionId}`);
+                
+                // Update in-memory session if exists
+                const existingSession = publicSessions.get(existingSessionId);
+                if (existingSession) {
+                  existingSession.socketId = socket.id;
+                  existingSession.lastReconnect = new Date();
+                } else {
+                  // Recreate in memory
+                  publicSessions.set(existingSessionId, {
+                    socketId: socket.id,
+                    guestName: name,
+                    email: email,
+                    startTime: existingTime,
+                    status: existingRow.status,
+                    lastReconnect: new Date()
+                  });
+                }
+                
+                // Check queue position or connection status
+                const queuePosition = publicQueue.indexOf(existingSessionId);
+                if (queuePosition > -1) {
+                  // Still in queue
+                  socket.emit('session:started', {
+                    sessionId: existingSessionId,
+                    queuePosition: queuePosition + 1,
+                    estimatedWaitTime: (queuePosition + 1) * 2,
+                    reconnected: true
+                  });
+                } else if (existingRow.status === 'active') {
+                  // Connected to agent
+                  socket.emit('session:started', {
+                    sessionId: existingSessionId,
+                    status: 'active',
+                    reconnected: true
+                  });
+                } else {
+                  // Add back to queue
+                  publicQueue.push(existingSessionId);
+                  socket.emit('session:started', {
+                    sessionId: existingSessionId,
+                    queuePosition: publicQueue.length,
+                    estimatedWaitTime: publicQueue.length * 2,
+                    reconnected: true
+                  });
+                }
+                
+                return;
+              } else {
+                console.log(`⏰ Existing session ${existingRow.session_id} for ${name} is too old (${Math.floor(timeDiff / 60000)} minutes), creating new one`);
+              }
+            }
+            
+            // No suitable existing session found - create new one
+            createNewGuestSession();
+          }
+        );
+      }
       
       function createNewGuestSession() {
         const sessionId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
