@@ -1627,7 +1627,11 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                       flex: 1,
                       overflow: 'auto',
                       p: 2,
-                      backgroundColor: '#f5f5f5'
+                      backgroundColor: '#f5f5f5',
+                      maxHeight: '400px', // Set maximum height
+                      minHeight: '200px', // Set minimum height
+                      display: 'flex',
+                      flexDirection: 'column'
                     }}
                   >
                     {messages.length === 0 && isOnline && (

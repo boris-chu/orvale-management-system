@@ -1321,44 +1321,13 @@ const FloatableChatWindow = ({ chat, onClose, onMinimize, onFocus }: FloatableCh
             <Box 
               sx={{ 
                 flex: 1, 
-                overflow: 'auto',
-                p: 1,
-                backgroundColor: '#fafafa',
+                overflow: 'hidden', // Change from 'auto' to 'hidden' to contain children
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 1
+                maxHeight: 'calc(100% - 140px)', // Reserve space for header and input
+                minHeight: '200px'
               }}
             >
-              {/* System message: Staff connected */}
-              <Box sx={{ textAlign: 'center', my: 1 }}>
-                <Chip 
-                  label={`You are now chatting with ${chat.guestInfo.guestName}`}
-                  size="small"
-                  sx={{ backgroundColor: '#e3f2fd', color: '#1976d2' }}
-                />
-              </Box>
-
-              {/* Initial guest message if exists */}
-              {chat.guestInfo.initialMessage && (
-                <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 1 }}>
-                  <Paper 
-                    sx={{ 
-                      p: 1, 
-                      maxWidth: '70%',
-                      backgroundColor: '#fff',
-                      border: '1px solid #e0e0e0'
-                    }}
-                  >
-                    <Typography variant="body2">
-                      {chat.guestInfo.initialMessage}
-                    </Typography>
-                    <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mt: 0.5 }}>
-                      {chat.guestInfo.joinedAt.toLocaleTimeString()}
-                    </Typography>
-                  </Paper>
-                </Box>
-              )}
-
               {/* Live messages display */}
               <MessagesDisplay sessionId={chat.sessionId} guestInfo={chat.guestInfo} />
             </Box>
@@ -1463,7 +1432,9 @@ const MessagesDisplay = ({ sessionId, guestInfo }: MessagesDisplayProps) => {
         backgroundColor: '#fafafa',
         display: 'flex',
         flexDirection: 'column',
-        gap: 1
+        gap: 1,
+        maxHeight: '300px', // Set maximum height for messages area
+        minHeight: '150px'  // Set minimum height
       }}
     >
       {/* Connection Status */}

@@ -548,7 +548,17 @@ export const GuestChatInterface = ({ sessionId: initialSessionId, onClose, setti
       )}
 
       {/* Messages */}
-      <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
+      <Box 
+        sx={{ 
+          flex: 1, 
+          overflow: 'auto', 
+          p: 1,
+          maxHeight: '400px', // Set maximum height
+          minHeight: '200px', // Set minimum height
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
         <AnimatePresence>
           {messages.map((message) => (
             <motion.div
