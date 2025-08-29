@@ -96,8 +96,8 @@ export async function GET(request: NextRequest) {
             ELSE 'normal'
           END as priority,
           
-          -- Calculate wait time in seconds
-          CAST((julianday('now') - julianday(pcs.created_at)) * 24 * 60 * 60 AS INTEGER) as wait_time_seconds,
+          -- Calculate wait time in seconds (ensure it's never negative)
+          CAST(MAX(0, (julianday('now') - julianday(pcs.created_at)) * 24 * 60 * 60) AS INTEGER) as wait_time_seconds,
           
           -- Get assigned staff info if any
           u.display_name as assigned_staff_name,
@@ -210,11 +210,19 @@ export async function GET(request: NextRequest) {
 
 // Helper functions
 function formatWaitTime(seconds: number): string {
+  // Handle negative or invalid values
+  if (seconds < 0 || !seconds || isNaN(seconds)) return '0s';
+  
   const minutes = Math.floor(seconds / 60);
   if (minutes < 1) return `${seconds}s`;
   if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
-  return `${hours}h ${minutes % 60}m`;
+  if (hours < 24) return `${hours}h ${minutes % 60}m`;
+  
+  // For sessions older than 24 hours, show days
+  const days = Math.floor(hours / 24);
+  if (days === 1) return '1 day ago';
+  return `${days} days ago`;
 }
 
 function getPriorityEmoji(priority: string, status: string): string {

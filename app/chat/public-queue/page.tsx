@@ -16,7 +16,8 @@ import {
   PersonAdd, SwapHoriz, Assignment, NoteAdd,
   Minimize, Maximize, Close, DragIndicator,
   ChatBubbleOutline, Support, Queue, People, Send,
-  LogoutOutlined, ExpandMore, ExpandLess
+  LogoutOutlined, ExpandMore, ExpandLess, Delete,
+  RemoveCircle, MoreVert
 } from '@mui/icons-material';
 import { ColorPicker } from '@/components/shared/ColorPicker';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -126,6 +127,11 @@ const PublicQueuePage = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [guestQueueExpanded, setGuestQueueExpanded] = useState(true);
   const [staffOnlineExpanded, setStaffOnlineExpanded] = useState(true);
+  const [removeSessionDialog, setRemoveSessionDialog] = useState<{
+    open: boolean;
+    session: GuestSession | null;
+    reason: string;
+  }>({ open: false, session: null, reason: '' });
 
   const workspaceRef = useRef<HTMLDivElement>(null);
   const chatWindowRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -618,6 +624,52 @@ const PublicQueuePage = () => {
     setThemeColors(prev => ({ ...prev, [currentColorKey]: color }));
   };
 
+  // Remove session from queue
+  const handleRemoveSession = async (session: GuestSession, reason: string) => {
+    try {
+      console.log('🗑️ Attempting to remove session:', session.id, 'Guest name:', session.guestName);
+      
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/public-portal/queue/guests/remove', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          sessionId: session.id,
+          reason
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove from local state
+        setGuestQueue(prev => prev.filter(g => g.id !== session.id));
+        
+        // Close dialog
+        setRemoveSessionDialog({ open: false, session: null, reason: '' });
+        
+        console.log(`✅ Removed session ${session.id} from queue`);
+      } else {
+        console.error('Failed to remove session:', data.error);
+        alert('Failed to remove session: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error removing session:', error);
+      alert('Error removing session from queue');
+    }
+  };
+
+  const openRemoveSessionDialog = (session: GuestSession) => {
+    setRemoveSessionDialog({ 
+      open: true, 
+      session, 
+      reason: '' 
+    });
+  };
+
   if (loading) {
     return (
       <Box p={4} display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -905,6 +957,22 @@ const PublicQueuePage = () => {
                           }
                         }}
                         onClick={() => handleGuestClick(guest)}
+                        secondaryAction={
+                          (currentUser?.role === 'admin' || userPermissions.includes('public_portal.manage_queue')) && (
+                            <Tooltip title="Remove from queue">
+                              <IconButton 
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openRemoveSessionDialog(guest);
+                                }}
+                                sx={{ color: 'text.secondary' }}
+                              >
+                                <RemoveCircle fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )
+                        }
                       >
                         <ListItemText
                           primary={
@@ -1173,6 +1241,52 @@ const PublicQueuePage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setColorPickerOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Remove Session Dialog */}
+      <Dialog 
+        open={removeSessionDialog.open} 
+        onClose={() => setRemoveSessionDialog({ open: false, session: null, reason: '' })}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Remove Guest from Queue</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Are you sure you want to remove <strong>{removeSessionDialog.session?.guestName}</strong> from the queue?
+          </Typography>
+          <TextField
+            fullWidth
+            label="Reason for removal (optional)"
+            value={removeSessionDialog.reason}
+            onChange={(e) => setRemoveSessionDialog(prev => ({ ...prev, reason: e.target.value }))}
+            placeholder="e.g., Stale session, duplicate request, resolved elsewhere..."
+            multiline
+            rows={2}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setRemoveSessionDialog({ open: false, session: null, reason: '' })}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              if (removeSessionDialog.session) {
+                handleRemoveSession(
+                  removeSessionDialog.session, 
+                  removeSessionDialog.reason || 'Removed by staff'
+                );
+              }
+            }}
+            variant="contained"
+            color="error"
+          >
+            Remove from Queue
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
