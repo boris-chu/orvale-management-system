@@ -1564,6 +1564,9 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
 
 
                       {/* Message Field */}
+                      <Box sx={{ color: 'red', fontSize: '12px', mb: 1 }}>
+                        🔧 TEMP: Code updated at {new Date().toLocaleTimeString()} - if you still see 00, there's a caching issue
+                      </Box>
                       <TextField
                         fullWidth
                         multiline
