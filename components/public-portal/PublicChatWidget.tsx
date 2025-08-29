@@ -1289,10 +1289,10 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                     );
                   }
                   
-                  // Return emoji icon
+                  // Return emoji icon - default to chat bubble if no valid icon selected
                   return (
                     <span style={{ fontSize: `${widgetSize * 0.4}px` }}>
-                      {emojiIcons[selectedIcon] || '💬'}
+                      {(selectedIcon && emojiIcons[selectedIcon]) || '💬'}
                     </span>
                   );
                 };
