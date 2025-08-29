@@ -1384,7 +1384,15 @@ const MessagesDisplay = ({ sessionId, guestInfo }: MessagesDisplayProps) => {
           timestamp: new Date(data.timestamp || Date.now()),
           senderName: guestInfo.guestName
         };
-        setMessages(prev => [...prev, newMessage]);
+        // Prevent duplicate messages by checking if message ID already exists
+        setMessages(prev => {
+          const messageExists = prev.some(msg => msg.id === newMessage.id);
+          if (messageExists) {
+            console.log(`Duplicate guest message prevented: ${newMessage.id}`);
+            return prev;
+          }
+          return [...prev, newMessage];
+        });
       }
     });
 
@@ -1398,7 +1406,15 @@ const MessagesDisplay = ({ sessionId, guestInfo }: MessagesDisplayProps) => {
           timestamp: new Date(data.timestamp || Date.now()),
           senderName: data.staffName || 'Staff'
         };
-        setMessages(prev => [...prev, newMessage]);
+        // Prevent duplicate messages by checking if message ID already exists
+        setMessages(prev => {
+          const messageExists = prev.some(msg => msg.id === newMessage.id);
+          if (messageExists) {
+            console.log(`Duplicate staff message prevented: ${newMessage.id}`);
+            return prev;
+          }
+          return [...prev, newMessage];
+        });
       }
     });
 
