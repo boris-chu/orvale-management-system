@@ -118,6 +118,11 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
     department: '',
     message: ''
   });
+
+  // Debug logging for form data
+  useEffect(() => {
+    console.log('🐛 PreChatData state:', preChatData);
+  }, [preChatData]);
   const [preChatErrors, setPreChatErrors] = useState<{ [key: string]: string }>({});
   const [availableAgents, setAvailableAgents] = useState<any[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
@@ -1408,6 +1413,15 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                         {settings?.welcome_message || 'Please fill out the form below to get started.'}
                       </Typography>
+
+                      {/* Debug field visibility */}
+                      {console.log('🐛 Field visibility:', {
+                        require_name: settings?.require_name,
+                        require_email: settings?.require_email,
+                        require_phone: settings?.require_phone,
+                        require_department: settings?.require_department,
+                        custom_fields: settings?.custom_fields_json
+                      })}
 
                       {/* Available Agents Display */}
                       {settings?.show_agent_avatars && availableAgents.length > 0 && (
