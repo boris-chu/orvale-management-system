@@ -1708,10 +1708,10 @@ publicPortalNamespace.on('connection', async (socket) => {
     if (socket.sessionId) {
       const session = publicSessions.get(socket.sessionId);
       if (session) {
-        // Update status
+        // Update status to abandoned when guest disconnects
         db.run(
           'UPDATE public_chat_sessions SET status = ?, ended_at = datetime("now") WHERE session_id = ?',
-          ['disconnected', socket.sessionId]
+          ['abandoned', socket.sessionId]
         );
         
         // Remove from queue if waiting
