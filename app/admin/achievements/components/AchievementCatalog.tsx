@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { DataTable } from '@/components/ui/data-table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
   Select,
   MenuItem,
   FormControl,
@@ -14,18 +17,19 @@ import {
   IconButton,
   Tooltip,
   Switch,
-  FormControlLabel
+  TextField,
+  CircularProgress,
+  Typography
 } from '@mui/material';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Edit,
   Trash2,
   Copy,
   Search,
-  Filter,
   RotateCcw,
   Trophy,
-  Eye,
-  EyeOff,
   ArrowUp,
   ArrowDown
 } from 'lucide-react';
@@ -258,155 +262,28 @@ export default function AchievementCatalog({ onEdit, onRefresh }: AchievementCat
     if (achievement.icon_type === 'emoji') {
       return <span className="text-2xl">{achievement.icon}</span>;
     } else if (achievement.icon_type === 'lucide') {
-      const IconComponent = Icons[achievement.icon as keyof typeof Icons] as any;
+      const IconComponent = Icons[achievement.icon as keyof typeof Icons] as React.ComponentType<{ className?: string }>;
       return IconComponent ? <IconComponent className="h-6 w-6" /> : <Trophy className="h-6 w-6" />;
     }
     return <Trophy className="h-6 w-6" />;
   };
 
-  const columns = [
-    {
-      accessorKey: 'display_order',
-      header: 'Order',
-      cell: ({ row }: any) => (
-        <div className="flex items-center gap-1">
-          <span className="text-sm text-gray-600">{row.original.display_order}</span>
-          <div className="flex flex-col">
-            <IconButton
-              size="small"
-              onClick={() => handleReorder(row.original, 'up')}
-              disabled={row.index === 0}
-            >
-              <ArrowUp className="h-3 w-3" />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => handleReorder(row.original, 'down')}
-              disabled={row.index === filteredAchievements.length - 1}
-            >
-              <ArrowDown className="h-3 w-3" />
-            </IconButton>
-          </div>
-        </div>
-      )
-    },
-    {
-      accessorKey: 'icon',
-      header: 'Icon',
-      cell: ({ row }: any) => renderIcon(row.original)
-    },
-    {
-      accessorKey: 'name',
-      header: 'Name',
-      cell: ({ row }: any) => (
-        <div>
-          <div className="font-medium">{row.original.name}</div>
-          <div className="text-sm text-gray-500">{row.original.description}</div>
-        </div>
-      )
-    },
-    {
-      accessorKey: 'category',
-      header: 'Category',
-      cell: ({ row }: any) => (
-        <Chip 
-          label={row.original.category} 
-          size="small" 
-          variant="outlined"
-          className="capitalize"
-        />
-      )
-    },
-    {
-      accessorKey: 'rarity',
-      header: 'Rarity',
-      cell: ({ row }: any) => (
-        <Badge className={`${rarityColors[row.original.rarity as keyof typeof rarityColors]} capitalize`}>
-          {row.original.rarity}
-        </Badge>
-      )
-    },
-    {
-      accessorKey: 'xp_reward',
-      header: 'XP',
-      cell: ({ row }: any) => (
-        <span className="font-semibold text-yellow-600">+{row.original.xp_reward}</span>
-      )
-    },
-    {
-      accessorKey: 'criteria_type',
-      header: 'Criteria',
-      cell: ({ row }: any) => (
-        <div className="text-sm">
-          <div className="font-medium capitalize">
-            {row.original.criteria_type.replace(/_/g, ' ')}
-          </div>
-          <div className="text-gray-500">Value: {row.original.criteria_value}</div>
-        </div>
-      )
-    },
-    {
-      accessorKey: 'unlocked_count',
-      header: 'Unlocks',
-      cell: ({ row }: any) => (
-        <span className="text-sm">{row.original.unlocked_count || 0} users</span>
-      )
-    },
-    {
-      accessorKey: 'active',
-      header: 'Status',
-      cell: ({ row }: any) => (
-        <Switch
-          size="small"
-          checked={row.original.active}
-          onChange={() => handleToggleActive(row.original)}
-          color="primary"
-        />
-      )
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      cell: ({ row }: any) => (
-        <div className="flex items-center gap-1">
-          <Tooltip title="Edit">
-            <IconButton size="small" onClick={() => onEdit(row.original)}>
-              <Edit className="h-4 w-4" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Clone">
-            <IconButton size="small" onClick={() => handleClone(row.original)}>
-              <Copy className="h-4 w-4" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Delete">
-            <IconButton 
-              size="small" 
-              onClick={() => handleDelete(row.original)}
-              color="error"
-            >
-              <Trash2 className="h-4 w-4" />
-            </IconButton>
-          </Tooltip>
-        </div>
-      )
-    }
-  ];
 
   return (
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap gap-4 items-center">
         <div className="flex-1 max-w-xs">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search achievements..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+          <TextField
+            placeholder="Search achievements..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            size="small"
+            fullWidth
+            InputProps={{
+              startAdornment: <Search className="text-gray-400 h-4 w-4 mr-2" />
+            }}
+          />
         </div>
 
         <FormControl size="small" className="min-w-[140px]">
@@ -474,11 +351,135 @@ export default function AchievementCatalog({ onEdit, onRefresh }: AchievementCat
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <DataTable
-          columns={columns}
-          data={filteredAchievements}
-          loading={loading}
-        />
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Order</TableCell>
+                <TableCell>Icon</TableCell>
+                <TableCell>Name</TableCell>
+                <TableCell>Category</TableCell>
+                <TableCell>Rarity</TableCell>
+                <TableCell>XP</TableCell>
+                <TableCell>Criteria</TableCell>
+                <TableCell>Unlocks</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={10} align="center" style={{ padding: '2rem' }}>
+                    <CircularProgress size={24} />
+                    <Typography variant="body2" className="ml-2">Loading achievements...</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : filteredAchievements.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={10} align="center" style={{ padding: '2rem' }}>
+                    <Typography variant="body2" color="textSecondary">
+                      No achievements found
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredAchievements.map((achievement, index) => (
+                  <TableRow key={achievement.id} hover>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm text-gray-600">{achievement.display_order}</span>
+                        <div className="flex flex-col">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleReorder(achievement, 'up')}
+                            disabled={index === 0}
+                          >
+                            <ArrowUp className="h-3 w-3" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleReorder(achievement, 'down')}
+                            disabled={index === filteredAchievements.length - 1}
+                          >
+                            <ArrowDown className="h-3 w-3" />
+                          </IconButton>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {renderIcon(achievement)}
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{achievement.name}</div>
+                        <div className="text-sm text-gray-500">{achievement.description}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={achievement.category} 
+                        size="small" 
+                        variant="outlined"
+                        className="capitalize"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={`${rarityColors[achievement.rarity as keyof typeof rarityColors]} capitalize`}>
+                        {achievement.rarity}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-semibold text-yellow-600">+{achievement.xp_reward}</span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div className="font-medium capitalize">
+                          {achievement.criteria_type.replace(/_/g, ' ')}
+                        </div>
+                        <div className="text-gray-500">Value: {achievement.criteria_value}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">{achievement.unlocked_count || 0} users</span>
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        size="small"
+                        checked={achievement.active}
+                        onChange={() => handleToggleActive(achievement)}
+                        color="primary"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Tooltip title="Edit">
+                          <IconButton size="small" onClick={() => onEdit(achievement)}>
+                            <Edit className="h-4 w-4" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Clone">
+                          <IconButton size="small" onClick={() => handleClone(achievement)}>
+                            <Copy className="h-4 w-4" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleDelete(achievement)}
+                            color="error"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </IconButton>
+                        </Tooltip>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </motion.div>
     </div>
   );

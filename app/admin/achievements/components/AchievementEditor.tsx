@@ -9,9 +9,7 @@ import {
   InputLabel,
   InputAdornment,
   Paper,
-  Box,
   Typography,
-  Divider,
   Alert,
   Tabs,
   Tab,
@@ -19,29 +17,17 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  Grid,
-  Chip
+  Grid
 } from '@mui/material';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { motion } from 'framer-motion';
 import {
   Save,
   X,
-  Search,
-  Upload,
-  Sparkles,
-  Calendar,
-  Code,
   Eye,
   Trophy,
-  Zap,
-  Target,
-  Users,
-  Timer,
-  Package,
   Star
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
@@ -49,8 +35,27 @@ import * as Icons from 'lucide-react';
 // For now, using regular TextField for dates
 import AchievementToast from '@/components/AchievementToast';
 
+interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  rarity: string;
+  icon: string;
+  icon_type: string;
+  xp_reward: number;
+  criteria_type: string;
+  criteria_value: number;
+  criteria_data: string;
+  toast_config: string;
+  active_from: string | null;
+  active_until: string | null;
+  custom_css: string;
+  active: boolean;
+}
+
 interface AchievementEditorProps {
-  achievement?: any;
+  achievement?: Achievement;
   isCreating: boolean;
   onSave: () => void;
   onCancel: () => void;
@@ -84,9 +89,8 @@ export default function AchievementEditor({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
-  const [iconSearchTerm, setIconSearchTerm] = useState('');
   const [selectedIconTab, setSelectedIconTab] = useState(0);
-  const [previewAchievement, setPreviewAchievement] = useState<any>(null);
+  const [previewAchievement, setPreviewAchievement] = useState<Achievement | null>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -140,7 +144,7 @@ export default function AchievementEditor({
     }
   }, [achievement, isCreating]);
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: string, value: string | number | boolean | Date | null) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -257,14 +261,15 @@ export default function AchievementEditor({
     if (formData.icon_type === 'emoji') {
       return <span className="text-4xl">{formData.icon}</span>;
     } else if (formData.icon_type === 'lucide') {
-      const IconComponent = Icons[formData.icon as keyof typeof Icons] as any;
+      const IconComponent = Icons[formData.icon as keyof typeof Icons] as React.ComponentType<{ className?: string }>;
       return IconComponent ? <IconComponent className="h-10 w-10" /> : <Trophy className="h-10 w-10" />;
     }
     return <Trophy className="h-10 w-10" />;
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Form */}
         <div className="space-y-6">
           <Paper elevation={1} className="p-6">
@@ -348,47 +353,47 @@ export default function AchievementEditor({
             </div>
           </Paper>
 
-          <Paper elevation={1} className="p-6">
-            <Typography variant="h6" className="mb-4">Unlock Criteria</Typography>
-            
-            <div className="space-y-4">
-              <FormControl fullWidth>
-                <InputLabel>Criteria Type</InputLabel>
-                <Select
-                  value={formData.criteria_type}
-                  onChange={(e) => handleChange('criteria_type', e.target.value)}
-                  label="Criteria Type"
-                >
-                  {Object.entries(criteriaTypeDescriptions).map(([key, desc]) => (
-                    <MenuItem key={key} value={key}>
-                      <div>
-                        <div className="font-medium capitalize">{key.replace(/_/g, ' ')}</div>
-                        <div className="text-sm text-gray-500">{desc}</div>
-                      </div>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+        <Paper elevation={1} className="p-6">
+          <Typography variant="h6" className="mb-4">Unlock Criteria</Typography>
+          
+          <div className="space-y-4">
+            <FormControl fullWidth>
+              <InputLabel>Criteria Type</InputLabel>
+              <Select
+                value={formData.criteria_type}
+                onChange={(e) => handleChange('criteria_type', e.target.value)}
+                label="Criteria Type"
+              >
+                {Object.entries(criteriaTypeDescriptions).map(([key, desc]) => (
+                  <MenuItem key={key} value={key}>
+                    <div>
+                      <div className="font-medium capitalize">{key.replace(/_/g, ' ')}</div>
+                      <div className="text-sm text-gray-500">{desc}</div>
+                    </div>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-              <TextField
-                fullWidth
-                label="Criteria Value"
-                type="number"
-                value={formData.criteria_value}
-                onChange={(e) => handleChange('criteria_value', parseInt(e.target.value) || 0)}
-                helperText="The target value to unlock this achievement"
-              />
+            <TextField
+              fullWidth
+              label="Criteria Value"
+              type="number"
+              value={formData.criteria_value}
+              onChange={(e) => handleChange('criteria_value', parseInt(e.target.value) || 0)}
+              helperText="The target value to unlock this achievement"
+            />
 
-              <TextField
-                fullWidth
-                label="Advanced Criteria (JSON)"
-                value={formData.criteria_data}
-                onChange={(e) => handleChange('criteria_data', e.target.value)}
-                multiline
-                rows={3}
-                helperText="Additional criteria configuration in JSON format"
-              />
-            </div>
+            <TextField
+              fullWidth
+              label="Advanced Criteria (JSON)"
+              value={formData.criteria_data}
+              onChange={(e) => handleChange('criteria_data', e.target.value)}
+              multiline
+              rows={3}
+              helperText="Additional criteria configuration in JSON format"
+            />
+          </div>
           </Paper>
 
           <Paper elevation={1} className="p-6">
@@ -419,72 +424,72 @@ export default function AchievementEditor({
         {/* Right Column - Preview & Advanced */}
         <div className="space-y-6">
           <Paper elevation={1} className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <Typography variant="h6">Live Preview</Typography>
-              <Button size="sm" onClick={showPreview}>
-                <Eye className="h-4 w-4 mr-2" />
-                Refresh Preview
-              </Button>
-            </div>
+          <div className="flex items-center justify-between mb-4">
+            <Typography variant="h6">Live Preview</Typography>
+            <Button size="sm" onClick={showPreview}>
+              <Eye className="h-4 w-4 mr-2" />
+              Refresh Preview
+            </Button>
+          </div>
 
-            <Card className={`${rarityColors[formData.rarity as keyof typeof rarityColors]} border-2`}>
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <div>{renderIcon()}</div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold mb-2">{formData.name || 'Achievement Name'}</h3>
-                    <p className="text-gray-700 mb-4">{formData.description || 'Achievement description'}</p>
-                    
-                    <div className="flex items-center justify-between">
-                      <Badge className={`capitalize ${rarityColors[formData.rarity as keyof typeof rarityColors]}`}>
-                        {formData.rarity}
-                      </Badge>
-                      <div className="flex items-center gap-2 text-yellow-600">
-                        <Star className="h-5 w-5" />
-                        <span className="font-bold">+{formData.xp_reward} XP</span>
-                      </div>
+          <Card className={`${rarityColors[formData.rarity as keyof typeof rarityColors]} border-2`}>
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4">
+                <div>{renderIcon()}</div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold mb-2">{formData.name || 'Achievement Name'}</h3>
+                  <p className="text-gray-700 mb-4">{formData.description || 'Achievement description'}</p>
+                  
+                  <div className="flex items-center justify-between">
+                    <Badge className={`capitalize ${rarityColors[formData.rarity as keyof typeof rarityColors]}`}>
+                      {formData.rarity}
+                    </Badge>
+                    <div className="flex items-center gap-2 text-yellow-600">
+                      <Star className="h-5 w-5" />
+                      <span className="font-bold">+{formData.xp_reward} XP</span>
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
           </Paper>
 
           <Paper elevation={1} className="p-6">
             <Typography variant="h6" className="mb-4">Toast Customization</Typography>
-            
-            <Alert severity="info" className="mb-4">
-              Toast configuration allows you to customize the notification appearance
-            </Alert>
+          
+          <Alert severity="info" className="mb-4">
+            Toast configuration allows you to customize the notification appearance
+          </Alert>
 
-            <TextField
-              fullWidth
-              label="Toast Configuration (JSON)"
-              value={formData.toast_config}
-              onChange={(e) => handleChange('toast_config', e.target.value)}
-              multiline
-              rows={4}
-              placeholder={`{
+          <TextField
+            fullWidth
+            label="Toast Configuration (JSON)"
+            value={formData.toast_config}
+            onChange={(e) => handleChange('toast_config', e.target.value)}
+            multiline
+            rows={4}
+            placeholder={`{
   "duration": 5000,
   "animation": "slide",
   "sound": "success.mp3"
 }`}
-            />
+          />
           </Paper>
 
           <Paper elevation={1} className="p-6">
             <Typography variant="h6" className="mb-4">Custom CSS</Typography>
-            
-            <TextField
-              fullWidth
-              label="Custom Styles"
-              value={formData.custom_css}
-              onChange={(e) => handleChange('custom_css', e.target.value)}
-              multiline
-              rows={4}
-              placeholder="/* Custom CSS for unique styling */"
-              helperText="Add custom CSS to make this achievement unique"
-            />
+          
+          <TextField
+            fullWidth
+            label="Custom Styles"
+            value={formData.custom_css}
+            onChange={(e) => handleChange('custom_css', e.target.value)}
+            multiline
+            rows={4}
+            placeholder="/* Custom CSS for unique styling */"
+            helperText="Add custom CSS to make this achievement unique"
+          />
           </Paper>
         </div>
       </div>
@@ -507,65 +512,65 @@ export default function AchievementEditor({
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
-          <div className="flex items-center justify-between">
-            <span>Choose Icon</span>
-            <IconButton onClick={() => setIconPickerOpen(false)}>
-              <X className="h-4 w-4" />
-            </IconButton>
-          </div>
-        </DialogTitle>
-        <DialogContent>
-          <Tabs value={selectedIconTab} onChange={(e, v) => setSelectedIconTab(v)}>
-            <Tab label="Emojis" />
-            <Tab label="Lucide Icons" />
-            <Tab label="Upload Custom" />
-          </Tabs>
+      <DialogTitle>
+        <div className="flex items-center justify-between">
+          <span>Choose Icon</span>
+          <IconButton onClick={() => setIconPickerOpen(false)}>
+            <X className="h-4 w-4" />
+          </IconButton>
+        </div>
+      </DialogTitle>
+      <DialogContent>
+        <Tabs value={selectedIconTab} onChange={(e, v) => setSelectedIconTab(v)}>
+          <Tab label="Emojis" />
+          <Tab label="Lucide Icons" />
+          <Tab label="Upload Custom" />
+        </Tabs>
 
-          {selectedIconTab === 0 && (
-            <Grid container spacing={2} className="mt-4">
-              {emojiIcons.map((emoji) => (
-                <Grid item key={emoji}>
+        {selectedIconTab === 0 && (
+          <Grid container spacing={2} className="mt-4">
+            {emojiIcons.map((emoji) => (
+              <Grid item key={emoji}>
+                <Button
+                  variant="outline"
+                  className="w-16 h-16 text-2xl"
+                  onClick={() => handleIconSelect(emoji, 'emoji')}
+                >
+                  {emoji}
+                </Button>
+              </Grid>
+            ))}
+          </Grid>
+        )}
+
+        {selectedIconTab === 1 && (
+          <Grid container spacing={2} className="mt-4">
+            {lucideIconNames.map((iconName) => {
+              const IconComponent = Icons[iconName as keyof typeof Icons] as React.ComponentType<{ className?: string }>;
+              return (
+                <Grid item key={iconName}>
                   <Button
                     variant="outline"
-                    className="w-16 h-16 text-2xl"
-                    onClick={() => handleIconSelect(emoji, 'emoji')}
+                    className="w-16 h-16"
+                    onClick={() => handleIconSelect(iconName, 'lucide')}
                   >
-                    {emoji}
+                    {IconComponent && <IconComponent className="h-6 w-6" />}
                   </Button>
                 </Grid>
-              ))}
-            </Grid>
-          )}
+              );
+            })}
+          </Grid>
+        )}
 
-          {selectedIconTab === 1 && (
-            <Grid container spacing={2} className="mt-4">
-              {lucideIconNames.map((iconName) => {
-                const IconComponent = Icons[iconName as keyof typeof Icons] as any;
-                return (
-                  <Grid item key={iconName}>
-                    <Button
-                      variant="outline"
-                      className="w-16 h-16"
-                      onClick={() => handleIconSelect(iconName, 'lucide')}
-                    >
-                      {IconComponent && <IconComponent className="h-6 w-6" />}
-                    </Button>
-                  </Grid>
-                );
-              })}
-            </Grid>
-          )}
-
-          {selectedIconTab === 2 && (
-            <div className="mt-4 text-center">
-              <Alert severity="info">
-                Custom SVG upload coming soon!
-              </Alert>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        {selectedIconTab === 2 && (
+          <div className="mt-4 text-center">
+            <Alert severity="info">
+              Custom SVG upload coming soon!
+            </Alert>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
 
       {/* Achievement Toast Preview */}
       <AchievementToast
