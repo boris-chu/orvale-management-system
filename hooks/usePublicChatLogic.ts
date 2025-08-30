@@ -39,6 +39,7 @@ interface ChatMessage {
   timestamp: Date;
   id: number;
   type?: 'text' | 'error' | 'success' | 'info';
+  agentName?: string; // Name of the agent for agent messages
 }
 
 interface PreChatData {
@@ -270,11 +271,18 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
       // Other socket event handlers...
       publicPortalSocket.addEventListener(componentId, 'agent:message', (data) => {
         console.log('📨 Agent message received:', data);
+        
+        // Update connected agent name if provided
+        if (data.staffName) {
+          setConnectedAgent(data.staffName);
+        }
+        
         const newMessage = {
           sender: 'agent' as const,
           text: data.message,
           timestamp: new Date(data.timestamp || Date.now()),
-          id: data.messageId || Date.now()
+          id: data.messageId || Date.now(),
+          agentName: data.staffName || connectedAgent || 'Support Agent'
         };
         
         setMessages(prev => {
@@ -301,6 +309,30 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
         if (isMinimized) {
           setUnreadCount(prev => prev + 1);
         }
+        
+        // Scroll to bottom
+        setTimeout(() => {
+          if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+          }
+        }, 100);
+      });
+
+      // Handle agent assignment
+      publicPortalSocket.addEventListener(componentId, 'agent:assigned', (data) => {
+        console.log('👤 Agent assigned:', data);
+        setConnectedAgent(data.agentName || 'Support Agent');
+        
+        // Add system message about agent connection
+        const assignmentMessage = {
+          sender: 'system' as const,
+          text: `You are now connected with ${data.agentName || 'a support agent'}`,
+          timestamp: new Date(),
+          id: Date.now(),
+          type: 'success' as const
+        };
+        
+        setMessages(prev => [...prev, assignmentMessage]);
         
         // Scroll to bottom
         setTimeout(() => {

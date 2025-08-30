@@ -612,9 +612,20 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                               <Box
                                 sx={{
                                   display: 'flex',
-                                  justifyContent: message.sender === 'guest' ? 'flex-end' : 'flex-start',
+                                  flexDirection: 'column',
+                                  alignItems: message.sender === 'guest' ? 'flex-end' : 'flex-start',
                                 }}
                               >
+                                {message.sender === 'agent' && message.agentName && (
+                                  <Typography variant="caption" sx={{ 
+                                    color: '#666', 
+                                    mb: 0.5,
+                                    px: 1,
+                                    fontWeight: 500
+                                  }}>
+                                    {message.agentName}
+                                  </Typography>
+                                )}
                                 <Paper
                                   sx={{
                                     p: 2,
@@ -969,24 +980,36 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                                   mb: 1
                                 }}
                               >
-                                <Paper
-                                  sx={{
-                                    p: 1.5,
-                                    maxWidth: '70%',
-                                    backgroundColor: message.sender === 'guest' ? 
-                                      (settings?.widget?.color || settings?.widget_color || '#1976d2') : 
-                                      message.sender === 'agent' ? '#ffffff' : '#f5f5f5',
-                                    color: message.sender === 'guest' ? 'white' : 'text.primary',
-                                    border: message.sender === 'agent' ? '1px solid #e0e0e0' : 'none'
-                                  }}
-                                >
-                                  <Typography variant="body2">
-                                    {message.text}
-                                  </Typography>
-                                  <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mt: 0.5 }}>
-                                    {new Date(message.timestamp).toLocaleTimeString()}
-                                  </Typography>
-                                </Paper>
+                                <Box>
+                                  {message.sender === 'agent' && message.agentName && (
+                                    <Typography variant="caption" sx={{ 
+                                      color: 'text.secondary', 
+                                      display: 'block', 
+                                      mb: 0.5,
+                                      fontWeight: 500
+                                    }}>
+                                      {message.agentName}
+                                    </Typography>
+                                  )}
+                                  <Paper
+                                    sx={{
+                                      p: 1.5,
+                                      maxWidth: '70%',
+                                      backgroundColor: message.sender === 'guest' ? 
+                                        (settings?.widget?.color || settings?.widget_color || '#1976d2') : 
+                                        message.sender === 'agent' ? '#ffffff' : '#f5f5f5',
+                                      color: message.sender === 'guest' ? 'white' : 'text.primary',
+                                      border: message.sender === 'agent' ? '1px solid #e0e0e0' : 'none'
+                                    }}
+                                  >
+                                    <Typography variant="body2">
+                                      {message.text}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ opacity: 0.7, display: 'block', mt: 0.5 }}>
+                                      {new Date(message.timestamp).toLocaleTimeString()}
+                                    </Typography>
+                                  </Paper>
+                                </Box>
                               </Box>
                             );
                           })}
