@@ -78,8 +78,13 @@ const initDB = () => {
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 description TEXT,
-                email TEXT,
-                section_id TEXT
+                section_id TEXT NOT NULL,
+                lead_user_id INTEGER,
+                active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (section_id) REFERENCES sections(id),
+                FOREIGN KEY (lead_user_id) REFERENCES users(id)
             )
         `);
 
@@ -127,10 +132,9 @@ const seedInitialData = async () => {
 
         // Insert teams
         db.run(`
-            INSERT INTO teams (id, name, description, email, section_id) VALUES
-            ('ITTS_Region7', 'ITTS: Region 7', 'IT Technical Support Region 7', 'region7@dpss.gov', 'ITTS'),
-            ('ITTS_Region7', 'ITTS: Region 7', 'IT Technical Support Region 7', 'itts@dpss.gov', 'ITTS'),
-            ('ADMIN_Main', 'Administration: Main', 'Main Administrative Office', 'admin@dpss.gov', 'ADMIN')
+            INSERT INTO teams (id, name, description, section_id) VALUES
+            ('ITTS_Region7', 'ITTS: Region 7', 'IT Technical Support Region 7', 'ITTS'),
+            ('ADMIN_Main', 'Administration: Main', 'Main Administrative Office', 'ADMIN')
         `);
 
         // Insert users

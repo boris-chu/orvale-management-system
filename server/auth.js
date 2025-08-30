@@ -217,7 +217,7 @@ const getAccessibleQueues = async (user) => {
         if (permissions.includes('queue.view_all_sections')) {
             // Admin can see all teams
             queues = await queryAsync(`
-                SELECT t.id, t.name, t.description, t.email, t.section_id, s.name as section_name,
+                SELECT t.id, t.name, t.description, t.section_id, s.name as section_name,
                        CASE WHEN t.id = ? THEN 1 ELSE 0 END as is_home
                 FROM teams t
                 LEFT JOIN sections s ON t.section_id = s.id
@@ -226,7 +226,7 @@ const getAccessibleQueues = async (user) => {
         } else if (permissions.includes('queue.view_section_teams')) {
             // Manager can see teams in same section
             queues = await queryAsync(`
-                SELECT t.id, t.name, t.description, t.email, t.section_id, s.name as section_name,
+                SELECT t.id, t.name, t.description, t.section_id, s.name as section_name,
                        CASE WHEN t.id = ? THEN 1 ELSE 0 END as is_home
                 FROM teams t
                 LEFT JOIN sections s ON t.section_id = s.id
@@ -236,7 +236,7 @@ const getAccessibleQueues = async (user) => {
         } else if (permissions.includes('queue.view_own_team')) {
             // Regular IT user can only see own team
             queues = await queryAsync(`
-                SELECT t.id, t.name, t.description, t.email, t.section_id, s.name as section_name,
+                SELECT t.id, t.name, t.description, t.section_id, s.name as section_name,
                        1 as is_home
                 FROM teams t
                 LEFT JOIN sections s ON t.section_id = s.id

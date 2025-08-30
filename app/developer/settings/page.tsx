@@ -26,7 +26,9 @@ import {
   Server,
   Phone,
   User,
-  LogOut
+  LogOut,
+  Key,
+  Building2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format24Hour } from '@/lib/time-utils';
@@ -41,6 +43,20 @@ interface SystemSettings {
   requireMFA: boolean;
   maxLoginAttempts: number;
   lockoutDuration: number;
+  
+  // SSO/Authentication Settings
+  ssoEnabled: boolean;
+  adIntegrationEnabled: boolean;
+  adServerUrl: string;
+  adDomain: string;
+  adBaseDn: string;
+  adBindUser: string;
+  adBindPassword: string;
+  adUserSearchFilter: string;
+  adGroupSearchFilter: string;
+  fallbackToLocalAuth: boolean;
+  autoCreateUsers: boolean;
+  defaultUserRole: string;
   
   // System Behavior
   autoAssignment: boolean;
@@ -86,6 +102,20 @@ export default function SystemSettings() {
     requireMFA: false,
     maxLoginAttempts: 5,
     lockoutDuration: 30,
+    
+    // SSO/Authentication defaults
+    ssoEnabled: false,
+    adIntegrationEnabled: false,
+    adServerUrl: '',
+    adDomain: '',
+    adBaseDn: '',
+    adBindUser: '',
+    adBindPassword: '',
+    adUserSearchFilter: '(sAMAccountName={0})',
+    adGroupSearchFilter: '(member={0})',
+    fallbackToLocalAuth: true,
+    autoCreateUsers: false,
+    defaultUserRole: 'user',
     
     // System behavior defaults
     autoAssignment: false,
@@ -685,6 +715,7 @@ export default function SystemSettings() {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
               <TabsTrigger value="security">Security</TabsTrigger>
+              <TabsTrigger value="sso">SSO & Auth</TabsTrigger>
               <TabsTrigger value="system">System</TabsTrigger>
               <TabsTrigger value="email">Email</TabsTrigger>
               <TabsTrigger value="presence">Presence</TabsTrigger>
@@ -850,6 +881,270 @@ export default function SystemSettings() {
                       />
                       <Label htmlFor="emailNotifications">Enable Email Notifications</Label>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* SSO & Authentication Settings */}
+            <TabsContent value="sso" className="space-y-6 mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Key className="h-5 w-5" />
+                    <span>Single Sign-On Configuration</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="ssoEnabled"
+                        checked={settings.ssoEnabled}
+                        onCheckedChange={(checked) => setSettings({
+                          ...settings, 
+                          ssoEnabled: checked
+                        })}
+                      />
+                      <Label htmlFor="ssoEnabled">Enable Single Sign-On (SSO)</Label>
+                    </div>
+                    
+                    {settings.ssoEnabled && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <span className="text-blue-800 font-medium">SSO Active</span>
+                        </div>
+                        <p className="text-blue-700 text-sm">
+                          Users will be redirected to SSO provider for authentication. Local authentication remains available as fallback.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="fallbackToLocalAuth"
+                        checked={settings.fallbackToLocalAuth}
+                        onCheckedChange={(checked) => setSettings({
+                          ...settings, 
+                          fallbackToLocalAuth: checked
+                        })}
+                        disabled={!settings.ssoEnabled}
+                      />
+                      <Label htmlFor="fallbackToLocalAuth">Allow Local Authentication Fallback</Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="autoCreateUsers"
+                        checked={settings.autoCreateUsers}
+                        onCheckedChange={(checked) => setSettings({
+                          ...settings, 
+                          autoCreateUsers: checked
+                        })}
+                        disabled={!settings.ssoEnabled}
+                      />
+                      <Label htmlFor="autoCreateUsers">Automatically Create New Users</Label>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="defaultUserRole">Default Role for New Users</Label>
+                      <select
+                        id="defaultUserRole"
+                        className="w-full mt-1 rounded-md border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                        value={settings.defaultUserRole}
+                        onChange={(e) => setSettings({
+                          ...settings, 
+                          defaultUserRole: e.target.value
+                        })}
+                        disabled={!settings.ssoEnabled || !settings.autoCreateUsers}
+                      >
+                        <option value="user">User</option>
+                        <option value="support">Support Agent</option>
+                        <option value="manager">Manager</option>
+                        <option value="admin">Administrator</option>
+                      </select>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Role assigned to automatically created users
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Building2 className="h-5 w-5" />
+                    <span>Active Directory Integration</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <Alert className="bg-yellow-50 border-yellow-200">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-yellow-800">
+                      <strong>Coming Soon:</strong> Active Directory integration is planned for future release. Configure these settings to prepare for AD authentication.
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="adIntegrationEnabled"
+                        checked={settings.adIntegrationEnabled}
+                        onCheckedChange={(checked) => setSettings({
+                          ...settings, 
+                          adIntegrationEnabled: checked
+                        })}
+                        disabled={!settings.ssoEnabled}
+                      />
+                      <Label htmlFor="adIntegrationEnabled">Enable Active Directory Integration</Label>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="adServerUrl">AD Server URL</Label>
+                        <Input
+                          id="adServerUrl"
+                          type="text"
+                          placeholder="ldaps://ad.company.com:636"
+                          value={settings.adServerUrl}
+                          onChange={(e) => setSettings({
+                            ...settings, 
+                            adServerUrl: e.target.value
+                          })}
+                          disabled={!settings.adIntegrationEnabled}
+                        />
+                        <p className="text-sm text-gray-500 mt-1">LDAP/LDAPS server URL</p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="adDomain">AD Domain</Label>
+                        <Input
+                          id="adDomain"
+                          type="text"
+                          placeholder="company.com"
+                          value={settings.adDomain}
+                          onChange={(e) => setSettings({
+                            ...settings, 
+                            adDomain: e.target.value
+                          })}
+                          disabled={!settings.adIntegrationEnabled}
+                        />
+                        <p className="text-sm text-gray-500 mt-1">Active Directory domain</p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="adBaseDn">Base DN</Label>
+                        <Input
+                          id="adBaseDn"
+                          type="text"
+                          placeholder="DC=company,DC=com"
+                          value={settings.adBaseDn}
+                          onChange={(e) => setSettings({
+                            ...settings, 
+                            adBaseDn: e.target.value
+                          })}
+                          disabled={!settings.adIntegrationEnabled}
+                        />
+                        <p className="text-sm text-gray-500 mt-1">Base distinguished name</p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="adBindUser">Bind User DN</Label>
+                        <Input
+                          id="adBindUser"
+                          type="text"
+                          placeholder="CN=service,OU=Service Accounts,DC=company,DC=com"
+                          value={settings.adBindUser}
+                          onChange={(e) => setSettings({
+                            ...settings, 
+                            adBindUser: e.target.value
+                          })}
+                          disabled={!settings.adIntegrationEnabled}
+                        />
+                        <p className="text-sm text-gray-500 mt-1">Service account for AD binding</p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="adBindPassword">Bind User Password</Label>
+                        <Input
+                          id="adBindPassword"
+                          type="password"
+                          placeholder="••••••••"
+                          value={settings.adBindPassword}
+                          onChange={(e) => setSettings({
+                            ...settings, 
+                            adBindPassword: e.target.value
+                          })}
+                          disabled={!settings.adIntegrationEnabled}
+                        />
+                        <p className="text-sm text-gray-500 mt-1">Service account password</p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="adUserSearchFilter">User Search Filter</Label>
+                        <Input
+                          id="adUserSearchFilter"
+                          type="text"
+                          placeholder="(sAMAccountName={0})"
+                          value={settings.adUserSearchFilter}
+                          onChange={(e) => setSettings({
+                            ...settings, 
+                            adUserSearchFilter: e.target.value
+                          })}
+                          disabled={!settings.adIntegrationEnabled}
+                        />
+                        <p className="text-sm text-gray-500 mt-1">LDAP filter for user lookup</p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="adGroupSearchFilter">Group Search Filter</Label>
+                        <Input
+                          id="adGroupSearchFilter"
+                          type="text"
+                          placeholder="(member={0})"
+                          value={settings.adGroupSearchFilter}
+                          onChange={(e) => setSettings({
+                            ...settings, 
+                            adGroupSearchFilter: e.target.value
+                          })}
+                          disabled={!settings.adIntegrationEnabled}
+                        />
+                        <p className="text-sm text-gray-500 mt-1">LDAP filter for group membership</p>
+                      </div>
+                    </div>
+
+                    {settings.adIntegrationEnabled && (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800 font-medium mb-2">AD Integration Requirements</p>
+                        <ul className="text-sm text-blue-600 space-y-1">
+                          <li>• Ensure network connectivity to Active Directory server</li>
+                          <li>• Service account must have read permissions on user objects</li>
+                          <li>• SSL/TLS certificate must be valid for LDAPS connections</li>
+                          <li>• Test connection before enabling in production</li>
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex space-x-4 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      disabled={!settings.adIntegrationEnabled}
+                      className="flex items-center space-x-2"
+                    >
+                      <Server className="h-4 w-4" />
+                      <span>Test Connection</span>
+                    </Button>
+                    <Button
+                      variant="outline" 
+                      disabled={!settings.adIntegrationEnabled}
+                      className="flex items-center space-x-2"
+                    >
+                      <User className="h-4 w-4" />
+                      <span>Test User Login</span>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

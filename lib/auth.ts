@@ -182,7 +182,7 @@ export const getAccessibleQueues = async (user: User): Promise<any[]> => {
         if (permissions.includes('queue.view_all')) {
             // Admin can see all queues
             queues = await queryAsync(`
-                SELECT t.id, t.name, t.description, t.email, t.section_id, s.name as section_name,
+                SELECT t.id, t.name, t.description, t.section_id, s.name as section_name,
                        CASE WHEN t.id = ? THEN 1 ELSE 0 END as is_home
                 FROM teams t
                 LEFT JOIN sections s ON t.section_id = s.id
@@ -191,7 +191,7 @@ export const getAccessibleQueues = async (user: User): Promise<any[]> => {
         } else if (permissions.includes('queue.view_team')) {
             // Manager can see section queues
             queues = await queryAsync(`
-                SELECT t.id, t.name, t.description, t.email, t.section_id, s.name as section_name,
+                SELECT t.id, t.name, t.description, t.section_id, s.name as section_name,
                        CASE WHEN t.id = ? THEN 1 ELSE 0 END as is_home
                 FROM teams t
                 LEFT JOIN sections s ON t.section_id = s.id
@@ -204,7 +204,6 @@ export const getAccessibleQueues = async (user: User): Promise<any[]> => {
                 id: user.team_id,
                 name: user.team_id,
                 description: 'My Team Queue',
-                email: 'team@orvale.gov',
                 section_id: user.section_id,
                 section_name: user.section_id,
                 is_home: 1

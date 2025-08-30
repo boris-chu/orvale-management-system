@@ -13,8 +13,8 @@ function createHelpdeskTeam() {
     console.log('🏢 Creating Helpdesk Team...');
     
     db.run(
-        `INSERT OR IGNORE INTO teams (id, name, description, section_id, email) VALUES (?, ?, ?, ?, ?)`,
-        ['HELPDESK', 'Helpdesk Team', 'Escalated ticket management and cross-team support', 'ITD', 'helpdesk@orvale.gov'],
+        `INSERT OR IGNORE INTO teams (id, name, description, section_id) VALUES (?, ?, ?, ?)`,
+        ['HELPDESK', 'Helpdesk Team', 'Escalated ticket management and cross-team support', 'ITD'],
         function(err) {
             if (err) {
                 console.error('❌ Error creating Helpdesk team:', err);
