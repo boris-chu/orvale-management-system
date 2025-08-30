@@ -53,6 +53,7 @@ import { ConfigurableDataTableDemo } from '@/components/ConfigurableDataTableDem
 import { DragDropColumnManager } from '@/components/DragDropColumnManager';
 import { ColumnEditorDialog } from '@/components/ColumnEditorDialog';
 import { RowEditorDialog } from '@/components/RowEditorDialog';
+import { DatabaseSchemaVisualization } from '@/components/DatabaseSchemaVisualization';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -973,7 +974,7 @@ export default function TablesManagementPage() {
 
       {/* Main Content */}
       <Tabs defaultValue="configurations" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 h-auto p-1">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-7 h-auto p-1">
           <TabsTrigger value="configurations" className="flex items-center gap-2 px-3 py-2 text-sm">
             <TableIcon className="h-4 w-4" />
             <span className="hidden sm:inline">Configurations</span>
@@ -988,6 +989,11 @@ export default function TablesManagementPage() {
             <Database className="h-4 w-4" />
             <span className="hidden sm:inline">Table Browser</span>
             <span className="sm:hidden">Browser</span>
+          </TabsTrigger>
+          <TabsTrigger value="schema" className="flex items-center gap-2 px-3 py-2 text-sm">
+            <Share2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Schema Diagram</span>
+            <span className="sm:hidden">Schema</span>
           </TabsTrigger>
           <TabsTrigger value="views" className="flex items-center gap-2 px-3 py-2 text-sm">
             <Save className="h-4 w-4" />
@@ -1454,6 +1460,11 @@ export default function TablesManagementPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Schema Diagram Tab */}
+        <TabsContent value="schema" className="space-y-4">
+          <DatabaseSchemaVisualization />
         </TabsContent>
 
         {/* Saved Views Tab */}
