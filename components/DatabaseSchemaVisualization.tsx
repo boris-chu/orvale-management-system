@@ -150,10 +150,10 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
       const toTable = getTablePosition(rel.to);
       
       // Calculate connection points with better positioning
-      const fromX = fromTable.x + 300; // Right edge of table
-      const fromY = fromTable.y + 75 + (index % 5) * 20; // Stagger connection points
+      const fromX = fromTable.x + (viewOptions.compactMode ? 250 : 300); // Right edge of table
+      const fromY = fromTable.y + 75 + (index % 5) * (viewOptions.compactMode ? 15 : 20); // Stagger connection points
       const toX = toTable.x; // Left edge of table
-      const toY = toTable.y + 75 + (index % 5) * 20;
+      const toY = toTable.y + 75 + (index % 5) * (viewOptions.compactMode ? 15 : 20);
 
       // Create path based on view options
       let pathData;
@@ -213,8 +213,8 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
         <rect
           x={table.position.x}
           y={table.position.y}
-          width="300"
-          height={Math.max(150, 30 + (viewOptions.showAllColumns ? table.columns.length : Math.min(table.columns.length, viewOptions.compactMode ? 5 : 10)) * 25 + (table.columns.length > (viewOptions.compactMode ? 5 : 10) && !viewOptions.showAllColumns ? 30 : 0))}
+          width={viewOptions.compactMode ? "250" : "300"}
+          height={Math.max(viewOptions.compactMode ? 120 : 150, 30 + (viewOptions.showAllColumns ? table.columns.length : Math.min(table.columns.length, viewOptions.compactMode ? 5 : 10)) * (viewOptions.compactMode ? 20 : 25) + (table.columns.length > (viewOptions.compactMode ? 5 : 10) && !viewOptions.showAllColumns ? 25 : 0))}
           fill={selectedTable === table.name ? "#dbeafe" : "#ffffff"}
           stroke={selectedTable === table.name ? "#3b82f6" : "#d1d5db"}
           strokeWidth={selectedTable === table.name ? "2" : "1"}
@@ -227,7 +227,7 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
         <rect
           x={table.position.x}
           y={table.position.y}
-          width="300"
+          width={viewOptions.compactMode ? "250" : "300"}
           height="30"
           fill={selectedTable === table.name ? "#3b82f6" : "#f3f4f6"}
           stroke="none"
@@ -236,7 +236,7 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
         <rect
           x={table.position.x}
           y={table.position.y + 22}
-          width="300"
+          width={viewOptions.compactMode ? "250" : "300"}
           height="8"
           fill={selectedTable === table.name ? "#3b82f6" : "#f3f4f6"}
           stroke="none"
@@ -260,27 +260,27 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
             {/* Column background */}
             <rect
               x={table.position.x + 1}
-              y={table.position.y + 30 + index * 25}
-              width="298"
-              height="24"
+              y={table.position.y + 30 + index * (viewOptions.compactMode ? 20 : 25)}
+              width={viewOptions.compactMode ? "248" : "298"}
+              height={viewOptions.compactMode ? "19" : "24"}
               fill={column.primaryKey ? "#fef3c7" : column.foreignKey ? "#dcfce7" : "transparent"}
               className="hover:fill-gray-50"
             />
             
             {/* Column icon */}
             <text
-              x={table.position.x + 8}
-              y={table.position.y + 45 + index * 25}
-              className="text-xs fill-gray-600 pointer-events-none"
+              x={table.position.x + (viewOptions.compactMode ? 6 : 8)}
+              y={table.position.y + (viewOptions.compactMode ? 42 : 45) + index * (viewOptions.compactMode ? 20 : 25)}
+              className={`${viewOptions.compactMode ? 'text-xs' : 'text-xs'} fill-gray-600 pointer-events-none`}
             >
               {column.primaryKey ? '🔑' : column.foreignKey ? '🔗' : '📄'}
             </text>
             
             {/* Column name */}
             <text
-              x={table.position.x + 25}
-              y={table.position.y + 45 + index * 25}
-              className={`text-xs pointer-events-none ${
+              x={table.position.x + (viewOptions.compactMode ? 20 : 25)}
+              y={table.position.y + (viewOptions.compactMode ? 42 : 45) + index * (viewOptions.compactMode ? 20 : 25)}
+              className={`${viewOptions.compactMode ? 'text-xs' : 'text-xs'} pointer-events-none ${
                 column.primaryKey ? 'fill-yellow-800 font-semibold' : 
                 column.foreignKey ? 'fill-green-800 font-medium' : 'fill-gray-700'
               }`}
@@ -290,9 +290,9 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
             
             {/* Column type */}
             <text
-              x={table.position.x + 200}
-              y={table.position.y + 45 + index * 25}
-              className="text-xs fill-gray-500 pointer-events-none"
+              x={table.position.x + (viewOptions.compactMode ? 160 : 200)}
+              y={table.position.y + (viewOptions.compactMode ? 42 : 45) + index * (viewOptions.compactMode ? 20 : 25)}
+              className={`${viewOptions.compactMode ? 'text-xs' : 'text-xs'} fill-gray-500 pointer-events-none`}
             >
               {column.type}
             </text>
@@ -300,9 +300,9 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
             {/* Nullable indicator */}
             {column.nullable && (
               <text
-                x={table.position.x + 280}
-                y={table.position.y + 45 + index * 25}
-                className="text-xs fill-gray-400 pointer-events-none"
+                x={table.position.x + (viewOptions.compactMode ? 230 : 280)}
+                y={table.position.y + (viewOptions.compactMode ? 42 : 45) + index * (viewOptions.compactMode ? 20 : 25)}
+                className={`${viewOptions.compactMode ? 'text-xs' : 'text-xs'} fill-gray-400 pointer-events-none`}
               >
                 ?
               </text>
@@ -314,7 +314,7 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
         {!viewOptions.showAllColumns && table.columns.length > (viewOptions.compactMode ? 5 : 10) && (
           <text
             x={table.position.x + 10}
-            y={table.position.y + 30 + (viewOptions.compactMode ? 5 : 10) * 25 + 15}
+            y={table.position.y + 30 + (viewOptions.compactMode ? 5 : 10) * (viewOptions.compactMode ? 20 : 25) + 15}
             className="text-xs fill-gray-500 pointer-events-none"
           >
             ... and {table.columns.length - (viewOptions.compactMode ? 5 : 10)} more columns
@@ -351,8 +351,8 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
     );
   }
 
-  const svgWidth = Math.max(1200, Math.max(...schemaData.tables.map(t => t.position.x + 300)));
-  const svgHeight = Math.max(800, Math.max(...schemaData.tables.map(t => t.position.y + 200)));
+  const svgWidth = Math.max(1200, Math.max(...schemaData.tables.map(t => t.position.x + (viewOptions.compactMode ? 250 : 300))));
+  const svgHeight = Math.max(800, Math.max(...schemaData.tables.map(t => t.position.y + (viewOptions.compactMode ? 150 : 200))));
 
   return (
     <div className={`space-y-4 ${className}`}>
