@@ -80,14 +80,14 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Calculate table positions for layout (simple grid layout)
+    // Calculate table positions for layout with more spacing
     const gridCols = Math.ceil(Math.sqrt(schemaData.length));
     schemaData.forEach((table, index) => {
       const row = Math.floor(index / gridCols);
       const col = index % gridCols;
       table.position = {
-        x: col * 350 + 50,
-        y: row * 200 + 50
+        x: col * 500 + 100,  // Increased from 350 to 500 for more horizontal spacing
+        y: row * 350 + 100   // Increased from 200 to 350 for more vertical spacing
       };
     });
 

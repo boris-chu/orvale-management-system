@@ -4,7 +4,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Download, ZoomIn, ZoomOut, RotateCcw, Database, Key, ExternalLink } from 'lucide-react';
+import { RefreshCw, Download, ZoomIn, ZoomOut, RotateCcw, Database, Key, ExternalLink, Settings2, GitBranch, Grid3x3, Minimize2, Maximize2, Eye } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 
 interface TableInfo {
@@ -54,9 +64,16 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
   const { toast } = useToast();
   const [schemaData, setSchemaData] = useState<SchemaData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.8);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [viewOptions, setViewOptions] = useState({
+    showRelationships: true,
+    showGrid: true,
+    curvedLines: true,
+    compactMode: false,
+    showAllColumns: false
+  });
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -106,7 +123,7 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
   const handleZoomIn = () => setZoom(prev => Math.min(prev * 1.2, 3));
   const handleZoomOut = () => setZoom(prev => Math.max(prev / 1.2, 0.3));
   const handleResetView = () => {
-    setZoom(1);
+    setZoom(0.8);
     setPan({ x: 0, y: 0 });
     setSelectedTable(null);
   };
@@ -126,51 +143,62 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
   };
 
   const renderRelationshipLines = () => {
-    if (!schemaData) return null;
+    if (!schemaData || !viewOptions.showRelationships) return null;
 
     return schemaData.relationships.map((rel, index) => {
       const fromTable = getTablePosition(rel.from);
       const toTable = getTablePosition(rel.to);
       
-      // Calculate connection points (center of table boxes)
-      const fromX = fromTable.x + 150; // Half of table width
-      const fromY = fromTable.y + 100; // Approximate center height
-      const toX = toTable.x + 150;
-      const toY = toTable.y + 100;
+      // Calculate connection points with better positioning
+      const fromX = fromTable.x + 300; // Right edge of table
+      const fromY = fromTable.y + 75 + (index % 5) * 20; // Stagger connection points
+      const toX = toTable.x; // Left edge of table
+      const toY = toTable.y + 75 + (index % 5) * 20;
 
-      // Create a curved line for better visibility
-      const midX = (fromX + toX) / 2;
-      const midY = (fromY + toY) / 2;
-      const offset = 50;
+      // Create path based on view options
+      let pathData;
+      if (viewOptions.curvedLines) {
+        // Create a curved line with better control points
+        const distance = Math.abs(toX - fromX);
+        const controlOffset = Math.min(distance * 0.3, 100);
+        pathData = `M ${fromX} ${fromY} C ${fromX + controlOffset} ${fromY}, ${toX - controlOffset} ${toY}, ${toX} ${toY}`;
+      } else {
+        // Straight lines with right angles
+        const midX = (fromX + toX) / 2;
+        pathData = `M ${fromX} ${fromY} L ${midX} ${fromY} L ${midX} ${toY} L ${toX} ${toY}`;
+      }
 
       return (
-        <g key={`rel-${index}`}>
+        <g key={`rel-${index}`} opacity={selectedTable && (selectedTable !== rel.from && selectedTable !== rel.to) ? 0.3 : 1}>
           {/* Relationship line */}
           <path
-            d={`M ${fromX} ${fromY} Q ${midX + offset} ${midY} ${toX} ${toY}`}
-            stroke="#6b7280"
-            strokeWidth="2"
-            strokeDasharray="5,5"
+            d={pathData}
+            stroke={selectedTable === rel.from || selectedTable === rel.to ? "#3b82f6" : "#6b7280"}
+            strokeWidth={selectedTable === rel.from || selectedTable === rel.to ? "3" : "2"}
+            strokeDasharray={viewOptions.curvedLines ? "5,5" : "8,4"}
             fill="none"
-            className="hover:stroke-blue-500 transition-colors cursor-pointer"
+            className="transition-all duration-200"
           />
           
           {/* Arrow head */}
           <polygon
-            points={`${toX-8},${toY-4} ${toX},${toY} ${toX-8},${toY+4}`}
-            fill="#6b7280"
-            className="hover:fill-blue-500 transition-colors"
+            points={`${toX-10},${toY-5} ${toX},${toY} ${toX-10},${toY+5}`}
+            fill={selectedTable === rel.from || selectedTable === rel.to ? "#3b82f6" : "#6b7280"}
+            className="transition-all duration-200"
           />
           
-          {/* Relationship label */}
-          <text
-            x={midX}
-            y={midY - 10}
-            className="text-xs fill-gray-600 pointer-events-none"
-            textAnchor="middle"
-          >
-            {rel.fromColumn} → {rel.toColumn}
-          </text>
+          {/* Relationship label - only show on hover or selection */}
+          {(selectedTable === rel.from || selectedTable === rel.to) && (
+            <text
+              x={(fromX + toX) / 2}
+              y={(fromY + toY) / 2 - 5}
+              className="text-xs fill-gray-700 font-medium"
+              textAnchor="middle"
+              style={{ pointerEvents: 'none' }}
+            >
+              {rel.fromColumn} → {rel.toColumn}
+            </text>
+          )}
         </g>
       );
     });
@@ -186,7 +214,7 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
           x={table.position.x}
           y={table.position.y}
           width="300"
-          height={Math.max(150, 30 + table.columns.length * 25)}
+          height={Math.max(150, 30 + (viewOptions.showAllColumns ? table.columns.length : Math.min(table.columns.length, viewOptions.compactMode ? 5 : 10)) * 25 + (table.columns.length > (viewOptions.compactMode ? 5 : 10) && !viewOptions.showAllColumns ? 30 : 0))}
           fill={selectedTable === table.name ? "#dbeafe" : "#ffffff"}
           stroke={selectedTable === table.name ? "#3b82f6" : "#d1d5db"}
           strokeWidth={selectedTable === table.name ? "2" : "1"}
@@ -227,7 +255,7 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
         </text>
         
         {/* Columns */}
-        {table.columns.slice(0, 10).map((column, index) => (
+        {table.columns.slice(0, viewOptions.showAllColumns ? undefined : (viewOptions.compactMode ? 5 : 10)).map((column, index) => (
           <g key={column.name}>
             {/* Column background */}
             <rect
@@ -282,14 +310,14 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
           </g>
         ))}
         
-        {/* Show truncation indicator if more than 10 columns */}
-        {table.columns.length > 10 && (
+        {/* Show truncation indicator if columns are truncated */}
+        {!viewOptions.showAllColumns && table.columns.length > (viewOptions.compactMode ? 5 : 10) && (
           <text
             x={table.position.x + 10}
-            y={table.position.y + 30 + 10 * 25 + 15}
+            y={table.position.y + 30 + (viewOptions.compactMode ? 5 : 10) * 25 + 15}
             className="text-xs fill-gray-500 pointer-events-none"
           >
-            ... and {table.columns.length - 10} more columns
+            ... and {table.columns.length - (viewOptions.compactMode ? 5 : 10)} more columns
           </text>
         )}
       </g>
@@ -373,6 +401,91 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
             </div>
             
             <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Settings2 className="h-4 w-4 mr-2" />
+                    View Options
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-64" align="end">
+                  <DropdownMenuLabel>Display Settings</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  
+                  <div className="space-y-3 p-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="show-relationships" className="text-sm font-normal cursor-pointer">
+                        <GitBranch className="h-4 w-4 inline mr-2" />
+                        Show Relationships
+                      </Label>
+                      <Switch
+                        id="show-relationships"
+                        checked={viewOptions.showRelationships}
+                        onCheckedChange={(checked) => 
+                          setViewOptions(prev => ({ ...prev, showRelationships: checked }))
+                        }
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="show-grid" className="text-sm font-normal cursor-pointer">
+                        <Grid3x3 className="h-4 w-4 inline mr-2" />
+                        Show Grid
+                      </Label>
+                      <Switch
+                        id="show-grid"
+                        checked={viewOptions.showGrid}
+                        onCheckedChange={(checked) => 
+                          setViewOptions(prev => ({ ...prev, showGrid: checked }))
+                        }
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="curved-lines" className="text-sm font-normal cursor-pointer">
+                        <span className="text-sm">〰️</span>
+                        <span className="ml-2">Curved Lines</span>
+                      </Label>
+                      <Switch
+                        id="curved-lines"
+                        checked={viewOptions.curvedLines}
+                        onCheckedChange={(checked) => 
+                          setViewOptions(prev => ({ ...prev, curvedLines: checked }))
+                        }
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="compact-mode" className="text-sm font-normal cursor-pointer">
+                        <Minimize2 className="h-4 w-4 inline mr-2" />
+                        Compact Mode
+                      </Label>
+                      <Switch
+                        id="compact-mode"
+                        checked={viewOptions.compactMode}
+                        onCheckedChange={(checked) => 
+                          setViewOptions(prev => ({ ...prev, compactMode: checked }))
+                        }
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="show-all-columns" className="text-sm font-normal cursor-pointer">
+                        <Eye className="h-4 w-4 inline mr-2" />
+                        Show All Columns
+                      </Label>
+                      <Switch
+                        id="show-all-columns"
+                        checked={viewOptions.showAllColumns}
+                        onCheckedChange={(checked) => 
+                          setViewOptions(prev => ({ ...prev, showAllColumns: checked }))
+                        }
+                      />
+                    </div>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
               <Button
                 variant="outline"
                 size="sm"
@@ -382,6 +495,7 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
+              
               <Button
                 variant="outline"
                 size="sm"
@@ -427,12 +541,16 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
               }}
             >
               {/* Grid background */}
-              <defs>
-                <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
-                  <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#e5e7eb" strokeWidth="1"/>
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid)" />
+              {viewOptions.showGrid && (
+                <>
+                  <defs>
+                    <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+                      <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#e5e7eb" strokeWidth="1"/>
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#grid)" />
+                </>
+              )}
               
               {/* Relationship lines */}
               {renderRelationshipLines()}
