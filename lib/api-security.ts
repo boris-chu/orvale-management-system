@@ -4,9 +4,65 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import rateLimit from 'express-rate-limit';
 import { verifyAuth } from '@/lib/auth-utils';
 import validator from 'validator';
+
+// Simple in-memory rate limiter for Next.js (production would use Redis)
+interface RateLimitStore {
+  [key: string]: {
+    count: number;
+    resetTime: number;
+  };
+}
+
+const rateLimitStore: RateLimitStore = {};
+
+/**
+ * Simple rate limiter implementation for Next.js
+ */
+export const checkRateLimit = (
+  identifier: string,
+  windowMs: number = 15 * 60 * 1000, // 15 minutes
+  maxRequests: number = 100
+): { allowed: boolean; resetTime?: number; remaining?: number } => {
+  const now = Date.now();
+  const key = `${identifier}:${Math.floor(now / windowMs)}`;
+  
+  // Clean up old entries periodically
+  if (Math.random() < 0.01) { // 1% chance to clean up
+    Object.keys(rateLimitStore).forEach(k => {
+      if (rateLimitStore[k].resetTime < now) {
+        delete rateLimitStore[k];
+      }
+    });
+  }
+  
+  if (!rateLimitStore[key]) {
+    rateLimitStore[key] = {
+      count: 0,
+      resetTime: now + windowMs
+    };
+  }
+  
+  const store = rateLimitStore[key];
+  
+  if (now > store.resetTime) {
+    // Reset the counter
+    store.count = 0;
+    store.resetTime = now + windowMs;
+  }
+  
+  store.count++;
+  
+  const allowed = store.count <= maxRequests;
+  const remaining = Math.max(0, maxRequests - store.count);
+  
+  return {
+    allowed,
+    resetTime: store.resetTime,
+    remaining
+  };
+};
 
 /**
  * Rate limiting configuration
@@ -17,20 +73,12 @@ export const createRateLimiter = (options: {
   message?: string;
   skipSuccessfulRequests?: boolean;
 }) => {
-  return rateLimit({
-    windowMs: options.windowMs || 15 * 60 * 1000, // 15 minutes default
-    max: options.max || 100, // Default 100 requests per window
+  return {
+    windowMs: options.windowMs || 15 * 60 * 1000,
+    max: options.max || 100,
     message: options.message || 'Too many requests from this IP, please try again later',
-    skipSuccessfulRequests: options.skipSuccessfulRequests || false,
-    standardHeaders: true,
-    legacyHeaders: false,
-    handler: (req, res) => {
-      res.status(429).json({
-        error: options.message || 'Too many requests',
-        retryAfter: Math.round(options.windowMs! / 1000) || 900
-      });
-    }
-  });
+    skipSuccessfulRequests: options.skipSuccessfulRequests || false
+  };
 };
 
 /**
@@ -315,10 +363,38 @@ export const validateRequest = (schema: Record<string, (input: any) => any>) => 
 export const createSecureHandler = (options: {
   requiredPermissions?: string[];
   validationSchema?: Record<string, (input: any) => any>;
-  rateLimitType?: keyof typeof rateLimiters;
+  rateLimitType?: 'api' | 'auth' | 'upload' | 'admin';
 }) => {
   return async (request: NextRequest, handler: (req: NextRequest, context: any) => Promise<NextResponse>) => {
     try {
+      const clientIP = getClientIP(request);
+      
+      // Apply rate limiting if specified
+      if (options.rateLimitType) {
+        const limiter = rateLimiters[options.rateLimitType];
+        const rateCheck = checkRateLimit(
+          clientIP,
+          limiter.windowMs,
+          limiter.max
+        );
+        
+        if (!rateCheck.allowed) {
+          auditLogger.logRateLimitExceeded(clientIP, request.nextUrl.pathname);
+          
+          return NextResponse.json({
+            error: limiter.message,
+            retryAfter: Math.round((rateCheck.resetTime! - Date.now()) / 1000)
+          }, { 
+            status: 429,
+            headers: {
+              'X-RateLimit-Limit': limiter.max.toString(),
+              'X-RateLimit-Remaining': rateCheck.remaining!.toString(),
+              'X-RateLimit-Reset': Math.round(rateCheck.resetTime! / 1000).toString()
+            }
+          });
+        }
+      }
+      
       // Apply CORS headers
       const origin = request.headers.get('origin');
       const corsHeaders = getCorsHeaders(origin);

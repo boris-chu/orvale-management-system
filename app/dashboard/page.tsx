@@ -88,7 +88,7 @@ export default function PersonalDashboard() {
       try {
         setLoading(true);
         
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('authToken');
         if (!token) {
           throw new Error('No authentication token found');
         }

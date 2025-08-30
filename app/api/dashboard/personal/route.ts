@@ -52,7 +52,7 @@ const categoryColors = {
 // GET: Personal dashboard metrics (with enhanced security)
 export async function GET(request: NextRequest) {
   return createSecureHandler({
-    requiredPermissions: ['portal.view_dashboard'], // Require dashboard viewing permission
+    requiredPermissions: ['portal.view_dashboard'], // Dashboard viewing permission now available
   })(request, async (req: NextRequest, context: any) => {
     const user = context.user;
     const userContext = SecurityService.createAccessContext(user);
@@ -316,13 +316,5 @@ export async function GET(request: NextRequest) {
       success: true,
       metrics
     });
-
-    } catch (error) {
-      console.error('Error loading dashboard metrics:', error);
-      return NextResponse.json({ 
-        error: 'Failed to load dashboard metrics',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }, { status: 500 });
-    }
   });
 }

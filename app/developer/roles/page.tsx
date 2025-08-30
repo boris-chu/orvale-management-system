@@ -418,6 +418,12 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     category: 'Portal Management', 
     description: 'Export configuration data\n• Backup settings\n• Data migration\n• System maintenance' 
   },
+  { 
+    id: 'portal.view_dashboard', 
+    name: 'View Personal Dashboard', 
+    category: 'Portal Management', 
+    description: 'Access personal dashboard\n• View metrics & analytics\n• Track ticket activity\n• Monitor achievements\n• Basic user functionality' 
+  },
   
   // Data Management Permissions
   { 

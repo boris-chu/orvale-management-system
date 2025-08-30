@@ -200,6 +200,77 @@ import { motion, AnimatePresence } from 'framer-motion';
 - Use React.memo for expensive components
 - Optimize bundle size with dynamic imports
 
+### Refactoring and Code Quality - CRITICAL
+**⚠️ ALWAYS refactor and improve code whenever possible:**
+
+1. **Remove External Dependencies**: Replace external libraries with lightweight custom implementations when feasible
+   ```javascript
+   // ❌ Don't introduce heavy external dependencies
+   import rateLimit from 'express-rate-limit'; // Doesn't work with Next.js
+   
+   // ✅ Create lightweight custom implementations
+   export const checkRateLimit = (identifier: string, windowMs: number, maxRequests: number) => {
+     // Custom rate limiting logic using simple in-memory store
+   };
+   ```
+
+2. **Fix Token Storage Inconsistencies**: Ensure consistent localStorage key naming
+   ```javascript
+   // ❌ Mixed token key names cause authentication failures
+   localStorage.getItem('token')      // Dashboard looking for this
+   localStorage.getItem('authToken')  // AuthContext storing this
+   
+   // ✅ Use consistent naming throughout the application
+   const TOKEN_KEY = 'authToken'; // Define once, use everywhere
+   ```
+
+3. **Simplify Complex Code**: Break down large functions, remove unnecessary abstractions
+   ```javascript
+   // ❌ Overly complex nested security handlers
+   createSecureHandler({ ... })(request, async (req, context) => {
+     return createSecureHandler({ ... })(req, async () => { ... });
+   });
+   
+   // ✅ Flat, clear security patterns
+   const authResult = await verifyAuth(request);
+   if (!authResult.success) return unauthorized();
+   ```
+
+4. **Eliminate Build Errors**: Fix syntax errors, missing dependencies, type mismatches immediately
+   ```javascript
+   // ❌ Syntax errors that break the build
+   try {
+     // some code
+     return success();
+   } catch (error) { // Missing opening brace or wrong nesting
+   
+   // ✅ Clean, proper error handling
+   try {
+     const result = await operation();
+     return NextResponse.json({ success: true, data: result });
+   } catch (error) {
+     return NextResponse.json({ error: error.message }, { status: 500 });
+   }
+   ```
+
+5. **Database Consistency**: Ensure permission names exist in database and UI
+   ```javascript
+   // ❌ Using permissions that don't exist in database
+   requiredPermissions: ['portal.view_dashboard'] // Not in database
+   
+   // ✅ Add missing permissions to both database and UI
+   // 1. Add to database: INSERT INTO role_permissions...
+   // 2. Add to UI permissions list: AVAILABLE_PERMISSIONS array
+   // 3. Then use in code
+   ```
+
+**Refactoring Priorities:**
+1. **Authentication Flow**: Fix token inconsistencies
+2. **Dependencies**: Remove external libs, create custom implementations  
+3. **Error Handling**: Consistent patterns across all APIs
+4. **Permission System**: Ensure database-UI consistency
+5. **Code Structure**: Simplify complex nested handlers
+
 ### Logging System
 The system uses **Pino** for production-grade structured logging:
 
@@ -746,7 +817,7 @@ import { organizationalData } from './assets/organizational-data.js';
 
 ## 🗄️ Database Schema Documentation
 
-The Orvale Management System uses SQLite database (`orvale_tickets.db`) with 23 tables organized into 6 functional groups:
+The Orvale Management System uses SQLite database (`orvale_tickets.db`) with 41+ tables organized into 7 functional groups:
 
 ### 1. **Authentication & Authorization Tables**
 - **users**: User accounts with authentication details
@@ -809,6 +880,96 @@ The Orvale Management System uses SQLite database (`orvale_tickets.db`) with 23 
 ### 6. **System Tables**
 - **backup_log**: Database backup history
 
+### 7. **Chat System Tables** 💬 **COMPREHENSIVE CHAT ANALYTICS**
+
+The chat system includes 18 specialized tables for internal and public portal chat functionality:
+
+#### **Internal Chat Tables:**
+- **chat_channels**: Public channels, private channels, DMs, and groups
+- **chat_channel_members**: Channel membership with roles (owner, admin, moderator, member)
+- **chat_messages**: All internal chat messages with threading and file support
+- **user_presence**: Real-time user status (online, away, busy, offline)
+- **user_chat_preferences**: Individual user settings and theme preferences
+- **chat_files**: File attachments in chat messages
+- **message_reactions**: Emoji reactions to messages
+- **call_logs**: Audio/video call history with quality ratings
+
+#### **Public Portal Chat Tables:**
+- **public_chat_sessions**: Guest chat sessions with staff assignment tracking
+- **public_chat_messages**: Messages between guests and staff
+- **public_chat_session_ratings**: Guest satisfaction ratings (1-5 stars)
+- **public_chat_session_events**: Session lifecycle events (connect, transfer, disconnect)
+- **public_chat_typing_status**: Real-time typing indicators
+- **public_chat_read_receipts**: Message delivery and read status
+- **staff_work_modes**: Staff availability status (ready, work_mode, ticketing_mode, offline)
+- **staff_work_mode_history**: Work mode change audit trail
+
+#### **Chat Analytics & Metrics:**
+- **staff_rating_summaries**: Aggregated staff performance ratings by period
+- **gif_usage_log**: GIF usage tracking with rate limiting
+- **chat_system_settings**: Admin-configurable chat settings
+
+#### **Key Chat Metrics Available:**
+
+**📊 Public Portal Chat Analytics:**
+```sql
+-- Users helped per staff member
+SELECT 
+  assigned_to as staff_member,
+  COUNT(*) as sessions_handled,
+  AVG(total_chat_duration) as avg_session_duration,
+  AVG(first_response_time) as avg_response_time
+FROM public_chat_sessions 
+WHERE assigned_to IS NOT NULL
+GROUP BY assigned_to;
+
+-- Customer satisfaction ratings
+SELECT 
+  AVG(rating) as avg_rating,
+  COUNT(*) as total_ratings,
+  staff_username
+FROM public_chat_session_ratings r
+JOIN public_chat_sessions s ON r.session_id = s.session_id
+WHERE s.assigned_to IS NOT NULL
+GROUP BY s.assigned_to;
+
+-- Tickets created from chat sessions
+SELECT 
+  COUNT(*) as tickets_from_chat
+FROM public_chat_sessions 
+WHERE ticket_created IS NOT NULL;
+```
+
+**📈 Internal Chat Analytics:**
+```sql
+-- Most active chat channels
+SELECT 
+  c.name as channel_name,
+  COUNT(m.id) as message_count,
+  COUNT(DISTINCT m.user_id) as unique_users
+FROM chat_channels c
+JOIN chat_messages m ON c.id = m.channel_id
+WHERE c.type = 'public_channel'
+GROUP BY c.id, c.name;
+
+-- User engagement metrics
+SELECT 
+  user_id,
+  COUNT(*) as messages_sent,
+  COUNT(DISTINCT channel_id) as channels_active
+FROM chat_messages
+GROUP BY user_id;
+```
+
+**🎯 Dashboard Metrics Integration:**
+- **Users Helped**: Count of completed public chat sessions per staff member
+- **Average Rating**: Customer satisfaction scores from session ratings
+- **Response Time**: Time from guest message to first staff response
+- **Resolution Time**: Total duration of chat sessions
+- **Tickets from Chat**: Auto-created tickets from chat interactions
+- **Active Channels**: Most used internal communication channels
+- **Staff Availability**: Real-time work mode distribution
+
 ### Key Relationships
 
 ```
@@ -821,6 +982,17 @@ helpdesk_team_preferences ←→ users & teams
 dpss_offices → dpss_bureaus → dpss_divisions → dpss_sections (hierarchical)
 ticket_categories → request_types → subcategories → implementations (hierarchical)
 support_teams ←→ support_team_groups (via group_id)
+
+-- Chat System Relationships
+chat_channels ←→ chat_messages (via channel_id)
+chat_channel_members ←→ users & chat_channels (via user_id, channel_id)
+chat_messages ←→ users (via user_id)
+public_chat_sessions ←→ users (via assigned_to)
+public_chat_sessions ←→ user_tickets (via ticket_created)
+public_chat_messages ←→ public_chat_sessions (via session_id)
+public_chat_session_ratings ←→ public_chat_sessions (via session_id)
+staff_work_modes ←→ users (via username)
+call_logs ←→ users (via caller_id, receiver_id)
 ```
 
 ### Important Design Patterns
@@ -830,6 +1002,11 @@ support_teams ←→ support_team_groups (via group_id)
 3. **Hierarchical Data**: Both DPSS structure and ticket categories use parent-child relationships
 4. **JSON Storage**: Used for flexible data like `computer_info` and permission overrides
 5. **Team Separation**: **CRITICAL** - `teams` for internal ticket processing/helpdesk, `support_teams` for public portal submission only
+6. **Chat Session Lifecycle**: Public chat sessions track complete interaction flow from waiting → active → ended/abandoned
+7. **Real-time Presence**: User presence and typing status with automatic cleanup and expiration
+8. **Message Threading**: Both internal and public chat support message replies and threading
+9. **Staff Work Modes**: Granular availability tracking for chat assignment and workload management
+10. **Performance Metrics**: Built-in timing fields for response time and resolution analytics
 
 ### Common Operations
 
@@ -853,6 +1030,41 @@ FROM user_tickets ut
 LEFT JOIN teams t ON ut.assigned_team = t.id
 LEFT JOIN users u1 ON ut.assigned_to = u1.username
 LEFT JOIN users u2 ON ut.submitted_by = u2.username;
+```
+
+**Get chat metrics for dashboard:**
+```sql
+-- Staff chat performance (public portal)
+SELECT 
+  u.display_name as staff_name,
+  COUNT(pcs.id) as sessions_handled,
+  AVG(pcs.total_chat_duration) as avg_duration_seconds,
+  AVG(pcs.first_response_time) as avg_response_time_seconds,
+  COUNT(pcs.ticket_created) as tickets_created_from_chat,
+  AVG(pcsr.rating) as avg_rating
+FROM users u
+LEFT JOIN public_chat_sessions pcs ON u.username = pcs.assigned_to 
+  AND pcs.status IN ('ended', 'abandoned')
+LEFT JOIN public_chat_session_ratings pcsr ON pcs.session_id = pcsr.session_id
+WHERE u.role_id IN ('support', 'helpdesk', 'manager', 'admin')
+GROUP BY u.username, u.display_name;
+```
+
+**Get active chat channels with message counts:**
+```sql
+SELECT 
+  cc.name as channel_name,
+  cc.type as channel_type,
+  COUNT(DISTINCT ccm.user_id) as member_count,
+  COUNT(cm.id) as message_count,
+  MAX(cm.created_at) as last_activity
+FROM chat_channels cc
+LEFT JOIN chat_channel_members ccm ON cc.id = ccm.channel_id
+LEFT JOIN chat_messages cm ON cc.id = cm.channel_id 
+  AND cm.is_deleted = FALSE
+WHERE cc.active = TRUE
+GROUP BY cc.id, cc.name, cc.type
+ORDER BY last_activity DESC;
 ```
 
 ## 📚 Key Resources
