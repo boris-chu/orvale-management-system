@@ -24,7 +24,9 @@ import {
   User,
   Globe,
   Table,
-  MessageCircle
+  MessageCircle,
+  Trophy,
+  Award
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -277,6 +279,16 @@ export default function DeveloperDashboard() {
         color: 'bg-teal-500',
         stats: 'Configure data displays',
         requiredPermissions: ['tables.view_config', 'admin.system_settings']
+      },
+      {
+        id: 'achievements',
+        title: 'Achievements & Badges',
+        description: 'Manage gamification system, achievements, and user badges',
+        icon: Trophy,
+        href: '/admin/achievements',
+        color: 'bg-yellow-500',
+        stats: 'Gamification system',
+        requiredPermissions: ['admin.manage_users', 'admin.system_settings']
       }
     ];
 

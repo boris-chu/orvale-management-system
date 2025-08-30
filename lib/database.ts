@@ -142,21 +142,30 @@ export const initDB = () => {
                 });
             });
 
-            // Achievement definitions table
+            // Achievement definitions table (enhanced for admin management)
             db.run(`
                 CREATE TABLE IF NOT EXISTS achievements (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
                     description TEXT NOT NULL,
-                    category TEXT NOT NULL CHECK (category IN ('productivity', 'quality', 'collaboration', 'special')),
+                    category TEXT NOT NULL CHECK (category IN ('productivity', 'quality', 'collaboration', 'special', 'custom')),
                     rarity TEXT NOT NULL CHECK (rarity IN ('common', 'uncommon', 'rare', 'epic', 'legendary')),
                     icon TEXT NOT NULL,
+                    icon_type TEXT DEFAULT 'emoji' CHECK (icon_type IN ('emoji', 'lucide', 'material', 'custom_svg')),
                     xp_reward INTEGER NOT NULL DEFAULT 0,
-                    criteria_type TEXT NOT NULL CHECK (criteria_type IN ('ticket_count', 'streak_days', 'template_usage', 'category_diversity', 'time_saved', 'team_collaboration', 'special_event')),
+                    criteria_type TEXT NOT NULL CHECK (criteria_type IN ('ticket_count', 'streak_days', 'template_usage', 'category_diversity', 'time_saved', 'team_collaboration', 'special_event', 'custom')),
                     criteria_value INTEGER,
                     criteria_data TEXT, -- JSON for complex criteria
+                    toast_config TEXT, -- JSON for custom toast styling
+                    display_order INTEGER DEFAULT 0,
+                    active_from TIMESTAMP,
+                    active_until TIMESTAMP,
+                    created_by TEXT,
+                    updated_by TEXT,
+                    custom_css TEXT,
                     active BOOLEAN DEFAULT TRUE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             `);
 
@@ -191,6 +200,40 @@ export const initDB = () => {
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(user_id, date),
                     FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            `);
+
+            // Achievement display settings table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS achievement_display_settings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    show_toast_notifications BOOLEAN DEFAULT TRUE,
+                    toast_duration INTEGER DEFAULT 5000,
+                    toast_position TEXT DEFAULT 'top-right',
+                    show_progress_bars BOOLEAN DEFAULT TRUE,
+                    show_locked_achievements BOOLEAN DEFAULT TRUE,
+                    dashboard_widget_enabled BOOLEAN DEFAULT TRUE,
+                    dashboard_widget_size TEXT DEFAULT 'medium' CHECK (dashboard_widget_size IN ('small', 'medium', 'large')),
+                    dashboard_widget_position INTEGER DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            `);
+
+            // Achievement icons library table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS achievement_icons (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    icon_type TEXT NOT NULL CHECK (icon_type IN ('emoji', 'lucide', 'material', 'custom_svg')),
+                    icon_value TEXT NOT NULL,
+                    category TEXT,
+                    tags TEXT, -- JSON array of searchable tags
+                    is_default BOOLEAN DEFAULT FALSE,
+                    created_by TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             `);
 
@@ -387,21 +430,77 @@ export const initDB = () => {
                 }
             ];
 
-            // Insert default achievements
+            // Insert default achievements with new fields
             defaultAchievements.forEach(achievement => {
                 db.run(
                     `INSERT OR IGNORE INTO achievements 
-                     (id, name, description, category, rarity, icon, xp_reward, criteria_type, criteria_value, criteria_data) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                     (id, name, description, category, rarity, icon, icon_type, xp_reward, criteria_type, criteria_value, criteria_data, display_order) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
                         achievement.id, achievement.name, achievement.description,
                         achievement.category, achievement.rarity, achievement.icon,
-                        achievement.xp_reward, achievement.criteria_type,
-                        achievement.criteria_value, achievement.criteria_data
+                        'emoji', achievement.xp_reward, achievement.criteria_type,
+                        achievement.criteria_value, achievement.criteria_data,
+                        defaultAchievements.indexOf(achievement)
                     ],
                     function(err) {
                         if (err) {
                             console.error(`Error creating achievement ${achievement.id}:`, err.message);
+                        }
+                    }
+                );
+            });
+
+            // Initialize default achievement icons
+            const defaultIcons = [
+                // Productivity Icons
+                { name: 'Target', icon_type: 'emoji', icon_value: '🎯', category: 'productivity', tags: JSON.stringify(['goal', 'aim', 'objective']) },
+                { name: 'Fire', icon_type: 'emoji', icon_value: '🔥', category: 'productivity', tags: JSON.stringify(['streak', 'hot', 'active']) },
+                { name: 'Runner', icon_type: 'emoji', icon_value: '🏃‍♂️', category: 'productivity', tags: JSON.stringify(['marathon', 'speed', 'fast']) },
+                { name: '100', icon_type: 'emoji', icon_value: '💯', category: 'productivity', tags: JSON.stringify(['perfect', 'complete', 'hundred']) },
+                { name: 'Lightning', icon_type: 'emoji', icon_value: '⚡', category: 'productivity', tags: JSON.stringify(['fast', 'quick', 'efficient']) },
+                { name: 'Rocket', icon_type: 'emoji', icon_value: '🚀', category: 'productivity', tags: JSON.stringify(['launch', 'fast', 'growth']) },
+                { name: 'Chart Up', icon_type: 'emoji', icon_value: '📈', category: 'productivity', tags: JSON.stringify(['growth', 'progress', 'increase']) },
+                
+                // Quality Icons
+                { name: 'Puzzle', icon_type: 'emoji', icon_value: '🧩', category: 'quality', tags: JSON.stringify(['solve', 'fix', 'complete']) },
+                { name: 'Clipboard', icon_type: 'emoji', icon_value: '📋', category: 'quality', tags: JSON.stringify(['checklist', 'organize', 'plan']) },
+                { name: 'Diamond', icon_type: 'emoji', icon_value: '💎', category: 'quality', tags: JSON.stringify(['premium', 'valuable', 'rare']) },
+                { name: 'Checkmark', icon_type: 'emoji', icon_value: '✅', category: 'quality', tags: JSON.stringify(['done', 'complete', 'success']) },
+                { name: 'Medal', icon_type: 'emoji', icon_value: '🥇', category: 'quality', tags: JSON.stringify(['first', 'winner', 'best']) },
+                
+                // Collaboration Icons
+                { name: 'Handshake', icon_type: 'emoji', icon_value: '🤝', category: 'collaboration', tags: JSON.stringify(['team', 'partner', 'collaborate']) },
+                { name: 'People', icon_type: 'emoji', icon_value: '👥', category: 'collaboration', tags: JSON.stringify(['team', 'group', 'users']) },
+                { name: 'Heart', icon_type: 'emoji', icon_value: '❤️', category: 'collaboration', tags: JSON.stringify(['love', 'care', 'support']) },
+                { name: 'High Five', icon_type: 'emoji', icon_value: '🙌', category: 'collaboration', tags: JSON.stringify(['celebrate', 'success', 'team']) },
+                
+                // Special Icons
+                { name: 'Star', icon_type: 'emoji', icon_value: '⭐', category: 'special', tags: JSON.stringify(['favorite', 'special', 'featured']) },
+                { name: 'Sparkles', icon_type: 'emoji', icon_value: '✨', category: 'special', tags: JSON.stringify(['magic', 'special', 'new']) },
+                { name: 'Trophy', icon_type: 'emoji', icon_value: '🏆', category: 'special', tags: JSON.stringify(['winner', 'champion', 'best']) },
+                { name: 'Crown', icon_type: 'emoji', icon_value: '👑', category: 'special', tags: JSON.stringify(['king', 'queen', 'leader']) },
+                { name: 'Gem', icon_type: 'emoji', icon_value: '💠', category: 'special', tags: JSON.stringify(['rare', 'special', 'unique']) },
+                { name: 'Rainbow', icon_type: 'emoji', icon_value: '🌈', category: 'special', tags: JSON.stringify(['colorful', 'diverse', 'inclusive']) },
+                
+                // Lucide Icons
+                { name: 'Trophy', icon_type: 'lucide', icon_value: 'Trophy', category: 'special', tags: JSON.stringify(['award', 'winner', 'achievement']) },
+                { name: 'Award', icon_type: 'lucide', icon_value: 'Award', category: 'special', tags: JSON.stringify(['prize', 'medal', 'honor']) },
+                { name: 'Target', icon_type: 'lucide', icon_value: 'Target', category: 'productivity', tags: JSON.stringify(['goal', 'aim', 'bullseye']) },
+                { name: 'Zap', icon_type: 'lucide', icon_value: 'Zap', category: 'productivity', tags: JSON.stringify(['energy', 'power', 'fast']) },
+                { name: 'Users', icon_type: 'lucide', icon_value: 'Users', category: 'collaboration', tags: JSON.stringify(['team', 'group', 'people']) }
+            ];
+
+            // Insert default icons
+            defaultIcons.forEach(icon => {
+                db.run(
+                    `INSERT OR IGNORE INTO achievement_icons 
+                     (name, icon_type, icon_value, category, tags, is_default) 
+                     VALUES (?, ?, ?, ?, ?, ?)`,
+                    [icon.name, icon.icon_type, icon.icon_value, icon.category, icon.tags, true],
+                    function(err) {
+                        if (err) {
+                            console.error(`Error creating icon ${icon.name}:`, err.message);
                         }
                     }
                 );
