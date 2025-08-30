@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth-utils';
 import { queryAsync } from '@/lib/database';
 import { SecurityService } from '@/lib/security-service';
 import { createSecureHandler, auditLogger, getClientIP } from '@/lib/api-security';
+import { AchievementService } from '@/lib/achievement-service';
 
 interface DashboardMetrics {
   ticketsGenerated: number;
@@ -189,33 +190,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Mock achievements for now - would come from user_achievements table
-    const achievements = [
-      {
-        id: '1',
-        name: 'First Steps',
-        description: 'Generated your first ticket',
-        unlockedAt: '2024-01-15T10:30:00Z',
-        rarity: 'common' as const,
-        icon: '🎯'
-      },
-      {
-        id: '2', 
-        name: 'Consistent Contributor',
-        description: 'Maintained a 7-day streak',
-        unlockedAt: '2024-01-22T14:45:00Z',
-        rarity: 'uncommon' as const,
-        icon: '🔥'
-      },
-      {
-        id: '3',
-        name: 'Problem Solver', 
-        description: 'Addressed tickets across 5+ categories',
-        unlockedAt: '2024-02-01T09:15:00Z',
-        rarity: 'rare' as const,
-        icon: '🧩'
-      }
-    ];
+    // Get user ID for achievements
+    const userResult = await queryAsync('SELECT id FROM users WHERE username = ?', [username]);
+    const userId = userResult[0]?.id;
+
+    // Get real achievements from the achievement service
+    let achievements = [];
+    if (userId) {
+      // First check and update achievements
+      await AchievementService.checkAchievements(userId, username);
+      
+      // Then get recent achievements for dashboard
+      achievements = await AchievementService.getRecentAchievements(userId, 6);
+    }
 
     // Get chat metrics for the user (if they are staff)
     let chatMetrics = {
@@ -282,9 +269,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Mock level/XP calculation based on tickets + chat activity
-    const level = Math.floor((ticketsGenerated + chatMetrics.usersHelped) / 20) + 1;
-    const xp = ticketsGenerated * 10 + currentStreak * 50 + chatMetrics.usersHelped * 15;
-    const xpToNextLevel = level * 200;
+    const totalXp = ticketsGenerated * 10 + currentStreak * 50 + chatMetrics.usersHelped * 15;
+    const level = Math.floor(totalXp / 200) + 1;
+    const xpInCurrentLevel = totalXp % 200; // XP progress within current level
+    const xpToNextLevel = 200; // XP needed to complete current level
 
     const metrics: DashboardMetrics = {
       ticketsGenerated,
@@ -298,7 +286,7 @@ export async function GET(request: NextRequest) {
       categoryBreakdown,
       achievements,
       level,
-      xp,
+      xp: xpInCurrentLevel,
       xpToNextLevel,
       chatMetrics
     };

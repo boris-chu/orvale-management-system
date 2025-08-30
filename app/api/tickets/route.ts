@@ -3,6 +3,7 @@ import { queryAsync, runAsync } from '@/lib/database';
 import { verifyAuth } from '@/lib/auth';
 import { generateTicketNumber } from '@/lib/ticket-numbering';
 import { ticketLogger, apiLogger } from '@/lib/logger';
+import { AchievementService } from '@/lib/achievement-service';
 
 // Helper function to add history entry
 async function addHistoryEntry(ticketId: string, actionType: string, user: any, fromValue?: string, toValue?: string, fromTeam?: string, toTeam?: string, reason?: string, details?: any) {
@@ -237,6 +238,23 @@ export async function POST(request: NextRequest) {
 
         // Log ticket creation
         ticketLogger.created(submissionId, request_creator_display_name || user_name, assigned_team);
+
+        // Check for achievement unlocks (async, don't block response)
+        try {
+            // Get user ID from employee number if available
+            const userResult = await queryAsync('SELECT id FROM users WHERE username = ?', [employee_number]);
+            const userId = userResult[0]?.id;
+            
+            if (userId) {
+                // Trigger achievement check for ticket creation
+                AchievementService.onTicketEvent(userId, employee_number, 'created').catch((error) => {
+                    console.error('Achievement check failed:', error);
+                });
+            }
+        } catch (error) {
+            // Don't fail ticket creation if achievement check fails
+            console.warn('Achievement check error:', error);
+        }
 
         return NextResponse.json({
             success: true,

@@ -142,6 +142,58 @@ export const initDB = () => {
                 });
             });
 
+            // Achievement definitions table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS achievements (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    category TEXT NOT NULL CHECK (category IN ('productivity', 'quality', 'collaboration', 'special')),
+                    rarity TEXT NOT NULL CHECK (rarity IN ('common', 'uncommon', 'rare', 'epic', 'legendary')),
+                    icon TEXT NOT NULL,
+                    xp_reward INTEGER NOT NULL DEFAULT 0,
+                    criteria_type TEXT NOT NULL CHECK (criteria_type IN ('ticket_count', 'streak_days', 'template_usage', 'category_diversity', 'time_saved', 'team_collaboration', 'special_event')),
+                    criteria_value INTEGER,
+                    criteria_data TEXT, -- JSON for complex criteria
+                    active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+
+            // User achievements table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS user_achievements (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    achievement_id TEXT NOT NULL,
+                    progress INTEGER DEFAULT 0,
+                    max_progress INTEGER DEFAULT 100,
+                    unlocked_at TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(user_id, achievement_id),
+                    FOREIGN KEY (user_id) REFERENCES users(id),
+                    FOREIGN KEY (achievement_id) REFERENCES achievements(id)
+                )
+            `);
+
+            // User analytics table for tracking detailed metrics
+            db.run(`
+                CREATE TABLE IF NOT EXISTS user_analytics (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    date DATE NOT NULL,
+                    tickets_generated INTEGER DEFAULT 0,
+                    templates_used INTEGER DEFAULT 0,
+                    categories_touched INTEGER DEFAULT 0,
+                    time_saved_minutes INTEGER DEFAULT 0,
+                    collaboration_points INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(user_id, date),
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            `);
+
             // Initialize ticket sequences table
             initTicketSequences().then(() => {
                 console.log('✅ Ticket numbering system initialized');
@@ -211,6 +263,145 @@ export const initDB = () => {
                                     [role.id, permission]
                                 );
                             });
+                        }
+                    }
+                );
+            });
+
+            // Initialize default achievements
+            const defaultAchievements = [
+                // Productivity Achievements
+                {
+                    id: 'first_steps',
+                    name: 'First Steps',
+                    description: 'Generate your first ticket',
+                    category: 'productivity',
+                    rarity: 'common',
+                    icon: '🎯',
+                    xp_reward: 25,
+                    criteria_type: 'ticket_count',
+                    criteria_value: 1,
+                    criteria_data: null
+                },
+                {
+                    id: 'consistent_contributor',
+                    name: 'Consistent Contributor',
+                    description: 'Maintain a 7-day streak',
+                    category: 'productivity',
+                    rarity: 'uncommon',
+                    icon: '🔥',
+                    xp_reward: 100,
+                    criteria_type: 'streak_days',
+                    criteria_value: 7,
+                    criteria_data: null
+                },
+                {
+                    id: 'marathon_runner',
+                    name: 'Marathon Runner',
+                    description: 'Maintain a 30-day streak',
+                    category: 'productivity',
+                    rarity: 'rare',
+                    icon: '🏃‍♂️',
+                    xp_reward: 300,
+                    criteria_type: 'streak_days',
+                    criteria_value: 30,
+                    criteria_data: null
+                },
+                {
+                    id: 'centurion',
+                    name: 'Centurion',
+                    description: 'Generate 100 tickets',
+                    category: 'productivity',
+                    rarity: 'epic',
+                    icon: '💯',
+                    xp_reward: 500,
+                    criteria_type: 'ticket_count',
+                    criteria_value: 100,
+                    criteria_data: null
+                },
+                {
+                    id: 'efficiency_expert',
+                    name: 'Efficiency Expert',
+                    description: 'Save 100+ hours through templates',
+                    category: 'productivity',
+                    rarity: 'legendary',
+                    icon: '⚡',
+                    xp_reward: 1000,
+                    criteria_type: 'time_saved',
+                    criteria_value: 6000, // 100 hours in minutes
+                    criteria_data: null
+                },
+                
+                // Quality Achievements
+                {
+                    id: 'problem_solver',
+                    name: 'Problem Solver',
+                    description: 'Address tickets across 5+ categories',
+                    category: 'quality',
+                    rarity: 'rare',
+                    icon: '🧩',
+                    xp_reward: 200,
+                    criteria_type: 'category_diversity',
+                    criteria_value: 5,
+                    criteria_data: null
+                },
+                {
+                    id: 'template_master',
+                    name: 'Template Master',
+                    description: 'Use templates in 50+ tickets',
+                    category: 'quality',
+                    rarity: 'epic',
+                    icon: '📋',
+                    xp_reward: 400,
+                    criteria_type: 'template_usage',
+                    criteria_value: 50,
+                    criteria_data: null
+                },
+                
+                // Collaboration Achievements
+                {
+                    id: 'team_player',
+                    name: 'Team Player',
+                    description: 'Collaborate on team projects',
+                    category: 'collaboration',
+                    rarity: 'uncommon',
+                    icon: '🤝',
+                    xp_reward: 150,
+                    criteria_type: 'team_collaboration',
+                    criteria_value: 1,
+                    criteria_data: null
+                },
+                
+                // Special Achievements
+                {
+                    id: 'early_adopter',
+                    name: 'Early Adopter',
+                    description: 'Among the first users of the system',
+                    category: 'special',
+                    rarity: 'legendary',
+                    icon: '🌟',
+                    xp_reward: 500,
+                    criteria_type: 'special_event',
+                    criteria_value: 1,
+                    criteria_data: JSON.stringify({ event_type: 'early_adoption' })
+                }
+            ];
+
+            // Insert default achievements
+            defaultAchievements.forEach(achievement => {
+                db.run(
+                    `INSERT OR IGNORE INTO achievements 
+                     (id, name, description, category, rarity, icon, xp_reward, criteria_type, criteria_value, criteria_data) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                        achievement.id, achievement.name, achievement.description,
+                        achievement.category, achievement.rarity, achievement.icon,
+                        achievement.xp_reward, achievement.criteria_type,
+                        achievement.criteria_value, achievement.criteria_data
+                    ],
+                    function(err) {
+                        if (err) {
+                            console.error(`Error creating achievement ${achievement.id}:`, err.message);
                         }
                     }
                 );

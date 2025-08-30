@@ -1332,6 +1332,26 @@ export default function TicketsPage() {
                   </Tooltip>
                 </TooltipProvider>
               )}
+
+              {/* View Dashboard Button - show for all authenticated users */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => window.location.href = '/dashboard'}
+                      variant="outline"
+                      className="bg-transparent border-white text-white hover:bg-white hover:text-blue-600 transition-all duration-200"
+                      size="sm"
+                    >
+                      <Monitor className="h-4 w-4 mr-2" />
+                      View Dashboard
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Personal Activity Dashboard</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               
               {/* Admin Dashboard Button - only show if user has admin permissions */}
               {currentUser?.permissions?.some((perm: string) => 

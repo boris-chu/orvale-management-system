@@ -205,6 +205,14 @@ export default function PersonalDashboard() {
         </div>
         
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => router.push('/achievements')}
+          >
+            <Award className="h-4 w-4 mr-2" />
+            View All Achievements
+          </Button>
           <Button variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
             Export Report
@@ -235,14 +243,14 @@ export default function PersonalDashboard() {
                 <span>{metrics.xp} XP</span>
                 <span>{metrics.xpToNextLevel} XP</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                 <div 
                   className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${(metrics.xp / metrics.xpToNextLevel) * 100}%` }}
+                  style={{ width: `${Math.min(100, Math.max(0, (metrics.xp / metrics.xpToNextLevel) * 100))}%` }}
                 />
               </div>
               <p className="text-xs text-gray-500">
-                {metrics.xpToNextLevel - metrics.xp} XP needed for next level
+                {Math.max(0, metrics.xpToNextLevel - metrics.xp)} XP needed for next level
               </p>
             </div>
           </CardContent>
