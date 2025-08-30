@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 // Material-UI imports for working Select components
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings, LogOut, CheckCircle, Monitor, Plus, Paperclip, FileText, Download, ExternalLink, X, Upload } from 'lucide-react';
+import { RefreshCw, User, Clock, AlertTriangle, Trash2, ArrowUp, Search, Eye, FolderOpen, Building2, Tag, Check, Save, Settings, LogOut, CheckCircle, Monitor, Plus, Paperclip, FileText, Download, ExternalLink, X, Upload, MessageCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 // Removed static imports - will load dynamically from database APIs
@@ -1284,6 +1284,28 @@ export default function TicketsPage() {
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>Create ticket for user or internal issue</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              {/* Helpdesk Chat Button - show if user has public portal queue permissions */}
+              {currentUser?.permissions?.includes('public_portal.manage_queue') && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={() => window.location.href = '/chat/public-queue'}
+                        variant="outline"
+                        className="bg-transparent border-white text-white hover:bg-white hover:text-blue-600 transition-all duration-200"
+                        size="sm"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Helpdesk Chat
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Public Chat Queue Management</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
