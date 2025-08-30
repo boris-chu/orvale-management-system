@@ -241,18 +241,36 @@ export class ChatCleanupScheduler {
   }
 
   /**
-   * Clean up stale presence data (older than 2 hours)
+   * Clean up stale presence data (users with 0 connections but still marked online)
    */
   private async cleanupStalePresence(): Promise<number> {
     try {
-      // This would clean up any presence tracking tables if they exist
-      // For now, we'll just log that this step ran
-      logger.info({
-        event: 'stale_presence_check',
-        note: 'Presence cleanup integrated with existing socket server intervals'
-      }, 'Stale presence cleanup check completed');
+      // Clean up users who have no active connections but are still marked as online
+      const result = await dbRun(`
+        UPDATE user_presence 
+        SET status = 'offline', 
+            last_active = datetime('now'),
+            updated_at = datetime('now')
+        WHERE status = 'online' 
+          AND connection_count = 0
+      `);
 
-      return 0; // Handled by existing socket server intervals
+      const count = result.changes || 0;
+      
+      if (count > 0) {
+        logger.info({
+          event: 'stale_presence_cleaned',
+          count: count,
+          description: 'Users with 0 connections marked offline'
+        }, `Marked ${count} users as offline due to stale presence data`);
+      } else {
+        logger.info({
+          event: 'stale_presence_check_clean',
+          message: 'No stale presence data found'
+        }, 'Stale presence cleanup - no cleanup needed');
+      }
+
+      return count;
     } catch (error) {
       logger.logError('Failed to cleanup stale presence', error);
       return 0;

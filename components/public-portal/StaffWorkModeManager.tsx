@@ -35,7 +35,7 @@ export const StaffWorkModeManager = ({ staffInfo, onWorkModeChange }: StaffWorkM
   const [workModeSettings, setWorkModeSettings] = useState<WorkModeSettings>({
     current_mode: 'away',
     auto_assign_enabled: true,
-    max_concurrent_chats: 3,
+    max_concurrent_chats: 1,
     accept_vip_chats: true,
     accept_escalated_chats: true,
     preferred_departments: [],
@@ -126,7 +126,7 @@ export const StaffWorkModeManager = ({ staffInfo, onWorkModeChange }: StaffWorkM
         setWorkModeSettings({
           current_mode: data.current_mode || 'away',
           auto_assign_enabled: Boolean(data.auto_assign_enabled),
-          max_concurrent_chats: data.max_concurrent_chats || 3,
+          max_concurrent_chats: data.max_concurrent_chats || 1,
           accept_vip_chats: Boolean(data.accept_vip_chats),
           accept_escalated_chats: Boolean(data.accept_escalated_chats),
           preferred_departments: Array.isArray(data.preferred_departments) 
@@ -225,20 +225,6 @@ export const StaffWorkModeManager = ({ staffInfo, onWorkModeChange }: StaffWorkM
   return (
     <Card>
       <CardContent sx={{ p: 1 }}>
-        {/* Current Status Display */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
-          <Avatar sx={{ backgroundColor: currentMode.color, width: 32, height: 32 }}>
-            <Typography variant="body2">{currentMode.icon}</Typography>
-          </Avatar>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="subtitle2" fontWeight="bold">
-              {currentMode.label}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {activeChatCount}/{workModeSettings.max_concurrent_chats} chats
-            </Typography>
-          </Box>
-        </Box>
 
         {/* Tabs */}
         <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
@@ -323,7 +309,7 @@ export const StaffWorkModeManager = ({ staffInfo, onWorkModeChange }: StaffWorkM
             <TextField
               type="number"
               fullWidth
-              label="Max Concurrent Chats"
+              label={`Max Concurrent Chats (Current: ${activeChatCount})`}
               value={workModeSettings.max_concurrent_chats}
               onChange={(e) => setWorkModeSettings(prev => ({ 
                 ...prev, 
