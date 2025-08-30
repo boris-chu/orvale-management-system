@@ -1157,7 +1157,7 @@ const PublicQueuePage = () => {
                           secondary={
                             <>
                               <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
-                                Waiting: {guest.waitTimeFormatted || formatWaitTime(guest.waitTime)}
+                                {guest.assignedTo ? 'Assisting' : `Waiting: ${guest.waitTimeFormatted || formatWaitTime(guest.waitTime)}`}
                               </span>
                               <br />
                               <span style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
@@ -1613,7 +1613,7 @@ const FloatableChatWindow = ({ chat, onClose, onMinimize, onFocus, onCreateTicke
                 {chat.guestInfo.guestName}
               </Typography>
               <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                {formatWaitTime(chat.guestInfo.waitTime)} • {chat.guestInfo.priority}
+                {chat.guestInfo.assignedTo ? 'Assisting' : formatWaitTime(chat.guestInfo.waitTime)} • {chat.guestInfo.priority}
               </Typography>
             </Box>
           </Box>
@@ -1637,7 +1637,7 @@ const FloatableChatWindow = ({ chat, onClose, onMinimize, onFocus, onCreateTicke
                 {chat.guestInfo.guestName}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {chat.guestInfo.department} • Waiting: {formatWaitTime(chat.guestInfo.waitTime)} • {chat.guestInfo.priority}
+                {chat.guestInfo.department} • {chat.guestInfo.assignedTo ? 'Assisting' : `Waiting: ${formatWaitTime(chat.guestInfo.waitTime)}`} • {chat.guestInfo.priority}
               </Typography>
               {chat.guestInfo.initialMessage && (
                 <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
@@ -2139,14 +2139,18 @@ const MessageInput = ({ sessionId, guestInfo, onCreateTicket }: MessageInputProp
 const formatWaitTime = (seconds: number) => {
   // Handle negative, null, undefined, or invalid values
   if (!seconds || seconds < 0 || isNaN(seconds) || !isFinite(seconds)) {
-    return '0s';
+    return '0m';
   }
   
   // Ensure we have a positive integer
   const validSeconds = Math.max(0, Math.floor(seconds));
   
   const minutes = Math.floor(validSeconds / 60);
-  if (minutes < 1) return `${validSeconds}s`;
+  
+  // For times less than 1 minute, still show as 0m (not seconds)
+  if (minutes < 1) return '0m';
+  
+  // For times less than 60 minutes, show only minutes
   if (minutes < 60) return `${minutes}m`;
   
   const hours = Math.floor(minutes / 60);
