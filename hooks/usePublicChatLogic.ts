@@ -96,6 +96,11 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
   const [agentsLoading, setAgentsLoading] = useState(false);
   const [displayedAgents, setDisplayedAgents] = useState<any[]>([]);
   
+  // Session Recovery State
+  const [sessionDisconnected, setSessionDisconnected] = useState(false);
+  const [showReconnectOption, setShowReconnectOption] = useState(false);
+  const [reconnectLoading, setReconnectLoading] = useState(false);
+  
   // Widget Position State
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -1003,6 +1008,134 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
     }, 3000);
   };
 
+  // Handle session disconnect detection
+  const handleSessionDisconnect = () => {
+    console.log('🔌 Session disconnected detected');
+    setSessionDisconnected(true);
+    setShowReconnectOption(true);
+    
+    // Add system message about disconnect
+    const disconnectMessage = {
+      sender: 'system' as const,
+      text: 'Your session has been disconnected. You can try to reconnect to your previous session if it was within the last 2 hours.',
+      timestamp: new Date(),
+      id: Date.now(),
+      type: 'error'
+    };
+    setMessages(prev => [...prev, disconnectMessage]);
+  };
+
+  // Handle manual session reconnection
+  const handleReconnectToPreviousSession = async () => {
+    console.log('🔄 Attempting to reconnect to previous session...');
+    setReconnectLoading(true);
+    
+    try {
+      // Get guest info from last session or form
+      const guestName = preChatData.name || localStorage.getItem('last_guest_name') || '';
+      const guestEmail = preChatData.email || localStorage.getItem('last_guest_email') || '';
+      
+      if (!guestName || !guestEmail) {
+        // Show form to collect info for reconnection
+        setShowPreChatForm(true);
+        setReconnectLoading(false);
+        return;
+      }
+      
+      // Call API to find and restore previous session
+      const response = await fetch('/api/public-portal/chat/reconnect-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          guestName,
+          guestEmail,
+          searchWindowHours: 2 // Search last 2 hours
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success && result.session) {
+        console.log('✅ Found previous session:', result.session.id);
+        
+        // Restore session state
+        setSessionId(result.session.id);
+        setMessages(result.messages || []);
+        setConnectedAgent(result.session.assigned_agent_name || null);
+        setQueuePosition(result.session.queue_position || null);
+        
+        // Update localStorage with recovered session
+        const sessionData = {
+          id: result.session.id,
+          guestName,
+          guestEmail,
+          messages: result.messages || [],
+          timestamp: Date.now()
+        };
+        localStorage.setItem('public_chat_session', JSON.stringify(sessionData));
+        
+        // Hide reconnect options
+        setSessionDisconnected(false);
+        setShowReconnectOption(false);
+        
+        // Join the session room via socket
+        publicPortalSocket.joinSession(result.session.id);
+        
+        // Add success message
+        const successMessage = {
+          sender: 'system' as const,
+          text: '✅ Successfully reconnected to your previous session!',
+          timestamp: new Date(),
+          id: Date.now(),
+          type: 'success'
+        };
+        setMessages(prev => [...prev, successMessage]);
+        
+      } else {
+        console.log('❌ No recoverable session found');
+        
+        // Show message that no session was found
+        const noSessionMessage = {
+          sender: 'system' as const,
+          text: 'No recent session found with your name and email. Starting a new chat session.',
+          timestamp: new Date(),
+          id: Date.now(),
+          type: 'info'
+        };
+        setMessages(prev => [...prev, noSessionMessage]);
+        
+        // Start new session
+        setShowReconnectOption(false);
+        setShowPreChatForm(true);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error reconnecting to session:', error);
+      
+      const errorMessage = {
+        sender: 'system' as const,
+        text: 'Error reconnecting to previous session. Please start a new chat or try again.',
+        timestamp: new Date(),
+        id: Date.now(),
+        type: 'error'
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setReconnectLoading(false);
+    }
+  };
+
+  // Handle starting new session instead of reconnecting
+  const handleStartNewSession = () => {
+    console.log('🆕 Starting new session instead of reconnecting');
+    setSessionDisconnected(false);
+    setShowReconnectOption(false);
+    setShowPreChatForm(true);
+    setMessages([]); // Clear messages for new session
+  };
+
   return {
     // State
     settings,
@@ -1034,6 +1167,9 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
     dragOffset,
     widgetPosition,
     chatContainerRef,
+    sessionDisconnected,
+    showReconnectOption,
+    reconnectLoading,
 
     // Setters
     setSettings,
@@ -1079,6 +1215,9 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
     handleWidgetClick,
     handleClose,
     toggleMinimize,
-    handleTyping
+    handleTyping,
+    handleSessionDisconnect,
+    handleReconnectToPreviousSession,
+    handleStartNewSession
   };
 };

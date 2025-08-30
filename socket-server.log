@@ -1299,3 +1299,561 @@ Room channel_8 now has 1 members: [ 'e603876' ]
 Boris Chu (e603876) joined channel 3
 Room channel_3 now has 1 members: [ 'e603876' ]
 📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+🗑️  Connection untracked: e603876 from ::1 (Total: 2)
+User disconnected: Boris Chu (Y2EYg0MUuBpLwAabAAA2)
+Socket connected: A0e4lZ6ZXRgZC1RxAAA5 from ::1
+🌍 Connection allowed (unlimited mode): guest from ::1
+✅ Connection tracked: guest from ::1 (Total: 3)
+🌍 Connection allowed (unlimited mode): e603876 from ::1
+🗑️  Connection untracked: guest from ::1 (Total: 2)
+✅ Connection tracked: e603876 from ::1 (Total: 3)
+✅ User authenticated: Boris Chu (e603876) on socket A0e4lZ6ZXRgZC1RxAAA5
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+✅ Presence timeout settings loaded: {
+  idleTimeoutMinutes: 10,
+  awayTimeoutMinutes: 30,
+  offlineTimeoutMinutes: 360,
+  enableAutoPresenceUpdates: true
+}
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+✅ Presence timeout settings loaded: {
+  idleTimeoutMinutes: 10,
+  awayTimeoutMinutes: 30,
+  offlineTimeoutMinutes: 360,
+  enableAutoPresenceUpdates: true
+}
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+✅ Presence timeout settings loaded: {
+  idleTimeoutMinutes: 10,
+  awayTimeoutMinutes: 30,
+  offlineTimeoutMinutes: 360,
+  enableAutoPresenceUpdates: true
+}
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+Boris Chu (e603876) joined channel 3
+Room channel_3 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 2
+Room channel_2 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 11
+Room channel_11 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 10
+Room channel_10 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 4
+Room channel_4 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 1
+Room channel_1 now has 1 members: [ 'e603876' ]
+Boris Chu (e603876) joined channel 8
+Room channel_8 now has 1 members: [ 'e603876' ]
+📡 WebSocket unlimited mode: ENABLED
+🗑️  Connection untracked: e603876 from ::1 (Total: 2)
+User disconnected: Boris Chu (8O7Dor0KAfHtT7T8AAAs)
+🗑️  Connection untracked: guest from ::1 (Total: 1)
+Unauthenticated socket disconnected: 7Div2gMiTSKhR9U5AAAq
+🗑️  Connection untracked: e603876 from ::1 (Total: 0)
+User disconnected: Boris Chu (A0e4lZ6ZXRgZC1RxAAA5)
+Socket connected: X-KNw7FFV35CIOSSAAA8 from ::1
+🌍 Connection allowed (unlimited mode): guest from ::1
+✅ Connection tracked: guest from ::1 (Total: 1)
+🌍 Connection allowed (unlimited mode): e603876 from ::1
+🗑️  Connection untracked: guest from ::1 (Total: 0)
+✅ Connection tracked: e603876 from ::1 (Total: 1)
+✅ User authenticated: Boris Chu (e603876) on socket X-KNw7FFV35CIOSSAAA8
+Socket connected: G2HVZsRSDN0sfFRtAAA_ from ::1
+🌍 Connection allowed (unlimited mode): guest from ::1
+✅ Connection tracked: guest from ::1 (Total: 2)
+🌍 Connection allowed (unlimited mode): e603876 from ::1
+🗑️  Connection untracked: guest from ::1 (Total: 1)
+✅ Connection tracked: e603876 from ::1 (Total: 2)
+✅ User authenticated: Boris Chu (e603876) on socket G2HVZsRSDN0sfFRtAAA_
+Socket connected: ebPUHGxWB6zQxpfeAABA from ::1
+🌍 Connection allowed (unlimited mode): guest from ::1
+✅ Connection tracked: guest from ::1 (Total: 3)
+Socket connected: 5jiwE6itf4suBVPDAABC from ::1
+🌍 Connection allowed (unlimited mode): guest from ::1
+✅ Connection tracked: guest from ::1 (Total: 4)
+🌍 Connection allowed (unlimited mode): e603876 from ::1
+🗑️  Connection untracked: guest from ::1 (Total: 3)
+✅ Connection tracked: e603876 from ::1 (Total: 4)
+✅ User authenticated: Boris Chu (e603876) on socket ebPUHGxWB6zQxpfeAABA
+🌍 Connection allowed (unlimited mode): e603876 from ::1
+🗑️  Connection untracked: guest from ::1 (Total: 3)
+✅ Connection tracked: e603876 from ::1 (Total: 4)
+✅ User authenticated: Boris Chu (e603876) on socket G2HVZsRSDN0sfFRtAAA_
+🗑️  Connection untracked: e603876 from ::1 (Total: 3)
+User disconnected: Boris Chu (G2HVZsRSDN0sfFRtAAA_)
+✅ Presence timeout settings loaded: {
+  idleTimeoutMinutes: 10,
+  awayTimeoutMinutes: 30,
+  offlineTimeoutMinutes: 360,
+  enableAutoPresenceUpdates: true
+}
+📡 WebSocket unlimited mode: ENABLED
+Socket connected: E_HGxeIs_bRngEaOAABE from ::1
+🌍 Connection allowed (unlimited mode): guest from ::1
+✅ Connection tracked: guest from ::1 (Total: 4)
+🌍 Connection allowed (unlimited mode): e603876 from ::1
+🗑️  Connection untracked: guest from ::1 (Total: 3)
+✅ Connection tracked: e603876 from ::1 (Total: 4)
+✅ User authenticated: Boris Chu (e603876) on socket E_HGxeIs_bRngEaOAABE

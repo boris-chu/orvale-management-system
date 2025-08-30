@@ -1653,6 +1653,107 @@ publicPortalNamespace.on('connection', async (socket) => {
     });
   });
   
+  // Handle joining a specific session (for session recovery)
+  socket.on('join:session', (data) => {
+    const { sessionId } = data;
+    
+    console.log(`🔗 Guest attempting to join session: ${sessionId}`);
+    
+    // Verify session exists and is valid
+    db.get(
+      `SELECT session_id, status, visitor_name, visitor_email, assigned_to 
+       FROM public_chat_sessions 
+       WHERE session_id = ?`,
+      [sessionId],
+      (err, row) => {
+        if (err) {
+          console.error('Error verifying session for join:', err);
+          socket.emit('session:error', { message: 'Database error during session verification' });
+          return;
+        }
+        
+        if (!row) {
+          console.log(`❌ Session ${sessionId} not found`);
+          socket.emit('session:error', { message: 'Session not found' });
+          return;
+        }
+        
+        console.log(`✅ Session ${sessionId} found - Status: ${row.status}, Assigned: ${row.assigned_to || 'none'}`);
+        
+        // Update socket and session data
+        socket.sessionId = sessionId;
+        socket.guestName = row.visitor_name;
+        socket.guestEmail = row.visitor_email;
+        socket.join(`session:${sessionId}`);
+        
+        // Update session in memory
+        const existingSession = publicSessions.get(sessionId);
+        if (existingSession) {
+          existingSession.socketId = socket.id;
+        } else {
+          publicSessions.set(sessionId, {
+            socketId: socket.id,
+            guestName: row.visitor_name,
+            email: row.visitor_email,
+            status: row.status,
+            agentId: row.assigned_to,
+            startTime: new Date(),
+            recovered: true
+          });
+        }
+        
+        // Add to queue if waiting and not already there
+        if (row.status === 'waiting' && !publicQueue.includes(sessionId)) {
+          // Priority boost for recovered sessions - add to front
+          publicQueue.unshift(sessionId);
+          console.log(`📋 Added recovered session ${sessionId} to front of queue (${publicQueue.length} total)`);
+        }
+        
+        // Update database status to active if it was abandoned
+        if (row.status === 'abandoned' || row.status === 'staff_disconnected') {
+          db.run(
+            'UPDATE public_chat_sessions SET status = ?, reconnected_at = datetime("now") WHERE session_id = ?',
+            ['waiting', sessionId],
+            (err) => {
+              if (err) {
+                console.error('Error updating session status:', err);
+              } else {
+                console.log(`✅ Updated session ${sessionId} status to waiting`);
+              }
+            }
+          );
+        }
+        
+        // Notify staff about session recovery
+        socket.to('public_staff').emit('session:recovered', {
+          sessionId,
+          guestName: row.visitor_name,
+          guestEmail: row.visitor_email,
+          status: row.status === 'abandoned' || row.status === 'staff_disconnected' ? 'waiting' : row.status,
+          queuePosition: publicQueue.indexOf(sessionId) + 1,
+          recovered: true
+        });
+        
+        // Notify guest about successful join
+        socket.emit('session:joined', {
+          sessionId,
+          status: row.status === 'abandoned' || row.status === 'staff_disconnected' ? 'waiting' : row.status,
+          queuePosition: row.status === 'waiting' ? publicQueue.indexOf(sessionId) + 1 : null,
+          assignedAgent: row.assigned_to
+        });
+        
+        // Trigger auto-assignment if no agent and agents available
+        if (!row.assigned_to || row.status === 'waiting') {
+          setTimeout(() => {
+            autoAssignAgent(sessionId);
+          }, 1000);
+        }
+        
+        console.log(`🎯 Guest successfully joined session ${sessionId}`);
+      }
+    );
+  });
+
   // Handle staff disconnecting from session
   socket.on('staff:disconnect_from_session', (data) => {
     if (!socket.isAgent) return;

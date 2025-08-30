@@ -60,7 +60,13 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
     toggleMinimize,
     handleTyping,
     handlePreChatSubmit,
-    checkSessionRecovery
+    checkSessionRecovery,
+    sessionDisconnected,
+    showReconnectOption,
+    reconnectLoading,
+    handleSessionDisconnect,
+    handleReconnectToPreviousSession,
+    handleStartNewSession
   } = usePublicChatLogic({ enabledPages, disabledPages });
 
   const widgetRef = useRef<HTMLDivElement>(null);
@@ -774,6 +780,48 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                 {/* Classic Chat Content */}
                 <Collapse in={!isMinimized} timeout="auto">
                   <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    {/* Session Reconnect Options */}
+                    {showReconnectOption && (
+                      <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider', backgroundColor: '#fff3cd' }}>
+                        <Typography variant="h6" gutterBottom sx={{ color: '#856404', display: 'flex', alignItems: 'center', gap: 1 }}>
+                          🔌 Session Disconnected
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                          Your chat session was disconnected. You can try to reconnect to your previous conversation if it was within the last 2 hours.
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+                          <Button
+                            variant="contained"
+                            onClick={handleReconnectToPreviousSession}
+                            disabled={reconnectLoading}
+                            startIcon={reconnectLoading ? <CircularProgress size={16} /> : '🔄'}
+                            sx={{
+                              backgroundColor: '#28a745',
+                              '&:hover': { backgroundColor: '#218838' },
+                              flex: 1
+                            }}
+                          >
+                            {reconnectLoading ? 'Searching...' : 'Reconnect to Previous Session'}
+                          </Button>
+                          
+                          <Button
+                            variant="outlined"
+                            onClick={handleStartNewSession}
+                            disabled={reconnectLoading}
+                            sx={{
+                              borderColor: '#6c757d',
+                              color: '#6c757d',
+                              '&:hover': { borderColor: '#5a6268', backgroundColor: 'rgba(108, 117, 125, 0.04)' },
+                              flex: 1
+                            }}
+                          >
+                            Start New Session
+                          </Button>
+                        </Box>
+                      </Box>
+                    )}
+
                     {/* Pre-Chat Form */}
                     {showPreChatForm && (
                       <Box sx={{ p: 3 }}>
@@ -944,8 +992,36 @@ export const PublicChatWidget = ({ enabledPages = [], disabledPages = [] }: Publ
                           })}
                         </Box>
 
+                        {/* Session Disconnected Message in Chat Area */}
+                        {sessionDisconnected && !showReconnectOption && (
+                          <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', backgroundColor: '#f8d7da', textAlign: 'center' }}>
+                            <Typography variant="body2" sx={{ color: '#721c24', mb: 2 }}>
+                              🔌 Session disconnected. Try reconnecting or start a new session.
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                              <Button
+                                size="small"
+                                variant="contained"
+                                onClick={handleReconnectToPreviousSession}
+                                disabled={reconnectLoading}
+                                sx={{ backgroundColor: '#28a745', '&:hover': { backgroundColor: '#218838' } }}
+                              >
+                                {reconnectLoading ? 'Searching...' : 'Reconnect'}
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={handleStartNewSession}
+                                disabled={reconnectLoading}
+                              >
+                                New Session
+                              </Button>
+                            </Box>
+                          </Box>
+                        )}
+
                         {/* Input Area */}
-                        {isOnline && (
+                        {isOnline && !sessionDisconnected && (
                           <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
                             <Box sx={{ display: 'flex', gap: 1 }}>
                               {settings?.enable_file_uploads && (

@@ -266,6 +266,21 @@ class PublicPortalSocket {
   }
 
   /**
+   * Join a specific session room (for reconnected sessions)
+   */
+  joinSession(sessionId: string): boolean {
+    if (!this.socket?.connected) {
+      console.error('Cannot join session: socket not connected');
+      return false;
+    }
+
+    console.log(`🔗 Joining session room: ${sessionId}`);
+    this.sessionId = sessionId;
+    this.socket.emit('join:session', { sessionId });
+    return true;
+  }
+
+  /**
    * Emit event to all registered listeners
    */
   private emitStoredEvent(event: string, data?: any) {
