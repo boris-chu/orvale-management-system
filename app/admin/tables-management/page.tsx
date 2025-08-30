@@ -974,43 +974,45 @@ export default function TablesManagementPage() {
 
       {/* Main Content */}
       <Tabs defaultValue="configurations" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-7 h-auto p-1">
-          <TabsTrigger value="configurations" className="flex items-center gap-2 px-3 py-2 text-sm">
-            <TableIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">Configurations</span>
-            <span className="sm:hidden">Config</span>
-          </TabsTrigger>
-          <TabsTrigger value="columns" className="flex items-center gap-2 px-3 py-2 text-sm">
-            <Columns className="h-4 w-4" />
-            <span className="hidden sm:inline">Column Definitions</span>
-            <span className="sm:hidden">Columns</span>
-          </TabsTrigger>
-          <TabsTrigger value="browser" className="flex items-center gap-2 px-3 py-2 text-sm">
-            <Database className="h-4 w-4" />
-            <span className="hidden sm:inline">Table Browser</span>
-            <span className="sm:hidden">Browser</span>
-          </TabsTrigger>
-          <TabsTrigger value="schema" className="flex items-center gap-2 px-3 py-2 text-sm">
-            <Share2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Schema Diagram</span>
-            <span className="sm:hidden">Schema</span>
-          </TabsTrigger>
-          <TabsTrigger value="views" className="flex items-center gap-2 px-3 py-2 text-sm">
-            <Save className="h-4 w-4" />
-            <span className="hidden sm:inline">Saved Views</span>
-            <span className="sm:hidden">Views</span>
-          </TabsTrigger>
-          <TabsTrigger value="editor" className="flex items-center gap-2 px-3 py-2 text-sm">
-            <Edit className="h-4 w-4" />
-            <span className="hidden sm:inline">Table Editor</span>
-            <span className="sm:hidden">Editor</span>
-          </TabsTrigger>
-          <TabsTrigger value="demo" className="flex items-center gap-2 px-3 py-2 text-sm">
-            <Play className="h-4 w-4" />
-            <span className="hidden sm:inline">Live Demo</span>
-            <span className="sm:hidden">Demo</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto">
+          <TabsList className="inline-flex h-auto p-1 w-max min-w-full">
+            <TabsTrigger value="configurations" className="flex items-center gap-2 px-3 py-2 text-sm whitespace-nowrap">
+              <TableIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">Configurations</span>
+              <span className="sm:hidden">Config</span>
+            </TabsTrigger>
+            <TabsTrigger value="columns" className="flex items-center gap-2 px-3 py-2 text-sm whitespace-nowrap">
+              <Columns className="h-4 w-4" />
+              <span className="hidden sm:inline">Column Definitions</span>
+              <span className="sm:hidden">Columns</span>
+            </TabsTrigger>
+            <TabsTrigger value="browser" className="flex items-center gap-2 px-3 py-2 text-sm whitespace-nowrap">
+              <Database className="h-4 w-4" />
+              <span className="hidden sm:inline">Table Browser</span>
+              <span className="sm:hidden">Browser</span>
+            </TabsTrigger>
+            <TabsTrigger value="schema" className="flex items-center gap-2 px-3 py-2 text-sm whitespace-nowrap">
+              <Share2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Schema Diagram</span>
+              <span className="sm:hidden">Schema</span>
+            </TabsTrigger>
+            <TabsTrigger value="views" className="flex items-center gap-2 px-3 py-2 text-sm whitespace-nowrap">
+              <Save className="h-4 w-4" />
+              <span className="hidden sm:inline">Saved Views</span>
+              <span className="sm:hidden">Views</span>
+            </TabsTrigger>
+            <TabsTrigger value="editor" className="flex items-center gap-2 px-3 py-2 text-sm whitespace-nowrap">
+              <Edit className="h-4 w-4" />
+              <span className="hidden sm:inline">Table Editor</span>
+              <span className="sm:hidden">Editor</span>
+            </TabsTrigger>
+            <TabsTrigger value="demo" className="flex items-center gap-2 px-3 py-2 text-sm whitespace-nowrap">
+              <Play className="h-4 w-4" />
+              <span className="hidden sm:inline">Live Demo</span>
+              <span className="sm:hidden">Demo</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Configurations Tab */}
         <TabsContent value="configurations" className="space-y-4">
