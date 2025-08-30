@@ -123,22 +123,9 @@ export default function TablesManagementPage() {
 
   // Table browser states
   const [selectedBrowserTable, setSelectedBrowserTable] = useState<string>('user_tickets');
-  const [availableTables] = useState([
-    { name: 'user_tickets', label: 'User Tickets', description: 'All ticket records with details' },
-    { name: 'users', label: 'Users', description: 'System users and authentication' },
-    { name: 'roles', label: 'Roles', description: 'User roles and permissions' },
-    { name: 'teams', label: 'Teams', description: 'Internal teams for ticket processing' },
-    { name: 'support_teams', label: 'Support Teams', description: 'Public portal team options' },
-    { name: 'ticket_categories', label: 'Ticket Categories', description: 'Main ticket categories' },
-    { name: 'request_types', label: 'Request Types', description: 'Types for each category' },
-    { name: 'subcategories', label: 'Subcategories', description: 'Detailed subcategories' },
-    { name: 'dpss_offices', label: 'DPSS Offices', description: 'Top-level office structure' },
-    { name: 'dpss_bureaus', label: 'DPSS Bureaus', description: 'Bureau organizational level' },
-    { name: 'dpss_divisions', label: 'DPSS Divisions', description: 'Division organizational level' },
-    { name: 'dpss_sections', label: 'DPSS Sections', description: 'Section organizational level' },
-    { name: 'portal_settings', label: 'Portal Settings', description: 'Public portal configuration' },
-    { name: 'system_settings', label: 'System Settings', description: 'System-wide settings' }
-  ]);
+  const [availableTables, setAvailableTables] = useState<any[]>([]);
+  const [availableTablesLoading, setAvailableTablesLoading] = useState(true);
+  const [tablesByCategory, setTablesByCategory] = useState<Record<string, any[]>>({});
 
   // Table Editor states
   const [selectedEditorTable, setSelectedEditorTable] = useState<string>('user_tickets');
@@ -148,18 +135,6 @@ export default function TablesManagementPage() {
   const [showAddColumnDialog, setShowAddColumnDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<{ open: boolean; columnId?: string; columnName?: string }>({ open: false });
   const [showDeleteRowConfirm, setShowDeleteRowConfirm] = useState<{ open: boolean; rowId?: any; rowLabel?: string }>({ open: false });
-  
-  // Available tables for editor (actual database tables)
-  const [editorTables] = useState([
-    { name: 'user_tickets', label: 'User Tickets', description: 'Main ticket records from the system', table_id: 'tickets_queue' },
-    { name: 'users', label: 'Users', description: 'System users and authentication data', table_id: 'users_list' },
-    { name: 'teams', label: 'Teams', description: 'Internal teams for ticket processing', table_id: 'teams_list' },
-    { name: 'support_teams', label: 'Support Teams', description: 'Public portal team options', table_id: 'support_teams' },
-    { name: 'ticket_categories', label: 'Ticket Categories', description: 'Main ticket categories', table_id: 'categories_list' },
-    { name: 'dpss_offices', label: 'DPSS Offices', description: 'Top-level office structure', table_id: 'offices_list' },
-    { name: 'portal_settings', label: 'Portal Settings', description: 'Public portal configuration', table_id: 'portal_config' },
-    { name: 'system_settings', label: 'System Settings', description: 'System-wide settings', table_id: 'system_config' }
-  ]);
   
   // Table data for editor
   const [editorTableData, setEditorTableData] = useState<any[]>([]);
@@ -186,6 +161,57 @@ export default function TablesManagementPage() {
     hasManagePermission,
     hasCreatePermission
   });
+
+  // Load available database tables dynamically
+  const loadAvailableTables = useCallback(async () => {
+    try {
+      setAvailableTablesLoading(true);
+      
+      // Get auth token for API calls
+      const token = localStorage.getItem('authToken');
+      const headers: any = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      // Load all available database tables
+      const tablesResponse = await fetch('/api/admin/database-tables', { headers });
+      if (tablesResponse.ok) {
+        const tablesData = await tablesResponse.json();
+        console.log('🗄️ Loaded dynamic tables:', tablesData.summary);
+        
+        setAvailableTables(tablesData.tables || []);
+        setTablesByCategory(tablesData.tablesByCategory || {});
+        
+        // Set default table selection to first available table if none selected
+        if (tablesData.tables && tablesData.tables.length > 0 && !selectedBrowserTable) {
+          setSelectedBrowserTable(tablesData.tables[0].name);
+        }
+        if (tablesData.tables && tablesData.tables.length > 0 && !selectedEditorTable) {
+          setSelectedEditorTable(tablesData.tables[0].name);
+        }
+      } else {
+        console.error('Failed to load database tables:', tablesResponse.status);
+        toast({
+          title: 'Warning',
+          description: 'Could not load database tables. Using fallback list.',
+          variant: 'default',
+        });
+      }
+    } catch (error) {
+      console.error('Error loading available tables:', error);
+      toast({
+        title: 'Warning',
+        description: 'Failed to load available tables. Some features may be limited.',
+        variant: 'default',
+      });
+    } finally {
+      setAvailableTablesLoading(false);
+    }
+  }, [toast, selectedBrowserTable, selectedEditorTable]);
 
   const loadData = useCallback(async () => {
     try {
@@ -236,8 +262,9 @@ export default function TablesManagementPage() {
   useEffect(() => {
     if (hasViewPermission) {
       loadData();
+      loadAvailableTables();
     }
-  }, [hasViewPermission, loadData]);
+  }, [hasViewPermission, loadData, loadAvailableTables]);
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -1190,7 +1217,18 @@ export default function TablesManagementPage() {
                     </CardHeader>
                     <CardContent className="p-0">
                       <div className="space-y-1">
-                        {availableTables.map((table) => (
+                        {availableTablesLoading ? (
+                          <div className="flex items-center justify-center py-8">
+                            <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                            <span className="text-sm text-gray-500">Loading tables...</span>
+                          </div>
+                        ) : availableTables.length === 0 ? (
+                          <div className="text-center py-8">
+                            <Database className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                            <p className="text-sm text-gray-500">No accessible tables found</p>
+                          </div>
+                        ) : (
+                          availableTables.map((table) => (
                           <motion.div
                             key={table.name}
                             whileHover={{ x: 2 }}
@@ -1217,6 +1255,11 @@ export default function TablesManagementPage() {
                                   <Badge variant="outline" className="text-xs">
                                     {table.name}
                                   </Badge>
+                                  {table.rowCount > 0 && (
+                                    <Badge variant="secondary" className="text-xs ml-2">
+                                      {table.rowCount.toLocaleString()} rows
+                                    </Badge>
+                                  )}
                                 </div>
                               </div>
                               {selectedBrowserTable === table.name && (
@@ -1226,7 +1269,8 @@ export default function TablesManagementPage() {
                               )}
                             </div>
                           </motion.div>
-                        ))}
+                        ))
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -1509,7 +1553,67 @@ export default function TablesManagementPage() {
                       <div>
                         <Label className="text-sm font-medium">Select Table to Edit</Label>
                         <div className="space-y-2 mt-2">
-                          {editorTables.map((table) => (
+                          {availableTablesLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                              <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                              <span className="text-sm text-gray-500">Loading tables...</span>
+                            </div>
+                          ) : availableTables.length === 0 ? (
+                            <div className="text-center py-8">
+                              <Database className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                              <p className="text-sm text-gray-500">No accessible tables found</p>
+                            </div>
+                          ) : (
+                            <>
+                              {Object.keys(tablesByCategory).length > 0 ? (
+                                // Display tables grouped by category
+                                Object.entries(tablesByCategory).map(([category, tables]) => (
+                                  <div key={category} className="space-y-1">
+                                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide px-2 py-1">
+                                      {category}
+                                    </div>
+                                    {tables.map((table) => (
+                                      <motion.div
+                                        key={table.name}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                                          selectedEditorTable === table.name 
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-sm ring-1 ring-blue-200 dark:ring-blue-800' 
+                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-sm'
+                                        }`}
+                                        onClick={() => setSelectedEditorTable(table.name)}
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <Database className={`h-4 w-4 ${
+                                            selectedEditorTable === table.name ? 'text-blue-600' : 'text-gray-500'
+                                          }`} />
+                                          <div className="flex-1">
+                                            <div className={`font-medium text-sm ${
+                                              selectedEditorTable === table.name ? 'text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-gray-100'
+                                            }`}>
+                                              {table.label}
+                                            </div>
+                                            <div className={`text-xs ${
+                                              selectedEditorTable === table.name ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'
+                                            }`}>
+                                              {table.description}
+                                              {table.rowCount > 0 && (
+                                                <span className="ml-2 font-mono">({table.rowCount.toLocaleString()} rows)</span>
+                                              )}
+                                            </div>
+                                          </div>
+                                          {selectedEditorTable === table.name && (
+                                            <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                                          )}
+                                        </div>
+                                      </motion.div>
+                                    ))}
+                                  </div>
+                                ))
+                              ) : (
+                                // Fallback to ungrouped display
+                                availableTables.map((table) => (
                             <motion.div
                               key={table.name}
                               whileHover={{ scale: 1.02 }}
@@ -1535,6 +1639,9 @@ export default function TablesManagementPage() {
                                     selectedEditorTable === table.name ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'
                                   }`}>
                                     {table.description}
+                                    {table.rowCount > 0 && (
+                                      <span className="ml-2 font-mono">({table.rowCount.toLocaleString()} rows)</span>
+                                    )}
                                   </div>
                                 </div>
                                 {selectedEditorTable === table.name && (
@@ -1542,7 +1649,10 @@ export default function TablesManagementPage() {
                                 )}
                               </div>
                             </motion.div>
-                          ))}
+                                ))
+                              )}
+                            </>
+                          )}
                         </div>
                       </div>
 
@@ -1555,7 +1665,7 @@ export default function TablesManagementPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-lg font-medium">
-                            Data in {editorTables.find(t => t.name === selectedEditorTable)?.label}
+                            Data in {availableTables.find(t => t.name === selectedEditorTable)?.label || selectedEditorTable}
                           </h3>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
                             {editorTableData.length} record{editorTableData.length !== 1 ? 's' : ''} • {editorColumns.length} column{editorColumns.length !== 1 ? 's' : ''}

@@ -62,6 +62,7 @@ export async function verifyAuth(request: NextRequest): Promise<AuthResult> {
 
     // Get user permissions through role
     const permissions = await getUserPermissions(user.role);
+    console.log('🔍 Auth Debug - User:', user.username, 'Role:', user.role, 'Permissions loaded:', permissions.length);
 
     const authenticatedUser: AuthenticatedUser = {
       id: user.id,
@@ -88,12 +89,14 @@ export async function verifyAuth(request: NextRequest): Promise<AuthResult> {
  */
 export async function getUserPermissions(role: string): Promise<string[]> {
   try {
+    // Role parameter is actually the role ID, not name
     const roleData = await getAsync(
-      'SELECT * FROM roles WHERE name = ?',
+      'SELECT * FROM roles WHERE id = ?',
       [role]
     );
 
     if (!roleData) {
+      console.log('⚠️ Role not found:', role);
       return [];
     }
 
@@ -106,10 +109,14 @@ export async function getUserPermissions(role: string): Promise<string[]> {
     ) as any;
 
     if (!permissions?.permissions) {
+      console.log('⚠️ No permissions found for role:', role);
       return [];
     }
 
-    return permissions.permissions.split(',').filter(Boolean);
+    const permissionsList = permissions.permissions.split(',').filter(Boolean);
+    console.log('✅ Loaded permissions for role', role, ':', permissionsList.length, 'permissions');
+    
+    return permissionsList;
 
   } catch (error) {
     console.error('Error fetching user permissions:', error);
