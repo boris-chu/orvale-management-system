@@ -1881,35 +1881,44 @@ const MessagesDisplay = ({ sessionId, guestInfo }: MessagesDisplayProps) => {
               sx={{ backgroundColor: '#e3f2fd', color: '#1976d2' }}
             />
           ) : (
-            <Paper
-              sx={{
-                p: 1.5,
-                maxWidth: '70%',
-                backgroundColor: message.sender === 'staff' ? '#1976d2' : '#fff',
-                color: message.sender === 'staff' ? 'white' : 'text.primary',
-                border: message.sender === 'guest' ? '1px solid #e0e0e0' : 'none'
-              }}
-            >
-              {message.sender === 'guest' && (
-                <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
-                  {message.senderName}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'flex-end',
+              gap: 1,
+              maxWidth: '70%',
+              flexDirection: message.sender === 'staff' ? 'row-reverse' : 'row'
+            }}>
+              <Paper
+                sx={{
+                  p: 1.5,
+                  backgroundColor: message.sender === 'staff' ? '#1976d2' : '#fff',
+                  color: message.sender === 'staff' ? 'white' : 'text.primary',
+                  border: message.sender === 'guest' ? '1px solid #e0e0e0' : 'none',
+                  wordBreak: 'break-word',
+                  whiteSpace: 'pre-wrap'
+                }}
+              >
+                {message.sender === 'guest' && (
+                  <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
+                    {message.senderName}
+                  </Typography>
+                )}
+                <Typography variant="body2" sx={{ lineHeight: 1.5 }}>
+                  {message.message}
                 </Typography>
-              )}
-              <Typography variant="body2">
-                {message.message}
-              </Typography>
+              </Paper>
               <Typography 
                 variant="caption" 
                 sx={{ 
-                  opacity: 0.7, 
-                  display: 'block', 
-                  mt: 0.5,
-                  color: message.sender === 'staff' ? 'rgba(255,255,255,0.7)' : 'text.secondary'
+                  color: 'text.secondary',
+                  opacity: 0.7,
+                  fontSize: '0.7rem',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                {message.timestamp.toLocaleTimeString()}
+                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </Typography>
-            </Paper>
+            </Box>
           )}
         </Box>
       ))}
