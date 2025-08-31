@@ -4,7 +4,7 @@
 
 ## Overview
 
-The Orvale Management System provides a comprehensive REST API with **120+ endpoints** across 12 functional areas. All APIs use JWT-based authentication with role-based access control (RBAC) supporting 104 granular permissions.
+The Orvale Management System provides a comprehensive REST API with **130+ endpoints** across 13 functional areas. All APIs use JWT-based authentication with role-based access control (RBAC) supporting 104 granular permissions.
 
 **Base URL**: `http://localhost:80/api/`  
 **Authentication**: Bearer token in `Authorization` header  
@@ -1346,7 +1346,201 @@ Create system backup.
 
 ---
 
-## 8. Public Portal APIs
+## 8. Achievement System APIs
+
+### Achievement Management (Admin Only)
+
+#### **GET** `/api/admin/achievements`
+Get all achievements with unlock statistics.
+
+**Permissions**: `admin.manage_users` OR `admin.system_settings`
+
+**Response:**
+```json
+{
+  "success": true,
+  "achievements": [
+    {
+      "id": "achievement_1234567890",
+      "name": "Ticket Master",
+      "description": "Complete 100 tickets",
+      "category": "productivity",
+      "rarity": "rare",
+      "icon": "🎯",
+      "icon_type": "emoji",
+      "xp_reward": 500,
+      "criteria_type": "ticket_count",
+      "criteria_value": 100,
+      "criteria_data": "{}",
+      "toast_config": "{}",
+      "display_order": 1,
+      "active_from": null,
+      "active_until": null,
+      "custom_css": "",
+      "active": true,
+      "unlocked_count": 25,
+      "created_at": "2025-01-15T10:30:00Z",
+      "updated_at": "2025-01-15T10:30:00Z"
+    }
+  ]
+}
+```
+
+#### **POST** `/api/admin/achievements`
+Create new achievement.
+
+**Permissions**: `admin.manage_users` OR `admin.system_settings`
+
+**Request:**
+```json
+{
+  "id": "achievement_1234567890",
+  "name": "Team Player",
+  "description": "Collaborate on 10 tickets with team members",
+  "category": "collaboration",
+  "rarity": "uncommon",
+  "icon": "🤝",
+  "icon_type": "emoji",
+  "xp_reward": 200,
+  "criteria_type": "team_collaboration",
+  "criteria_value": 10,
+  "criteria_data": "{}",
+  "toast_config": "{\"animation\": {\"entry\": \"bounce\"}}",
+  "active_from": null,
+  "active_until": null,
+  "custom_css": "",
+  "active": true
+}
+```
+
+#### **GET** `/api/admin/achievements/[id]`
+Get specific achievement with unlock count.
+
+#### **PUT** `/api/admin/achievements/[id]`
+Update complete achievement (all fields).
+
+#### **PATCH** `/api/admin/achievements/[id]`
+Update specific achievement fields only.
+
+**Request Example:**
+```json
+{
+  "active": false,
+  "xp_reward": 150
+}
+```
+
+#### **DELETE** `/api/admin/achievements/[id]`
+Soft delete achievement (sets active = false).
+
+### Achievement Configuration
+
+#### **GET** `/api/admin/achievements/stats`
+Get achievement dashboard statistics.
+
+**Response:**
+```json
+{
+  "success": true,
+  "stats": {
+    "totalAchievements": 25,
+    "activeAchievements": 22,
+    "totalUnlocks": 1247,
+    "usersWithAchievements": 89
+  }
+}
+```
+
+#### **GET** `/api/admin/achievements/dashboard-settings`
+Get user dashboard configuration settings.
+
+**Response:**
+```json
+{
+  "layout": {
+    "showStatsCards": true,
+    "showProgressBar": true,
+    "showRecentAchievements": true,
+    "showActivityHeatmap": true,
+    "showLeaderboard": true,
+    "showUpcomingMilestones": true,
+    "showAchievementGallery": true,
+    "showPersonalStats": true
+  },
+  "display": {
+    "achievementsPerPage": 12,
+    "animationsEnabled": true,
+    "showXPValues": true,
+    "showRarityColors": true,
+    "compactMode": false,
+    "darkModeDefault": false
+  },
+  "privacy": {
+    "showPublicProfile": true,
+    "shareProgressWithTeam": true,
+    "showInLeaderboards": true,
+    "allowBadgeSharing": true
+  },
+  "notifications": {
+    "enableAchievementNotifications": true,
+    "enableMilestoneAlerts": true,
+    "enableWeeklyDigest": false,
+    "enableTeamComparisons": true
+  },
+  "customization": {
+    "allowThemeSelection": true,
+    "allowLayoutCustomization": false,
+    "maxCustomAchievements": 5,
+    "enablePersonalGoals": true
+  }
+}
+```
+
+#### **POST** `/api/admin/achievements/dashboard-settings`
+Update user dashboard configuration.
+
+#### **GET** `/api/admin/achievements/toast-config`
+Get toast notification configuration.
+
+**Response:**
+```json
+{
+  "duration": 5000,
+  "position": "top-right",
+  "animation": {
+    "entry": "slide",
+    "exit": "slide",
+    "duration": 400
+  },
+  "style": {
+    "borderRadius": 8,
+    "shadow": "lg",
+    "blur": false,
+    "glow": false,
+    "gradient": "from-blue-500 to-purple-600"
+  },
+  "sound": {
+    "enabled": true,
+    "volume": 50,
+    "file": "achievement.mp3"
+  }
+}
+```
+
+#### **POST** `/api/admin/achievements/toast-config`
+Update toast notification configuration.
+
+**Valid Values:**
+- **Categories**: `productivity`, `quality`, `collaboration`, `special`, `custom`
+- **Rarities**: `common`, `uncommon`, `rare`, `epic`, `legendary`
+- **Icon Types**: `emoji`, `lucide`, `material`, `custom_svg`
+- **Criteria Types**: `ticket_count`, `streak_days`, `template_usage`, `category_diversity`, `time_saved`, `team_collaboration`, `special_event`, `custom`
+- **Toast Positions**: `top-right`, `top-center`, `top-left`, `bottom-right`, `bottom-center`, `bottom-left`
+- **Toast Animations**: `slide`, `fade`, `scale`, `bounce`
+
+---
+
+## 9. Public Portal APIs
 
 ### Public Portal Widget
 
@@ -1440,7 +1634,7 @@ Upload/update user profile picture.
 
 ---
 
-## 10. System Monitoring APIs
+## 11. System Monitoring APIs
 
 #### **GET** `/api/health`
 API health check and status.
@@ -1593,6 +1787,17 @@ In addition to REST APIs, the chat system uses WebSocket connections for real-ti
 
 ## Changelog
 
+**Version 1.3.0** - August 30, 2025
+- **NEW**: Achievement System APIs (`/api/admin/achievements/*`) - Complete gamification system
+- **NEW**: Admin-managed achievement creation and customization 
+- **NEW**: Toast notification configuration APIs
+- **NEW**: Dashboard settings management for user achievement displays
+- **NEW**: Achievement statistics and analytics endpoints
+- **ADDED**: 9 pre-installed achievements with XP rewards (3,270 total XP)
+- **ADDED**: Icon picker support (emoji + Lucide icons)
+- **ADDED**: Achievement rarity system (common to legendary)
+- **UPDATED**: API count increased to 130+ endpoints across 13 functional areas
+
 **Version 1.2.0** - January 26, 2025
 - **NEW**: File sharing APIs for chat messages (`/api/chat/files/*`)
 - **NEW**: Staff management APIs (`/api/staff/*`)
@@ -1615,4 +1820,4 @@ In addition to REST APIs, the chat system uses WebSocket connections for real-ti
 
 ---
 
-*This documentation covers all 120+ API endpoints across 12 functional areas in the Orvale Management System. For implementation details, see the corresponding route files in `/app/api/`.*
+*This documentation covers all 130+ API endpoints across 13 functional areas in the Orvale Management System. For implementation details, see the corresponding route files in `/app/api/`.*
