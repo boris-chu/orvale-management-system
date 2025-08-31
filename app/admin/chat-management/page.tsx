@@ -1237,7 +1237,6 @@ export default function ChatManagementPage() {
           widget_primary_color: data.primaryColor,
           widget_theme: data.theme
         }));
-      }
     } catch (error) {
       console.error('Failed to load widget settings:', error);
     }

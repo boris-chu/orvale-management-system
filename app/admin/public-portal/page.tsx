@@ -296,7 +296,6 @@ const PublicPortalAdmin = () => {
           agent_avatar_anonymity: data.agent_avatar_anonymity ?? true
         };
         setSettings({ ...settings, ...sanitizedData });
-      }
 
       // Also load WebSocket settings
       await loadWebSocketSettings();

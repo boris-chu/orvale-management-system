@@ -39,7 +39,6 @@ export default function PublicChatProvider({ children }: PublicChatProviderProps
             setDisabledPages(JSON.parse(data.disabled_pages));
           }
         }
-      }
     } catch (error) {
       console.error('Failed to load public chat settings:', error);
     }
