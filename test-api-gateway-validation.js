@@ -72,7 +72,7 @@ async function runTest(testName, service, action, data = {}, requireAuth = true)
     
     // Login if auth required
     if (requireAuth) {
-      const loginResult = await makeRequest('admin', 'login', TEST_ADMIN);
+      const loginResult = await makeRequest('auth', 'login', TEST_ADMIN);
       if (!loginResult.success || !loginResult.data?.token) {
         throw new Error('Failed to authenticate for test');
       }
@@ -124,13 +124,15 @@ async function runAllTests() {
   console.log(`${colors.blue}=== API Gateway Validation Test Suite ===${colors.reset}\n`);
   console.log(`Testing endpoint: ${API_URL}\n`);
   
-  // Test AdminService (21 actions)
-  console.log(`${colors.yellow}--- Testing AdminService (21 actions) ---${colors.reset}`);
+  // Test AuthService first
+  console.log(`${colors.yellow}--- Testing AuthService (4 actions) ---${colors.reset}`);
   
-  await runTest('Admin: Login', 'admin', 'login', TEST_ADMIN, false);
-  await runTest('Admin: Get Users', 'admin', 'get_users');
-  await runTest('Admin: Get Roles', 'admin', 'get_roles');
-  await runTest('Admin: Get Permissions', 'admin', 'get_permissions');
+  await runTest('Auth: Login', 'auth', 'login', TEST_ADMIN, false);
+  await runTest('Auth: Get Current User', 'auth', 'get_current_user');
+  await runTest('Auth: Verify Token', 'auth', 'verify_token');
+  
+  // Test AdminService (24 actions based on error message)
+  console.log(`\n${colors.yellow}--- Testing AdminService (24 actions) ---${colors.reset}`);
   await runTest('Admin: Get Chat Settings', 'admin', 'get_chat_settings');
   await runTest('Admin: Get Chat Stats', 'admin', 'get_chat_stats');
   await runTest('Admin: Get Chat Users', 'admin', 'get_chat_users');
