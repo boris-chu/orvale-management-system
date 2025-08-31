@@ -9,7 +9,7 @@ const API_URL = 'http://localhost/api/v1';
 
 // Test user credentials
 const TEST_ADMIN = {
-  username: 'admin',
+  username: 'e603876',
   password: 'admin123'
 };
 
