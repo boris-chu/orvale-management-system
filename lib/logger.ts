@@ -331,6 +331,9 @@ export const systemLogger = {
     
   error: (data: any, message: string) =>
     pinoEnabled && logger.error(data, message),
+    
+  debug: (message: string, data?: any) =>
+    pinoEnabled && logger.debug(data || {}, message),
 };
 
 // API request logger
@@ -373,6 +376,48 @@ getLogSettings().then(({ level, enabled }) => {
   systemLogger.startup();
 });
 */
+
+// Create request-scoped logger for API gateway
+export function createRequestLogger(requestId: string, username?: string) {
+  return {
+    info: (message: string, data?: any) => {
+      if (pinoEnabled) {
+        logger.info({ 
+          requestId, 
+          username, 
+          ...data 
+        }, message);
+      }
+    },
+    warn: (message: string, data?: any) => {
+      if (pinoEnabled) {
+        logger.warn({ 
+          requestId, 
+          username, 
+          ...data 
+        }, message);
+      }
+    },
+    error: (message: string, data?: any) => {
+      if (pinoEnabled) {
+        logger.error({ 
+          requestId, 
+          username, 
+          ...data 
+        }, message);
+      }
+    },
+    debug: (message: string, data?: any) => {
+      if (pinoEnabled) {
+        logger.debug({ 
+          requestId, 
+          username, 
+          ...data 
+        }, message);
+      }
+    }
+  };
+}
 
 // Export default logger and utilities
 export default logger;

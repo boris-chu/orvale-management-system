@@ -4,7 +4,7 @@
 
 ## Overview
 
-The Orvale Management System provides a comprehensive REST API with **130+ endpoints** across 13 functional areas. All APIs use JWT-based authentication with role-based access control (RBAC) supporting 104 granular permissions.
+The Orvale Management System provides a comprehensive REST API with **123 verified route files** providing **195+ individual HTTP method handlers** across **16 functional areas**. All APIs use JWT-based authentication with role-based access control (RBAC) supporting 104 granular permissions.
 
 **Base URL**: `http://localhost:80/api/`  
 **Authentication**: Bearer token in `Authorization` header  
@@ -1576,9 +1576,241 @@ Check if public portal widget should be displayed.
 }
 ```
 
+#### **GET** `/api/public-portal/available-agents`
+Get list of available support agents for chat.
+
+**Response:**
+```json
+{
+  "available_agents": [
+    {
+      "id": "agent_1",
+      "display_name": "Support Agent",
+      "status": "available",
+      "queue_count": 2
+    }
+  ],
+  "total_available": 1,
+  "estimated_wait_time": 120
+}
+```
+
+### Public Chat System
+
+#### **GET** `/api/public-portal/chat/start-session`
+Get guest chat session information.
+
+#### **POST** `/api/public-portal/chat/start-session`
+Start a new guest chat session.
+
+**Request:**
+```json
+{
+  "guest_name": "John Visitor",
+  "guest_email": "john@example.com",
+  "initial_message": "I need help with login issues"
+}
+```
+
+#### **GET** `/api/public-portal/chat/messages`
+Get messages for guest chat session.
+
+#### **POST** `/api/public-portal/chat/messages`
+Send message in guest chat session.
+
+#### **DELETE** `/api/public-portal/chat/messages`
+Delete guest chat messages (cleanup).
+
+#### **POST** `/api/public-portal/chat/auto-assign`
+Auto-assign guest to available agent.
+
+#### **POST** `/api/public-portal/chat/reconnect-session`
+Reconnect to existing guest chat session.
+
+#### **POST** `/api/public-portal/chat/return-to-queue`
+Return guest to waiting queue.
+
+### Public Queue Management
+
+#### **GET** `/api/public-portal/queue/guests`
+Get guest waiting queue status.
+
+#### **POST** `/api/public-portal/queue/guests/remove`
+Remove guest from waiting queue.
+
+#### **GET** `/api/public-portal/queue/staff`
+Get staff view of guest queue.
+
+#### **GET** `/api/public-portal/staff/active-chats`
+Get active guest chat sessions for staff.
+
+### Public Chat Messages
+
+#### **GET** `/api/public-chat/messages/[sessionId]`
+Get messages for specific guest session.
+
+**Response:**
+```json
+{
+  "messages": [
+    {
+      "id": "msg_123",
+      "session_id": "session_abc",
+      "sender_type": "guest",
+      "sender_name": "John Visitor",
+      "message": "I need help with login",
+      "timestamp": "2025-08-31T10:00:00Z"
+    }
+  ],
+  "session_active": true,
+  "agent_assigned": "agent_1"
+}
+```
+
 ---
 
-## 9. Utility & Reference APIs
+## 9. Developer Portal APIs
+
+### System Management
+
+#### **GET** `/api/developer/analytics`
+Get comprehensive system analytics.
+
+**Permissions**: `admin.view_analytics`
+
+#### **GET** `/api/developer/stats`
+Get system statistics and performance metrics.
+
+**Permissions**: `admin.view_analytics`
+
+#### **GET** `/api/developer/settings`
+Get current system configuration settings.
+
+**Permissions**: `admin.system_settings`
+
+#### **PUT** `/api/developer/settings`
+Update system configuration settings.
+
+**Permissions**: `admin.system_settings`
+
+#### **POST** `/api/developer/settings/test-email`
+Test email configuration and connectivity.
+
+**Permissions**: `admin.system_settings`
+
+### Data Management
+
+#### **GET** `/api/developer/backup`
+Get backup status and history.
+
+**Permissions**: `admin.manage_backup`
+
+#### **POST** `/api/developer/backup`
+Create system backup.
+
+**Permissions**: `admin.manage_backup`
+
+#### **GET** `/api/developer/backup/download`
+Download backup file.
+
+**Permissions**: `admin.manage_backup`
+
+#### **POST** `/api/developer/data-management/export`
+Export system data in various formats.
+
+**Permissions**: `admin.manage_backup`
+
+#### **POST** `/api/developer/data-management/import`
+Import data into the system.
+
+**Permissions**: `admin.manage_backup`
+
+### Entity Management
+
+#### **GET/POST/PUT/DELETE** `/api/developer/categories`
+Complete CRUD operations for ticket categories.
+
+**Permissions**: `admin.manage_categories`
+
+#### **GET/POST/PUT/DELETE** `/api/developer/request-types`
+Manage request types within categories.
+
+**Permissions**: `admin.manage_categories`
+
+#### **GET/POST/PUT/DELETE** `/api/developer/subcategories`
+Manage detailed subcategories.
+
+**Permissions**: `admin.manage_categories`
+
+#### **GET/POST/PUT/DELETE** `/api/developer/support-teams`
+Manage support team configurations.
+
+**Permissions**: `admin.manage_teams`
+
+#### **GET/POST/PUT/DELETE** `/api/developer/teams`
+Manage internal working teams.
+
+**Permissions**: `admin.manage_teams`
+
+#### **GET** `/api/developer/teams/[id]/users`
+Get users assigned to specific team.
+
+**Permissions**: `admin.manage_teams`
+
+### User Management
+
+#### **GET/POST/PUT/DELETE** `/api/developer/users`
+Complete user lifecycle management.
+
+**Permissions**: `admin.manage_users`
+
+#### **POST** `/api/developer/users/reset-password`
+Reset user password administratively.
+
+**Permissions**: `admin.manage_users`
+
+#### **GET/POST/PUT/DELETE** `/api/developer/roles`
+Manage user roles and permissions.
+
+**Permissions**: `admin.manage_users`
+
+### Organizational Structure
+
+#### **GET/POST/PUT/DELETE** `/api/developer/sections`
+Manage DPSS organizational sections.
+
+**Permissions**: `admin.manage_organization`
+
+#### **GET/POST/PUT/DELETE** `/api/developer/dpss-org`
+Manage complete DPSS organizational hierarchy.
+
+**Permissions**: `admin.manage_organization`
+
+### Configuration Management
+
+#### **GET/PUT/POST** `/api/developer/portal-settings`
+Manage public portal configuration.
+
+**Permissions**: `admin.system_settings`
+
+#### **GET/POST/PUT/DELETE** `/api/developer/response-templates`
+Manage automated response templates.
+
+**Permissions**: `admin.system_settings`
+
+#### **GET/POST/PUT/DELETE** `/api/developer/sla-configurations`
+Manage service level agreement configurations.
+
+**Permissions**: `admin.system_settings`
+
+#### **GET** `/api/developer/work-mode-analytics`
+Analytics for staff work mode efficiency.
+
+**Permissions**: `admin.view_analytics`
+
+---
+
+## 10. Utility & Reference APIs
 
 ### Data Reference
 
@@ -1636,20 +1868,17 @@ Upload/update user profile picture.
 
 ## 11. System Monitoring APIs
 
+### Application Health
+
 #### **GET** `/api/health`
 API health check and status.
 
 **Response:**
 ```json
 {
-  "status": "healthy",
-  "timestamp": "2025-01-15T14:30:00Z",
-  "services": {
-    "database": "connected",
-    "socket_server": "running",
-    "email": "configured",
-    "backup": "scheduled"
-  },
+  "success": true,
+  "message": "Orvale Management System API is running",
+  "timestamp": "2025-08-31T10:00:00Z",
   "version": "1.0.0"
 }
 ```
@@ -1657,11 +1886,103 @@ API health check and status.
 #### **GET** `/api/system-info`
 Detailed system information and diagnostics.
 
+**Permissions**: `admin.system_settings`
+
 #### **GET** `/api/maintenance/status`
 Check maintenance mode status.
 
 #### **POST** `/api/maintenance/status`
 Enable/disable maintenance mode.
+
+**Permissions**: `admin.system_settings`
+
+### Socket Server Management
+
+#### **GET** `/api/socket-server/status`
+Get Socket.io server status and connection count.
+
+**Permissions**: `admin.system_settings`
+
+**Response:**
+```json
+{
+  "status": "running",
+  "port": 3001,
+  "connected_clients": 25,
+  "uptime_seconds": 86400
+}
+```
+
+#### **POST** `/api/socket-server/restart`
+Restart Socket.io server for maintenance.
+
+**Permissions**: `admin.system_settings`
+
+### System Utilities
+
+#### **GET** `/api/data-backup`
+Initiate system data backup.
+
+**Permissions**: `admin.system_settings`
+
+#### **GET** `/api/system/stats`
+Get comprehensive system statistics.
+
+**Permissions**: `admin.view_analytics`
+
+**Response:**
+```json
+{
+  "tickets": {
+    "total": 1250,
+    "open": 45,
+    "in_progress": 32
+  },
+  "users": {
+    "total": 156,
+    "active_today": 87
+  },
+  "chat": {
+    "messages_today": 320,
+    "active_channels": 12
+  }
+}
+```
+
+#### **GET** `/api/system-info`
+Detailed system information and diagnostics.
+
+**Permissions**: `admin.system_settings`
+
+#### **GET** `/api/system/init`
+System initialization status.
+
+**Permissions**: `admin.system_settings`
+
+#### **POST** `/api/system/init`
+Initialize or reset system components.
+
+**Permissions**: `admin.system_settings`
+
+#### **GET** `/api/debug/maintenance`
+Maintenance mode debugging information.
+
+**Permissions**: `admin.system_settings`
+
+#### **GET** `/api/test-logging`
+Test system logging functionality.
+
+**Permissions**: `admin.system_settings`
+
+#### **GET** `/api/security/test`
+Security system testing endpoint.
+
+**Permissions**: `admin.system_settings`
+
+#### **POST** `/api/security/test`
+Execute security tests and validations.
+
+**Permissions**: `admin.system_settings`
 
 ---
 
@@ -1787,6 +2108,13 @@ In addition to REST APIs, the chat system uses WebSocket connections for real-ti
 
 ## Changelog
 
+**Version 1.3.1** - August 31, 2025
+- **AUDIT**: Comprehensive codebase scan completed - **123 endpoints verified** across **16 functional areas**
+- **ADDED**: Missing endpoints documented - Socket server management, system utilities, application health
+- **ENHANCED**: Complete API service mapping for single gateway migration
+- **VALIDATION**: All endpoints cross-referenced with actual codebase implementation
+- **DOCUMENTATION**: Updated service mapping and migration plan with validated endpoint count
+
 **Version 1.3.0** - August 30, 2025
 - **NEW**: Achievement System APIs (`/api/admin/achievements/*`) - Complete gamification system
 - **NEW**: Admin-managed achievement creation and customization 
@@ -1820,4 +2148,4 @@ In addition to REST APIs, the chat system uses WebSocket connections for real-ti
 
 ---
 
-*This documentation covers all 130+ API endpoints across 13 functional areas in the Orvale Management System. For implementation details, see the corresponding route files in `/app/api/`.*
+*This documentation covers all **123 verified API endpoints** across **16 functional areas** in the Orvale Management System. Comprehensive audit completed August 31, 2025. For implementation details, see the corresponding route files in `/app/api/`.*
