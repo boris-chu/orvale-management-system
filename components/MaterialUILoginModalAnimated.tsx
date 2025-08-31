@@ -49,6 +49,7 @@ export default function MaterialUILoginModalAnimated({
   description,
   animationStyle = 'bounce'
 }: MaterialUILoginModalAnimatedProps) {
+  // Component loaded successfully
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -154,34 +155,53 @@ export default function MaterialUILoginModalAnimated({
     });
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const requestBody = {
+        service: 'auth',
+        action: 'login',
+        data: { username, password }
+      };
+      
+      // Login attempt with API Gateway
+      
+      const response = await fetch('/api/v1', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify(requestBody)
       });
 
       const result = await response.json();
 
-      if (response.ok && result.success) {
-        localStorage.setItem('authToken', result.token);
-        localStorage.setItem('currentUser', JSON.stringify(result.user));
+      if (response.ok && result.success && result.data?.data?.token) {
+        // Store token and user data IMMEDIATELY for production builds
+        localStorage.setItem('authToken', result.data.data.token);
+        localStorage.setItem('currentUser', JSON.stringify(result.data.data.user));
+        
+        // Force localStorage to flush (production timing fix)
+        localStorage.getItem('authToken'); // Read to ensure write is complete
+        
+        console.log('🔐 Login success - token stored, user:', result.data.data.user.display_name);
         
         // Determine redirect URL based on user preferences
-        const redirectUrl = getLoginRedirectUrl(result.user);
+        const redirectUrl = getLoginRedirectUrl(result.data.data.user);
+        console.log('🔀 Redirecting to:', redirectUrl);
         
         // Success animation
         controls.start({
           scale: [1, 1.2, 0],
           opacity: [1, 1, 0],
-          transition: { duration: 0.5 }
+          transition: { duration: 0.3 } // Reduced animation time
         });
 
+        // Reduced delay for production build compatibility
         setTimeout(() => {
           onClose();
+          // Ensure token is still there before redirect
+          const tokenCheck = localStorage.getItem('authToken');
+          console.log('🔀 Pre-redirect token check:', !!tokenCheck);
           window.location.href = redirectUrl;
-        }, 500);
+        }, 300);
       } else {
-        setError(result.message || 'Invalid username or password');
+        setError(result.data?.error || result.error || 'Invalid username or password');
         // Error shake animation
         controls.start({
           x: [0, -10, 10, -10, 10, 0],

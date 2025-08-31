@@ -219,17 +219,42 @@ export default function HelpdeskQueue() {
   }, [showUserMenu]);
 
   const checkPermissions = async () => {
-    try {
-      const result = await apiClient.getCurrentUser();
-      const user = result.data;
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      try {
+        console.log(`🔍 Helpdesk queue - checking permissions, attempt ${attempts + 1}/${maxAttempts}`);
+        const result = await apiClient.getCurrentUser();
+        const user = result.data?.user || result.data; // Handle both possible response structures
+        console.log('🔍 Helpdesk queue - user loaded:', user?.display_name, 'permissions:', user?.permissions?.length);
+        console.log('🔍 Helpdesk queue - raw API response:', result);
+        console.log('🔍 Helpdesk queue - first 10 permissions:', user?.permissions?.slice(0, 10));
+        console.log('🔍 Helpdesk queue - looking for permission: helpdesk.multi_queue_access');
+        console.log('🔍 Helpdesk queue - has permission:', user.permissions?.includes('helpdesk.multi_queue_access'));
+        
         if (!user.permissions?.includes('helpdesk.multi_queue_access')) {
-          window.location.href = '/';
+          console.log('❌ Helpdesk queue - missing helpdesk.multi_queue_access permission, redirecting to home in 3 seconds...');
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 3000); // 3 second delay
           return;
         }
+        console.log('✅ Helpdesk queue - permission check passed');
         setCurrentUser(user);
-    } catch (error) {
-      console.error('Permission check failed:', error);
-      window.location.href = '/';
+        return; // Success, exit retry loop
+      } catch (error) {
+        attempts++;
+        console.error(`❌ Helpdesk queue - permission check failed (attempt ${attempts}/${maxAttempts}):`, error);
+        
+        if (attempts < maxAttempts) {
+          console.log('🔄 Helpdesk queue - retrying permission check...');
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+        } else {
+          console.error('❌ Helpdesk queue - all permission check attempts failed, redirecting to home');
+          window.location.href = '/';
+        }
+      }
     }
   };
 

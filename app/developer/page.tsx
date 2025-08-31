@@ -79,45 +79,93 @@ export default function DeveloperDashboard() {
 
   const checkAdminAccess = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      console.log('🔍 Admin dashboard - checking permissions, token exists:', !!token);
+      // Enhanced token check with multiple retries for production builds
+      let token = null;
+      let attempts = 0;
+      const maxAttempts = 10; // Try up to 10 times over 5 seconds
+      
+      console.log('🔍 Admin dashboard - starting permission check');
+      
+      // Try multiple times to get the token (production race condition fix)
+      while (!token && attempts < maxAttempts) {
+        token = localStorage.getItem('authToken');
+        
+        if (!token) {
+          attempts++;
+          console.log(`🔍 Admin dashboard - token attempt ${attempts}/${maxAttempts}, waiting...`);
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
+      console.log('🔍 Admin dashboard - final token check, exists:', !!token, 'after', attempts, 'attempts');
       
       if (!token) {
-        console.log('❌ No token found, redirecting to home');
+        console.log('❌ No token found after all retries, redirecting to home');
         window.location.href = '/';
         return;
       }
 
-      const result = await apiClient.getCurrentUser();
-      console.log('🔍 Admin dashboard - auth response loaded');
-      const user = result.data;
-        console.log('🔍 Admin dashboard - user loaded:', user.display_name, 'Role:', user.role);
-        console.log('🔍 Admin dashboard - permissions:', user.permissions);
-        
-        // Check if user has any admin permissions
-        const adminPermissions = [
-          'admin.manage_users', 'admin.view_users',
-          'admin.manage_teams', 'admin.view_teams', 
-          'admin.manage_organization', 'admin.view_organization',
-          'admin.manage_categories', 'admin.view_categories',
-          'admin.manage_support_teams', 'admin.view_support_teams',
-          'admin.view_analytics', 'admin.system_settings'
-        ];
-        
-        const hasAdminAccess = adminPermissions.some(perm => 
-          user.permissions?.includes(perm)
-        );
-        
-        console.log('🔍 Admin dashboard - has admin access:', hasAdminAccess);
-        
-        if (!hasAdminAccess) {
-          console.log('❌ User lacks admin permissions, redirecting to tickets');
-          window.location.href = '/tickets';
-          return;
+      let apiAttempts = 0;
+      const maxApiAttempts = 3;
+      let user = null;
+      
+      // Try API call with retries
+      while (!user && apiAttempts < maxApiAttempts) {
+        try {
+          apiAttempts++;
+          console.log(`🔍 Admin dashboard - API call attempt ${apiAttempts}/${maxApiAttempts}`);
+          const result = await apiClient.getCurrentUser();
+          user = result.data?.user || result.data; // Handle both possible response structures
+          console.log('🔍 Admin dashboard - user loaded:', user?.display_name, 'Role:', user?.role);
+          console.log('🔍 Admin dashboard - raw API response:', result);
+        } catch (apiError) {
+          console.error(`❌ Admin dashboard - API call ${apiAttempts} failed:`, apiError);
+          if (apiAttempts < maxApiAttempts) {
+            console.log('🔄 Admin dashboard - retrying API call...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
         }
-        
-        console.log('✅ Admin access granted');
-        setCurrentUser(user);
+      }
+      
+      if (!user) {
+        console.error('❌ Admin dashboard - all API attempts failed, redirecting to home');
+        window.location.href = '/';
+        return;
+      }
+      
+      console.log('🔍 Admin dashboard - permissions:', user.permissions?.length, 'total');
+      console.log('🔍 Admin dashboard - first 10 permissions:', user.permissions?.slice(0, 10));
+      
+      // Check if user has any admin permissions
+      const adminPermissions = [
+        'admin.manage_users', 'admin.view_users',
+        'admin.manage_teams', 'admin.view_teams', 
+        'admin.manage_organization', 'admin.view_organization',
+        'admin.manage_categories', 'admin.view_categories',
+        'admin.manage_support_teams', 'admin.view_support_teams',
+        'admin.view_analytics', 'admin.system_settings'
+      ];
+      
+      console.log('🔍 Admin dashboard - checking for admin permissions:', adminPermissions);
+      const matchedPermissions = adminPermissions.filter(perm => user.permissions?.includes(perm));
+      console.log('🔍 Admin dashboard - matched permissions:', matchedPermissions);
+      
+      const hasAdminAccess = adminPermissions.some(perm => 
+        user.permissions?.includes(perm)
+      );
+      
+      console.log('🔍 Admin dashboard - has admin access:', hasAdminAccess);
+      
+      if (!hasAdminAccess) {
+        console.log('❌ User lacks admin permissions, redirecting to tickets in 3 seconds...');
+        setTimeout(() => {
+          window.location.href = '/tickets';
+        }, 3000); // 3 second delay
+        return;
+      }
+      
+      console.log('✅ Admin access granted');
+      setCurrentUser(user);
     } catch (error) {
       console.error('❌ Permission check failed:', error);
       window.location.href = '/';

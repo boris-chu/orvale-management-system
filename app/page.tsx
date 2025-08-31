@@ -22,24 +22,39 @@ export default function Home() {
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     if (token) {
-      // Check user permissions to determine redirect
-      fetch('/api/auth/user', {
+      // Check user permissions using the API Gateway
+      fetch('/api/v1', {
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({
+          service: 'auth',
+          action: 'get_current_user',
+          data: {}
+        })
       })
       .then(response => response.json())
-      .then(user => {
-        // Redirect helpdesk users to helpdesk queue by default
-        if (user.permissions?.includes('helpdesk.multi_queue_access')) {
-          window.location.href = '/helpdesk/queue';
+      .then(result => {
+        if (result.success && result.data?.user) {
+          const user = result.data.user;
+          // Redirect helpdesk users to helpdesk queue by default
+          if (user.permissions?.includes('helpdesk.multi_queue_access')) {
+            window.location.href = '/helpdesk/queue';
+          } else {
+            window.location.href = '/tickets';
+          }
         } else {
-          window.location.href = '/tickets';
+          // Invalid token, remove and stay on main page
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('currentUser');
         }
       })
       .catch(() => {
-        // Fallback to tickets if API call fails
-        window.location.href = '/tickets';
+        // Token validation failed, remove and stay on main page
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('currentUser');
       });
     }
   }, []);
