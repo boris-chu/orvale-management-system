@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -155,18 +156,8 @@ export default function UserManagement() {
 
   const loadUsers = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const userData = await response.json();
-        setUsers(userData);
-      } else {
-        showNotification('Failed to load users', 'error');
-      }
+      const result = await apiClient.getDeveloperUsers();
+      setUsers(result.data);
     } catch (error) {
       console.error('Failed to load users:', error);
       showNotification('Error loading users', 'error');

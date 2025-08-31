@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import apiClient from '@/lib/api-client';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 
@@ -27,9 +28,8 @@ export default function PublicChatProvider({ children }: PublicChatProviderProps
 
   const loadPageSettings = async () => {
     try {
-      const response = await fetch('/api/public-portal/widget-settings');
-      if (response.ok) {
-        const data = await response.json();
+      const result = await apiClient.getPublicWidgetSettings();
+      const data = result.data;
         if (data.enabled) {
           setWidgetEnabled(true);
           if (data.enabled_pages) {

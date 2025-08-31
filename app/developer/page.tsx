@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -87,16 +88,9 @@ export default function DeveloperDashboard() {
         return;
       }
 
-      const response = await fetch('/api/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      console.log('🔍 Admin dashboard - auth response status:', response.status);
-
-      if (response.ok) {
-        const user = await response.json();
+      const result = await apiClient.getCurrentUser();
+      console.log('🔍 Admin dashboard - auth response loaded');
+      const user = result.data;
         console.log('🔍 Admin dashboard - user loaded:', user.display_name, 'Role:', user.role);
         console.log('🔍 Admin dashboard - permissions:', user.permissions);
         
@@ -124,10 +118,6 @@ export default function DeveloperDashboard() {
         
         console.log('✅ Admin access granted');
         setCurrentUser(user);
-      } else {
-        console.log('❌ Auth failed, redirecting to login');
-        window.location.href = '/';
-      }
     } catch (error) {
       console.error('❌ Permission check failed:', error);
       window.location.href = '/';
@@ -136,18 +126,8 @@ export default function DeveloperDashboard() {
 
   const loadDashboardStats = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/stats', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const statsData = await response.json();
-        setStats(statsData);
-      } else {
-        console.error('Failed to load stats, status:', response.status);
-      }
+      const result = await apiClient.getDeveloperStats('24h');
+      setStats(result.data);
     } catch (error) {
       console.error('Failed to load dashboard stats:', error);
     } finally {

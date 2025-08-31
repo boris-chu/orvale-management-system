@@ -10,6 +10,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -194,15 +195,8 @@ function ThemeManagementTab({ settings, updateSetting, currentUser }: ThemeManag
 
   const loadThemeAnalytics = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/chat/theme-analytics', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setThemeStats(data);
-      }
+      const result = await apiClient.getThemeAnalytics('7d');
+      setThemeStats(result.data);
     } catch (error) {
       console.error('Failed to load theme analytics:', error);
     }
@@ -224,25 +218,13 @@ function ThemeManagementTab({ settings, updateSetting, currentUser }: ThemeManag
     if (!confirm('This will override all user theme preferences with the system default. Continue?')) return;
     
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/chat/force-theme-compliance', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          internal_chat_theme: adminSettings?.internal_chat_theme || 'light',
-          public_queue_theme: adminSettings?.public_queue_theme || 'light'
-        })
+      await apiClient.forceThemeCompliance({
+        internal_chat_theme: adminSettings?.internal_chat_theme || 'light',
+        public_queue_theme: adminSettings?.public_queue_theme || 'light'
       });
       
-      if (response.ok) {
-        alert('Theme compliance enforced successfully!');
-        await loadThemeAnalytics();
-      } else {
-        throw new Error('Failed to enforce compliance');
-      }
+      alert('Theme compliance enforced successfully!');
+      await loadThemeAnalytics();
     } catch (error) {
       console.error('Failed to force theme compliance:', error);
       alert('Failed to enforce theme compliance. Please try again.');
@@ -1182,14 +1164,8 @@ export default function ChatManagementPage() {
         return;
       }
 
-      const response = await fetch('/api/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const user = await response.json();
+      const result = await apiClient.getCurrentUser();
+      const user = result.data;
         
         // Check if user has chat management permissions
         const hasPermission = user.permissions?.includes('chat.manage_system') || 
@@ -1203,10 +1179,6 @@ export default function ChatManagementPage() {
         }
         
         setCurrentUser(user);
-      } else {
-        window.location.href = '/';
-        return;
-      }
     } catch (error) {
       console.error('Failed to verify admin access:', error);
       window.location.href = '/';
@@ -1234,15 +1206,9 @@ export default function ChatManagementPage() {
 
   const loadChatSettings = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/chat/settings', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        // Merge with existing settings to preserve widget settings loaded separately
-        setSettings(prev => ({ ...prev, ...data }));
-      }
+      const result = await apiClient.getChatSettings();
+      // Merge with existing settings to preserve widget settings loaded separately
+      setSettings(prev => ({ ...prev, ...result.data }));
     } catch (error) {
       console.error('Failed to load chat settings:', error);
     }
@@ -1250,17 +1216,9 @@ export default function ChatManagementPage() {
 
   const loadSystemStats = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/chat/stats', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        console.log('🔢 Real metrics loaded:', data);
-        setStats(data);
-      } else {
-        console.error('Failed to load system stats:', response.status);
-      }
+      const result = await apiClient.getChatStats('24h');
+      console.log('🔢 Real metrics loaded:', result.data);
+      setStats(result.data);
     } catch (error) {
       console.error('Failed to load system stats:', error);
     }
@@ -1268,12 +1226,8 @@ export default function ChatManagementPage() {
 
   const loadWidgetSettings = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/chat/widget-settings', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
+      const result = await apiClient.getWidgetSettings();
+      const data = result.data;
         // Map API response to our settings structure
         setSettings(prev => ({
           ...prev,
@@ -1377,20 +1331,8 @@ export default function ChatManagementPage() {
   const refreshUserData = async () => {
     try {
       setIsProcessing(true);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/chat/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        setUsers(userData.users || []);
-      } else {
-        console.error('Failed to fetch user data:', response.status);
-      }
+      const result = await apiClient.getChatUsers();
+      setUsers(result.data.users || []);
     } catch (error) {
       console.error('Error refreshing user data:', error);
     } finally {

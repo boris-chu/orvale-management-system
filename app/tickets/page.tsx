@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -320,20 +321,8 @@ export default function TicketsPage() {
   const loadAssignableUsers = async () => {
     setLoadingAssignableUsers(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/users/assignable', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAssignableUsers(data.users || []);
-      } else {
-        console.error('Failed to load assignable users');
-        setAssignableUsers([]);
-      }
+      const result = await apiClient.getUsers(); // Gets all users with filtering capability
+      setAssignableUsers(result.data.users || []);
     } catch (error) {
       console.error('Error loading assignable users:', error);
       setAssignableUsers([]);
@@ -348,20 +337,8 @@ export default function TicketsPage() {
     
     setLoadingTeams(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/helpdesk/teams', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableTeams(data.data?.all_teams || []);
-      } else {
-        console.error('Failed to load available teams');
-        setAvailableTeams([]);
-      }
+      const result = await apiClient.getHelpdeskTeams();
+      setAvailableTeams(result.data?.all_teams || []);
     } catch (error) {
       console.error('Error loading available teams:', error);
       setAvailableTeams([]);

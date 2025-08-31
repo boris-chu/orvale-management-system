@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import {
   Box, Card, CardContent, CardHeader, Typography, Tabs, Tab,
   Switch, Select, MenuItem, TextField, FormControl, FormControlLabel, 
@@ -208,13 +209,9 @@ const PublicPortalAdmin = () => {
         return;
       }
 
-      const response = await fetch('/api/auth/user', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const user = await response.json();
-        setCurrentUser(user);
+      const result = await apiClient.getCurrentUser();
+      const user = result.data;
+      setCurrentUser(user);
         
         // Check if user has permission to manage public portal settings
         if (!user.permissions?.includes('public_portal.manage_settings') && 
@@ -226,10 +223,6 @@ const PublicPortalAdmin = () => {
         
         // User is authorized, load settings
         loadSettings();
-      } else {
-        setAuthError('Authentication failed. Please log in again.');
-        setLoading(false);
-      }
     } catch (error) {
       console.error('Authentication error:', error);
       setAuthError('Authentication error. Please try again.');
@@ -240,19 +233,11 @@ const PublicPortalAdmin = () => {
   // Load WebSocket system settings separately
   const loadWebSocketSettings = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/websocket-settings', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSettings(prev => ({ 
-          ...prev, 
-          websocket_unlimited_mode: Boolean(data.websocket_unlimited_mode) 
-        }));
-      }
+      const result = await apiClient.getWebsocketSettings();
+      setSettings(prev => ({ 
+        ...prev, 
+        websocket_unlimited_mode: Boolean(result.data.websocket_unlimited_mode) 
+      }));
     } catch (error) {
       console.error('Failed to load WebSocket settings:', error);
     }
@@ -260,14 +245,8 @@ const PublicPortalAdmin = () => {
 
   const loadSettings = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/public-portal/settings', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
+      const result = await apiClient.getPortalSettings();
+      const data = result.data;
         if (data.schedule_json) {
           data.schedule = JSON.parse(data.schedule_json);
         }
@@ -331,39 +310,25 @@ const PublicPortalAdmin = () => {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      
       console.log('🔄 Saving settings:', settings);
       
-      const response = await fetch('/api/admin/public-portal/settings', {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...settings,
-          schedule_json: JSON.stringify(settings.schedule),
-          holidays_json: JSON.stringify(settings.holidays),
-          custom_fields_json: JSON.stringify(settings.custom_fields),
-          allowed_file_types_json: JSON.stringify(settings.allowed_file_types),
-          enabled_pages: JSON.stringify(settings.enabled_pages),
-          disabled_pages: JSON.stringify(settings.disabled_pages),
-          delivery_status_icons: JSON.stringify(settings.delivery_status_icons)
-        })
-      });
+      const settingsToSave = {
+        ...settings,
+        schedule_json: JSON.stringify(settings.schedule),
+        holidays_json: JSON.stringify(settings.holidays),
+        custom_fields_json: JSON.stringify(settings.custom_fields),
+        allowed_file_types_json: JSON.stringify(settings.allowed_file_types),
+        enabled_pages: JSON.stringify(settings.enabled_pages),
+        disabled_pages: JSON.stringify(settings.disabled_pages),
+        delivery_status_icons: JSON.stringify(settings.delivery_status_icons)
+      };
       
-      const result = await response.json();
+      const result = await apiClient.updatePortalSettings(settingsToSave);
       console.log('💾 Save response:', result);
       
-      if (response.ok) {
-        // Show success animation
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 2000); // Hide success after 2 seconds
-      } else {
-        console.error('❌ Save failed:', result);
-        alert(`Failed to save settings: ${result.error || 'Unknown error'}`);
-      }
+      // Show success animation
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000); // Hide success after 2 seconds
     } catch (error) {
       console.error('❌ Failed to save settings:', error);
       alert(`Failed to save settings: ${error.message || 'Network error'}`);
@@ -375,26 +340,12 @@ const PublicPortalAdmin = () => {
   // Save WebSocket system settings immediately
   const saveWebSocketSettings = async (websocketUnlimitedMode: boolean) => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/websocket-settings', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          websocket_unlimited_mode: websocketUnlimitedMode
-        })
+      const result = await apiClient.updateWebsocketSettings({
+        websocket_unlimited_mode: websocketUnlimitedMode
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ WebSocket settings saved:', data.message);
-        return true;
-      } else {
-        console.error('❌ Failed to save WebSocket settings');
-        return false;
-      }
+      const data = result.data;
+      console.log('✅ WebSocket settings saved:', data.message);
+      return true;
     } catch (error) {
       console.error('❌ Error saving WebSocket settings:', error);
       return false;
