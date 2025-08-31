@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Gateway Tester - Orvale Management System</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: 200px 200px 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    select, input, textarea, button {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    select:focus, input:focus, textarea:focus {
+      outline: none;
+      border-color: #4CAF50;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .data-section {
+      margin-bottom: 20px;
+    }
+    .data-section label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #555;
+    }
+    .data-section textarea {
+      width: 100%;
+      min-height: 100px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    .results {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .result-panel {
+      background: #f8f8f8;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      padding: 15px;
+    }
+    .result-panel h3 {
+      margin-top: 0;
+      color: #444;
+    }
+    .result-content {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .status {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .auth-section {
+      background: #e3f2fd;
+      border: 1px solid #90caf9;
+      border-radius: 4px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .auth-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .auth-status {
+      margin-left: auto;
+      font-size: 14px;
+      color: #1976d2;
+    }
+    .quick-actions {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+    }
+    .quick-actions h3 {
+      margin-bottom: 10px;
+      color: #555;
+    }
+    .quick-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .quick-button {
+      padding: 8px 15px;
+      background: #f0f0f0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    .quick-button:hover {
+      background: #e0e0e0;
+      border-color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 API Gateway Tester</h1>
+    <p>Test the unified API Gateway at <code>/api/v1</code></p>
+    
+    <div class="auth-section">
+      <div class="auth-controls">
+        <input type="text" id="username" placeholder="Username" value="admin">
+        <input type="password" id="password" placeholder="Password" value="admin123">
+        <button onclick="login()">Login</button>
+        <button onclick="logout()">Logout</button>
+        <span class="auth-status" id="authStatus">Not authenticated</span>
+      </div>
+    </div>
+    
+    <div class="controls">
+      <select id="service" onchange="updateActions()">
+        <option value="">Select Service</option>
+        <option value="admin">AdminService</option>
+        <option value="helpdesk">HelpdeskService</option>
+        <option value="developer">DeveloperService</option>
+        <option value="utilities">UtilitiesService</option>
+        <option value="public">PublicService</option>
+      </select>
+      
+      <select id="action">
+        <option value="">Select Action</option>
+      </select>
+      
+      <button onclick="executeRequest()" id="executeBtn">Execute Request</button>
+    </div>
+    
+    <div class="data-section">
+      <label for="requestData">Request Data (JSON):</label>
+      <textarea id="requestData" placeholder='{"key": "value"}'>{}</textarea>
+    </div>
+    
+    <div class="results">
+      <div class="result-panel">
+        <h3>Request</h3>
+        <div id="requestInfo" class="result-content">No request sent yet</div>
+      </div>
+      
+      <div class="result-panel">
+        <h3>Response</h3>
+        <div id="responseStatus"></div>
+        <div id="responseInfo" class="result-content">No response received yet</div>
+      </div>
+    </div>
+    
+    <div class="quick-actions">
+      <h3>Quick Tests</h3>
+      <div class="quick-buttons">
+        <button class="quick-button" onclick="quickTest('admin', 'get_users')">Get Users</button>
+        <button class="quick-button" onclick="quickTest('admin', 'get_chat_stats')">Chat Stats</button>
+        <button class="quick-button" onclick="quickTest('helpdesk', 'get_queue')">Helpdesk Queue</button>
+        <button class="quick-button" onclick="quickTest('developer', 'get_system_health')">System Health</button>
+        <button class="quick-button" onclick="quickTest('utilities', 'get_ticket_categories')">Categories</button>
+        <button class="quick-button" onclick="quickTest('public', 'get_widget_status', false)">Widget Status</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    let authToken = null;
+    
+    // Service action mappings
+    const serviceActions = {
+      admin: [
+        'login', 'logout', 'get_users', 'create_user', 'update_user', 'delete_user',
+        'get_roles', 'get_permissions', 'get_chat_settings', 'update_chat_settings',
+        'get_chat_stats', 'get_chat_users', 'get_all_messages', 'export_messages',
+        'get_widget_settings', 'update_widget_settings', 'get_websocket_settings',
+        'update_websocket_settings', 'get_theme_settings', 'update_theme_settings',
+        'get_theme_analytics', 'force_theme_compliance', 'get_recovery_settings',
+        'get_work_mode_settings', 'update_work_mode_settings', 'get_table_configs',
+        'get_table_views', 'get_table_data', 'force_logout_user', 'block_user',
+        'get_portal_settings', 'update_portal_settings'
+      ],
+      helpdesk: [
+        'get_queue', 'get_teams', 'get_team_preferences', 'update_team_preferences',
+        'get_stats', 'update_ticket_status', 'assign_ticket', 'escalate_ticket',
+        'get_ticket_history'
+      ],
+      developer: [
+        'get_stats', 'get_system_health', 'get_system_logs', 'export_system_logs',
+        'create_backup', 'get_backup_history', 'restore_backup', 'run_maintenance',
+        'get_api_endpoints', 'test_api_endpoint', 'get_users', 'create_user',
+        'update_user', 'delete_user', 'execute_database_query', 'get_database_schema',
+        'get_database_stats', 'optimize_database', 'get_performance_metrics',
+        'clear_system_cache', 'restart_services'
+      ],
+      utilities: [
+        'get_organizations', 'get_offices', 'get_bureaus', 'get_divisions',
+        'get_sections', 'get_ticket_categories', 'get_request_types'
+      ],
+      public: [
+        'get_widget_settings', 'get_widget_status', 'get_available_agents',
+        'start_chat_session', 'get_chat_messages', 'send_chat_message',
+        'auto_assign_agent', 'reconnect_session', 'get_guest_queue',
+        'remove_from_queue', 'update_guest_info'
+      ]
+    };
+    
+    function updateActions() {
+      const service = document.getElementById('service').value;
+      const actionSelect = document.getElementById('action');
+      
+      actionSelect.innerHTML = '<option value="">Select Action</option>';
+      
+      if (service && serviceActions[service]) {
+        serviceActions[service].forEach(action => {
+          const option = document.createElement('option');
+          option.value = action;
+          option.textContent = action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          actionSelect.appendChild(option);
+        });
+      }
+    }
+    
+    async function login() {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      
+      const result = await makeRequest('admin', 'login', { username, password }, false);
+      
+      if (result.success && result.data?.token) {
+        authToken = result.data.token;
+        document.getElementById('authStatus').textContent = `Authenticated as ${username}`;
+        document.getElementById('authStatus').style.color = '#2e7d32';
+      } else {
+        alert('Login failed: ' + (result.error || 'Unknown error'));
+      }
+    }
+    
+    function logout() {
+      authToken = null;
+      document.getElementById('authStatus').textContent = 'Not authenticated';
+      document.getElementById('authStatus').style.color = '#1976d2';
+    }
+    
+    async function makeRequest(service, action, data = {}, useAuth = true) {
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (useAuth && authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      
+      const requestBody = { service, action, data };
+      
+      // Update request display
+      document.getElementById('requestInfo').textContent = JSON.stringify({
+        url: '/api/v1',
+        method: 'POST',
+        headers: headers,
+        body: requestBody
+      }, null, 2);
+      
+      try {
+        const response = await fetch('/api/v1', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(requestBody)
+        });
+        
+        const result = await response.json();
+        
+        // Update response display
+        const statusDiv = document.getElementById('responseStatus');
+        statusDiv.className = 'status ' + (response.ok && result.success ? 'success' : 'error');
+        statusDiv.textContent = `Status: ${response.status} ${response.ok ? 'OK' : 'Error'}`;
+        
+        document.getElementById('responseInfo').textContent = JSON.stringify(result, null, 2);
+        
+        return {
+          success: response.ok && result.success,
+          data: result.data?.data || result.data,
+          error: result.data?.error || result.error,
+          message: result.data?.message || result.message
+        };
+      } catch (error) {
+        document.getElementById('responseStatus').className = 'status error';
+        document.getElementById('responseStatus').textContent = 'Network Error';
+        document.getElementById('responseInfo').textContent = error.message;
+        
+        return {
+          success: false,
+          error: error.message
+        };
+      }
+    }
+    
+    async function executeRequest() {
+      const service = document.getElementById('service').value;
+      const action = document.getElementById('action').value;
+      
+      if (!service || !action) {
+        alert('Please select both service and action');
+        return;
+      }
+      
+      let data = {};
+      try {
+        const dataText = document.getElementById('requestData').value.trim();
+        if (dataText) {
+          data = JSON.parse(dataText);
+        }
+      } catch (error) {
+        alert('Invalid JSON in request data: ' + error.message);
+        return;
+      }
+      
+      // Determine if auth is needed (public service actions don't need auth)
+      const needsAuth = service !== 'public' || ['remove_from_queue', 'auto_assign_agent'].includes(action);
+      
+      document.getElementById('executeBtn').disabled = true;
+      await makeRequest(service, action, data, needsAuth);
+      document.getElementById('executeBtn').disabled = false;
+    }
+    
+    async function quickTest(service, action, needsAuth = true) {
+      document.getElementById('service').value = service;
+      updateActions();
+      document.getElementById('action').value = action;
+      document.getElementById('requestData').value = '{}';
+      
+      if (needsAuth && !authToken) {
+        await login();
+      }
+      
+      await executeRequest();
+    }
+    
+    // Check auth status on load
+    if (authToken) {
+      document.getElementById('authStatus').textContent = 'Authenticated';
+      document.getElementById('authStatus').style.color = '#2e7d32';
+    }
+  </script>
+</body>
+</html>
