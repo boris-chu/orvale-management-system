@@ -6,6 +6,7 @@
 'use client';
 
 import React, { useState, useEffect, useContext, createContext, useCallback } from 'react';
+import apiClient from '@/lib/api-client';
 
 // Theme Interfaces
 export interface ThemeColors {
@@ -384,15 +385,11 @@ export const ThemeSystemProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const loadAdminSettings = useCallback(async () => {
     try {
       setAdminLoading(true);
-      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
       
-      const response = await fetch('/api/admin/chat/theme-settings', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.getThemeSettings();
 
-      if (response.ok) {
-        const data = await response.json();
-        setAdminSettings(data);
+      if (result.success && result.data) {
+        setAdminSettings(result.data);
       } else {
         // Set defaults if API fails
         setAdminSettings({
@@ -428,15 +425,11 @@ export const ThemeSystemProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const loadUserPreferences = useCallback(async () => {
     try {
       setUserLoading(true);
-      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
       
-      const response = await fetch('/api/chat/user-theme-preferences', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.getUserThemePreferences();
 
-      if (response.ok) {
-        const data = await response.json();
-        setUserPreferences(data);
+      if (result.success && result.data) {
+        setUserPreferences(result.data);
       } else {
         // Set defaults if API fails
         setUserPreferences({
@@ -473,20 +466,11 @@ export const ThemeSystemProvider: React.FC<{ children: React.ReactNode }> = ({ c
     themeName: string
   ) => {
     try {
-      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
-      
-      const response = await fetch('/api/chat/user-theme-preferences', {
-        method: 'PUT',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          [`${interfaceType}_theme`]: themeName
-        })
+      const result = await apiClient.updateUserThemePreferences({
+        [`${interfaceType}_theme`]: themeName
       });
 
-      if (response.ok) {
+      if (result.success) {
         await loadUserPreferences(); // Refresh
       } else {
         throw new Error('Failed to update theme preference');
@@ -500,18 +484,9 @@ export const ThemeSystemProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Update admin settings
   const updateAdminSettings = useCallback(async (updates: Partial<AdminThemeSettings>) => {
     try {
-      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
-      
-      const response = await fetch('/api/admin/chat/theme-settings', {
-        method: 'PUT',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updates)
-      });
+      const result = await apiClient.updateThemeSettings(updates);
 
-      if (response.ok) {
+      if (result.success) {
         await loadAdminSettings(); // Refresh
       } else {
         throw new Error('Failed to update admin theme settings');

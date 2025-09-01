@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { 
   Tabs, 
   Tab, 
@@ -105,16 +106,10 @@ export default function AchievementManagementPage() {
 
   const loadStats = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/achievements/stats', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const result = await apiClient.getAchievementStats();
 
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
+      if (result.success && result.data) {
+        setStats(result.data);
       }
     } catch (error) {
       console.error('Failed to load achievement stats:', error);

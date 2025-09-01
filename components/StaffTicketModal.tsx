@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import apiClient from '@/lib/api-client';
 
 // Types
 interface TicketAttachment {
@@ -302,19 +303,14 @@ export function StaffTicketModal({
   const loadCategories = async () => {
     console.log('🎫 [StaffTicketModal] loadCategories() called');
     try {
-      const token = localStorage.getItem('authToken');
-      console.log('🔑 [StaffTicketModal] Auth token exists:', !!token);
+      console.log('🔑 [StaffTicketModal] Loading categories via API Gateway');
       
-      const response = await fetch('/api/ticket-data/categories', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const result = await apiClient.makeRequest('utilities', 'get_categories', {});
       
-      console.log('📡 [StaffTicketModal] Categories API response status:', response.status);
+      console.log('📡 [StaffTicketModal] Categories API response success:', result.success);
       
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success && result.data) {
+        const data = result.data;
         console.log('📋 [StaffTicketModal] Categories loaded:', {
           categories: data.categories?.length || 0,
           requestTypes: Object.keys(data.requestTypes || {}).length,
@@ -345,15 +341,9 @@ export function StaffTicketModal({
 
   const loadTeams = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/teams', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const teamData = await response.json();
-        setTeams(teamData.filter((team: Team) => team.id)); // Filter active teams
+      const result = await apiClient.getTeams();
+      if (result.success && result.data) {
+        setTeams(result.data.filter((team: Team) => team.id)); // Filter active teams
       }
     } catch (error) {
       console.error('Failed to load teams:', error);
@@ -362,7 +352,6 @@ export function StaffTicketModal({
 
   const loadUsers = async () => {
     try {
-      const token = localStorage.getItem('authToken');
       const allUsers: User[] = [];
       const systemUsersOnly: User[] = [];
       
@@ -377,16 +366,11 @@ export function StaffTicketModal({
       if (canAssignCrossTeam) {
         // Load all active users from all teams
         try {
-          const allUsersResponse = await fetch('/api/developer/users', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
+          const result = await apiClient.getUsers();
           
-          if (allUsersResponse.ok) {
-            const allUsersData = await allUsersResponse.json();
-            console.log('🔍 All users response:', allUsersData);
-            const filteredAllUsers = allUsersData.filter((user: User) => 
+          if (result.success && result.data) {
+            console.log('🔍 All users response:', result.data);
+            const filteredAllUsers = result.data.filter((user: User) => 
               user.username && user.active !== false // All active users with usernames
             );
             console.log('🔍 Filtered system users:', filteredAllUsers);
@@ -399,15 +383,10 @@ export function StaffTicketModal({
       } else if (currentUser?.team_id) {
         // Load only users from current user's team
         try {
-          const systemUsersResponse = await fetch(`/api/developer/teams/${currentUser.team_id}/users`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
+          const result = await apiClient.getUsers({ team_id: currentUser.team_id });
           
-          if (systemUsersResponse.ok) {
-            const systemUserData = await systemUsersResponse.json();
-            const filteredSystemUsers = systemUserData.filter((user: User) => user.username && user.active !== false);
+          if (result.success && result.data) {
+            const filteredSystemUsers = result.data.filter((user: User) => user.username && user.active !== false);
             systemUsersOnly.push(...filteredSystemUsers); // Add to system users only
             allUsers.push(...filteredSystemUsers); // Also add to all users for search
           }
@@ -418,23 +397,16 @@ export function StaffTicketModal({
       
       // Load ticket users (for search only, NOT for assignment)
       try {
-        const ticketUsersResponse = await fetch('/api/staff/ticket-users', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const result = await apiClient.makeRequest('staff', 'get_ticket_users', {});
         
-        if (ticketUsersResponse.ok) {
-          const ticketUsersData = await ticketUsersResponse.json();
-          if (ticketUsersData.success && ticketUsersData.users) {
-            // Convert ticket user format to User format
-            const formattedTicketUsers = ticketUsersData.users.map((ticketUser: any) => ({
-              ...ticketUser,
-              team_name: ticketUser.section || 'Ticket User', // Show section as team
-              active: true
-            }));
-            allUsers.push(...formattedTicketUsers);
-          }
+        if (result.success && result.data && result.data.users) {
+          // Convert ticket user format to User format
+          const formattedTicketUsers = result.data.users.map((ticketUser: any) => ({
+            ...ticketUser,
+            team_name: ticketUser.section || 'Ticket User', // Show section as team
+            active: true
+          }));
+          allUsers.push(...formattedTicketUsers);
         }
       } catch (error) {
         console.warn('Failed to load ticket users:', error);
@@ -463,10 +435,9 @@ export function StaffTicketModal({
 
   const loadOrganizationData = async () => {
     try {
-      const response = await fetch('/api/ticket-data/organization');
-      if (response.ok) {
-        const data = await response.json();
-        setOrganizationData(data);
+      const result = await apiClient.makeRequest('utilities', 'get_organization', {});
+      if (result.success && result.data) {
+        setOrganizationData(result.data);
       }
     } catch (error) {
       console.error('Failed to load organization data:', error);
@@ -519,8 +490,6 @@ export function StaffTicketModal({
       console.log('💾 Creating new ticket user:', newUserData);
       
       // Create ticket user in database so they can be searched next time
-      const token = localStorage.getItem('authToken');
-      
       // Map form field names to API field names
       // Use employee number as username since they're essentially the same
       const apiUserData = {
@@ -539,27 +508,12 @@ export function StaffTicketModal({
       
       console.log('📤 Sending API data:', apiUserData);
       
-      const response = await fetch('/api/staff/ticket-users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(apiUserData)
-      });
+      const result = await apiClient.makeRequest('staff', 'create_ticket_user', apiUserData);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error creating ticket user:', response.status, errorText);
-        try {
-          const errorData = JSON.parse(errorText);
-          throw new Error(errorData.error || 'Failed to create ticket user');
-        } catch {
-          throw new Error(`Failed to create ticket user: ${response.status} ${errorText}`);
-        }
+      if (!result.success) {
+        console.error('❌ API Error creating ticket user:', result.error);
+        throw new Error(result.error || 'Failed to create ticket user');
       }
-
-      const result = await response.json();
       console.log('✅ Ticket user created:', result);
 
       // Populate the form with the new user information
@@ -928,7 +882,6 @@ export function StaffTicketModal({
       if (formData.attachments.length > 0) {
         console.log(`📎 Uploading ${formData.attachments.length} files...`);
         
-        const token = localStorage.getItem('authToken');
         const uploadFormData = new FormData();
         
         // Add all files to form data
@@ -939,21 +892,12 @@ export function StaffTicketModal({
         });
         
         // Upload files
-        const uploadResponse = await fetch('/api/staff/tickets/attachments', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: uploadFormData
-        });
+        const uploadResult = await apiClient.makeRequest('tickets', 'upload_attachment', { files: uploadFormData });
         
-        if (!uploadResponse.ok) {
-          const errorText = await uploadResponse.text();
-          console.error('❌ File upload failed:', errorText);
-          throw new Error(`File upload failed: ${uploadResponse.status} ${errorText}`);
+        if (!uploadResult.success) {
+          console.error('❌ File upload failed:', uploadResult.error);
+          throw new Error(`File upload failed: ${uploadResult.error}`);
         }
-        
-        const uploadResult = await uploadResponse.json();
         uploadedAttachments = uploadResult.files || [];
         console.log('✅ Files uploaded successfully:', uploadedAttachments);
         
@@ -978,7 +922,6 @@ export function StaffTicketModal({
         resetForm();
       } else {
         // Default submission logic
-        const token = localStorage.getItem('authToken');
         const payload = {
           ...formData,
           attachments: uploadedAttachments,
@@ -986,26 +929,16 @@ export function StaffTicketModal({
           submittedDate: new Date().toISOString()
         };
         
-        console.log('📤 Sending API request to /api/staff/tickets with payload:', payload);
+        console.log('📤 Sending API request to staff tickets service with payload:', payload);
         
-        const response = await fetch('/api/staff/tickets', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(payload)
-        });
+        const result = await apiClient.makeRequest('tickets', 'create_staff', payload);
 
-        console.log('📥 API Response status:', response.status);
+        console.log('📥 API Response success:', result.success);
         
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ API Error response:', errorText);
-          throw new Error(`Failed to create ticket: ${response.status} ${errorText}`);
+        if (!result.success) {
+          console.error('❌ API Error response:', result.error);
+          throw new Error(`Failed to create ticket: ${result.error}`);
         }
-
-        const result = await response.json();
         console.log('✅ API Success response:', result);
         
         const successMessage = uploadedAttachments.length > 0 

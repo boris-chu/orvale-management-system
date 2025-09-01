@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import apiClient from '@/lib/api-client';
 import {
   Dialog,
   DialogTitle,
@@ -102,15 +103,9 @@ export default function MaterialUILoginModal({
     setError('');
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
+      const result = await apiClient.login({ username, password });
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (result.success) {
         localStorage.setItem('authToken', result.token);
         localStorage.setItem('currentUser', JSON.stringify(result.user));
         

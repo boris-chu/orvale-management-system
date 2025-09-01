@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import apiClient from '@/lib/api-client';
 
 interface User {
   id: number;
@@ -152,9 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Call logout endpoint to clear server-side session
       try {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-        });
+        await apiClient.logout();
       } catch (error) {
         console.log('Logout endpoint call failed, but continuing with local cleanup');
       }
