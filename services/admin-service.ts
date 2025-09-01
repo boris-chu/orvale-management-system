@@ -1580,40 +1580,42 @@ export class AdminService extends BaseService {
    */
   private async checkSocketIOStatus(): Promise<{ connected: boolean; uptime?: string; error?: string }> {
     try {
-      // Use fetch API which is available in Node.js 18+
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+      // Simple approach: check if we can create a TCP connection to the Socket.io port
+      const net = require('net');
       
-      const response = await fetch('http://localhost:3001/socket.io/', {
-        method: 'GET',
-        signal: controller.signal
+      return new Promise((resolve) => {
+        const socket = new net.Socket();
+        
+        // Set timeout
+        socket.setTimeout(2000);
+        
+        socket.connect(3001, 'localhost', () => {
+          // Connection successful - Socket.io server is running
+          socket.destroy();
+          resolve({
+            connected: true,
+            uptime: this.formatUptime(process.uptime())
+          });
+        });
+        
+        socket.on('error', (error: any) => {
+          socket.destroy();
+          resolve({
+            connected: false,
+            error: 'Connection refused'
+          });
+        });
+        
+        socket.on('timeout', () => {
+          socket.destroy();
+          resolve({
+            connected: false,
+            error: 'Connection timeout'
+          });
+        });
       });
       
-      clearTimeout(timeoutId);
-      
-      // Socket.io typically returns 200 for healthy status or 400 for handshake errors
-      // Both indicate the server is running
-      if (response.status === 200 || response.status === 400) {
-        return {
-          connected: true,
-          uptime: this.formatUptime(process.uptime())
-        };
-      } else {
-        return {
-          connected: false,
-          error: `HTTP ${response.status}`
-        };
-      }
-      
     } catch (error: any) {
-      // Handle timeout and connection errors
-      if (error.name === 'AbortError') {
-        return {
-          connected: false,
-          error: 'Connection timeout'
-        };
-      }
-      
       return {
         connected: false,
         error: error.message || 'Connection failed'
