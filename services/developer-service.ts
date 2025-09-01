@@ -227,38 +227,94 @@ export class DeveloperService extends BaseService {
   private async getSettings(data: any, context: RequestContext): Promise<any> {
     this.requirePermission(context, 'admin.system_settings');
     
-    const { category = 'all' } = data;
+    this.log(context, 'Getting system settings');
     
-    this.log(context, 'Getting system settings', { category });
-    
-    // Note: category filtering not supported with current schema
-    
-    const settings = await queryAsync(`
-      SELECT * FROM system_settings ORDER BY setting_key
-    `);
-    
-    // Group settings by key
-    const settingsData: any = {};
-    settings.forEach((setting: any) => {
-      // Parse JSON values
-      let value = setting.setting_value;
-      try {
-        value = JSON.parse(setting.setting_value);
-      } catch {
-        // Keep as string if not valid JSON
-      }
+    // Default settings structure for the settings page
+    const DEFAULT_SETTINGS = {
+      sessionTimeout: 60,
+      passwordMinLength: 8,
+      requireMFA: false,
+      maxLoginAttempts: 5,
+      lockoutDuration: 30,
       
-      settingsData[setting.setting_key] = {
-        value,
-        updated_at: setting.updated_at,
-        updated_by: setting.updated_by
-      };
-    });
-    
-    return this.success({
-      settings: settingsData,
-      total_settings: settings.length
-    });
+      // SSO/Authentication Settings
+      ssoEnabled: false,
+      adIntegrationEnabled: false,
+      adServerUrl: '',
+      adDomain: '',
+      adBaseDn: '',
+      adBindUser: '',
+      adBindPassword: '',
+      adUserSearchFilter: '(sAMAccountName={0})',
+      adGroupSearchFilter: '(member={0})',
+      fallbackToLocalAuth: true,
+      autoCreateUsers: false,
+      defaultUserRole: 'user',
+      
+      autoAssignment: false,
+      defaultPriority: 'medium',
+      emailNotifications: true,
+      maxTicketsPerUser: 50,
+      
+      smtpHost: '',
+      smtpPort: 587,
+      smtpSecure: true,
+      smtpUser: '',
+      fromEmail: '',
+      fromName: 'Orvale Support System',
+      
+      enableMaintenance: false,
+      maintenanceMessage: 'System is under maintenance. Please try again later.',
+      autoBackupEnabled: true,
+      backupRetentionDays: 30,
+      backupLocation: './backups',
+      logLevel: 'info',
+      pinoEnabled: true,
+      
+      idleTimeoutMinutes: 10,
+      awayTimeoutMinutes: 30,
+      offlineTimeoutMinutes: 60,
+      enableAutoPresenceUpdates: true
+    };
+
+    try {
+      // Try to create the system_settings table if it doesn't exist
+      await runAsync(`
+        CREATE TABLE IF NOT EXISTS system_settings (
+          id INTEGER PRIMARY KEY,
+          setting_key TEXT UNIQUE NOT NULL,
+          setting_value TEXT NOT NULL,
+          updated_by TEXT NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Get all settings from database
+      const dbSettings = await queryAsync(`
+        SELECT setting_key, setting_value FROM system_settings
+      `);
+
+      // Start with defaults and override with database values
+      const settingsData = { ...DEFAULT_SETTINGS };
+      
+      dbSettings.forEach((row: any) => {
+        try {
+          const key = row.setting_key as string;
+          if (key in settingsData) {
+            settingsData[key as keyof typeof settingsData] = JSON.parse(row.setting_value);
+          }
+        } catch (error) {
+          this.log(context, `Failed to parse setting ${row.setting_key}`, { error: error.message });
+        }
+      });
+
+      return this.success(settingsData);
+      
+    } catch (error) {
+      this.logError(context, 'Failed to get system settings', error);
+      // Return defaults if database operation fails
+      return this.success(DEFAULT_SETTINGS);
+    }
   }
 
   /**
@@ -268,42 +324,95 @@ export class DeveloperService extends BaseService {
     this.requirePermission(context, 'admin.system_settings');
     
     this.validateRequiredFields(data, ['settings']);
-    const { settings, category } = data;
+    const { settings } = data;
     
-    this.log(context, 'Updating system settings', { category, settingsCount: Object.keys(settings).length });
+    this.log(context, 'Updating system settings', { settingsCount: Object.keys(settings).length });
     
     const updates = [];
     const username = context.user!.username;
-    
-    for (const [key, value] of Object.entries(settings)) {
-      // Determine data type and serialize value
-      let dataType = 'string';
-      let serializedValue = String(value);
-      
-      if (typeof value === 'boolean') {
-        dataType = 'boolean';
-        serializedValue = value.toString();
-      } else if (typeof value === 'number') {
-        dataType = 'number';
-        serializedValue = value.toString();
-      } else if (typeof value === 'object') {
-        dataType = 'json';
-        serializedValue = JSON.stringify(value);
-      }
-      
+
+    try {
+      // Create system_settings table if it doesn't exist
       await runAsync(`
-        INSERT OR REPLACE INTO system_settings 
-        (setting_key, setting_value, updated_by, updated_at)
-        VALUES (?, ?, ?, datetime('now'))
-      `, [key, serializedValue, username]);
-      
-      updates.push(key);
+        CREATE TABLE IF NOT EXISTS system_settings (
+          id INTEGER PRIMARY KEY,
+          setting_key TEXT UNIQUE NOT NULL,
+          setting_value TEXT NOT NULL,
+          updated_by TEXT NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Create audit log table if it doesn't exist
+      await runAsync(`
+        CREATE TABLE IF NOT EXISTS system_settings_audit (
+          id INTEGER PRIMARY KEY,
+          setting_key TEXT NOT NULL,
+          old_value TEXT,
+          new_value TEXT NOT NULL,
+          updated_by TEXT NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Update each setting
+      const updatePromises = Object.entries(settings).map(async ([key, value]) => {
+        // Get old value for audit log
+        const oldSetting = await getAsync(
+          'SELECT setting_value FROM system_settings WHERE setting_key = ?',
+          [key]
+        );
+
+        // Serialize the value as JSON
+        const serializedValue = JSON.stringify(value);
+
+        // Update or insert setting
+        await runAsync(`
+          INSERT INTO system_settings (setting_key, setting_value, updated_by) 
+          VALUES (?, ?, ?)
+          ON CONFLICT(setting_key) DO UPDATE SET
+            setting_value = excluded.setting_value,
+            updated_by = excluded.updated_by,
+            updated_at = CURRENT_TIMESTAMP
+        `, [key, serializedValue, username]);
+
+        // Log change for audit
+        await runAsync(`
+          INSERT INTO system_settings_audit (setting_key, old_value, new_value, updated_by)
+          VALUES (?, ?, ?, ?)
+        `, [
+          key, 
+          oldSetting ? oldSetting.setting_value : null,
+          serializedValue,
+          username
+        ]);
+
+        updates.push(key);
+      });
+
+      await Promise.all(updatePromises);
+
+      // If log level or pino enabled was updated, update the logger configuration
+      if (settings.logLevel || settings.pinoEnabled !== undefined) {
+        this.log(context, 'Logging settings changed, updating logger configuration');
+        try {
+          const { updateLogLevel } = require('@/lib/logger');
+          await updateLogLevel();
+        } catch (error) {
+          this.log(context, 'Failed to update logger configuration', { error: error.message });
+        }
+      }
+
+      return this.success({
+        updated_settings: updates,
+        updated_by: username,
+        updated_at: new Date().toISOString()
+      }, `Updated ${updates.length} system settings successfully`);
+
+    } catch (error) {
+      this.logError(context, 'Failed to update system settings', error);
+      throw error;
     }
-    
-    return this.success({
-      updated_settings: updates,
-      updated_by: username
-    }, `Updated ${updates.length} system settings`);
   }
 
   /**
