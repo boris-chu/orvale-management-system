@@ -1580,51 +1580,43 @@ export class AdminService extends BaseService {
    */
   private async checkSocketIOStatus(): Promise<{ connected: boolean; uptime?: string; error?: string }> {
     try {
-      const http = require('http');
+      // Use fetch API which is available in Node.js 18+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
       
-      return new Promise((resolve) => {
-        const startTime = Date.now();
-        
-        // Try to connect to the Socket.io server health endpoint
-        const req = http.get('http://localhost:3001/socket.io/', (res: any) => {
-          const responseTime = Date.now() - startTime;
-          
-          if (res.statusCode === 200 || res.statusCode === 400) {
-            // 200 = healthy, 400 = Socket.io handshake (also indicates server is running)
-            resolve({
-              connected: true,
-              uptime: this.formatUptime(process.uptime()), // Approximate uptime
-            });
-          } else {
-            resolve({
-              connected: false,
-              error: `HTTP ${res.statusCode}`
-            });
-          }
-        });
-        
-        req.setTimeout(2000); // 2 second timeout
-        
-        req.on('error', () => {
-          resolve({
-            connected: false,
-            error: 'Connection failed'
-          });
-        });
-        
-        req.on('timeout', () => {
-          req.destroy();
-          resolve({
-            connected: false,
-            error: 'Connection timeout'
-          });
-        });
+      const response = await fetch('http://localhost:3001/socket.io/', {
+        method: 'GET',
+        signal: controller.signal
       });
       
-    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      // Socket.io typically returns 200 for healthy status or 400 for handshake errors
+      // Both indicate the server is running
+      if (response.status === 200 || response.status === 400) {
+        return {
+          connected: true,
+          uptime: this.formatUptime(process.uptime())
+        };
+      } else {
+        return {
+          connected: false,
+          error: `HTTP ${response.status}`
+        };
+      }
+      
+    } catch (error: any) {
+      // Handle timeout and connection errors
+      if (error.name === 'AbortError') {
+        return {
+          connected: false,
+          error: 'Connection timeout'
+        };
+      }
+      
       return {
         connected: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error.message || 'Connection failed'
       };
     }
   }
