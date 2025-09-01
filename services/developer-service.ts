@@ -563,9 +563,16 @@ export class DeveloperService extends BaseService {
     
     const users = await queryAsync(`
       SELECT 
-        u.id, u.username, u.display_name, u.email, u.active, u.role,
-        u.created_at
+        u.id, u.username, u.display_name, u.email, u.active, 
+        u.role as role_id,
+        u.team_id,
+        u.section_id,
+        u.created_at,
+        t.name as team_name,
+        r.name as role_name
       FROM users u
+      LEFT JOIN teams t ON u.team_id = t.id
+      LEFT JOIN roles r ON u.role = r.id
       ${whereClause}
       ORDER BY u.created_at DESC
       LIMIT ? OFFSET ?

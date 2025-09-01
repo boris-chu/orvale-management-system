@@ -635,25 +635,48 @@ export default function RoleManagement() {
 
   const checkPermissions = async () => {
     try {
+      console.log('🔍 Role Management - checking permissions');
       const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/auth/user', {
+      if (!token) {
+        console.log('❌ Role Management - no token found');
+        window.location.href = '/access-denied?requested=Role Management';
+        return;
+      }
+
+      const response = await fetch('/api/v1', {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          service: 'auth',
+          action: 'get_current_user',
+          data: {}
+        })
       });
+      
       if (response.ok) {
-        const user = await response.json();
-        if (!user.permissions?.includes('admin.manage_users') && !user.permissions?.includes('admin.system_settings')) {
-          window.location.href = '/developer';
+        const result = await response.json();
+        const user = result.data?.user || result.data;
+        
+        console.log('🔍 Role Management - user loaded:', user?.display_name);
+        console.log('🔍 Role Management - permissions:', user?.permissions?.length, 'total');
+        
+        if (!user?.permissions?.includes('admin.manage_users') && !user?.permissions?.includes('admin.system_settings')) {
+          console.log('❌ Role Management - insufficient permissions, redirecting to access denied');
+          window.location.href = '/access-denied?requested=Role Management';
           return;
         }
+        
+        console.log('✅ Role Management - permissions verified');
         setCurrentUser(user);
       } else {
-        window.location.href = '/';
+        console.log('❌ Role Management - API call failed');
+        window.location.href = '/access-denied?requested=Role Management';
       }
     } catch (error) {
-      console.error('Permission check failed:', error);
-      window.location.href = '/';
+      console.error('❌ Role Management - permission check failed:', error);
+      window.location.href = '/access-denied?requested=Role Management';
     }
   };
 

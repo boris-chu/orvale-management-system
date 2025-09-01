@@ -132,25 +132,24 @@ export default function UserManagement() {
 
   const checkPermissions = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const user = await response.json();
-        if (!user.permissions?.includes('admin.manage_users') && !user.permissions?.includes('admin.view_users')) {
-          window.location.href = '/developer';
-          return;
-        }
-        setCurrentUser(user);
-      } else {
-        window.location.href = '/';
+      console.log('🔍 User Management - checking permissions');
+      const result = await apiClient.getCurrentUser();
+      const user = result.data?.user || result.data;
+      
+      console.log('🔍 User Management - user loaded:', user?.display_name);
+      console.log('🔍 User Management - permissions:', user?.permissions?.length, 'total');
+      
+      if (!user?.permissions?.includes('admin.manage_users') && !user?.permissions?.includes('admin.view_users')) {
+        console.log('❌ User Management - insufficient permissions, redirecting to access denied');
+        window.location.href = '/access-denied?requested=User Management';
+        return;
       }
+      
+      console.log('✅ User Management - permissions verified');
+      setCurrentUser(user);
     } catch (error) {
-      console.error('Permission check failed:', error);
-      window.location.href = '/';
+      console.error('❌ User Management - permission check failed:', error);
+      window.location.href = '/access-denied?requested=User Management';
     }
   };
 
@@ -604,7 +603,7 @@ export default function UserManagement() {
                       </td>
                       <td className="py-3 px-4">
                         <Badge variant="outline">
-                          {user.role_id}
+                          {user.role_name || user.role_id || user.role || 'No role'}
                         </Badge>
                       </td>
                       <td className="py-3 px-4">

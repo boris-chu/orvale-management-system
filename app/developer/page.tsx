@@ -157,10 +157,8 @@ export default function DeveloperDashboard() {
       console.log('🔍 Admin dashboard - has admin access:', hasAdminAccess);
       
       if (!hasAdminAccess) {
-        console.log('❌ User lacks admin permissions, redirecting to tickets in 3 seconds...');
-        setTimeout(() => {
-          window.location.href = '/tickets';
-        }, 3000); // 3 second delay
+        console.log('❌ User lacks admin permissions, redirecting to access denied');
+        window.location.href = '/access-denied?requested=Admin Dashboard';
         return;
       }
       

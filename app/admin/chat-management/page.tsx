@@ -1165,18 +1165,27 @@ export default function ChatManagementPage() {
       }
 
       const result = await apiClient.getCurrentUser();
-      const user = result.data;
+      const user = result.data?.user || result.data;
+      
+      console.log('🔍 Chat Management - checking permissions for:', user?.display_name);
+      console.log('🔍 Chat Management - permissions:', user?.permissions?.length, 'total');
+      console.log('🔍 Chat Management - role:', user?.role);
         
         // Check if user has chat management permissions
-        const hasPermission = user.permissions?.includes('chat.manage_system') || 
-                             user.permissions?.includes('admin.system_settings') ||
-                             user.permissions?.includes('admin.manage_chat_channels') ||
-                             user.role === 'admin';
+        const hasPermission = user?.permissions?.includes('chat.manage_system') || 
+                             user?.permissions?.includes('admin.system_settings') ||
+                             user?.permissions?.includes('admin.manage_chat_channels') ||
+                             user?.role === 'admin';
+
+        console.log('🔍 Chat Management - has permission:', hasPermission);
 
         if (!hasPermission) {
-          window.location.href = '/tickets';
+          console.log('❌ Chat Management - insufficient permissions, redirecting to access denied');
+          window.location.href = '/access-denied?requested=Chat Management System';
           return;
         }
+        
+        console.log('✅ Chat Management - access granted');
         
         setCurrentUser(user);
     } catch (error) {
