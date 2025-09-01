@@ -262,11 +262,11 @@ export class AdminService extends BaseService {
       active_users: presence.online + presence.away + presence.busy,
       
       // Channel and message stats
-      total_channels: channelStats?.length || 0,
-      messages_per_hour: messageStats[0]?.total_messages || 0,
+      total_channels: channelStats?.reduce((sum: number, stat: any) => sum + (stat.channel_count || 0), 0) || 0,
+      messages_per_hour: Math.round((messageStats[0]?.total_messages || 0) / 24), // Messages in period divided by hours
       
-      // Storage info (approximate)
-      storage_used_mb: Math.round((messageStats[0]?.total_messages * 0.1) || 0),
+      // Storage info (approximate - assume 1KB per message average)
+      storage_used_mb: Math.round(((messageStats[0]?.total_messages || 0) * 1) / 1024) || 0,
       
       // Raw data for advanced analytics
       messages: messageStats[0] || {},
