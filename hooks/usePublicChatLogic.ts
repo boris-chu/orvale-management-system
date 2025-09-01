@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { publicPortalSocket } from '@/lib/public-portal-socket';
+import apiClient from '@/lib/api-client';
 
 interface WidgetSettings {
   enabled: boolean;
@@ -394,9 +395,9 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
   // Load widget settings from API
   const loadWidgetSettings = async () => {
     try {
-      const response = await fetch('/api/public-portal/widget-settings');
-      if (response.ok) {
-        const data = await response.json();
+      const result = await apiClient.getPublicWidgetSettings();
+      if (result.success) {
+        const data = result.data;
         console.log('Widget settings loaded:', data);
         console.log('🎨 Widget theme is:', data.widget_theme || 'NOT SET - defaulting to classic');
         setSettings(data);
@@ -438,13 +439,12 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
   const loadAvailableAgents = async () => {
     try {
       setAgentsLoading(true);
-      const response = await fetch('/api/public-portal/available-agents');
-      const data = await response.json();
+      const result = await apiClient.getAvailableAgents();
       
-      if (data.success) {
-        setAvailableAgents(data.agents || []);
+      if (result.success) {
+        setAvailableAgents(result.data?.agents || []);
       } else {
-        console.error('Failed to load available agents:', data.error);
+        console.error('Failed to load available agents:', result.error);
         setAvailableAgents([]);
       }
     } catch (error) {
@@ -621,33 +621,20 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
     setLoading(true);
     
     try {
-      const response = await fetch('/api/public-portal/chat/start-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const result = await apiClient.startChatSession({
+        guest_info: {
+          name: guestName,
+          email: guestEmail,
+          phone: null,
+          department: null
         },
-        body: JSON.stringify({
-          guest_info: {
-            name: guestName,
-            email: guestEmail,
-            phone: null,
-            department: null
-          },
-          initial_message: initialIssue
-        })
+        initial_message: initialIssue
       });
 
-      console.log('📡 Start session response status:', response.status);
-      
-      if (!response.ok) {
-        console.error('❌ Start session failed:', response.status, response.statusText);
-      }
-
-      const result = await response.json();
       console.log('📦 Start session result:', result);
       
       if (result.success) {
-        setSessionId(result.sessionId || result.session_id);
+        setSessionId(result.data?.sessionId || result.data?.session_id);
         setShowPreChatForm(false);
         setLoading(false);
         
@@ -661,11 +648,11 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
         setMessages(prev => [...prev, userInitialMessage]);
         
         // Add queue position message if needed
-        const position = result.queuePosition || 1;
+        const position = result.data?.queuePosition || 1;
         if (position > 1) {
           const queueMessage = {
             sender: 'system' as const,
-            text: `You are position ${position} in queue. ${result.estimatedWaitTime ? `Estimated wait time: ${result.estimatedWaitTime} minutes.` : 'Please wait for the next available agent.'}`,
+            text: `You are position ${position} in queue. ${result.data?.estimatedWaitTime ? `Estimated wait time: ${result.data.estimatedWaitTime} minutes.` : 'Please wait for the next available agent.'}`,
             timestamp: new Date(),
             id: Date.now() + 2
           };
@@ -680,7 +667,7 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
           email: guestEmail,
           phone: null,
           department: null,
-          sessionId: result.sessionId || result.session_id
+          sessionId: result.data?.sessionId || result.data?.session_id
         };
         
         console.log('🔌 Starting socket session with guestInfo:', guestInfo);
@@ -762,36 +749,28 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
     
     try {
       // Call the session API to start a new chat session
-      const response = await fetch('/api/public-portal/chat/start-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const result = await apiClient.startChatSession({
+        guest_info: {
+          name: preChatData.name,
+          email: preChatData.email,
+          phone: preChatData.phone || null,
+          department: preChatData.department || null
         },
-        body: JSON.stringify({
-          guest_info: {
-            name: preChatData.name,
-            email: preChatData.email,
-            phone: preChatData.phone || null,
-            department: preChatData.department || null
-          },
-          initial_message: preChatData.message
-        })
+        initial_message: preChatData.message
       });
-
-      const result = await response.json();
       
       if (result.success) {
         // Session started successfully
-        setSessionId(result.sessionId || result.session_id);
-        setQueuePosition(result.queuePosition || 1);
+        setSessionId(result.data?.sessionId || result.data?.session_id);
+        setQueuePosition(result.data?.queuePosition || 1);
         setShowPreChatForm(false);
         
         // Add initial queue message
-        const position = result.queuePosition || 1;
+        const position = result.data?.queuePosition || 1;
         const initialMessage = {
           sender: 'system' as const,
-          text: result.message || (position > 1 
-            ? `You are position ${position} in queue. ${result.estimatedWaitTime ? `Estimated wait time: ${result.estimatedWaitTime} minutes.` : 'Please wait for the next available agent.'}` 
+          text: result.data?.message || (position > 1 
+            ? `You are position ${position} in queue. ${result.data?.estimatedWaitTime ? `Estimated wait time: ${result.data.estimatedWaitTime} minutes.` : 'Please wait for the next available agent.'}` 
             : 'Connecting you with an available agent...'),
           timestamp: new Date(),
           id: Date.now()
@@ -804,7 +783,7 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
           email: preChatData.email,
           phone: preChatData.phone,
           department: preChatData.department,
-          sessionId: result.sessionId || result.session_id
+          sessionId: result.data?.sessionId || result.data?.session_id
         };
         
         startChatSession(guestInfo);
@@ -963,20 +942,12 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
       try {
         console.log('🔄 Returning chat session to queue instead of ending:', sessionId);
         
-        const response = await fetch('/api/public-portal/chat/return-to-queue', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            sessionId
-          })
+        const result = await apiClient.makeRequest('public', 'return_to_queue', {
+          sessionId
         });
-
-        const result = await response.json();
         
         if (result.success) {
-          console.log('✅ Session returned to queue:', result.message);
+          console.log('✅ Session returned to queue:', result.data?.message || result.message);
           
           // Show a message to the guest that they've been returned to queue
           const queueMessage = {
@@ -1075,35 +1046,27 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
       }
       
       // Call API to find and restore previous session
-      const response = await fetch('/api/public-portal/chat/reconnect-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          guestName,
-          guestEmail,
-          searchWindowHours: 2 // Search last 2 hours
-        })
+      const result = await apiClient.reconnectSession({
+        guestName,
+        guestEmail,
+        searchWindowHours: 2 // Search last 2 hours
       });
       
-      const result = await response.json();
-      
-      if (result.success && result.session) {
-        console.log('✅ Found previous session:', result.session.id);
+      if (result.success && result.data?.session) {
+        console.log('✅ Found previous session:', result.data.session.id);
         
         // Restore session state
-        setSessionId(result.session.id);
-        setMessages(result.messages || []);
-        setConnectedAgent(result.session.assigned_agent_name || null);
-        setQueuePosition(result.session.queue_position || null);
+        setSessionId(result.data.session.id);
+        setMessages(result.data?.messages || []);
+        setConnectedAgent(result.data.session.assigned_agent_name || null);
+        setQueuePosition(result.data.session.queue_position || null);
         
         // Update localStorage with recovered session
         const sessionData = {
-          id: result.session.id,
+          id: result.data.session.id,
           guestName,
           guestEmail,
-          messages: result.messages || [],
+          messages: result.data?.messages || [],
           timestamp: Date.now()
         };
         localStorage.setItem('public_chat_session', JSON.stringify(sessionData));
@@ -1113,7 +1076,7 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
         setShowReconnectOption(false);
         
         // Join the session room via socket
-        publicPortalSocket.joinSession(result.session.id);
+        publicPortalSocket.joinSession(result.data.session.id);
         
         // Add success message
         const successMessage = {

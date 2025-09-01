@@ -19,6 +19,7 @@ import {
   Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import apiClient from '@/lib/api-client';
 
 interface UnifiedLoginModalProps {
   isOpen: boolean;
@@ -74,17 +75,11 @@ export default function UnifiedLoginModal({
     setError('');
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
+      const result = await apiClient.login({ username, password });
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        localStorage.setItem('authToken', result.token);
-        localStorage.setItem('currentUser', JSON.stringify(result.user));
+      if (result.success && result.data?.token) {
+        localStorage.setItem('authToken', result.data.token);
+        localStorage.setItem('currentUser', JSON.stringify(result.data.user));
         
         // Create success animation before redirect
         setError('');

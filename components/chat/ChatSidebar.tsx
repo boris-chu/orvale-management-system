@@ -32,6 +32,7 @@ import { useChatSettings } from '@/hooks/useChatSettings';
 import { useThemeCSS } from '@/hooks/useThemeSystem';
 import { cn } from '@/lib/utils';
 import UserThemeModal from './UserThemeModal';
+import apiClient from '@/lib/api-client';
 
 interface User {
   username: string;
@@ -93,18 +94,12 @@ export default function ChatSidebar({
   // Function to refresh unread counts from API (authoritative source)
   const refreshUnreadCounts = useCallback(async () => {
     try {
-      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
-      if (!token) return;
-
-      const response = await fetch('/api/chat/channels', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      const result = await apiClient.makeRequest('chat', 'get_channels', {});
+      
+      if (result.success) {
         const newUnreadCounts: Record<string, number> = {};
         
-        data.channels?.forEach((channel: any) => {
+        result.data?.channels?.forEach((channel: any) => {
           newUnreadCounts[channel.id.toString()] = channel.unread_count || 0;
         });
         
@@ -130,17 +125,12 @@ export default function ChatSidebar({
   useEffect(() => {
     const loadChatsData = async () => {
       try {
-        const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
-        if (!token) return;
+        if (!localStorage.getItem('authToken')) return;
 
-        // Load channels and DMs in parallel
-        const [channelsResponse, dmsResponse] = await Promise.all([
-          fetch('/api/chat/channels', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          }),
-          fetch('/api/chat/dm', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
+        // Load channels and DMs in parallel via API Gateway
+        const [channelsResult, dmsResult] = await Promise.all([
+          apiClient.makeRequest('chat', 'get_channels', {}),
+          apiClient.makeRequest('chat', 'get_direct_messages', {})
         ]);
 
         const channels: ChatItem[] = [];
@@ -148,10 +138,10 @@ export default function ChatSidebar({
         const directMessages: ChatItem[] = [];
 
         // Process channels data
-        if (channelsResponse.ok) {
-          const channelsData = await channelsResponse.json();
+        if (channelsResult.success) {
+          const channelsData = channelsResult.data;
           
-          channelsData.channels.forEach((ch: any) => {
+          channelsData.channels?.forEach((ch: any) => {
             // Skip direct messages - they'll be handled by the DM API
             if (ch.type === 'direct_message') {
               return;
@@ -178,9 +168,9 @@ export default function ChatSidebar({
         }
 
         // Process DMs data
-        if (dmsResponse.ok) {
+        if (dmsResult.success) {
           try {
-            const dmsData = await dmsResponse.json();
+            const dmsData = dmsResult.data;
             
             dmsData.dms?.forEach((dm: any) => {
               directMessages.push({
@@ -201,7 +191,7 @@ export default function ChatSidebar({
             console.error('Failed to process DMs data:', dmError);
           }
         } else {
-          console.error('DMs API failed with status:', dmsResponse.status);
+          console.error('DMs API failed:', dmsResult.error);
         }
 
         console.log('📂 ChatSidebar loaded chats:', { 
@@ -237,16 +227,13 @@ export default function ChatSidebar({
   useEffect(() => {
     const loadOnlineUsers = async () => {
       try {
-        const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
-        if (!token || !currentUser) return;
+        if (!currentUser) return;
 
         // Use the same endpoint as CreateChatModal for consistency
-        const response = await fetch('/api/chat/users', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const result = await apiClient.makeRequest('chat', 'get_users', {});
 
-        if (response.ok) {
-          const data = await response.json();
+        if (result.success) {
+          const data = result.data;
           
           if (data.users) {
             // Get online and away users, prioritize team members
@@ -359,44 +346,14 @@ export default function ChatSidebar({
   // Handle creating DM directly from online users
   const handleCreateDM = async (user: User) => {
     try {
-      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
-      if (!token) {
-        console.error('No authentication token');
-        return;
-      }
-
       console.log('🔗 Creating DM with user:', user.display_name);
 
-      const response = await fetch('/api/chat/dm', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          targetUsername: user.username
-        })
+      const result = await apiClient.makeRequest('chat', 'create_direct_message', {
+        targetUsername: user.username
       });
 
-      if (!response.ok) {
-        let errorMessage = 'Failed to create DM';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (parseError) {
-          console.error('Failed to parse error response:', parseError);
-          errorMessage = `HTTP ${response.status} - ${response.statusText}`;
-        }
-        console.error('Failed to create DM:', errorMessage);
-        return;
-      }
-
-      let result;
-      try {
-        result = await response.json();
-      } catch (parseError) {
-        console.error('Failed to parse DM creation response:', parseError);
-        console.error('Response status:', response.status, response.statusText);
+      if (!result.success) {
+        console.error('Failed to create DM:', result.error);
         return;
       }
       console.log('✅ DM created/found:', result);
@@ -404,7 +361,7 @@ export default function ChatSidebar({
       // Create a basic ChatItem and select it immediately
       // Use the target user info since this is who we're chatting with
       const dmChat: ChatItem = {
-        id: result.dmId.toString(),
+        id: result.data?.dmId?.toString() || result.data?.id?.toString(),
         type: 'dm',
         name: user.username,
         displayName: user.display_name,

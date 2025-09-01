@@ -326,20 +326,8 @@ export default function HelpdeskQueue() {
     
     try {
       setLoadingAttachments(true);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/staff/tickets/attachments?ticketId=${ticketId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setTicketAttachments(data.attachments || []);
-      } else {
-        console.error('Failed to load attachments');
-        setTicketAttachments([]);
-      }
+      const result = await apiClient.makeRequest('tickets', 'get_attachments', { ticket_id: ticketId });
+      setTicketAttachments(result.data?.attachments || []);
     } catch (error) {
       console.error('Error loading attachments:', error);
       setTicketAttachments([]);
@@ -351,15 +339,18 @@ export default function HelpdeskQueue() {
   // Download attachment
   const downloadAttachment = async (attachmentId: number, filename: string) => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/staff/tickets/attachments/${attachmentId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const result = await apiClient.makeRequest('tickets', 'download_attachment', { attachment_id: attachmentId });
       
-      if (response.ok) {
-        const blob = await response.blob();
+      if (result.success && result.data?.file_data) {
+        // Convert base64 to blob
+        const byteCharacters = atob(result.data.file_data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: result.data.mime_type });
+        
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.style.display = 'none';
@@ -616,14 +607,9 @@ export default function HelpdeskQueue() {
   const loadAssignableUsers = async () => {
     setLoadingAssignableUsers(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/users/assignable', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAssignableUsers(data.users || []);
-      }
+      const result = await apiClient.getUsers({ assignable: true });
+      const users = result.data?.users || result.data || [];
+      setAssignableUsers(users);
     } catch (error) {
       console.error('Error loading assignable users:', error);
     } finally {
@@ -635,14 +621,9 @@ export default function HelpdeskQueue() {
     if (!canAssignCrossTeam()) return;
     setLoadingTeams(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/helpdesk/teams', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableTeams(data.data?.all_teams || []);
-      }
+      const result = await apiClient.getHelpdeskTeams();
+      const teams = result.data?.all_teams || result.data || [];
+      setAvailableTeams(teams);
     } catch (error) {
       console.error('Error loading available teams:', error);
     } finally {
@@ -652,26 +633,20 @@ export default function HelpdeskQueue() {
 
   const loadDropdownData = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const [categoriesRes, orgRes] = await Promise.all([
-        fetch('/api/ticket-data/categories', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch('/api/ticket-data/organization', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
+      const [categoriesResult, orgResult] = await Promise.all([
+        apiClient.getTicketCategories(),
+        apiClient.getOrganizations()
       ]);
       
-      if (categoriesRes.ok) {
-        const catData = await categoriesRes.json();
+      if (categoriesResult.success) {
+        const catData = categoriesResult.data;
         setCategories(catData.categories || {});
         setRequestTypes(catData.requestTypes || {});
         setSubcategories(catData.subcategories || {});
       }
       
-      if (orgRes.ok) {
-        const orgData = await orgRes.json();
-        setOrganizationalData(orgData || {});
+      if (orgResult.success) {
+        setOrganizationalData(orgResult.data || {});
       }
     } catch (error) {
       console.error('Error loading dropdown data:', error);
@@ -755,29 +730,23 @@ export default function HelpdeskQueue() {
       const token = localStorage.getItem('authToken');
       console.log('📤 Sending PUT request with data:', selectedTicket);
       
-      const response = await fetch(`/api/tickets/${selectedTicket.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(selectedTicket)
+      const result = await apiClient.makeRequest('tickets', 'update', {
+        ticket_id: selectedTicket.id,
+        ...selectedTicket
       });
       
-      console.log('📥 Server response:', response.status, response.statusText);
+      console.log('📥 API Gateway response:', result);
       
-      if (response.ok) {
-        const responseData = await response.json();
-        console.log('✅ Save successful:', responseData);
+      if (result.success) {
+        console.log('✅ Save successful:', result.data);
         
         setSaveStatus('saved');
         setOriginalTicket({...selectedTicket});
         showNotification('Ticket updated successfully', 'success');
         setTimeout(() => setSaveStatus('idle'), 2000);
       } else {
-        const errorText = await response.text();
-        console.error('❌ Save failed:', response.status, errorText);
-        throw new Error(`Failed to save ticket: ${response.status}`);
+        console.error('❌ Save failed:', result.error);
+        throw new Error(result.error || 'Failed to save ticket');
       }
     } catch (error) {
       console.error('💥 Save error:', error);
@@ -809,14 +778,10 @@ export default function HelpdeskQueue() {
   const loadTicketComments = async (ticketId: string) => {
     setLoadingComments(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/tickets/${ticketId}/comments`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setTicketComments(data.comments || []);
-        setUnreadCommentsCount(data.unread_count || 0);
+      const result = await apiClient.makeRequest('tickets', 'get_comments', { ticket_id: ticketId });
+      if (result.success) {
+        setTicketComments(result.data?.comments || []);
+        setUnreadCommentsCount(result.data?.unread_count || 0);
       }
     } catch (error) {
       console.error('Error loading comments:', error);
@@ -829,24 +794,16 @@ export default function HelpdeskQueue() {
     if (!selectedTicket) return;
     
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/tickets/${selectedTicket.id}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ comment_text: commentText })
+      const result = await apiClient.makeRequest('tickets', 'add_comment', {
+        ticket_id: selectedTicket.id,
+        comment_text: commentText
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        setTicketComments(prev => [...prev, data.comment]);
+      if (result.success) {
+        setTicketComments(prev => [...prev, result.data?.comment]);
         showNotification('Comment added successfully', 'success');
       } else {
-        const errorData = await response.text();
-        console.error('Comment API error:', response.status, errorData);
-        throw new Error(`Failed to add comment: ${response.status} - ${errorData}`);
+        throw new Error(result.error || 'Failed to add comment');
       }
     } catch (error) {
       console.error('Error adding comment:', error);
@@ -859,17 +816,16 @@ export default function HelpdeskQueue() {
     if (!selectedTicket) return;
     
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/tickets/${selectedTicket.id}/comments/${commentId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+      const result = await apiClient.makeRequest('tickets', 'delete_comment', {
+        ticket_id: selectedTicket.id,
+        comment_id: commentId
       });
       
-      if (response.ok) {
+      if (result.success) {
         setTicketComments(prev => prev.filter(comment => comment.id !== commentId));
         showNotification('Comment deleted successfully', 'success');
       } else {
-        throw new Error('Failed to delete comment');
+        throw new Error(result.error || 'Failed to delete comment');
       }
     } catch (error) {
       console.error('Error deleting comment:', error);
@@ -882,13 +838,11 @@ export default function HelpdeskQueue() {
     if (!selectedTicket) return;
     
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/tickets/${selectedTicket.id}/comments/read`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+      const result = await apiClient.makeRequest('tickets', 'mark_comments_read', {
+        ticket_id: selectedTicket.id
       });
       
-      if (response.ok) {
+      if (result.success) {
         setUnreadCommentsCount(0);
       }
     } catch (error) {
@@ -1439,32 +1393,22 @@ export default function HelpdeskQueue() {
             try {
               console.log('🎫 Creating ticket via helpdesk queue onSubmit:', ticketData);
               
-              // Create the ticket via API
-              const token = localStorage.getItem('authToken');
-              const response = await fetch('/api/staff/tickets', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                  ...ticketData,
-                  createdByStaff: currentUser?.username,
-                  submittedDate: new Date().toISOString()
-                })
+              // Create the ticket via API Gateway
+              const result = await apiClient.makeRequest('tickets', 'create', {
+                ...ticketData,
+                createdByStaff: currentUser?.username,
+                submittedDate: new Date().toISOString()
               });
 
-              if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Failed to create ticket: ${response.status} ${errorText}`);
+              if (!result.success) {
+                throw new Error(result.error || 'Failed to create ticket');
               }
 
-              const result = await response.json();
               console.log('✅ Ticket created successfully:', result);
 
               // After successful ticket creation, refresh the tickets
               await handleRefresh();
-              showNotification(`Ticket ${result.ticketId} created successfully`, 'success');
+              showNotification(`Ticket ${result.data?.ticketId || result.data?.ticket_id} created successfully`, 'success');
             } catch (error) {
               console.error('❌ Error creating ticket:', error);
               showNotification('Failed to create ticket. Please try again.', 'error');
@@ -1516,11 +1460,8 @@ export default function HelpdeskQueue() {
           try {
             console.log(`📎 Uploading ${files.length} files for ticket ${selectedTicket.id}...`);
             
-            const token = localStorage.getItem('authToken');
-            const uploadFormData = new FormData();
-            
-            // Add all files to form data
-            Array.from(files).forEach((file) => {
+            // Validate files
+            const validatedFiles = Array.from(files).map((file) => {
               // Validate file size (max 10MB)
               if (file.size > 10 * 1024 * 1024) {
                 throw new Error(`${file.name} exceeds 10MB limit`);
@@ -1547,35 +1488,32 @@ export default function HelpdeskQueue() {
                 throw new Error(`${file.name} - File type not allowed`);
               }
               
-              uploadFormData.append('files', file);
+              return file;
             });
             
-            uploadFormData.append('ticketId', selectedTicket.id);
-            
-            // Upload files
-            const uploadResponse = await fetch('/api/staff/tickets/attachments', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`
-              },
-              body: uploadFormData
+            // Upload files via API Gateway
+            const uploadResult = await apiClient.makeRequest('tickets', 'upload_attachments', {
+              ticket_id: selectedTicket.id,
+              files: validatedFiles.map(file => ({
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                data: file // This will need to be handled by the API Gateway
+              }))
             });
             
-            if (!uploadResponse.ok) {
-              const errorText = await uploadResponse.text();
-              throw new Error(`Upload failed: ${uploadResponse.status} ${errorText}`);
+            if (!uploadResult.success) {
+              throw new Error(uploadResult.error || 'Upload failed');
             }
-            
-            const uploadResult = await uploadResponse.json();
             console.log('✅ Files uploaded successfully:', uploadResult);
             
-            showNotification(`${uploadResult.files?.length || 0} file(s) uploaded successfully`, 'success');
+            showNotification(`${uploadResult.data?.files?.length || 0} file(s) uploaded successfully`, 'success');
             
             // Refresh attachments list
             loadTicketAttachments(selectedTicket.id);
             
-            if (uploadResult.errors && uploadResult.errors.length > 0) {
-              showNotification(`Some files failed: ${uploadResult.errors.join(', ')}`, 'error');
+            if (uploadResult.data?.errors && uploadResult.data.errors.length > 0) {
+              showNotification(`Some files failed: ${uploadResult.data.errors.join(', ')}`, 'error');
             }
           } catch (error) {
             console.error('❌ File upload error:', error);
@@ -1588,20 +1526,13 @@ export default function HelpdeskQueue() {
           try {
             console.log(`🗑️ Deleting attachment ${attachmentId}...`);
             
-            const token = localStorage.getItem('authToken');
-            const response = await fetch(`/api/staff/tickets/attachments/${attachmentId}`, {
-              method: 'DELETE',
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
+            const result = await apiClient.makeRequest('tickets', 'delete_attachment', {
+              attachment_id: attachmentId
             });
             
-            if (!response.ok) {
-              const errorText = await response.text();
-              throw new Error(`Delete failed: ${response.status} ${errorText}`);
+            if (!result.success) {
+              throw new Error(result.error || 'Delete failed');
             }
-            
-            const result = await response.json();
             console.log('✅ Attachment deleted successfully:', result);
             
             showNotification('File deleted successfully', 'success');
