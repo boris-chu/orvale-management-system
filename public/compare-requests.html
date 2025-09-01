@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Request Comparison</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        button { padding: 10px 20px; background: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px; }
+        .test { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 4px; }
+        .success { border-color: #4CAF50; background: #e8f5e9; }
+        .error { border-color: #f44336; background: #ffebee; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Request Comparison Test</h1>
+    
+    <button onclick="testHardcodedCredentials()">Test Hardcoded Credentials</button>
+    <button onclick="testFormInputs()">Test Form Inputs</button>
+    <button onclick="compareRequests()">Compare All Methods</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        async function testHardcodedCredentials() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="test">Testing with hardcoded credentials...</div>';
+            
+            try {
+                // Exactly what works in curl
+                const response = await fetch('/api/v1', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        service: 'auth',
+                        action: 'login',
+                        data: {
+                            username: 'e603876',
+                            password: 'admin123'
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                resultsDiv.innerHTML = `
+                    <div class="test ${response.ok ? 'success' : 'error'}">
+                        <h3>Hardcoded Credentials Test</h3>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Success:</strong> ${response.ok && result.success}</p>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="test error"><h3>Error:</h3><pre>${error.message}</pre></div>`;
+            }
+        }
+        
+        async function testFormInputs() {
+            const resultsDiv = document.getElementById('results');
+            
+            // Create form inputs
+            const formDiv = document.createElement('div');
+            formDiv.innerHTML = `
+                <div class="test">
+                    <h3>Form Input Test</h3>
+                    <input type="text" id="testUsername" value="e603876" placeholder="Username">
+                    <input type="password" id="testPassword" value="admin123" placeholder="Password">
+                    <button onclick="submitFormTest()">Submit</button>
+                    <div id="formResult"></div>
+                </div>
+            `;
+            
+            resultsDiv.appendChild(formDiv);
+        }
+        
+        window.submitFormTest = async function() {
+            const username = document.getElementById('testUsername').value;
+            const password = document.getElementById('testPassword').value;
+            const resultDiv = document.getElementById('formResult');
+            
+            console.log('Form test - Username:', username, 'Password length:', password.length);
+            
+            try {
+                const response = await fetch('/api/v1', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        service: 'auth',
+                        action: 'login',
+                        data: { username, password }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Success:</strong> ${response.ok && result.success}</p>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+            }
+        };
+        
+        async function compareRequests() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="test">Running comparison tests...</div>';
+            
+            const tests = [];
+            
+            // Test 1: Direct string
+            tests.push({
+                name: 'Direct String',
+                body: '{"service":"auth","action":"login","data":{"username":"e603876","password":"admin123"}}'
+            });
+            
+            // Test 2: JSON.stringify
+            tests.push({
+                name: 'JSON.stringify',
+                body: JSON.stringify({
+                    service: 'auth',
+                    action: 'login',
+                    data: {
+                        username: 'e603876',
+                        password: 'admin123'
+                    }
+                })
+            });
+            
+            // Test 3: With explicit string types
+            tests.push({
+                name: 'Explicit Strings',
+                body: JSON.stringify({
+                    service: String('auth'),
+                    action: String('login'),
+                    data: {
+                        username: String('e603876'),
+                        password: String('admin123')
+                    }
+                })
+            });
+            
+            const results = [];
+            
+            for (const test of tests) {
+                try {
+                    const response = await fetch('/api/v1', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: test.body
+                    });
+                    
+                    const result = await response.json();
+                    
+                    results.push({
+                        name: test.name,
+                        status: response.status,
+                        success: response.ok && result.success,
+                        result: result,
+                        body: test.body
+                    });
+                    
+                } catch (error) {
+                    results.push({
+                        name: test.name,
+                        error: error.message
+                    });
+                }
+            }
+            
+            // Display results
+            let html = '';
+            results.forEach(test => {
+                html += `
+                    <div class="test ${test.success ? 'success' : 'error'}">
+                        <h3>${test.name}</h3>
+                        <p><strong>Status:</strong> ${test.status || 'Error'}</p>
+                        <p><strong>Success:</strong> ${test.success || false}</p>
+                        ${test.error ? `<p><strong>Error:</strong> ${test.error}</p>` : ''}
+                        ${test.result ? `<pre>${JSON.stringify(test.result, null, 2)}</pre>` : ''}
+                        <p><strong>Request Body:</strong></p>
+                        <pre>${test.body || 'N/A'}</pre>
+                    </div>
+                `;
+            });
+            
+            resultsDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

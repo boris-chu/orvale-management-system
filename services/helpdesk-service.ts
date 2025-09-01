@@ -200,12 +200,86 @@ export class HelpdeskService extends BaseService {
       });
     }
     
+    // Get user's team preferences to determine which teams to show
+    let userTeams = [];
+    try {
+      const preferences = await queryAsync(`
+        SELECT 
+          htp.team_id,
+          htp.is_visible,
+          htp.tab_order,
+          t.name as team_name,
+          t.description as team_label
+        FROM helpdesk_team_preferences htp
+        LEFT JOIN teams t ON htp.team_id = t.id
+        WHERE htp.user_id = ? AND htp.is_visible = 1 AND t.active = TRUE
+        ORDER BY htp.tab_order
+      `, [context.user?.username]);
+      
+      if (preferences && preferences.length > 0) {
+        userTeams = preferences.map((pref: any) => {
+          const teamStat = teamStats.find((ts: any) => ts.team_id === pref.team_id);
+          return {
+            team_id: pref.team_id,
+            team_name: pref.team_name,
+            team_label: pref.team_label || pref.team_name,
+            tab_order: pref.tab_order,
+            statusCounts: {
+              pending: teamStat?.open_tickets || 0,
+              in_progress: teamStat?.in_progress_tickets || 0,
+              completed: 0, // Would need separate query for completed
+              escalated: 0, // Would need separate query for escalated
+              deleted: 0
+            },
+            totalTickets: teamStat?.total_tickets || 0
+          };
+        });
+      } else {
+        // No preferences set, show all teams user has access to
+        const availableTeams = await queryAsync(`
+          SELECT 
+            t.id as team_id,
+            t.name as team_name,
+            t.description as team_label
+          FROM teams t
+          WHERE t.active = TRUE AND t.id IN (
+            SELECT DISTINCT ut.assigned_team 
+            FROM user_tickets ut 
+            WHERE ut.assigned_team IS NOT NULL
+          )
+          ORDER BY t.name
+          LIMIT 10
+        `);
+        
+        userTeams = availableTeams.map((team: any, index: number) => {
+          const teamStat = teamStats.find((ts: any) => ts.team_id === team.team_id);
+          return {
+            team_id: team.team_id,
+            team_name: team.team_name,
+            team_label: team.team_label || team.team_name,
+            tab_order: index + 1,
+            statusCounts: {
+              pending: teamStat?.open_tickets || 0,
+              in_progress: teamStat?.in_progress_tickets || 0,
+              completed: 0,
+              escalated: 0,
+              deleted: 0
+            },
+            totalTickets: teamStat?.total_tickets || 0
+          };
+        });
+      }
+    } catch (prefError) {
+      this.log(context, 'Could not load team preferences, showing default teams', { error: prefError.message });
+    }
+
     return this.createPaginatedResponse(
       tickets,
       countResult[0]?.total || 0,
       Math.floor(offset / limit) + 1,
       limit,
       {
+        userTeams: userTeams,
         team_statistics: teamStats,
         applied_filters: {
           teams,
@@ -420,10 +494,10 @@ export class HelpdeskService extends BaseService {
   private async updateTeamPreferences(data: any, context: RequestContext): Promise<any> {
     this.requirePermission(context, 'helpdesk.multi_queue_access');
     
-    this.validateRequiredFields(data, ['preferences']);
     const { 
       username = context.user?.username, 
-      preferences 
+      preferences,
+      teamPreferences
     } = data;
     
     if (!username) {
@@ -435,21 +509,36 @@ export class HelpdeskService extends BaseService {
       this.requirePermission(context, 'helpdesk.view_team_metrics');
     }
     
-    this.log(context, 'Updating team preferences', { username, preferenceKeys: Object.keys(preferences) });
+    // Handle both old format (preferences.preferred_teams) and new format (teamPreferences array)
+    let teamPrefArray = [];
     
-    // Extract preferred teams from preferences
-    const preferredTeams = Array.isArray(preferences.preferred_teams) ? preferences.preferred_teams : [];
+    if (teamPreferences && Array.isArray(teamPreferences)) {
+      // New format from HelpdeskTeamSettings component
+      teamPrefArray = teamPreferences;
+    } else if (preferences && Array.isArray(preferences.preferred_teams)) {
+      // Old format - convert to new format
+      teamPrefArray = preferences.preferred_teams.map((teamId: string, index: number) => ({
+        team_id: teamId,
+        is_visible: true,
+        tab_order: index + 1
+      }));
+    }
+    
+    this.log(context, 'Updating team preferences', { username, teamCount: teamPrefArray.length });
+    
+    // Extract team IDs for validation
+    const teamIds = teamPrefArray.map((pref: any) => pref.team_id);
     
     // Validate team IDs exist
-    if (preferredTeams.length > 0) {
+    if (teamIds.length > 0) {
       const teamCheck = await queryAsync(`
         SELECT COUNT(*) as count
         FROM teams 
-        WHERE id IN (${preferredTeams.map(() => '?').join(',')})
+        WHERE id IN (${teamIds.map(() => '?').join(',')})
         AND active = TRUE
-      `, preferredTeams);
+      `, teamIds);
       
-      if (teamCheck[0]?.count !== preferredTeams.length) {
+      if (teamCheck[0]?.count !== teamIds.length) {
         throw new ValidationError('Some selected teams do not exist or are inactive');
       }
     }
@@ -460,26 +549,26 @@ export class HelpdeskService extends BaseService {
     `, [username]);
     
     // Insert new preferences
-    if (preferredTeams.length > 0) {
-      const insertPromises = preferredTeams.map((teamId: string, index: number) =>
+    if (teamPrefArray.length > 0) {
+      const insertPromises = teamPrefArray.map((pref: any) =>
         runAsync(`
           INSERT INTO helpdesk_team_preferences 
           (user_id, team_id, is_visible, tab_order)
           VALUES (?, ?, ?, ?)
-        `, [username, teamId, true, index + 1])
+        `, [username, pref.team_id, pref.is_visible ? 1 : 0, pref.tab_order])
       );
       
       await Promise.all(insertPromises);
     }
     
     // Get updated preferences with team names
-    const teamNames = {};
-    if (preferredTeams.length > 0) {
+    const teamNames: any = {};
+    if (teamIds.length > 0) {
       const teams = await queryAsync(`
         SELECT id, name
         FROM teams 
-        WHERE id IN (${preferredTeams.map(() => '?').join(',')})
-      `, preferredTeams);
+        WHERE id IN (${teamIds.map(() => '?').join(',')})
+      `, teamIds);
       
       teams.forEach((team: any) => {
         teamNames[team.id] = team.name;
@@ -488,17 +577,18 @@ export class HelpdeskService extends BaseService {
     
     return this.success({
       username,
+      message: 'Team preferences updated successfully',
       preferences: {
-        preferred_teams: preferredTeams,
-        team_order: preferredTeams,
-        show_all_teams: preferredTeams.length === 0,
-        default_view: preferredTeams.length > 0 ? 'preferred_teams' : 'all_teams',
-        auto_refresh_interval: parseInt(preferences.auto_refresh_interval) || 30,
-        show_team_stats: typeof preferences.show_team_stats === 'boolean' ? preferences.show_team_stats : true,
-        show_unassigned_first: typeof preferences.show_unassigned_first === 'boolean' ? preferences.show_unassigned_first : true,
-        notifications_enabled: typeof preferences.notifications_enabled === 'boolean' ? preferences.notifications_enabled : true,
-        sound_notifications: typeof preferences.sound_notifications === 'boolean' ? preferences.sound_notifications : false,
-        desktop_notifications: typeof preferences.desktop_notifications === 'boolean' ? preferences.desktop_notifications : true,
+        preferred_teams: teamIds,
+        team_order: teamIds,
+        show_all_teams: teamIds.length === 0,
+        default_view: teamIds.length > 0 ? 'preferred_teams' : 'all_teams',
+        auto_refresh_interval: 30,
+        show_team_stats: true,
+        show_unassigned_first: true,
+        notifications_enabled: true,
+        sound_notifications: false,
+        desktop_notifications: true,
         team_names: teamNames
       },
       updated_by: context.user!.username

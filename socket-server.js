@@ -50,7 +50,7 @@ const server = http.createServer((req, res) => {
 });
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:80",
+    origin: ["http://localhost", "http://localhost:80", "http://127.0.0.1", "http://127.0.0.1:80"],
     methods: ["GET", "POST"],
     credentials: true
   },

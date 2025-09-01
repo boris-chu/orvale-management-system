@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Recovery Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        button { padding: 15px; margin: 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 4px; }
+        .success { border-color: #4CAF50; background: #e8f5e9; }
+        .error { border-color: #f44336; background: #ffebee; }
+        pre { background: #f5f5f5; padding: 10px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🌐 Network Recovery Test</h1>
+    
+    <button onclick="testConnectivity()">Test Basic Connectivity</button>
+    <button onclick="testAPIGateway()">Test API Gateway</button>
+    <button onclick="testAuthentication()">Test Authentication Flow</button>
+    <button onclick="runFullRecovery()">Full Recovery Test</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        const resultsDiv = document.getElementById('results');
+        
+        async function testConnectivity() {
+            resultsDiv.innerHTML = '<div class="test">Testing basic connectivity...</div>';
+            
+            const tests = [
+                { name: 'Main Server', url: '/api/health' },
+                { name: 'Socket.io', url: 'http://localhost:3001/socket.io/socket.io.js' },
+                { name: 'Static Assets', url: '/favicon.ico' }
+            ];
+            
+            const results = [];
+            
+            for (const test of tests) {
+                try {
+                    const controller = new AbortController();
+                    setTimeout(() => controller.abort(), 5000);
+                    
+                    const response = await fetch(test.url, {
+                        signal: controller.signal,
+                        cache: 'no-cache'
+                    });
+                    
+                    results.push({
+                        name: test.name,
+                        success: response.ok,
+                        status: response.status,
+                        statusText: response.statusText
+                    });
+                } catch (error) {
+                    results.push({
+                        name: test.name,
+                        success: false,
+                        error: error.message
+                    });
+                }
+            }
+            
+            displayResults(results);
+        }
+        
+        async function testAPIGateway() {
+            resultsDiv.innerHTML = '<div class="test">Testing API Gateway...</div>';
+            
+            try {
+                const controller = new AbortController();
+                setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch('/api/v1', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        service: 'auth',
+                        action: 'verify_token',
+                        data: {}
+                    }),
+                    signal: controller.signal,
+                    cache: 'no-cache'
+                });
+                
+                const result = await response.json();
+                
+                resultsDiv.innerHTML = `
+                    <div class="test ${response.ok ? 'success' : 'error'}">
+                        <h3>API Gateway Test</h3>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Success:</strong> ${response.ok}</p>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="test error">
+                        <h3>API Gateway Test Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Name:</strong> ${error.name}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function testAuthentication() {
+            resultsDiv.innerHTML = '<div class="test">Testing authentication flow...</div>';
+            
+            try {
+                // Step 1: Login
+                const loginResponse = await fetch('/api/v1', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        service: 'auth',
+                        action: 'login',
+                        data: { username: 'e999991', password: 'admin123' }
+                    }),
+                    cache: 'no-cache'
+                });
+                
+                const loginResult = await loginResponse.json();
+                
+                if (!loginResult.success || !loginResult.data?.data?.token) {
+                    throw new Error('Login failed: ' + (loginResult.error || 'No token received'));
+                }
+                
+                const token = loginResult.data.data.token;
+                
+                // Step 2: Test authenticated request
+                const userResponse = await fetch('/api/v1', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        service: 'auth',
+                        action: 'get_current_user',
+                        data: {}
+                    }),
+                    cache: 'no-cache'
+                });
+                
+                const userResult = await userResponse.json();
+                
+                resultsDiv.innerHTML = `
+                    <div class="test success">
+                        <h3>Authentication Test - SUCCESS</h3>
+                        <p><strong>Login Status:</strong> ${loginResponse.status}</p>
+                        <p><strong>User Request Status:</strong> ${userResponse.status}</p>
+                        <p><strong>User:</strong> ${userResult.data?.user?.display_name || 'N/A'}</p>
+                        <p><strong>Token:</strong> ${token.substring(0, 20)}...</p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="test error">
+                        <h3>Authentication Test - FAILED</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function runFullRecovery() {
+            resultsDiv.innerHTML = '<div class="test">Running full recovery test...</div>';
+            
+            // Clear any cached data
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Wait a moment
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Test all systems
+            await testConnectivity();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testAPIGateway();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testAuthentication();
+        }
+        
+        function displayResults(results) {
+            let html = '';
+            results.forEach(result => {
+                html += `
+                    <div class="test ${result.success ? 'success' : 'error'}">
+                        <h4>${result.name}</h4>
+                        <p><strong>Status:</strong> ${result.status || 'Failed'} ${result.statusText || ''}</p>
+                        <p><strong>Success:</strong> ${result.success}</p>
+                        ${result.error ? `<p><strong>Error:</strong> ${result.error}</p>` : ''}
+                    </div>
+                `;
+            });
+            resultsDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

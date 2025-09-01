@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        button { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .result { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9; }
+        .success { border-color: #4CAF50; background: #e8f5e9; }
+        .error { border-color: #f44336; background: #ffebee; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Login Debug Test</h1>
+    <p>Test login with e603876 / admin123</p>
+    
+    <button onclick="testLogin()">Test Login</button>
+    <div id="result"></div>
+    
+    <script>
+        async function testLogin() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testing login...</p>';
+            
+            try {
+                const response = await fetch('/api/v1', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        service: 'auth',
+                        action: 'login',
+                        data: {
+                            username: 'e603876',
+                            password: 'admin123'
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                resultDiv.className = 'result';
+                resultDiv.innerHTML = '<h3>Response Debug:</h3>' +
+                    '<p><strong>Status:</strong> ' + response.status + '</p>' +
+                    '<p><strong>Response OK:</strong> ' + response.ok + '</p>' +
+                    '<p><strong>Result Success:</strong> ' + result.success + '</p>' +
+                    '<p><strong>Has result.data:</strong> ' + (!!result.data) + '</p>' +
+                    '<p><strong>Has result.data.data:</strong> ' + (!!result.data?.data) + '</p>' +
+                    '<p><strong>Has Token:</strong> ' + (!!result.data?.data?.token) + '</p>' +
+                    '<p><strong>Has User:</strong> ' + (!!result.data?.data?.user) + '</p>' +
+                    '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                
+                // Test the actual login logic
+                if (response.ok && result.success && result.data?.data?.token) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = '<h3>✅ LOGIN SUCCESS!</h3>' +
+                        '<p><strong>User:</strong> ' + result.data.data.user.display_name + '</p>' +
+                        '<p><strong>Role:</strong> ' + result.data.data.user.role + '</p>' +
+                        '<p><strong>Token:</strong> ' + result.data.data.token.substring(0, 20) + '...</p>' +
+                        '<p>Login logic would succeed with these credentials!</p>';
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = '<h3>❌ LOGIN FAILED</h3>' +
+                        '<p>Login logic would fail. Check conditions above.</p>';
+                }
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = '<h3>❌ NETWORK ERROR</h3>' +
+                    '<p>' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

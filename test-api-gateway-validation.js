@@ -150,46 +150,43 @@ async function runAllTests() {
   // Skip actions that modify data for safety
   console.log(`${colors.yellow}Skipping write operations for safety...${colors.reset}`);
   
-  // Test HelpdeskService (9 actions)
-  console.log(`\n${colors.yellow}--- Testing HelpdeskService (9 actions) ---${colors.reset}`);
+  // Test HelpdeskService (4 actions - actual available actions)
+  console.log(`\n${colors.yellow}--- Testing HelpdeskService (4 actions) ---${colors.reset}`);
   
   await runTest('Helpdesk: Get Queue', 'helpdesk', 'get_queue');
   await runTest('Helpdesk: Get Teams', 'helpdesk', 'get_teams');
   await runTest('Helpdesk: Get Team Preferences', 'helpdesk', 'get_team_preferences');
-  await runTest('Helpdesk: Get Stats', 'helpdesk', 'get_stats');
-  await runTest('Helpdesk: Get Ticket History', 'helpdesk', 'get_ticket_history', { ticket_id: 1 });
+  await runTest('Helpdesk: Update Team Preferences', 'helpdesk', 'update_team_preferences', { preferences: {} });
   
-  // Test DeveloperService (21 actions)
-  console.log(`\n${colors.yellow}--- Testing DeveloperService (21 actions) ---${colors.reset}`);
+  // Test DeveloperService (actual available actions)
+  console.log(`\n${colors.yellow}--- Testing DeveloperService (actual available actions) ---${colors.reset}`);
   
+  await runTest('Developer: Get Analytics', 'developer', 'get_analytics');
   await runTest('Developer: Get Stats', 'developer', 'get_stats');
-  await runTest('Developer: Get System Health', 'developer', 'get_system_health');
-  await runTest('Developer: Get System Logs', 'developer', 'get_system_logs', { limit: 10 });
-  await runTest('Developer: Get Backup History', 'developer', 'get_backup_history');
-  await runTest('Developer: Get API Endpoints', 'developer', 'get_api_endpoints');
+  await runTest('Developer: Get Settings', 'developer', 'get_settings');
+  await runTest('Developer: Get Backup Status', 'developer', 'get_backup_status');
   await runTest('Developer: Get Users', 'developer', 'get_users');
-  await runTest('Developer: Get Database Schema', 'developer', 'get_database_schema');
-  await runTest('Developer: Get Database Stats', 'developer', 'get_database_stats');
-  await runTest('Developer: Get Performance Metrics', 'developer', 'get_performance_metrics');
+  await runTest('Developer: Get Roles', 'developer', 'get_roles');
+  await runTest('Developer: Get Teams', 'developer', 'get_teams');
+  await runTest('Developer: Get Categories', 'developer', 'get_categories');
   
-  // Test UtilitiesService (7 actions)
-  console.log(`\n${colors.yellow}--- Testing UtilitiesService (7 actions) ---${colors.reset}`);
+  // Test UtilitiesService (actual available actions)
+  console.log(`\n${colors.yellow}--- Testing UtilitiesService (actual available actions) ---${colors.reset}`);
   
-  await runTest('Utilities: Get Organizations', 'utilities', 'get_organizations');
-  await runTest('Utilities: Get Offices', 'utilities', 'get_offices');
-  await runTest('Utilities: Get Bureaus', 'utilities', 'get_bureaus');
-  await runTest('Utilities: Get Divisions', 'utilities', 'get_divisions');
-  await runTest('Utilities: Get Sections', 'utilities', 'get_sections');
-  await runTest('Utilities: Get Ticket Categories', 'utilities', 'get_ticket_categories');
-  await runTest('Utilities: Get Request Types', 'utilities', 'get_request_types');
+  await runTest('Utilities: Get Organization', 'utilities', 'get_organization');
+  await runTest('Utilities: Get Categories', 'utilities', 'get_categories');
+  await runTest('Utilities: Get Assignable Users', 'utilities', 'get_assignable_users');
+  await runTest('Utilities: Get Support Teams', 'utilities', 'get_support_teams');
+  await runTest('Utilities: Get Simple Categories', 'utilities', 'get_simple_categories');
+  await runTest('Utilities: Get Profile Picture', 'utilities', 'get_profile_picture', { username: 'e603876' });
   
-  // Test PublicService (11 actions)
-  console.log(`\n${colors.yellow}--- Testing PublicService (11 actions) ---${colors.reset}`);
+  // Test PublicService (actual available actions)
+  console.log(`\n${colors.yellow}--- Testing PublicService (actual available actions) ---${colors.reset}`);
   
   await runTest('Public: Get Widget Settings', 'public', 'get_widget_settings', {}, false);
   await runTest('Public: Get Widget Status', 'public', 'get_widget_status', {}, false);
   await runTest('Public: Get Available Agents', 'public', 'get_available_agents', {}, false);
-  await runTest('Public: Get Guest Queue', 'public', 'get_guest_queue', {}, false);
+  await runTest('Public: Get Guest Queue', 'public', 'get_guest_queue');
   
   // Test session creation
   const sessionResult = await runTest('Public: Start Chat Session', 'public', 'start_chat_session', {
@@ -204,8 +201,12 @@ async function runAllTests() {
     await runTest('Public: Send Chat Message', 'public', 'send_chat_message', {
       session_id: sessionId,
       message: 'Test message',
-      message_type: 'text'
+      message_type: 'text',
+      sender_name: 'Test User'
     }, false);
+    await runTest('Public: Auto Assign Agent', 'public', 'auto_assign_agent', { session_id: sessionId });
+    await runTest('Public: Reconnect Session', 'public', 'reconnect_session', { session_id: sessionId }, false);
+    await runTest('Public: Return to Queue', 'public', 'return_to_queue', { session_id: sessionId });
   }
   
   // Print summary

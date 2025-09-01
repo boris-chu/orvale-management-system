@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Browser Storage</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; text-align: center; }
+        button { padding: 15px 30px; font-size: 16px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 10px; }
+        button:hover { background: #d32f2f; }
+        .success { color: #4CAF50; margin: 20px 0; }
+        .info { background: #e3f2fd; padding: 20px; border-radius: 5px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Clear Browser Storage</h1>
+    <div class="info">
+        <p><strong>Use this if you're experiencing login loops or authentication issues.</strong></p>
+        <p>This will clear all stored authentication tokens and user data.</p>
+    </div>
+    
+    <button onclick="clearStorage()">Clear All Storage</button>
+    <button onclick="clearAuthOnly()">Clear Auth Only</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        function clearStorage() {
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+                document.getElementById('result').innerHTML = '<div class="success">✅ All browser storage cleared!</div>';
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } catch (error) {
+                document.getElementById('result').innerHTML = '<div style="color: red;">❌ Error clearing storage: ' + error.message + '</div>';
+            }
+        }
+        
+        function clearAuthOnly() {
+            try {
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('token'); // old key
+                sessionStorage.removeItem('authToken');
+                sessionStorage.removeItem('currentUser');
+                
+                document.getElementById('result').innerHTML = '<div class="success">✅ Authentication data cleared!</div>';
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } catch (error) {
+                document.getElementById('result').innerHTML = '<div style="color: red;">❌ Error clearing auth data: ' + error.message + '</div>';
+            }
+        }
+        
+        // Show current storage state
+        window.onload = function() {
+            const hasAuthToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+            const hasCurrentUser = localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser');
+            
+            if (hasAuthToken || hasCurrentUser) {
+                document.getElementById('result').innerHTML = 
+                    '<div style="background: #fff3e0; padding: 15px; border-radius: 5px; margin: 20px 0;">' +
+                    '<strong>Current Storage:</strong><br>' +
+                    'Auth Token: ' + (hasAuthToken ? '✅ Found' : '❌ None') + '<br>' +
+                    'User Data: ' + (hasCurrentUser ? '✅ Found' : '❌ None') +
+                    '</div>';
+            }
+        };
+    </script>
+</body>
+</html>

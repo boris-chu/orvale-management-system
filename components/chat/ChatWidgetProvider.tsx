@@ -133,11 +133,23 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
 
   const loadWidgetSettings = async () => {
     try {
-      // Load widget settings from public API (no auth required)
-      console.log('🔧 Fetching widget settings from: /api/chat/widget-settings');
-      const settingsResponse = await fetch('/api/chat/widget-settings');
+      // Load widget settings through API Gateway (no auth required)
+      console.log('🔧 Fetching widget settings from API Gateway');
+      const settingsResponse = await fetch('/api/v1', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          service: 'public',
+          action: 'get_widget_settings',
+          data: {}
+        })
+      });
+      
       if (settingsResponse.ok) {
-        const widgetSettings = await settingsResponse.json();
+        const result = await settingsResponse.json();
+        const widgetSettings = result.data?.data || result.data;
         console.log('🔧 Loaded widget settings:', widgetSettings);
         
         setSettings(prev => ({

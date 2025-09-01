@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Keepalive Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        .status { padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #e8f5e9; border: 1px solid #4CAF50; }
+        .error { background: #ffebee; border: 1px solid #f44336; }
+        button { padding: 10px 20px; background: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🌐 Network Keepalive Test</h1>
+    <p>This keeps the network connection active to prevent suspension</p>
+    
+    <button onclick="startKeepalive()">Start Keepalive</button>
+    <button onclick="stopKeepalive()">Stop Keepalive</button>
+    <button onclick="testConnection()">Test Connection Now</button>
+    
+    <div id="status"></div>
+    <div id="log"></div>
+    
+    <script>
+        let keepaliveInterval = null;
+        let connectionCount = 0;
+        
+        function startKeepalive() {
+            if (keepaliveInterval) {
+                clearInterval(keepaliveInterval);
+            }
+            
+            keepaliveInterval = setInterval(async () => {
+                try {
+                    connectionCount++;
+                    const start = Date.now();
+                    
+                    // Ping the API Gateway
+                    const response = await fetch('/api/v1', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            service: 'auth',
+                            action: 'verify_token',
+                            data: {}
+                        }),
+                        cache: 'no-cache',
+                        keepalive: true
+                    });
+                    
+                    const duration = Date.now() - start;
+                    const timestamp = new Date().toLocaleTimeString();
+                    
+                    updateStatus('success', `✅ Keepalive ${connectionCount} - ${timestamp} (${duration}ms)`);
+                    
+                } catch (error) {
+                    const timestamp = new Date().toLocaleTimeString();
+                    updateStatus('error', `❌ Keepalive ${connectionCount} failed - ${timestamp}: ${error.message}`);
+                }
+            }, 2000); // Every 2 seconds
+            
+            updateStatus('success', '🚀 Keepalive started - pinging every 2 seconds');
+        }
+        
+        function stopKeepalive() {
+            if (keepaliveInterval) {
+                clearInterval(keepaliveInterval);
+                keepaliveInterval = null;
+                updateStatus('error', '⏹️ Keepalive stopped');
+            }
+        }
+        
+        async function testConnection() {
+            try {
+                const start = Date.now();
+                const response = await fetch('/api/health', { cache: 'no-cache' });
+                const duration = Date.now() - start;
+                const result = await response.json();
+                
+                updateStatus('success', `✅ Connection test passed (${duration}ms): ${result.message}`);
+                
+            } catch (error) {
+                updateStatus('error', `❌ Connection test failed: ${error.message}`);
+            }
+        }
+        
+        function updateStatus(type, message) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = 'status ' + type;
+            statusDiv.textContent = message;
+            
+            // Add to log
+            const logDiv = document.getElementById('log');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(logEntry);
+            
+            // Keep only last 20 log entries
+            while (logDiv.children.length > 20) {
+                logDiv.removeChild(logDiv.firstChild);
+            }
+        }
+        
+        // Auto-start keepalive
+        startKeepalive();
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            stopKeepalive();
+        });
+    </script>
+</body>
+</html>

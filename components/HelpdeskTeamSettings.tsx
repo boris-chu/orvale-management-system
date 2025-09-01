@@ -57,24 +57,50 @@ export default function HelpdeskTeamSettings({ open, onClose, onSaved }: Helpdes
   const loadPreferences = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/helpdesk/team-preferences', {
+      // Load team preferences through API Gateway
+      const preferencesResponse = await fetch('/api/v1', {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          service: 'helpdesk',
+          action: 'get_team_preferences',
+          data: {}
+        })
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setPreferences(data.preferences || []);
-        setAvailableTeams(data.availableTeams || []);
+      // Load available teams
+      const teamsResponse = await fetch('/api/v1', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          service: 'helpdesk',
+          action: 'get_teams',
+          data: {}
+        })
+      });
+
+      if (preferencesResponse.ok && teamsResponse.ok) {
+        const prefResult = await preferencesResponse.json();
+        const teamResult = await teamsResponse.json();
+        
+        const prefData = prefResult.data?.data || prefResult.data;
+        const teamData = teamResult.data?.data || teamResult.data;
+        
+        setPreferences(prefData.preferences || []);
+        setAvailableTeams(teamData.teams || []);
         
         // If user has no preferences yet, create default ones
-        if (data.preferences.length === 0 && data.availableTeams.length > 0) {
-          const defaultPrefs = data.availableTeams.map((team: any, index: number) => ({
+        if ((prefData.preferences || []).length === 0 && (teamData.teams || []).length > 0) {
+          const defaultPrefs = teamData.teams.map((team: any, index: number) => ({
             team_id: team.id,
             team_name: team.name,
-            team_label: team.label,
+            team_label: team.label || team.description,
             is_visible: true, // Show all teams by default
             tab_order: index + 1
           }));
@@ -94,31 +120,38 @@ export default function HelpdeskTeamSettings({ open, onClose, onSaved }: Helpdes
   const savePreferences = async () => {
     setSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/helpdesk/team-preferences', {
-        method: 'PUT',
+      const response = await fetch('/api/v1', {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         },
         body: JSON.stringify({
-          teamPreferences: preferences.map(pref => ({
-            team_id: pref.team_id,
-            is_visible: pref.is_visible,
-            tab_order: pref.tab_order
-          }))
+          service: 'helpdesk',
+          action: 'update_team_preferences',
+          data: {
+            teamPreferences: preferences.map(pref => ({
+              team_id: pref.team_id,
+              is_visible: pref.is_visible,
+              tab_order: pref.tab_order
+            }))
+          }
         })
       });
 
       if (response.ok) {
-        showNotification('Team preferences saved successfully', 'success');
-        onSaved(); // Notify parent to refresh
-        setTimeout(() => {
-          onClose();
-        }, 1000);
+        const result = await response.json();
+        if (result.success) {
+          showNotification('Team preferences saved successfully', 'success');
+          onSaved(); // Notify parent to refresh
+          setTimeout(() => {
+            onClose();
+          }, 1000);
+        } else {
+          showNotification(result.error || 'Failed to save preferences', 'error');
+        }
       } else {
-        const errorData = await response.json();
-        showNotification(errorData.error || 'Failed to save preferences', 'error');
+        showNotification('Failed to save preferences', 'error');
       }
     } catch (error) {
       console.error('Error saving preferences:', error);

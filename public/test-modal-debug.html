@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Modal Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        button { padding: 10px 20px; background: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px; }
+        .info { background: #e3f2fd; padding: 15px; border-radius: 4px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Modal Debug Test</h1>
+    
+    <div class="info">
+        <strong>Instructions:</strong>
+        <ol>
+            <li>Open browser developer tools (F12)</li>
+            <li>Go to the main page: <a href="/" target="_blank">http://localhost/</a></li>
+            <li>Click "Access Queue" to open the login modal</li>
+            <li>Enter credentials: e603876 / admin123</li>
+            <li>Watch the Network tab and Console tab for errors</li>
+        </ol>
+    </div>
+    
+    <button onclick="window.open('/', '_blank')">Open Main Page</button>
+    <button onclick="window.open('/test-login.html', '_blank')">Open Debug Test (Working)</button>
+    
+    <h3>🔍 Debug Checklist:</h3>
+    <ul>
+        <li><strong>Network Tab:</strong> Look for the POST request to /api/v1</li>
+        <li><strong>Request Body:</strong> Should be {"service":"auth","action":"login","data":{"username":"e603876","password":"admin123"}}</li>
+        <li><strong>Response:</strong> Should have success:true and nested data structure</li>
+        <li><strong>Console:</strong> Look for any JavaScript errors or warnings</li>
+        <li><strong>Application Tab:</strong> Check localStorage for authToken after login attempt</li>
+    </ul>
+    
+    <h3>🐛 Common Issues:</h3>
+    <ul>
+        <li><strong>Wrong endpoint:</strong> If you see /api/auth/login instead of /api/v1, the cache needs clearing</li>
+        <li><strong>CORS errors:</strong> Refresh the page and try again</li>
+        <li><strong>JavaScript errors:</strong> Check if there are any component errors</li>
+        <li><strong>Response parsing:</strong> Verify the response structure matches expected format</li>
+    </ul>
+    
+    <script>
+        // Test if we can reach the API Gateway
+        fetch('/api/v1', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                service: 'auth', 
+                action: 'verify_token', 
+                data: {}
+            })
+        })
+        .then(response => response.json())
+        .then(result => {
+            console.log('✅ API Gateway is accessible:', result);
+        })
+        .catch(error => {
+            console.error('❌ API Gateway connection failed:', error);
+        });
+    </script>
+</body>
+</html>

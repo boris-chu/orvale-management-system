@@ -157,7 +157,7 @@ export default function UserManagement() {
   const loadUsers = async () => {
     try {
       const result = await apiClient.getDeveloperUsers();
-      setUsers(result.data);
+      setUsers(result.data.items || []);
     } catch (error) {
       console.error('Failed to load users:', error);
       showNotification('Error loading users', 'error');
@@ -213,36 +213,22 @@ export default function UserManagement() {
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/users', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
+      await apiClient.createDeveloperUser(formData);
+      showNotification('User created successfully', 'success');
+      setShowCreateModal(false);
+      setFormData({
+        username: '',
+        display_name: '',
+        email: '',
+        password: '',
+        team_id: '',
+        role_id: '',
+        active: true
       });
-
-      if (response.ok) {
-        showNotification('User created successfully', 'success');
-        setShowCreateModal(false);
-        setFormData({
-          username: '',
-          display_name: '',
-          email: '',
-          password: '',
-          team_id: '',
-          role_id: '',
-          active: true
-        });
-        loadUsers();
-      } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to create user', 'error');
-      }
+      loadUsers();
     } catch (error) {
       console.error('Error creating user:', error);
-      showNotification('Error creating user', 'error');
+      showNotification(error.message || 'Error creating user', 'error');
     } finally {
       setSaving(false);
     }
@@ -256,28 +242,14 @@ export default function UserManagement() {
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/users', {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ ...formData, id: selectedUser.id })
-      });
-
-      if (response.ok) {
-        showNotification('User updated successfully', 'success');
-        setShowEditModal(false);
-        setSelectedUser(null);
-        loadUsers();
-      } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to update user', 'error');
-      }
+      await apiClient.updateDeveloperUser(selectedUser.id, formData);
+      showNotification('User updated successfully', 'success');
+      setShowEditModal(false);
+      setSelectedUser(null);
+      loadUsers();
     } catch (error) {
       console.error('Error updating user:', error);
-      showNotification('Error updating user', 'error');
+      showNotification(error.message || 'Error updating user', 'error');
     } finally {
       setSaving(false);
     }
@@ -294,24 +266,12 @@ export default function UserManagement() {
     }
 
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/developer/users?id=${userId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        showNotification('User deleted successfully', 'success');
-        loadUsers();
-      } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to delete user', 'error');
-      }
+      await apiClient.deleteDeveloperUser(userId);
+      showNotification('User deleted successfully', 'success');
+      loadUsers();
     } catch (error) {
       console.error('Error deleting user:', error);
-      showNotification('Error deleting user', 'error');
+      showNotification(error.message || 'Error deleting user', 'error');
     }
   };
 
@@ -339,32 +299,15 @@ export default function UserManagement() {
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/users/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          userId: selectedUser.id,
-          newPassword: resetPassword
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        showNotification(result.message, 'success');
-        setShowPasswordResetModal(false);
-        setSelectedUser(null);
-        setResetPassword('');
-      } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to reset password', 'error');
-      }
+      // Use the updateDeveloperUser method to update just the password
+      await apiClient.updateDeveloperUser(selectedUser.id, { password: resetPassword });
+      showNotification('Password reset successfully', 'success');
+      setShowPasswordResetModal(false);
+      setSelectedUser(null);
+      setResetPassword('');
     } catch (error) {
       console.error('Error resetting password:', error);
-      showNotification('Error resetting password', 'error');
+      showNotification(error.message || 'Error resetting password', 'error');
     } finally {
       setSaving(false);
     }

@@ -213,8 +213,8 @@
         <button class="quick-button" onclick="quickTest('auth', 'login', false)">Test Login</button>
         <button class="quick-button" onclick="quickTest('admin', 'get_chat_stats')">Chat Stats</button>
         <button class="quick-button" onclick="quickTest('helpdesk', 'get_queue')">Helpdesk Queue</button>
-        <button class="quick-button" onclick="quickTest('developer', 'get_system_health')">System Health</button>
-        <button class="quick-button" onclick="quickTest('utilities', 'get_ticket_categories')">Categories</button>
+        <button class="quick-button" onclick="quickTest('developer', 'get_stats')">Dev Stats</button>
+        <button class="quick-button" onclick="quickTest('utilities', 'get_categories')">Categories</button>
         <button class="quick-button" onclick="quickTest('public', 'get_widget_status', false)">Widget Status</button>
       </div>
     </div>
@@ -238,27 +238,23 @@
         'update_work_mode_settings', 'get_table_configs', 'get_table_views', 'get_table_data'
       ],
       helpdesk: [
-        'get_queue', 'get_teams', 'get_team_preferences', 'update_team_preferences',
-        'get_stats', 'update_ticket_status', 'assign_ticket', 'escalate_ticket',
-        'get_ticket_history'
+        'get_queue', 'get_teams', 'get_team_preferences', 'update_team_preferences'
       ],
       developer: [
-        'get_stats', 'get_system_health', 'get_system_logs', 'export_system_logs',
-        'create_backup', 'get_backup_history', 'restore_backup', 'run_maintenance',
-        'get_api_endpoints', 'test_api_endpoint', 'get_users', 'create_user',
-        'update_user', 'delete_user', 'execute_database_query', 'get_database_schema',
-        'get_database_stats', 'optimize_database', 'get_performance_metrics',
-        'clear_system_cache', 'restart_services'
+        'get_analytics', 'get_stats', 'get_settings', 'update_settings', 
+        'test_email_config', 'get_backup_status', 'create_backup', 'export_data',
+        'import_data', 'get_users', 'create_user', 'update_user', 'reset_password',
+        'get_roles', 'get_teams', 'get_categories'
       ],
       utilities: [
-        'get_organizations', 'get_offices', 'get_bureaus', 'get_divisions',
-        'get_sections', 'get_ticket_categories', 'get_request_types'
+        'get_organization', 'get_categories', 'get_assignable_users', 'get_support_teams',
+        'get_simple_categories', 'get_profile_picture', 'upload_profile_picture'
       ],
       public: [
         'get_widget_settings', 'get_widget_status', 'get_available_agents',
         'start_chat_session', 'get_chat_messages', 'send_chat_message',
-        'auto_assign_agent', 'reconnect_session', 'get_guest_queue',
-        'remove_from_queue', 'update_guest_info'
+        'auto_assign_agent', 'reconnect_session', 'return_to_queue', 
+        'get_guest_queue', 'remove_from_queue'
       ]
     };
     

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Browser Request Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        button { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px; }
+        .result { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🌐 Browser Request Test</h1>
+    <p>This tests the exact same API call that works in curl</p>
+    
+    <button onclick="testExactRequest()">Test Exact Request</button>
+    <button onclick="testFormData()">Test Different Formats</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        async function testExactRequest() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testing exact curl request...</p>';
+            
+            try {
+                // Exact same request as our working curl command
+                const response = await fetch('/api/v1', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        "service": "auth",
+                        "action": "login", 
+                        "data": {
+                            "username": "e603876",
+                            "password": "admin123"
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                resultDiv.innerHTML = 
+                    '<h3>Response Status: ' + response.status + '</h3>' +
+                    '<h3>Success: ' + (response.ok && result.success) + '</h3>' +
+                    '<h3>Response:</h3>' +
+                    '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                    
+            } catch (error) {
+                resultDiv.innerHTML = '<h3>Error:</h3><pre>' + error.message + '</pre>';
+            }
+        }
+        
+        async function testFormData() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testing different request formats...</p>';
+            
+            // Test 1: URLSearchParams
+            try {
+                const params = new URLSearchParams();
+                params.append('username', 'e603876');
+                params.append('password', 'admin123');
+                
+                const response1 = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: params
+                });
+                
+                console.log('Form data test:', response1.status, await response1.text());
+            } catch (error) {
+                console.log('Form data failed:', error);
+            }
+            
+            // Test 2: Manual JSON construction
+            const jsonString = '{"service":"auth","action":"login","data":{"username":"e603876","password":"admin123"}}';
+            
+            try {
+                const response2 = await fetch('/api/v1', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: jsonString
+                });
+                
+                const result2 = await response2.json();
+                
+                resultDiv.innerHTML = 
+                    '<h3>Manual JSON Test:</h3>' +
+                    '<p>Status: ' + response2.status + '</p>' +
+                    '<p>Success: ' + result2.success + '</p>' +
+                    '<pre>' + JSON.stringify(result2, null, 2) + '</pre>';
+                    
+            } catch (error) {
+                resultDiv.innerHTML = '<h3>Manual JSON Error:</h3><pre>' + error.message + '</pre>';
+            }
+        }
+    </script>
+</body>
+</html>

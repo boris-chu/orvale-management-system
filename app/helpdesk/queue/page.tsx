@@ -262,7 +262,11 @@ export default function HelpdeskQueue() {
     try {
       setLoading(true);
       const result = await apiClient.getHelpdeskQueue();
-      const data: HelpdeskQueueData = result.data;
+      // Handle API Gateway nested response structure
+      const data: HelpdeskQueueData = result.data?.data || result.data;
+      console.log('🔍 Helpdesk queue - raw API response:', result);
+      console.log('🔍 Helpdesk queue - processed data:', data);
+      console.log('🔍 Helpdesk queue - userTeams:', data.userTeams);
       setSummaryData(data);
         
         // Initialize team tabs to 'pending' status
@@ -287,8 +291,11 @@ export default function HelpdeskQueue() {
 
   const loadEscalatedTickets = async () => {
     try {
-      const result = await apiClient.getHelpdeskQueue({ type: 'escalated' });
-      setEscalatedTickets(result.data.tickets || []);
+      const result = await apiClient.getHelpdeskQueue({ 
+        status: 'escalated'
+      });
+      const data = result.data?.data || result.data;
+      setEscalatedTickets(data.items || data.tickets || []);
     } catch (err: any) {
       showNotification('Error loading escalated tickets', 'error');
     }
@@ -296,25 +303,18 @@ export default function HelpdeskQueue() {
 
   const loadTeamTickets = async (teamId: string, status: string = 'all') => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/helpdesk/queue?type=team&teamId=${teamId}&status=${status}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const result = await apiClient.getHelpdeskQueue({ 
+        teams: [teamId],
+        status: status === 'all' ? 'all' : status
       });
-
-      if (response.ok) {
-        const data: HelpdeskQueueData = await response.json();
-        setTeamTickets(prev => ({
-          ...prev,
-          [teamId]: {
-            ...prev[teamId],
-            [status]: data.tickets || []
-          }
-        }));
-      } else {
-        showNotification('Failed to load team tickets', 'error');
-      }
+      const data = result.data?.data || result.data;
+      setTeamTickets(prev => ({
+        ...prev,
+        [teamId]: {
+          ...prev[teamId],
+          [status]: data.items || data.tickets || []
+        }
+      }));
     } catch (err: any) {
       showNotification('Error loading team tickets', 'error');
     }

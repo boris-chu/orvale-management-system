@@ -76,13 +76,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const result = await response.json();
             console.log('🔄 API Gateway response:', result);
             
-            if (result.success && result.data?.user) {
-              console.log('✅ Updated with fresh user data:', result.data.user);
-              setUser(result.data.user);
+            // Handle nested API Gateway response structure
+            const userData = result.data?.data?.user || result.data?.user;
+            if (result.success && userData) {
+              console.log('✅ Updated with fresh user data:', userData);
+              setUser(userData);
               // Update stored user data
-              localStorage.setItem('currentUser', JSON.stringify(result.data.user));
+              localStorage.setItem('currentUser', JSON.stringify(userData));
             } else {
               console.log('⚠️ API Gateway returned invalid user data, keeping stored data');
+              console.log('🔍 Response structure:', result);
             }
           } else {
             console.log('⚠️ Fresh data fetch failed, keeping stored data');

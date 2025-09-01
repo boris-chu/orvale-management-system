@@ -175,7 +175,18 @@ export default function DeveloperDashboard() {
   const loadDashboardStats = async () => {
     try {
       const result = await apiClient.getDeveloperStats('24h');
-      setStats(result.data);
+      // Handle nested API Gateway response structure
+      const statsData = result.data?.data || result.data;
+      console.log('🔍 Developer stats result:', result);
+      console.log('🔍 Stats data:', statsData);
+      setStats(statsData || {
+        totalUsers: 0,
+        activeUsers: 0,
+        totalTeams: 0,
+        totalTickets: 0,
+        organizationalUnits: 0,
+        categoryPaths: 0
+      });
     } catch (error) {
       console.error('Failed to load dashboard stats:', error);
     } finally {
