@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -92,22 +93,20 @@ export default function OrganizationalManagement() {
 
   const checkPermissions = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const user = await response.json();
-        if (!user.permissions?.includes('admin.manage_organization') && !user.permissions?.includes('admin.view_organization')) {
-          window.location.href = '/developer';
-          return;
-        }
-        setCurrentUser(user);
-      } else {
+      const result = await apiClient.getCurrentUser();
+      const user = result.data?.user || result.data;
+      
+      if (!user) {
         window.location.href = '/';
+        return;
       }
+      
+      if (!user.permissions?.includes('admin.manage_organization') && !user.permissions?.includes('admin.view_organization')) {
+        window.location.href = '/developer';
+        return;
+      }
+      
+      setCurrentUser(user);
     } catch (error) {
       console.error('Permission check failed:', error);
       window.location.href = '/';
@@ -116,15 +115,9 @@ export default function OrganizationalManagement() {
 
   const loadSections = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/sections', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const sectionData = await response.json();
-        setSections(sectionData);
+      const result = await apiClient.getDeveloperSections();
+      if (result.success) {
+        setSections(result.data);
       } else {
         showNotification('Failed to load sections', 'error');
       }
@@ -167,6 +160,8 @@ export default function OrganizationalManagement() {
 
     setSaving(true);
     try {
+      // TODO: Add create_section action to developer service and use:
+      // const result = await apiClient.makeRequest('developer', 'create_section', formData);
       const token = localStorage.getItem('authToken');
       const response = await fetch('/api/developer/sections', {
         method: 'POST',
@@ -208,6 +203,8 @@ export default function OrganizationalManagement() {
 
     setSaving(true);
     try {
+      // TODO: Add update_section action to developer service and use:
+      // const result = await apiClient.makeRequest('developer', 'update_section', { ...formData, id: selectedSection.id });
       const token = localStorage.getItem('authToken');
       const response = await fetch('/api/developer/sections', {
         method: 'PUT',
@@ -246,6 +243,8 @@ export default function OrganizationalManagement() {
     }
 
     try {
+      // TODO: Add delete_section action to developer service and use:
+      // const result = await apiClient.makeRequest('developer', 'delete_section', { id: sectionId });
       const token = localStorage.getItem('authToken');
       const response = await fetch(`/api/developer/sections?id=${sectionId}`, {
         method: 'DELETE',

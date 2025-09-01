@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -682,14 +683,9 @@ export default function RoleManagement() {
 
   const loadRoles = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/roles', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const roleData = await response.json();
+      const result = await apiClient.getRoles();
+      if (result.success) {
+        const roleData = result.data;
         // Add system flag to built-in roles
         const rolesWithFlags = roleData.map((role: any) => ({
           ...role,
@@ -733,6 +729,13 @@ export default function RoleManagement() {
   const handleCreateRole = async () => {
     setSaving(true);
     try {
+      // TODO: Add create_role action to developer service and use:
+      // const result = await apiClient.makeRequest('developer', 'create_role', {
+      //   id: formData.id || formData.name.toLowerCase().replace(/\s+/g, '_'),
+      //   name: formData.name,
+      //   description: formData.description,
+      //   permissions: formData.permissions
+      // });
       const token = localStorage.getItem('authToken');
       const response = await fetch('/api/developer/roles', {
         method: 'POST',
@@ -775,6 +778,13 @@ export default function RoleManagement() {
     
     setSaving(true);
     try {
+      // TODO: Add update_role action to developer service and use:
+      // const result = await apiClient.makeRequest('developer', 'update_role', {
+      //   id: selectedRole.id,
+      //   name: formData.name,
+      //   description: formData.description,
+      //   permissions: formData.permissions
+      // });
       const token = localStorage.getItem('authToken');
       
       const response = await fetch('/api/developer/roles', {
@@ -816,6 +826,8 @@ export default function RoleManagement() {
 
     setSaving(true);
     try {
+      // TODO: Add delete_role action to developer service and use:
+      // const result = await apiClient.makeRequest('developer', 'delete_role', { id: selectedRole.id });
       const token = localStorage.getItem('authToken');
       
       const response = await fetch(`/api/developer/roles?id=${selectedRole.id}`, {

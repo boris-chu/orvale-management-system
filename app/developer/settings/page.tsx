@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -380,26 +381,17 @@ export default function SystemSettings() {
   const testEmailConnection = async () => {
     setSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/settings/test-email', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          smtpHost: settings.smtpHost,
-          smtpPort: settings.smtpPort,
-          smtpSecure: settings.smtpSecure,
-          smtpUser: settings.smtpUser
-        })
+      const result = await apiClient.testEmailConfig({
+        smtpHost: settings.smtpHost,
+        smtpPort: settings.smtpPort,
+        smtpSecure: settings.smtpSecure,
+        smtpUser: settings.smtpUser
       });
       
-      if (response.ok) {
+      if (result.success) {
         showNotification('Email connection test successful', 'success');
       } else {
-        const error = await response.json();
-        showNotification(error.message || 'Email connection failed', 'error');
+        showNotification(result.message || 'Email connection failed', 'error');
       }
     } catch (error) {
       showNotification('Email connection test failed', 'error');
@@ -412,26 +404,16 @@ export default function SystemSettings() {
   const createManualBackup = async () => {
     setBackupLoading(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/backup', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ action: 'create' })
-      });
+      const result = await apiClient.createBackup({ action: 'create' });
       
-      const result = await response.json();
-      
-      if (response.ok && result.success) {
-        showNotification(`Manual backup created successfully: ${result.backup.filename}`, 'success');
+      if (result.success) {
+        showNotification(`Manual backup created successfully: ${result.data.backup.filename || result.data.backup.name}`, 'success');
         // Refresh backup list if it's open
         if (showBackupHistory) {
           loadBackupHistory();
         }
       } else {
-        showNotification(result.error || 'Failed to create backup', 'error');
+        showNotification(result.message || 'Failed to create backup', 'error');
       }
     } catch (error) {
       console.error('Backup creation failed:', error);
@@ -443,6 +425,11 @@ export default function SystemSettings() {
 
   const loadBackupHistory = async () => {
     try {
+      // TODO: Add list_backups and get_backup_stats actions to developer service
+      // const [listResult, statsResult] = await Promise.all([
+      //   apiClient.makeRequest('developer', 'list_backups'),
+      //   apiClient.getBackupStatus()
+      // ]);
       const token = localStorage.getItem('authToken');
       const [listResponse, statsResponse] = await Promise.all([
         fetch('/api/developer/backup?action=list', {
@@ -480,6 +467,8 @@ export default function SystemSettings() {
   const cleanOldBackups = async () => {
     setBackupLoading(true);
     try {
+      // TODO: Add cleanup_backups action to developer service
+      // const result = await apiClient.makeRequest('developer', 'cleanup_backups');
       const token = localStorage.getItem('authToken');
       const response = await fetch('/api/developer/backup', {
         method: 'POST',
@@ -511,6 +500,8 @@ export default function SystemSettings() {
 
   const downloadBackup = async (filename: string) => {
     try {
+      // TODO: Add download_backup action to developer service
+      // This would need special handling for file downloads
       const token = localStorage.getItem('authToken');
       const response = await fetch(`/api/developer/backup/download?filename=${filename}`, {
         headers: { 'Authorization': `Bearer ${token}` }

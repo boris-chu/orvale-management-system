@@ -167,16 +167,8 @@ export default function UserManagement() {
 
   const loadTeams = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/teams', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const teamData = await response.json();
-        setTeams(teamData);
-      }
+      const result = await apiClient.getTeams();
+      setTeams(result.data || []);
     } catch (error) {
       console.error('Failed to load teams:', error);
     }
@@ -184,16 +176,8 @@ export default function UserManagement() {
 
   const loadRoles = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/roles', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const roleData = await response.json();
-        setRoles(roleData);
-      }
+      const result = await apiClient.getRoles();
+      setRoles(result.data || []);
     } catch (error) {
       console.error('Failed to load roles:', error);
     }

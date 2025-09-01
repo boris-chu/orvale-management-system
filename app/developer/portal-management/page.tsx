@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,23 +49,14 @@ export default function PortalManagementPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
+        const result = await apiClient.getCurrentUser();
+        const userData = result.data?.user || result.data;
+        
+        if (!userData) {
           router.push('/');
           return;
         }
-
-        const response = await fetch('/api/auth/user', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Authentication failed');
-        }
-
-        const userData = await response.json();
+        
         setUser(userData);
         setLoading(false);
       } catch (error) {

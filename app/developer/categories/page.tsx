@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -147,23 +148,21 @@ export default function CategoryManagement() {
 
   const checkPermissions = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const user = await response.json();
-        if (!user.permissions?.includes('admin.manage_categories') && !user.permissions?.includes('admin.view_categories') &&
-            !user.permissions?.includes('admin.manage_organization') && !user.permissions?.includes('admin.view_organization')) {
-          window.location.href = '/developer';
-          return;
-        }
-        setCurrentUser(user);
-      } else {
+      const result = await apiClient.getCurrentUser();
+      const user = result.data?.user || result.data;
+      
+      if (!user) {
         window.location.href = '/';
+        return;
       }
+      
+      if (!user.permissions?.includes('admin.manage_categories') && !user.permissions?.includes('admin.view_categories') &&
+          !user.permissions?.includes('admin.manage_organization') && !user.permissions?.includes('admin.view_organization')) {
+        window.location.href = '/developer';
+        return;
+      }
+      
+      setCurrentUser(user);
     } catch (error) {
       console.error('Permission check failed:', error);
       window.location.href = '/';
@@ -172,41 +171,28 @@ export default function CategoryManagement() {
 
   const loadData = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      
       // Load ticket categories
-      const categoriesResponse = await fetch('/api/developer/categories', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (categoriesResponse.ok) {
-        const categoriesData = await categoriesResponse.json();
-        setTicketCategories(categoriesData);
+      const categoriesResult = await apiClient.getDeveloperCategories();
+      if (categoriesResult.success) {
+        setTicketCategories(categoriesResult.data);
       }
 
       // Load request types
-      const requestTypesResponse = await fetch('/api/developer/request-types', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (requestTypesResponse.ok) {
-        const requestTypesData = await requestTypesResponse.json();
-        setRequestTypes(requestTypesData);
+      const requestTypesResult = await apiClient.getDeveloperRequestTypes();
+      if (requestTypesResult.success) {
+        setRequestTypes(requestTypesResult.data);
       }
 
       // Load subcategories
-      const subcategoriesResponse = await fetch('/api/developer/subcategories', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (subcategoriesResponse.ok) {
-        const subcategoriesData = await subcategoriesResponse.json();
-        setSubcategories(subcategoriesData);
+      const subcategoriesResult = await apiClient.getDeveloperSubcategories();
+      if (subcategoriesResult.success) {
+        setSubcategories(subcategoriesResult.data);
       }
 
       // Load DPSS organizational data
-      const dpssResponse = await fetch('/api/developer/dpss-org', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (dpssResponse.ok) {
-        const dpssData = await dpssResponse.json();
+      const dpssResult = await apiClient.getDeveloperDpssOrg();
+      if (dpssResult.success) {
+        const dpssData = dpssResult.data;
         setDpssOffices(dpssData.offices || []);
         setDpssBureaus(dpssData.bureaus || []);
         setDpssDivisions(dpssData.divisions || []);

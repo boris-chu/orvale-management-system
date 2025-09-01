@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -114,22 +115,20 @@ export default function TeamManagement() {
 
   const checkPermissions = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const user = await response.json();
-        if (!user.permissions?.includes('admin.manage_teams') && !user.permissions?.includes('admin.view_teams')) {
-          window.location.href = '/developer';
-          return;
-        }
-        setCurrentUser(user);
-      } else {
+      const result = await apiClient.getCurrentUser();
+      const user = result.data?.user || result.data;
+      
+      if (!user) {
         window.location.href = '/';
+        return;
       }
+      
+      if (!user.permissions?.includes('admin.manage_teams') && !user.permissions?.includes('admin.view_teams')) {
+        window.location.href = '/developer';
+        return;
+      }
+      
+      setCurrentUser(user);
     } catch (error) {
       console.error('Permission check failed:', error);
       window.location.href = '/';
@@ -138,15 +137,9 @@ export default function TeamManagement() {
 
   const loadTeams = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/teams', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const teamData = await response.json();
-        setTeams(teamData);
+      const result = await apiClient.getTeams();
+      if (result.success) {
+        setTeams(result.data);
       } else {
         showNotification('Failed to load teams', 'error');
       }
@@ -160,15 +153,9 @@ export default function TeamManagement() {
 
   const loadSections = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/sections', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const sectionData = await response.json();
-        setSections(sectionData);
+      const result = await apiClient.getDeveloperSections();
+      if (result.success) {
+        setSections(result.data);
       }
     } catch (error) {
       console.error('Failed to load sections:', error);
@@ -177,14 +164,9 @@ export default function TeamManagement() {
 
   const loadUsers = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const userData = await response.json();
+      const result = await apiClient.getDeveloperUsers();
+      if (result.success) {
+        const userData = result.data.items || result.data;
         setUsers(userData.filter((user: User) => user.active));
       }
     } catch (error) {
@@ -223,6 +205,8 @@ export default function TeamManagement() {
 
     setSaving(true);
     try {
+      // TODO: Add create_team action to developer service and use:
+      // const result = await apiClient.makeRequest('developer', 'create_team', formData);
       const token = localStorage.getItem('authToken');
       const response = await fetch('/api/developer/teams', {
         method: 'POST',
@@ -265,6 +249,8 @@ export default function TeamManagement() {
 
     setSaving(true);
     try {
+      // TODO: Add update_team action to developer service and use:
+      // const result = await apiClient.makeRequest('developer', 'update_team', { ...formData, id: selectedTeam.id });
       const token = localStorage.getItem('authToken');
       const response = await fetch('/api/developer/teams', {
         method: 'PUT',
@@ -303,6 +289,8 @@ export default function TeamManagement() {
     }
 
     try {
+      // TODO: Add delete_team action to developer service and use:
+      // const result = await apiClient.makeRequest('developer', 'delete_team', { id: teamId });
       const token = localStorage.getItem('authToken');
       const response = await fetch(`/api/developer/teams?id=${teamId}`, {
         method: 'DELETE',

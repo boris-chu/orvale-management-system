@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -191,29 +192,21 @@ export default function SystemAnalytics() {
 
   const checkPermissions = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
+      const result = await apiClient.getCurrentUser();
+      const user = result.data?.user || result.data;
+      
+      if (!user) {
         window.location.href = '/';
         return;
       }
-
-      const response = await fetch('/api/auth/user', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const user = await response.json();
-        
-        // Check for analytics permission
-        if (!user.permissions?.includes('admin.view_analytics')) {
-          window.location.href = '/developer';
-          return;
-        }
-        
-        setCurrentUser(user);
-      } else {
-        window.location.href = '/';
+      
+      // Check for analytics permission
+      if (!user.permissions?.includes('admin.view_analytics')) {
+        window.location.href = '/developer';
+        return;
       }
+      
+      setCurrentUser(user);
     } catch (error) {
       console.error('Permission check failed:', error);
       window.location.href = '/';
@@ -222,25 +215,16 @@ export default function SystemAnalytics() {
 
   const loadAnalyticsData = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      
       // Load basic stats
-      const statsResponse = await fetch('/api/developer/stats', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        setStats(statsData);
+      const statsResult = await apiClient.getDeveloperStats();
+      if (statsResult.success) {
+        setStats(statsResult.data);
       }
 
       // Load analytics overview data
-      const analyticsResponse = await fetch(`/api/developer/analytics?type=overview&range=${dateRange}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (analyticsResponse.ok) {
-        const analyticsData = await analyticsResponse.json();
+      const analyticsResult = await apiClient.getDeveloperAnalytics('overview', dateRange);
+      if (analyticsResult.success) {
+        const analyticsData = analyticsResult.data;
         
         // Update stats with real analytics data
         if (analyticsData.summary) {
@@ -279,14 +263,9 @@ export default function SystemAnalytics() {
 
   const loadTicketTrends = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/developer/analytics?type=trends&range=${dateRange}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setTicketTrends(data.trends || []);
+      const result = await apiClient.getDeveloperAnalytics('trends', dateRange);
+      if (result.success) {
+        setTicketTrends(result.data.trends || []);
       }
     } catch (error) {
       console.error('Failed to load ticket trends:', error);
@@ -295,14 +274,9 @@ export default function SystemAnalytics() {
 
   const loadTeamPerformance = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/developer/analytics?type=teams&range=${dateRange}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setTeamPerformance(data.teams || []);
+      const result = await apiClient.getDeveloperAnalytics('teams', dateRange);
+      if (result.success) {
+        setTeamPerformance(result.data.teams || []);
       }
     } catch (error) {
       console.error('Failed to load team performance:', error);
