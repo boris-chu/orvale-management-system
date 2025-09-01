@@ -220,8 +220,55 @@ export class AdminService extends BaseService {
       `)
     ]);
     
+    // Check Socket.io server status
+    const socketioStatus = await this.checkSocketIOStatus();
+    
+    // Get user presence distribution
+    const presenceStats = await queryAsync(`
+      SELECT 
+        status,
+        COUNT(*) as count
+      FROM user_presence 
+      WHERE last_seen >= datetime('now', '-1 hour')
+      GROUP BY status
+    `);
+    
+    // Format presence data for frontend
+    const presence = {
+      online: 0,
+      away: 0,
+      busy: 0,
+      offline: 0
+    };
+    
+    presenceStats.forEach((stat: any) => {
+      if (presence.hasOwnProperty(stat.status)) {
+        presence[stat.status as keyof typeof presence] = stat.count;
+      }
+    });
+    
     return this.success({
       period,
+      // Socket.io server information
+      socketio_status: socketioStatus.connected ? 'connected' : 'disconnected',
+      socketio_port: 3001,
+      socketio_uptime: socketioStatus.uptime || '0m',
+      
+      // User presence distribution
+      users_online: presence.online,
+      users_away: presence.away,
+      users_busy: presence.busy,
+      users_offline: presence.offline,
+      active_users: presence.online + presence.away + presence.busy,
+      
+      // Channel and message stats
+      total_channels: channelStats?.length || 0,
+      messages_per_hour: messageStats[0]?.total_messages || 0,
+      
+      // Storage info (approximate)
+      storage_used_mb: Math.round((messageStats[0]?.total_messages * 0.1) || 0),
+      
+      // Raw data for advanced analytics
       messages: messageStats[0] || {},
       channels: channelStats,
       users: userStats[0] || {},
@@ -1526,6 +1573,77 @@ export class AdminService extends BaseService {
       Math.floor(offset / limit) + 1,
       limit
     );
+  }
+
+  /**
+   * Check Socket.io server status by attempting to connect
+   */
+  private async checkSocketIOStatus(): Promise<{ connected: boolean; uptime?: string; error?: string }> {
+    try {
+      const http = require('http');
+      
+      return new Promise((resolve) => {
+        const startTime = Date.now();
+        
+        // Try to connect to the Socket.io server health endpoint
+        const req = http.get('http://localhost:3001/socket.io/', (res: any) => {
+          const responseTime = Date.now() - startTime;
+          
+          if (res.statusCode === 200 || res.statusCode === 400) {
+            // 200 = healthy, 400 = Socket.io handshake (also indicates server is running)
+            resolve({
+              connected: true,
+              uptime: this.formatUptime(process.uptime()), // Approximate uptime
+            });
+          } else {
+            resolve({
+              connected: false,
+              error: `HTTP ${res.statusCode}`
+            });
+          }
+        });
+        
+        req.setTimeout(2000); // 2 second timeout
+        
+        req.on('error', () => {
+          resolve({
+            connected: false,
+            error: 'Connection failed'
+          });
+        });
+        
+        req.on('timeout', () => {
+          req.destroy();
+          resolve({
+            connected: false,
+            error: 'Connection timeout'
+          });
+        });
+      });
+      
+    } catch (error) {
+      return {
+        connected: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Format uptime in human readable format
+   */
+  private formatUptime(seconds: number): string {
+    const days = Math.floor(seconds / (24 * 3600));
+    const hours = Math.floor((seconds % (24 * 3600)) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (days > 0) {
+      return `${days}d ${hours}h`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else {
+      return `${minutes}m`;
+    }
   }
 
   /**
