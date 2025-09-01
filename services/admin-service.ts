@@ -221,7 +221,13 @@ export class AdminService extends BaseService {
     ]);
     
     // Check Socket.io server status
-    const socketioStatus = await this.checkSocketIOStatus();
+    let socketioStatus: { connected: boolean; uptime?: string; error?: string };
+    try {
+      socketioStatus = await this.checkSocketIOStatus();
+    } catch (error) {
+      this.log(context, 'Socket.io status check failed', { error: error instanceof Error ? error.message : String(error) });
+      socketioStatus = { connected: false, error: 'Status check failed' };
+    }
     
     // Get user presence distribution
     const presenceStats = await queryAsync(`
@@ -1585,32 +1591,51 @@ export class AdminService extends BaseService {
       
       return new Promise((resolve) => {
         const socket = new net.Socket();
+        let isResolved = false;
+        
+        // Helper to ensure we only resolve once
+        const safeResolve = (result: any) => {
+          if (!isResolved) {
+            isResolved = true;
+            try {
+              socket.destroy();
+            } catch (e) {
+              // Ignore destroy errors
+            }
+            resolve(result);
+          }
+        };
         
         // Set timeout
         socket.setTimeout(2000);
         
         socket.connect(3001, 'localhost', () => {
           // Connection successful - Socket.io server is running
-          socket.destroy();
-          resolve({
+          safeResolve({
             connected: true,
             uptime: this.formatUptime(process.uptime())
           });
         });
         
         socket.on('error', (error: any) => {
-          socket.destroy();
-          resolve({
+          safeResolve({
             connected: false,
             error: 'Connection refused'
           });
         });
         
         socket.on('timeout', () => {
-          socket.destroy();
-          resolve({
+          safeResolve({
             connected: false,
             error: 'Connection timeout'
+          });
+        });
+        
+        // Ensure cleanup on any uncaught issues
+        socket.on('close', () => {
+          safeResolve({
+            connected: false,
+            error: 'Connection closed'
           });
         });
       });
