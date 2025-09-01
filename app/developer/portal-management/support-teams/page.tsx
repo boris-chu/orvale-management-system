@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -86,14 +87,10 @@ export default function SupportTeamsManagement() {
 
   const checkPermissions = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const user = await response.json();
+      const result = await apiClient.getCurrentUser();
+      const user = result.data?.user || result.data;
+      
+      if (user) {
         console.log('Support Teams - User permissions:', user.permissions);
         console.log('Support Teams - User role:', user.role);
         

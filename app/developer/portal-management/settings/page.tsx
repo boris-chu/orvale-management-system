@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -143,23 +144,14 @@ export default function PortalSettingsPage() {
 
   const checkPermissions = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
+      const result = await apiClient.getCurrentUser();
+      const userData = result.data?.user || result.data;
+      
+      if (!userData) {
         router.push('/');
         return;
       }
 
-      const response = await fetch('/api/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Authentication failed');
-      }
-
-      const userData = await response.json();
       setCurrentUser(userData);
       
       // Check permissions for portal settings
@@ -179,14 +171,9 @@ export default function PortalSettingsPage() {
 
   const loadSettings = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/portal-settings', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSettings(data);
+      const result = await apiClient.getPortalSettings();
+      if (result.success) {
+        setSettings(result.data);
       } else {
         showNotification('Error loading portal settings', 'error');
       }
@@ -203,17 +190,8 @@ export default function PortalSettingsPage() {
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/portal-settings', {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(settings)
-      });
-
-      if (response.ok) {
+      const result = await apiClient.updatePortalSettings(settings);
+      if (result.success) {
         showNotification('Portal settings saved successfully', 'success');
         setHasChanges(false);
       } else {
@@ -235,6 +213,8 @@ export default function PortalSettingsPage() {
 
     setSaving(true);
     try {
+      // TODO: Add reset_portal_settings action to admin service and use:
+      // const result = await apiClient.makeRequest('admin', 'reset_portal_settings');
       const token = localStorage.getItem('authToken');
       const response = await fetch('/api/developer/portal-settings', {
         method: 'POST',
@@ -265,6 +245,8 @@ export default function PortalSettingsPage() {
   const testEmailConfiguration = async () => {
     setTesting(true);
     try {
+      // TODO: Add test_portal_email action to admin service and use:
+      // const result = await apiClient.makeRequest('admin', 'test_portal_email');
       const token = localStorage.getItem('authToken');
       const response = await fetch('/api/developer/portal-settings', {
         method: 'POST',

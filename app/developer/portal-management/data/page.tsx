@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -71,21 +72,14 @@ export default function DataManagementPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
+        const result = await apiClient.getCurrentUser();
+        const userData = result.data?.user || result.data;
+        
+        if (!userData) {
           router.push('/');
           return;
         }
-
-        const response = await fetch('/api/auth/user', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!response.ok) {
-          throw new Error('Authentication failed');
-        }
-
-        const userData = await response.json();
+        
         setUser(userData);
         setLoading(false);
       } catch (error) {
@@ -148,21 +142,13 @@ export default function DataManagementPage() {
   const handleFullExport = async () => {
     setExporting(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/data-management/export', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ exportType: 'full' })
-      });
-
-      if (!response.ok) {
+      const result = await apiClient.exportData({ exportType: 'full' });
+      
+      if (!result.success) {
         throw new Error('Export failed');
       }
 
-      const data = await response.json();
+      const data = result.data;
       setExportData(data);
       
       // Download the file
@@ -206,17 +192,9 @@ export default function DataManagementPage() {
 
     setImporting(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/data-management/import', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(importPreview)
-      });
-
-      if (!response.ok) {
+      const result = await apiClient.importData(importPreview);
+      
+      if (!result.success) {
         throw new Error('Import failed');
       }
 
@@ -233,21 +211,13 @@ export default function DataManagementPage() {
 
   const handleSingleExport = async (dataType: string) => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/data-management/export', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ exportType: 'single', dataType })
-      });
-
-      if (!response.ok) {
+      const result = await apiClient.exportData({ exportType: 'single', dataType });
+      
+      if (!result.success) {
         throw new Error('Export failed');
       }
 
-      const data = await response.json();
+      const data = result.data;
       
       // Download the file
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });

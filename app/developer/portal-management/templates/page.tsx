@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -117,15 +118,13 @@ export default function ResponseTemplatesPage() {
           return;
         }
 
-        const response = await fetch('/api/auth/user', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!response.ok) {
+        const result = await apiClient.getCurrentUser();
+        const userData = result.data?.user || result.data;
+        
+        if (!userData) {
           throw new Error('Authentication failed');
         }
-
-        const userData = await response.json();
+        
         setUser(userData);
         await Promise.all([loadTemplates(), loadSLAConfigs()]);
         setLoading(false);
