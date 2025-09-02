@@ -644,21 +644,10 @@ export default function RoleManagement() {
         return;
       }
 
-      const response = await fetch('/api/v1', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          service: 'auth',
-          action: 'get_current_user',
-          data: {}
-        })
-      });
+      const result = await apiClient.getCurrentUser();
       
-      if (response.ok) {
-        const result = await response.json();
-        const user = result.data?.user || result.data;
+      if (result.success) {
+        const user = result.data;
         
         console.log('🔍 Role Management - user loaded:', user?.display_name);
         console.log('🔍 Role Management - permissions:', user?.permissions?.length, 'total');
@@ -729,29 +718,14 @@ export default function RoleManagement() {
   const handleCreateRole = async () => {
     setSaving(true);
     try {
-      // TODO: Add create_role action to developer service and use:
-      // const result = await apiClient.makeRequest('developer', 'create_role', {
-      //   id: formData.id || formData.name.toLowerCase().replace(/\s+/g, '_'),
-      //   name: formData.name,
-      //   description: formData.description,
-      //   permissions: formData.permissions
-      // });
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/roles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          id: formData.id || formData.name.toLowerCase().replace(/\s+/g, '_'),
-          name: formData.name,
-          description: formData.description,
-          permissions: formData.permissions
-        })
+      const result = await apiClient.createDeveloperRole({
+        id: formData.id || formData.name.toLowerCase().replace(/\s+/g, '_'),
+        name: formData.name,
+        description: formData.description,
+        permissions: formData.permissions
       });
 
-      if (response.ok) {
+      if (result.success) {
         showNotification('Role created successfully', 'success');
         setShowCreateModal(false);
         setFormData({
@@ -762,8 +736,7 @@ export default function RoleManagement() {
         });
         loadRoles();
       } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to create role', 'error');
+        showNotification(result.message || 'Failed to create role', 'error');
       }
     } catch (error) {
       console.error('Error creating role:', error);
@@ -778,37 +751,20 @@ export default function RoleManagement() {
     
     setSaving(true);
     try {
-      // TODO: Add update_role action to developer service and use:
-      // const result = await apiClient.makeRequest('developer', 'update_role', {
-      //   id: selectedRole.id,
-      //   name: formData.name,
-      //   description: formData.description,
-      //   permissions: formData.permissions
-      // });
-      const token = localStorage.getItem('authToken');
-      
-      const response = await fetch('/api/developer/roles', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          id: selectedRole.id,
-          name: formData.name,
-          description: formData.description,
-          permissions: formData.permissions
-        })
+      const result = await apiClient.updateDeveloperRole({
+        id: selectedRole.id,
+        name: formData.name,
+        description: formData.description,
+        permissions: formData.permissions
       });
 
-      if (response.ok) {
+      if (result.success) {
         showNotification('Role updated successfully', 'success');
         setShowEditModal(false);
         setSelectedRole(null);
         loadRoles();
       } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to update role', 'error');
+        showNotification(result.message || 'Failed to update role', 'error');
       }
     } catch (error) {
       console.error('Error updating role:', error);

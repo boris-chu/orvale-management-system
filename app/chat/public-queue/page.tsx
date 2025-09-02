@@ -22,6 +22,7 @@ import {
 import { ColorPicker } from '@/components/shared/ColorPicker';
 import { motion, AnimatePresence } from 'framer-motion';
 import { socketClient } from '@/lib/socket-client';
+import apiClient from '@/lib/api-client';
 import { StaffWorkModeManager } from '@/components/public-portal/StaffWorkModeManager';
 import { publicPortalSocket } from '@/lib/public-portal-socket';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -233,12 +234,10 @@ const PublicQueuePage = () => {
         return;
       }
 
-      const response = await fetch('/api/auth/user', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.getCurrentUser();
 
-      if (response.ok) {
-        const user = await response.json();
+      if (result.success) {
+        const user = result.data;
         
         // Check if user has permission to manage public queue
         if (!user.permissions?.includes('public_portal.manage_queue') && 
@@ -416,21 +415,19 @@ const PublicQueuePage = () => {
       console.log('🔍 Loading real queue data...');
 
       // Load active guest sessions from server
-      const guestResponse = await fetch('/api/public-portal/queue/guests', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const guestResult = await apiClient.getPublicQueueGuests();
 
-      console.log('📡 Guest API response status:', guestResponse.status);
+      console.log('📡 Guest API response:', guestResult.success);
 
-      if (guestResponse.ok) {
-        const guestData = await guestResponse.json();
+      if (guestResult.success) {
+        const guestData = guestResult.data;
         console.log('📊 Guest data received:', {
-          success: guestData.success,
+          success: true,
           guestCount: guestData.guests?.length || 0,
           rawData: guestData
         });
         
-        if (guestData.success && guestData.guests) {
+        if (guestData.guests) {
           const realGuests: GuestSession[] = guestData.guests.map((guest: any) => ({
             id: guest.session_id,
             guestName: guest.guest_name || `Guest #${guest.session_id.slice(-3)}`,
@@ -459,22 +456,18 @@ const PublicQueuePage = () => {
           console.log('✅ Setting guest queue with', uniqueGuests.length, 'unique guests:', uniqueGuests.map(g => ({ id: g.id, name: g.guestName, status: g.status })));
           setGuestQueue(uniqueGuests);
         } else {
-          console.log('❌ Invalid guest data format or no success flag');
+          console.log('❌ Invalid guest data format or no guests');
         }
       } else {
-        console.error('❌ Failed to load guest queue:', guestResponse.status, guestResponse.statusText);
-        const errorText = await guestResponse.text();
-        console.error('Error response:', errorText);
+        console.error('❌ Failed to load guest queue:', guestResult.message);
       }
 
       // Load active staff from server
-      const staffResponse = await fetch('/api/public-portal/queue/staff', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const staffResult = await apiClient.getPublicQueueStaff();
 
-      if (staffResponse.ok) {
-        const staffData = await staffResponse.json();
-        if (staffData.success && staffData.staff) {
+      if (staffResult.success) {
+        const staffData = staffResult.data;
+        if (staffData.staff) {
           const realStaff: StaffMember[] = staffData.staff.map((staff: any) => ({
             id: staff.user_id?.toString() || staff.username,
             name: staff.display_name || staff.username,
@@ -495,15 +488,10 @@ const PublicQueuePage = () => {
 
   const loadWorkMode = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) return;
+      const result = await apiClient.getStaffWorkModes();
 
-      const response = await fetch('/api/staff/work-modes', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success) {
+        const data = result.data;
         setWorkMode(data.work_mode || 'away');
         setStatusMessage(data.status_message || '');
         
@@ -534,27 +522,12 @@ const PublicQueuePage = () => {
 
   const saveWorkMode = async (newMode: string, newStatusMessage?: string) => {
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) return;
+      const result = await apiClient.updateStaffWorkMode(newMode, newStatusMessage || statusMessage);
 
-      const response = await fetch('/api/staff/work-modes', {
-        method: 'PUT',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          work_mode: newMode,
-          status_message: newStatusMessage || statusMessage,
-          auto_accept_chats: newMode === 'ready' ? 1 : 0
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Work mode updated:', data.message);
+      if (result.success) {
+        console.log('Work mode updated:', result.message);
       } else {
-        console.error('Failed to update work mode');
+        console.error('Failed to update work mode:', result.message);
       }
     } catch (error) {
       console.error('Error updating work mode:', error);
@@ -664,23 +637,9 @@ const PublicQueuePage = () => {
     if (realTimeEnabled && publicPortalSocket.isConnected()) {
       try {
         // Use the session assignment API for database update
-        const token = localStorage.getItem('authToken');
-        const response = await fetch('/api/public-portal/chat/auto-assign', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            sessionId: guest.id,
-            priority: guest.priority || 'normal',
-            department: guest.department || null,
-            isEscalated: false,
-            forceAssign: currentStaff.id // Force assign to current staff
-          })
-        });
+        const result = await apiClient.autoAssignGuestToAgent(guest.id);
 
-        if (response.ok) {
+        if (result.success) {
           console.log(`✅ Session ${guest.id} assigned to ${currentStaff.name}`);
         } else {
           console.error('Failed to assign session via API');
@@ -749,22 +708,9 @@ const PublicQueuePage = () => {
     try {
       console.log('🗑️ Attempting to remove session:', session.id, 'Guest name:', session.guestName);
       
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/public-portal/queue/guests/remove', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          sessionId: session.id,
-          reason
-        })
-      });
-
-      const data = await response.json();
+      const result = await apiClient.removeGuestFromQueue(session.id);
       
-      if (data.success) {
+      if (result.success) {
         // Remove from local state
         setGuestQueue(prev => prev.filter(g => g.id !== session.id));
         
@@ -1470,28 +1416,18 @@ const PublicQueuePage = () => {
           };
           
           try {
-            const token = localStorage.getItem('authToken');
-            const response = await fetch('/api/staff/tickets', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify(chatTicketData)
-            });
-            
-            const result = await response.json();
+            const result = await apiClient.createStaffTicket(chatTicketData);
             
             if (result.success) {
-              console.log('✅ Chat-sourced ticket created successfully:', result.ticketId);
-              alert(`Ticket created successfully: ${result.ticketId}`);
+              console.log('✅ Chat-sourced ticket created successfully:', result.data.ticketId);
+              alert(`Ticket created successfully: ${result.data.ticketId}`);
               
               // Close modal after successful submission
               setStaffTicketModalOpen(false);
               setTicketModalContext(null);
             } else {
-              console.error('❌ Failed to create ticket:', result.error);
-              alert('Failed to create ticket: ' + result.error);
+              console.error('❌ Failed to create ticket:', result.message);
+              alert('Failed to create ticket: ' + result.message);
             }
           } catch (error) {
             console.error('❌ Error creating ticket:', error);

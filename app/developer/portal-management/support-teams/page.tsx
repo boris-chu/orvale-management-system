@@ -120,17 +120,14 @@ export default function SupportTeamsManagement() {
 
   const loadData = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      console.log('Support Teams - Loading data with token:', !!token);
+      console.log('Support Teams - Loading data...');
       
-      const response = await fetch('/api/developer/support-teams', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.getDeveloperSupportTeams();
       
-      console.log('Support Teams - API response status:', response.status);
+      console.log('Support Teams - API response status:', result.success);
       
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success) {
+        const data = result.data;
         console.log('Support Teams - API response data:', data);
         setGroups(data.groups || []);
         setTeams(data.teams || []);
@@ -166,17 +163,9 @@ export default function SupportTeamsManagement() {
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/support-teams', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ ...formData, type: modalType })
-      });
+      const result = await apiClient.createDeveloperSupportTeam({ ...formData, type: modalType });
 
-      if (response.ok) {
+      if (result.success) {
         showNotification(`${modalType} created successfully`, 'success');
         setShowCreateModal(false);
         resetForm();
@@ -205,17 +194,9 @@ export default function SupportTeamsManagement() {
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/support-teams', {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ ...formData, type: modalType })
-      });
+      const result = await apiClient.updateDeveloperSupportTeam({ ...formData, type: modalType });
 
-      if (response.ok) {
+      if (result.success) {
         showNotification(`${modalType} updated successfully`, 'success');
         setShowEditModal(false);
         setSelectedItem(null);
@@ -247,18 +228,13 @@ export default function SupportTeamsManagement() {
     }
 
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/developer/support-teams?type=${type}&id=${itemId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.deleteDeveloperSupportTeam(type, itemId);
 
-      if (response.ok) {
+      if (result.success) {
         showNotification(`${type} deleted successfully`, 'success');
         loadData();
       } else {
-        const error = await response.json();
-        showNotification(error.error || `Failed to delete ${type}`, 'error');
+        showNotification(result.message || `Failed to delete ${type}`, 'error');
       }
     } catch (error) {
       console.error(`Error deleting ${type}:`, error);

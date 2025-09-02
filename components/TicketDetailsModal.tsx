@@ -40,6 +40,7 @@ import {
 import OrganizationalBrowserModal from './OrganizationalBrowserModal';
 import CategoryBrowserModal from './CategoryBrowserModal';
 import TicketHistoryComponent from './TicketHistoryComponent';
+import apiClient from '@/lib/api-client';
 
 interface Ticket {
   id: string;
@@ -305,11 +306,7 @@ export function TicketDetailsModal({
         });
         formData.append('ticketId', selectedTicket.id);
         
-        await fetch('/api/staff/tickets/attachments', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
-          body: formData
-        });
+        await apiClient.uploadTicketAttachment(newAttachments[0], { ticketId: selectedTicket.id });
       }
       
       // Reset states and reload attachments
@@ -328,13 +325,9 @@ export function TicketDetailsModal({
   const loadAssignableUsers = async () => {
     setLoadingAssignableUsers(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/users/assignable', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAssignableUsers(data.users || []);
+      const result = await apiClient.getTicketAssignableUsers();
+      if (result.success) {
+        setAssignableUsers(result.data.users || []);
       }
     } catch (error) {
       console.error('Error loading assignable users:', error);
@@ -351,18 +344,14 @@ export function TicketDetailsModal({
     console.log('🔧 loadAvailableTeams - canAssignCrossTeam: true');
     setLoadingTeams(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/helpdesk/teams', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        console.log('🔧 loadAvailableTeams - API response:', data);
-        const teams = data.data?.all_teams || [];
+      const result = await apiClient.getHelpdeskTeams();
+      if (result.success) {
+        console.log('🔧 loadAvailableTeams - API response:', result.data);
+        const teams = result.data.all_teams || [];
         console.log('🔧 loadAvailableTeams - extracted teams:', teams);
         setAvailableTeams(teams);
       } else {
-        console.error('🔧 loadAvailableTeams - API response not ok:', response.status);
+        console.error('🔧 loadAvailableTeams - API response failed:', result.message);
       }
     } catch (error) {
       console.error('Error loading available teams:', error);
@@ -373,13 +362,9 @@ export function TicketDetailsModal({
 
   const loadDropdownData = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/dropdown-data', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setDropdownData(data);
+      const result = await apiClient.getDropdownData();
+      if (result.success) {
+        setDropdownData(result.data);
       }
     } catch (error) {
       console.error('Error loading dropdown data:', error);

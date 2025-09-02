@@ -139,14 +139,10 @@ export default function ResponseTemplatesPage() {
 
   const loadTemplates = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/response-templates', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.getDeveloperResponseTemplates();
 
-      if (response.ok) {
-        const data = await response.json();
-        setTemplates(data.templates);
+      if (result.success) {
+        setTemplates(result.data.templates);
       } else {
         showNotification('Error loading templates', 'error');
       }
@@ -158,14 +154,10 @@ export default function ResponseTemplatesPage() {
 
   const loadSLAConfigs = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/sla-configurations', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.getDeveloperSlaConfigurations();
 
-      if (response.ok) {
-        const data = await response.json();
-        setSlaConfigs(data.slaConfigurations);
+      if (result.success) {
+        setSlaConfigs(result.data.slaConfigurations);
       } else {
         showNotification('Error loading SLA configurations', 'error');
       }
@@ -177,22 +169,11 @@ export default function ResponseTemplatesPage() {
 
   const handleSaveTemplate = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const method = editingTemplate ? 'PUT' : 'POST';
-      const body = editingTemplate ? 
-        { ...templateForm, id: editingTemplate.id } : 
-        templateForm;
+      const result = editingTemplate ? 
+        await apiClient.updateDeveloperResponseTemplate({ ...templateForm, id: editingTemplate.id }) :
+        await apiClient.createDeveloperResponseTemplate(templateForm);
 
-      const response = await fetch('/api/developer/response-templates', {
-        method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      });
-
-      if (response.ok) {
+      if (result.success) {
         showNotification(`Template ${editingTemplate ? 'updated' : 'created'} successfully`);
         setShowTemplateModal(false);
         resetTemplateForm();
@@ -208,22 +189,11 @@ export default function ResponseTemplatesPage() {
 
   const handleSaveSLA = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const method = editingSLA ? 'PUT' : 'POST';
-      const body = editingSLA ? 
-        { ...slaForm, id: editingSLA.id } : 
-        slaForm;
+      const result = editingSLA ? 
+        await apiClient.updateDeveloperSlaConfiguration({ ...slaForm, id: editingSLA.id }) :
+        await apiClient.createDeveloperSlaConfiguration(slaForm);
 
-      const response = await fetch('/api/developer/sla-configurations', {
-        method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      });
-
-      if (response.ok) {
+      if (result.success) {
         showNotification(`SLA configuration ${editingSLA ? 'updated' : 'created'} successfully`);
         setShowSLAModal(false);
         resetSLAForm();
@@ -241,13 +211,9 @@ export default function ResponseTemplatesPage() {
     if (!confirm(`Are you sure you want to delete "${template.name}"?`)) return;
 
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/developer/response-templates?id=${template.id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.deleteDeveloperResponseTemplate(template.id);
 
-      if (response.ok) {
+      if (result.success) {
         showNotification('Template deleted successfully');
         await loadTemplates();
       } else {
@@ -263,13 +229,9 @@ export default function ResponseTemplatesPage() {
     if (!confirm(`Are you sure you want to delete "${sla.name}"?`)) return;
 
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/developer/sla-configurations?id=${sla.id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.deleteDeveloperSlaConfiguration(sla.id);
 
-      if (response.ok) {
+      if (result.success) {
         showNotification('SLA configuration deleted successfully');
         await loadSLAConfigs();
       } else {

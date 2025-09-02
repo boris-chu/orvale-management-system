@@ -1259,7 +1259,6 @@ export default function ChatManagementPage() {
 
   const saveWidgetSettings = async () => {
     try {
-      const token = localStorage.getItem('authToken');
       const widgetPayload = {
         enabled: settings.widget_enabled,
         position: settings.widget_position,
@@ -1268,17 +1267,10 @@ export default function ChatManagementPage() {
         theme: settings.widget_theme
       };
 
-      const response = await fetch('/api/admin/chat/widget-settings', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(widgetPayload),
-      });
+      const result = await apiClient.updateWidgetSettings(widgetPayload);
 
-      if (!response.ok) {
-        console.error('Failed to save widget settings:', response.status);
+      if (!result.success) {
+        console.error('Failed to save widget settings:', result.message);
       }
     } catch (error) {
       console.error('Error saving widget settings:', error);
@@ -1288,44 +1280,21 @@ export default function ChatManagementPage() {
   const saveSettings = async () => {
     setIsSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        alert('Authentication required. Please log in again.');
-        window.location.href = '/';
-        return;
-      }
-
       // Save both chat settings and widget settings
-      const [chatResponse] = await Promise.all([
-        fetch('/api/admin/chat/settings', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(settings),
-        }),
+      const [chatResult] = await Promise.all([
+        apiClient.updateChatSettings(settings),
         saveWidgetSettings()
       ]);
 
-      if (chatResponse.ok) {
+      if (chatResult.success) {
         setHasChanges(false);
         // Show success message
         alert('Settings saved successfully!');
         // Trigger widget refresh across all pages
         window.dispatchEvent(new CustomEvent('chat-settings-updated', { detail: settings }));
       } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('Save failed:', response.status, errorData);
-        if (response.status === 401) {
-          alert('Authentication expired. Please log in again.');
-          window.location.href = '/';
-          return;
-        } else if (response.status === 403) {
-          alert('You do not have permission to modify chat settings.');
-          return;
-        }
-        throw new Error(errorData.error || 'Failed to save settings');
+        console.error('Save failed:', chatResult.message);
+        alert(`Save failed: ${chatResult.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Failed to save settings:', error);
@@ -1353,17 +1322,9 @@ export default function ChatManagementPage() {
     
     try {
       setIsProcessing(true);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/chat/users/force-logout', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username })
-      });
+      const result = await apiClient.forceLogoutChatUser(username);
 
-      if (response.ok) {
+      if (result.success) {
         await refreshUserData();
         alert(`${username} has been logged out of all sessions.`);
       } else {
@@ -1383,20 +1344,9 @@ export default function ChatManagementPage() {
     
     try {
       setIsProcessing(true);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/chat/users/block', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          username, 
-          blocked: !isCurrentlyBlocked 
-        })
-      });
+      const result = await apiClient.blockChatUser(username, !isCurrentlyBlocked);
 
-      if (response.ok) {
+      if (result.success) {
         await refreshUserData();
         alert(`${username} has been ${action}ed.`);
       } else {
@@ -1413,14 +1363,10 @@ export default function ChatManagementPage() {
   // Channel management functions
   const loadChannels = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/chat/channels', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.getAdminChatChannels();
 
-      if (response.ok) {
-        const data = await response.json();
-        setChannels(data.channels || []);
+      if (result.success) {
+        setChannels(result.data.channels || []);
       }
     } catch (error) {
       console.error('Error loading channels:', error);
@@ -1430,22 +1376,16 @@ export default function ChatManagementPage() {
   const createChannel = async () => {
     try {
       setIsProcessing(true);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/chat/channels', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: (newChannelData.name || 'unnamed').toLowerCase().replace(/\s+/g, '-'),
-          description: newChannelData.description,
-          type: newChannelData.type,
-          is_read_only: newChannelData.is_read_only
-        })
-      });
+      const channelData = {
+        name: (newChannelData.name || 'unnamed').toLowerCase().replace(/\s+/g, '-'),
+        description: newChannelData.description,
+        type: newChannelData.type,
+        is_read_only: newChannelData.is_read_only
+      };
 
-      if (response.ok) {
+      const result = await apiClient.createChatChannel(channelData);
+
+      if (result.success) {
         await loadChannels();
         setShowCreateChannelModal(false);
         setNewChannelData({
@@ -1474,21 +1414,15 @@ export default function ChatManagementPage() {
     
     try {
       setIsProcessing(true);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/chat/channels/${selectedChannel.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: (selectedChannel.name || 'unnamed').toLowerCase().replace(/\s+/g, '-'),
-          description: selectedChannel.description,
-          is_read_only: selectedChannel.is_read_only
-        })
-      });
+      const channelData = {
+        name: (selectedChannel.name || 'unnamed').toLowerCase().replace(/\s+/g, '-'),
+        description: selectedChannel.description,
+        is_read_only: selectedChannel.is_read_only
+      };
 
-      if (response.ok) {
+      const result = await apiClient.updateChatChannel(selectedChannel.id, channelData);
+
+      if (result.success) {
         await loadChannels();
         setShowEditChannelModal(false);
         setSelectedChannel(null);
@@ -1510,18 +1444,13 @@ export default function ChatManagementPage() {
     
     try {
       setIsProcessing(true);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/chat/channels/${channelId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.deleteChatChannel(channelId);
 
-      if (response.ok) {
+      if (result.success) {
         await loadChannels();
         alert(`Channel #${channelName} deleted successfully!`);
       } else {
-        const error = await response.json();
-        alert(`Failed to delete channel: ${error.error}`);
+        alert(`Failed to delete channel: ${result.message}`);
       }
     } catch (error) {
       console.error('Error deleting channel:', error);
@@ -1534,14 +1463,10 @@ export default function ChatManagementPage() {
   // Channel member management functions
   const loadChannelMembers = async (channelId: string) => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/admin/chat/channels/${channelId}/members`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.getChatChannelMembers(channelId);
 
-      if (response.ok) {
-        const data = await response.json();
-        setChannelMembers(data.members || []);
+      if (result.success) {
+        setChannelMembers(result.data.members || []);
       }
     } catch (error) {
       console.error('Error loading channel members:', error);
@@ -1550,14 +1475,10 @@ export default function ChatManagementPage() {
 
   const loadAvailableUsers = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/users', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.getDeveloperUsers();
 
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableUsers(data.users || []);
+      if (result.success) {
+        setAvailableUsers(result.data.users || []);
       }
     } catch (error) {
       console.error('Error loading available users:', error);
@@ -1567,26 +1488,14 @@ export default function ChatManagementPage() {
   const addChannelMember = async (channelId: string, userId: string) => {
     try {
       setIsProcessing(true);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/admin/chat/channels/${channelId}/members`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          role: 'member'
-        })
-      });
+      const result = await apiClient.addChatChannelMember(channelId, userId, 'member');
 
-      if (response.ok) {
+      if (result.success) {
         await loadChannelMembers(channelId);
         await loadChannels(); // Refresh channel list to update member counts
         alert('Member added successfully!');
       } else {
-        const error = await response.json();
-        alert(`Failed to add member: ${error.error}`);
+        alert(`Failed to add member: ${result.message}`);
       }
     } catch (error) {
       console.error('Error adding channel member:', error);
@@ -1601,19 +1510,14 @@ export default function ChatManagementPage() {
     
     try {
       setIsProcessing(true);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/admin/chat/channels/${channelId}/members/${userId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.removeChatChannelMember(channelId, userId);
 
-      if (response.ok) {
+      if (result.success) {
         await loadChannelMembers(channelId);
         await loadChannels(); // Refresh channel list to update member counts
         alert('Member removed successfully!');
       } else {
-        const error = await response.json();
-        alert(`Failed to remove member: ${error.error}`);
+        alert(`Failed to remove member: ${result.message}`);
       }
     } catch (error) {
       console.error('Error removing channel member:', error);
@@ -1670,24 +1574,19 @@ export default function ChatManagementPage() {
 
     try {
       setMonitorLoading(true);
-      const token = localStorage.getItem('authToken');
-      
-      const params = new URLSearchParams({
-        limit: monitorPagination.limit.toString(),
-        offset: loadMore ? monitorPagination.offset.toString() : '0',
-        time_range: messageFilters.time_range
-      });
+      const filters = {
+        limit: monitorPagination.limit,
+        offset: loadMore ? monitorPagination.offset : 0,
+        time_range: messageFilters.time_range,
+        ...(messageFilters.channel_id && { channel_id: messageFilters.channel_id }),
+        ...(messageFilters.user_id && { user_id: messageFilters.user_id }),
+        ...(messageFilters.message_type && { message_type: messageFilters.message_type })
+      };
 
-      if (messageFilters.channel_id) params.append('channel_id', messageFilters.channel_id);
-      if (messageFilters.user_id) params.append('user_id', messageFilters.user_id);
-      if (messageFilters.message_type) params.append('message_type', messageFilters.message_type);
+      const result = await apiClient.getAllMessages(filters);
 
-      const response = await fetch(`/api/admin/chat/messages?${params}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success) {
+        const data = result.data;
         
         if (loadMore) {
           setMonitoredMessages(prev => [...prev, ...data.messages]);
@@ -1720,30 +1619,24 @@ export default function ChatManagementPage() {
 
   const exportMessages = async (format: 'csv' | 'json') => {
     try {
-      const token = localStorage.getItem('authToken');
-      const params = new URLSearchParams({
+      const options = {
         format,
-        time_range: messageFilters.time_range
-      });
+        time_range: messageFilters.time_range,
+        ...(messageFilters.channel_id && { channel_id: messageFilters.channel_id }),
+        ...(messageFilters.user_id && { user_id: messageFilters.user_id })
+      };
 
-      if (messageFilters.channel_id) params.append('channel_id', messageFilters.channel_id);
-      if (messageFilters.user_id) params.append('user_id', messageFilters.user_id);
+      const result = await apiClient.exportMessages(options);
 
-      const response = await fetch(`/api/admin/chat/messages/export?${params}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
+      if (result.success) {
+        // Handle binary data response
+        const blob = new Blob([result.data], { type: 'application/octet-stream' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
         
-        const contentDisposition = response.headers.get('content-disposition');
-        const filename = contentDisposition ? 
-          contentDisposition.split('filename=')[1].replace(/"/g, '') : 
-          `chat_messages.${format}`;
+        const filename = result.filename || `chat_messages.${format}`;
         
         a.download = filename;
         document.body.appendChild(a);

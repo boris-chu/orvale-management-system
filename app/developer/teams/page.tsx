@@ -205,19 +205,9 @@ export default function TeamManagement() {
 
     setSaving(true);
     try {
-      // TODO: Add create_team action to developer service and use:
-      // const result = await apiClient.makeRequest('developer', 'create_team', formData);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/teams', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
+      const result = await apiClient.createDeveloperTeam(formData);
 
-      if (response.ok) {
+      if (result.success) {
         showNotification('Team created successfully', 'success');
         setShowCreateModal(false);
         setFormData({
@@ -230,8 +220,7 @@ export default function TeamManagement() {
         });
         loadTeams();
       } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to create team', 'error');
+        showNotification(result.message || 'Failed to create team', 'error');
       }
     } catch (error) {
       console.error('Error creating team:', error);
@@ -249,26 +238,15 @@ export default function TeamManagement() {
 
     setSaving(true);
     try {
-      // TODO: Add update_team action to developer service and use:
-      // const result = await apiClient.makeRequest('developer', 'update_team', { ...formData, id: selectedTeam.id });
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/teams', {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ ...formData, id: selectedTeam.id })
-      });
+      const result = await apiClient.updateDeveloperTeam({ ...formData, id: selectedTeam.id });
 
-      if (response.ok) {
+      if (result.success) {
         showNotification('Team updated successfully', 'success');
         setShowEditModal(false);
         setSelectedTeam(null);
         loadTeams();
       } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to update team', 'error');
+        showNotification(result.message || 'Failed to update team', 'error');
       }
     } catch (error) {
       console.error('Error updating team:', error);

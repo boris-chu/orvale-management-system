@@ -430,19 +430,14 @@ export default function SystemSettings() {
       //   apiClient.makeRequest('developer', 'list_backups'),
       //   apiClient.getBackupStatus()
       // ]);
-      const token = localStorage.getItem('authToken');
-      const [listResponse, statsResponse] = await Promise.all([
-        fetch('/api/developer/backup?action=list', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch('/api/developer/backup?action=stats', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
+      const [listResult, statsResult] = await Promise.all([
+        apiClient.getBackupList(),
+        apiClient.getBackupStats()
       ]);
       
-      if (listResponse.ok && statsResponse.ok) {
-        const listData = await listResponse.json();
-        const statsData = await statsResponse.json();
+      if (listResult.success && statsResult.success) {
+        const listData = listResult.data;
+        const statsData = statsResult.data;
         
         setBackupList(listData.backups || []);
         setBackupStats(statsData.stats || null);
@@ -467,28 +462,16 @@ export default function SystemSettings() {
   const cleanOldBackups = async () => {
     setBackupLoading(true);
     try {
-      // TODO: Add cleanup_backups action to developer service
-      // const result = await apiClient.makeRequest('developer', 'cleanup_backups');
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/backup', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ action: 'cleanup' })
-      });
+      const result = await apiClient.cleanupBackups();
       
-      const result = await response.json();
-      
-      if (response.ok && result.success) {
-        showNotification(`Cleanup completed - deleted ${result.deleted} old backup files`, 'success');
+      if (result.success) {
+        showNotification(`Cleanup completed - deleted ${result.data.deleted} old backup files`, 'success');
         // Refresh backup list if it's open
         if (showBackupHistory) {
           loadBackupHistory();
         }
       } else {
-        showNotification(result.error || 'Failed to cleanup backups', 'error');
+        showNotification(result.message || 'Failed to cleanup backups', 'error');
       }
     } catch (error) {
       console.error('Backup cleanup failed:', error);
@@ -500,15 +483,11 @@ export default function SystemSettings() {
 
   const downloadBackup = async (filename: string) => {
     try {
-      // TODO: Add download_backup action to developer service
-      // This would need special handling for file downloads
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/developer/backup/download?filename=${filename}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.downloadBackup(filename);
       
-      if (response.ok) {
-        const blob = await response.blob();
+      if (result.success && result.data) {
+        // Handle binary data download
+        const blob = new Blob([result.data], { type: 'application/octet-stream' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -519,7 +498,7 @@ export default function SystemSettings() {
         document.body.removeChild(a);
         showNotification(`Backup downloaded: ${filename}`, 'success');
       } else {
-        showNotification('Failed to download backup', 'error');
+        showNotification(result.message || 'Failed to download backup', 'error');
       }
     } catch (error) {
       console.error('Download failed:', error);

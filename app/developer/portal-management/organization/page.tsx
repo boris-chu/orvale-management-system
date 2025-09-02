@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -89,22 +90,17 @@ export default function OrganizationStructurePage() {
         return;
       }
 
-      const response = await fetch('/api/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
+      const result = await apiClient.getCurrentUser();
+      
+      if (!result.success) {
         throw new Error('Authentication failed');
       }
 
-      const userData = await response.json();
-      setCurrentUser(userData);
+      setCurrentUser(result.data);
       
       // Check permissions for organization management
-      const hasPermission = userData.role === 'admin' ||
-                           userData.permissions?.includes('admin.manage_organization');
+      const hasPermission = result.data.role === 'admin' ||
+                           result.data.permissions?.includes('admin.manage_organization');
       
       if (!hasPermission) {
         router.push('/developer/portal-management');
@@ -118,13 +114,10 @@ export default function OrganizationStructurePage() {
 
   const loadData = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/dpss-org', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.getDeveloperDpssOrg();
 
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success) {
+        const data = result.data;
         setDpssOffices(data.offices || []);
         setDpssSections(data.sections || []);
       }
@@ -198,17 +191,9 @@ export default function OrganizationStructurePage() {
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/dpss-org', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ ...formData, type: modalType })
-      });
+      const result = await apiClient.createDeveloperDpssOrg({ ...formData, type: modalType });
 
-      if (response.ok) {
+      if (result.success) {
         showNotification(`${modalType} created successfully`, 'success');
         setShowCreateModal(false);
         resetForm();
@@ -233,17 +218,9 @@ export default function OrganizationStructurePage() {
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/dpss-org', {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ ...formData, type: modalType })
-      });
+      const result = await apiClient.updateDeveloperDpssOrg({ ...formData, type: modalType });
 
-      if (response.ok) {
+      if (result.success) {
         showNotification(`${modalType} updated successfully`, 'success');
         setShowEditModal(false);
         setSelectedItem(null);
@@ -271,18 +248,13 @@ export default function OrganizationStructurePage() {
     }
 
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/developer/dpss-org?type=${type}&id=${itemId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.deleteDeveloperDpssOrg(type, itemId);
 
-      if (response.ok) {
+      if (result.success) {
         showNotification(`${type} deleted successfully`, 'success');
         loadData();
       } else {
-        const error = await response.json();
-        showNotification(error.error || `Failed to delete ${type}`, 'error');
+        showNotification(result.message || `Failed to delete ${type}`, 'error');
       }
     } catch (error) {
       console.error(`Error deleting ${type}:`, error);

@@ -213,26 +213,14 @@ export default function PortalSettingsPage() {
 
     setSaving(true);
     try {
-      // TODO: Add reset_portal_settings action to admin service and use:
-      // const result = await apiClient.makeRequest('admin', 'reset_portal_settings');
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/portal-settings', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ action: 'reset_to_defaults' })
-      });
+      const result = await apiClient.resetDeveloperPortalSettings();
 
-      if (response.ok) {
-        const result = await response.json();
-        setSettings(result.settings);
+      if (result.success) {
+        setSettings(result.data.settings);
         setHasChanges(false);
         showNotification('Settings reset to defaults', 'success');
       } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to reset settings', 'error');
+        showNotification(result.message || 'Failed to reset settings', 'error');
       }
     } catch (error) {
       console.error('Error resetting settings:', error);
@@ -245,19 +233,9 @@ export default function PortalSettingsPage() {
   const testEmailConfiguration = async () => {
     setTesting(true);
     try {
-      // TODO: Add test_portal_email action to admin service and use:
-      // const result = await apiClient.makeRequest('admin', 'test_portal_email');
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/portal-settings', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ action: 'test_email' })
-      });
+      const result = await apiClient.testDeveloperPortalEmail();
 
-      if (response.ok) {
+      if (result.success) {
         showNotification('Test email sent successfully', 'success');
       } else {
         showNotification('Failed to send test email', 'error');
