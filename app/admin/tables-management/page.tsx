@@ -56,6 +56,7 @@ import { RowEditorDialog } from '@/components/RowEditorDialog';
 import { DatabaseSchemaVisualization } from '@/components/DatabaseSchemaVisualization';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import apiClient from '@/lib/api-client';
 
 // Types
 interface TableConfiguration {
@@ -168,39 +169,20 @@ export default function TablesManagementPage() {
     try {
       setAvailableTablesLoading(true);
       
-      // Get auth token for API calls
-      const token = localStorage.getItem('authToken');
-      const headers: any = {
-        'Content-Type': 'application/json',
-      };
+      // Load all available database tables using apiClient
+      const result = await apiClient.getDatabaseTables();
+      console.log('🗄️ Loaded dynamic tables:', result.data?.summary);
       
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      const tablesData = result.data || {};
+      setAvailableTables(tablesData.tables || []);
+      setTablesByCategory(tablesData.tablesByCategory || {});
+      
+      // Set default table selection to first available table if none selected
+      if (tablesData.tables && tablesData.tables.length > 0 && !selectedBrowserTable) {
+        setSelectedBrowserTable(tablesData.tables[0].name);
       }
-      
-      // Load all available database tables
-      const tablesResponse = await fetch('/api/admin/database-tables', { headers });
-      if (tablesResponse.ok) {
-        const tablesData = await tablesResponse.json();
-        console.log('🗄️ Loaded dynamic tables:', tablesData.summary);
-        
-        setAvailableTables(tablesData.tables || []);
-        setTablesByCategory(tablesData.tablesByCategory || {});
-        
-        // Set default table selection to first available table if none selected
-        if (tablesData.tables && tablesData.tables.length > 0 && !selectedBrowserTable) {
-          setSelectedBrowserTable(tablesData.tables[0].name);
-        }
-        if (tablesData.tables && tablesData.tables.length > 0 && !selectedEditorTable) {
-          setSelectedEditorTable(tablesData.tables[0].name);
-        }
-      } else {
-        console.error('Failed to load database tables:', tablesResponse.status);
-        toast({
-          title: 'Warning',
-          description: 'Could not load database tables. Using fallback list.',
-          variant: 'default',
-        });
+      if (tablesData.tables && tablesData.tables.length > 0 && !selectedEditorTable) {
+        setSelectedEditorTable(tablesData.tables[0].name);
       }
     } catch (error) {
       console.error('Error loading available tables:', error);
@@ -218,36 +200,17 @@ export default function TablesManagementPage() {
     try {
       setLoading(true);
       
-      // Get auth token for API calls
-      const token = localStorage.getItem('authToken');
-      const headers: any = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      // Load configurations
-      const configResponse = await fetch('/api/admin/tables-configs', { headers });
-      if (configResponse.ok) {
-        const configData = await configResponse.json();
-        setConfigurations(configData.configurations || []);
-      }
+      // Load configurations using apiClient
+      const configResult = await apiClient.getTableConfigs();
+      setConfigurations(configResult.data?.configurations || []);
 
-      // Load column definitions
-      const columnsResponse = await fetch('/api/admin/tables-columns', { headers });
-      if (columnsResponse.ok) {
-        const columnsData = await columnsResponse.json();
-        setColumnDefinitions(columnsData.columns || []);
-      }
+      // Load column definitions using apiClient
+      const columnsResult = await apiClient.getTableColumns();
+      setColumnDefinitions(columnsResult.data?.columns || []);
 
-      // Load saved views
-      const viewsResponse = await fetch('/api/admin/tables-views', { headers });
-      if (viewsResponse.ok) {
-        const viewsData = await viewsResponse.json();
-        setSavedViews(viewsData.views || []);
-      }
+      // Load saved views using apiClient
+      const viewsResult = await apiClient.getTableViews();
+      setSavedViews(viewsResult.data?.views || []);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -290,42 +253,32 @@ export default function TablesManagementPage() {
     }
 
     try {
-      const response = await fetch('/api/admin/tables-configs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      await apiClient.createTableConfig({
+        table_identifier: selectedTable,
+        configuration_name: newConfigName,
+        description: newConfigDescription,
+        column_config: {
+          visible_columns: [],
+          column_order: [],
+          column_widths: {}
         },
-        body: JSON.stringify({
-          table_identifier: selectedTable,
-          configuration_name: newConfigName,
-          description: newConfigDescription,
-          column_config: {
-            visible_columns: [],
-            column_order: [],
-            column_widths: {}
-          },
-          filter_config: {},
-          sort_config: {},
-          display_config: {
-            row_height: 'medium',
-            show_borders: true,
-            striped_rows: false
-          }
-        }),
+        filter_config: {},
+        sort_config: {},
+        display_config: {
+          row_height: 'medium',
+          show_borders: true,
+          striped_rows: false
+        }
       });
 
-      if (response.ok) {
-        toast({
-          title: 'Success',
-          description: 'Configuration created successfully',
-        });
-        setCreateConfigOpen(false);
-        setNewConfigName('');
-        setNewConfigDescription('');
-        loadData();
-      } else {
-        throw new Error('Failed to create configuration');
-      }
+      toast({
+        title: 'Success',
+        description: 'Configuration created successfully',
+      });
+      setCreateConfigOpen(false);
+      setNewConfigName('');
+      setNewConfigDescription('');
+      loadData();
     } catch (error) {
       console.error('Error creating configuration:', error);
       toast({
@@ -342,19 +295,13 @@ export default function TablesManagementPage() {
     }
 
     try {
-      const response = await fetch(`/api/admin/tables-configs/${configId}`, {
-        method: 'DELETE',
+      await apiClient.deleteTableConfig(configId);
+      
+      toast({
+        title: 'Success',
+        description: 'Configuration deleted successfully',
       });
-
-      if (response.ok) {
-        toast({
-          title: 'Success',
-          description: 'Configuration deleted successfully',
-        });
-        loadData();
-      } else {
-        throw new Error('Failed to delete configuration');
-      }
+      loadData();
     } catch (error) {
       console.error('Error deleting configuration:', error);
       toast({
@@ -395,33 +342,12 @@ export default function TablesManagementPage() {
       setEditorLoading(true);
       console.log('🔍 Loading editor data for table:', tableIdentifier);
       
-      const token = localStorage.getItem('authToken');
-      const headers: any = {
-        'Content-Type': 'application/json',
-      };
+      // Load actual table data using apiClient
+      const result = await apiClient.getTableData(tableIdentifier, { limit: 25 });
+      console.log('🔍 API Response data:', result.data);
       
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      // Load actual table data instead of column definitions
-      const response = await fetch(`/api/admin/table-data?table=${tableIdentifier}&limit=25`, {
-        headers,
-      });
-
-      console.log('🔍 API Response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('🔍 API Error response:', errorText);
-        throw new Error(`Failed to fetch table data: ${response.statusText} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log('🔍 API Response data:', data);
-      
-      const tableData = data.data?.rows || [];
-      const columnInfo = data.data?.columns || [];
+      const tableData = result.data?.rows || [];
+      const columnInfo = result.data?.columns || [];
       
       console.log('🔍 Extracted data for', tableIdentifier, ':', tableData.length, 'rows');
       
@@ -464,40 +390,18 @@ export default function TablesManagementPage() {
 
   const handleSaveColumn = async (columnData: Partial<ColumnDefinition>) => {
     try {
-      const token = localStorage.getItem('authToken');
-      const headers: any = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      let response;
       if (editingColumn) {
         // Update existing column
-        response = await fetch(`/api/admin/tables-columns/${editingColumn.id}`, {
-          method: 'PUT',
-          headers,
-          body: JSON.stringify({
-            ...columnData,
-            table_identifier: selectedEditorTable,
-          }),
+        await apiClient.updateTableColumn(editingColumn.id, {
+          ...columnData,
+          table_identifier: selectedEditorTable,
         });
       } else {
         // Create new column
-        response = await fetch('/api/admin/tables-columns', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            ...columnData,
-            table_identifier: selectedEditorTable,
-          }),
+        await apiClient.createTableColumn({
+          ...columnData,
+          table_identifier: selectedEditorTable,
         });
-      }
-
-      if (!response.ok) {
-        throw new Error(`Failed to save column: ${response.statusText}`);
       }
 
       toast({
@@ -522,23 +426,7 @@ export default function TablesManagementPage() {
 
   const handleDeleteColumn = async (columnId: string) => {
     try {
-      const token = localStorage.getItem('authToken');
-      const headers: any = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(`/api/admin/tables-columns/${columnId}`, {
-        method: 'DELETE',
-        headers,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete column: ${response.statusText}`);
-      }
+      await apiClient.deleteTableColumn(columnId);
 
       toast({
         title: 'Success',
@@ -562,30 +450,7 @@ export default function TablesManagementPage() {
   // Handle cell edit
   const handleCellEdit = async (rowId: any, field: string, newValue: any) => {
     try {
-      const token = localStorage.getItem('authToken');
-      const headers: any = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch('/api/admin/table-data', {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({
-          table: selectedEditorTable,
-          rowId,
-          field,
-          value: newValue,
-          primaryKey: 'id'
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update cell: ${response.statusText}`);
-      }
+      await apiClient.updateTableData(selectedEditorTable, rowId, field, newValue, 'id');
 
       // Update local data
       const updatedData = editorTableData.map(row => 
@@ -611,31 +476,11 @@ export default function TablesManagementPage() {
   // Handle full row save
   const handleRowSave = async (rowData: any) => {
     try {
-      const token = localStorage.getItem('authToken');
-      const headers: any = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
       const isNewRow = typeof rowData.id === 'string' && rowData.id.startsWith('new_');
 
       if (isNewRow) {
         // Create new row
-        const response = await fetch('/api/admin/table-data', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            table: selectedEditorTable,
-            rowData
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to create row: ${response.statusText}`);
-        }
+        await apiClient.createTableRow(selectedEditorTable, rowData);
 
         // Reload table data to get the new row with proper ID
         await loadEditorColumns(selectedEditorTable);
@@ -650,17 +495,7 @@ export default function TablesManagementPage() {
         const promises = Object.entries(rowData)
           .filter(([field, value]) => editingRow && editingRow[field] !== value)
           .map(([field, value]) => 
-            fetch('/api/admin/table-data', {
-              method: 'PUT',
-              headers,
-              body: JSON.stringify({
-                table: selectedEditorTable,
-                rowId: rowData.id || rowData.ID,
-                field,
-                value,
-                primaryKey: 'id'
-              }),
-            })
+            apiClient.updateTableData(selectedEditorTable, rowData.id || rowData.ID, field, value, 'id')
           );
 
         await Promise.all(promises);
@@ -686,28 +521,7 @@ export default function TablesManagementPage() {
   // Handle row deletion
   const handleDeleteRow = async (rowId: any) => {
     try {
-      const token = localStorage.getItem('authToken');
-      const headers: any = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch('/api/admin/table-data', {
-        method: 'DELETE',
-        headers,
-        body: JSON.stringify({
-          table: selectedEditorTable,
-          rowId,
-          primaryKey: 'id'
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete row: ${response.statusText}`);
-      }
+      await apiClient.deleteTableRow(selectedEditorTable, rowId, 'id');
 
       // Remove row from local data
       const updatedData = editorTableData.filter(row => 
@@ -2036,37 +1850,25 @@ export default function TablesManagementPage() {
               }}
               onSave={async (configuration) => {
                 try {
-                  const token = localStorage.getItem('authToken');
-                  const response = await fetch('/api/admin/tables-configs', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({
-                      table_identifier: selectedTableForColumns,
-                      configuration_name: `Custom ${getTableTypeLabel(selectedTableForColumns)} Layout`,
-                      description: `Custom column configuration for ${getTableTypeLabel(selectedTableForColumns)}`,
-                      column_config: configuration.columns,
-                      filter_config: configuration.filters,
-                      sort_config: configuration.sorting,
-                      display_config: {
-                        row_height: 'medium',
-                        show_borders: true,
-                        striped_rows: false
-                      }
-                    }),
+                  await apiClient.createTableConfig({
+                    table_identifier: selectedTableForColumns,
+                    configuration_name: `Custom ${getTableTypeLabel(selectedTableForColumns)} Layout`,
+                    description: `Custom column configuration for ${getTableTypeLabel(selectedTableForColumns)}`,
+                    column_config: configuration.columns,
+                    filter_config: configuration.filters,
+                    sort_config: configuration.sorting,
+                    display_config: {
+                      row_height: 'medium',
+                      show_borders: true,
+                      striped_rows: false
+                    }
                   });
 
-                  if (response.ok) {
-                    toast({
-                      title: 'Success',
-                      description: 'Column configuration saved successfully',
-                    });
-                    loadData(); // Refresh the configurations list
-                  } else {
-                    throw new Error('Failed to save configuration');
-                  }
+                  toast({
+                    title: 'Success',
+                    description: 'Column configuration saved successfully',
+                  });
+                  loadData(); // Refresh the configurations list
                 } catch (error) {
                   console.error('Error saving configuration:', error);
                   throw error; // Re-throw so the component can handle it
