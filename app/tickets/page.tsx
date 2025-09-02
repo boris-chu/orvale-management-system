@@ -191,27 +191,21 @@ export default function TicketsPage() {
   // Load dynamic data from database APIs
   const loadTicketData = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const headers = {
-        'Authorization': `Bearer ${token}`
-      };
-
-      // Load organizational data and categories in parallel
-      const [orgResponse, categoriesResponse] = await Promise.all([
-        fetch('/api/ticket-data/organization', { headers }),
-        fetch('/api/ticket-data/categories', { headers })
+      // Load organizational data and categories in parallel using API Gateway
+      const [orgResult, categoriesResult] = await Promise.all([
+        apiClient.getOrganization(),
+        apiClient.getCategories()
       ]);
 
-      if (orgResponse.ok) {
-        const orgData = await orgResponse.json();
-        setOrganizationalData(orgData);
+      if (orgResult.success) {
+        setOrganizationalData(orgResult.data);
       } else {
-        console.error('Failed to load organizational data');
+        console.error('Failed to load organizational data:', orgResult.error);
         setOrganizationalData({ offices: [], bureaus: [], divisions: [], sections: [] });
       }
 
-      if (categoriesResponse.ok) {
-        const categoriesData = await categoriesResponse.json();
+      if (categoriesResult.success) {
+        const categoriesData = categoriesResult.data;
         
         console.log('🏷️ Categories API response:', categoriesData);
         
@@ -224,7 +218,7 @@ export default function TicketsPage() {
         console.log('🏷️ RequestTypes set to:', categoriesData.requestTypes);
         console.log('🏷️ Subcategories set to:', categoriesData.subcategories);
       } else {
-        console.error('Failed to load ticket categories');
+        console.error('Failed to load ticket categories:', categoriesResult.error);
         setCategories({});
         setRequestTypes({});
         setSubcategories({});
@@ -353,18 +347,12 @@ export default function TicketsPage() {
     
     try {
       setLoadingAttachments(true);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/staff/tickets/attachments?ticketId=${ticketId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const result = await apiClient.getTicketAttachment(ticketId);
       
-      if (response.ok) {
-        const data = await response.json();
-        setTicketAttachments(data.attachments || []);
+      if (result.success) {
+        setTicketAttachments(result.data?.attachments || []);
       } else {
-        console.error('Failed to load attachments');
+        console.error('Failed to load attachments:', result.error);
         setTicketAttachments([]);
       }
     } catch (error) {
@@ -378,15 +366,11 @@ export default function TicketsPage() {
   // Download attachment
   const downloadAttachment = async (attachmentId: number, filename: string) => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/staff/tickets/attachments/${attachmentId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const result = await apiClient.getTicketAttachment(attachmentId);
       
-      if (response.ok) {
-        const blob = await response.blob();
+      if (result.success && result.data) {
+        // Handle blob data from API Gateway
+        const blob = result.data instanceof Blob ? result.data : new Blob([result.data]);
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.style.display = 'none';
@@ -398,7 +382,7 @@ export default function TicketsPage() {
         document.body.removeChild(a);
         showNotification(`Downloaded ${filename}`, 'success');
       } else {
-        throw new Error('Download failed');
+        throw new Error(result.error || 'Download failed');
       }
     } catch (error) {
       console.error('Error downloading attachment:', error);
@@ -462,19 +446,12 @@ export default function TicketsPage() {
     
     setUploadingAttachments(true);
     try {
-      const token = localStorage.getItem('authToken');
-      
       // Delete marked attachments
       for (const attachmentId of attachmentsToDelete) {
-        const response = await fetch(`/api/staff/tickets/attachments/${attachmentId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const result = await apiClient.deleteTicketAttachment(attachmentId);
         
-        if (!response.ok) {
-          throw new Error(`Failed to delete attachment ${attachmentId}`);
+        if (!result.success) {
+          throw new Error(`Failed to delete attachment ${attachmentId}: ${result.error}`);
         }
       }
       
@@ -486,16 +463,10 @@ export default function TicketsPage() {
         });
         formData.append('ticketId', selectedTicket.id);
         
-        const response = await fetch('/api/staff/tickets/attachments', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        });
+        const result = await apiClient.uploadTicketAttachment(formData, { ticketId: selectedTicket.id });
         
-        if (!response.ok) {
-          throw new Error('Failed to upload new attachments');
+        if (!result.success) {
+          throw new Error(`Failed to upload new attachments: ${result.error}`);
         }
       }
       
@@ -538,21 +509,17 @@ export default function TicketsPage() {
         return;
       }
 
-      const response = await fetch('/api/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const result = await apiClient.getCurrentUser();
 
-      console.log('🔍 Auth API response status:', response.status);
+      console.log('🔍 Auth API response:', result.success);
 
-      if (response.ok) {
-        const user = await response.json();
+      if (result.success) {
+        const user = result.data;
         console.log('✅ User loaded successfully:', user.display_name, 'Permissions:', user.permissions?.length || 0);
         setCurrentUser(user);
         localStorage.setItem('currentUser', JSON.stringify(user));
       } else {
-        console.log('❌ Token invalid, status:', response.status);
+        console.log('❌ Token invalid, error:', result.error);
         // Token invalid, redirect to login
         localStorage.removeItem('authToken');
         localStorage.removeItem('currentUser');
@@ -621,24 +588,18 @@ export default function TicketsPage() {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const params = new URLSearchParams({
+      const filterParams = {
         status: activeTab === 'all' ? '' : activeTab,
         queue: filters.queue,
         priority: filters.priority === 'all' ? '' : filters.priority,
         sort: filters.sort,
         limit: '50'
-      });
+      };
 
-      const response = await fetch(`/api/tickets?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const result = await apiClient.getTickets(filterParams);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success) {
+        const data = result.data;
         let filteredTickets = data.tickets || [];
         
         // Apply client-side filtering for queue logic
@@ -696,7 +657,7 @@ export default function TicketsPage() {
           total: data.pagination?.total || 0
         });
       } else {
-        console.error('Failed to load tickets');
+        console.error('Failed to load tickets:', result.error);
       }
     } catch (error) {
       console.error('Error loading tickets:', error);
@@ -765,21 +726,13 @@ export default function TicketsPage() {
   // Handle ticket actions
   const handleTicketAction = async (ticketId: string, action: string, data?: any) => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/tickets/${ticketId}/${action}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data || {})
-      });
+      const result = await apiClient.performTicketAction(ticketId, action, data || {});
 
-      if (response.ok) {
+      if (result.success) {
         // Reload tickets to show updated state
         loadTickets();
       } else {
-        console.error(`Failed to ${action} ticket`);
+        console.error(`Failed to ${action} ticket:`, result.error);
       }
     } catch (error) {
       console.error(`Error ${action} ticket:`, error);
@@ -794,14 +747,13 @@ export default function TicketsPage() {
   const loadTicketComments = async (ticketId: string) => {
     setLoadingComments(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/tickets/${ticketId}/comments`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
+      const result = await apiClient.getTicketComments(ticketId);
+      if (result.success) {
+        const data = result.data;
         setTicketComments(data.comments || []);
         setUnreadCommentsCount(data.unread_count || 0);
+      } else {
+        console.error('Error loading comments:', result.error);
       }
     } catch (error) {
       console.error('Error loading comments:', error);
@@ -814,24 +766,15 @@ export default function TicketsPage() {
     if (!selectedTicket) return;
     
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/tickets/${selectedTicket.id}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ comment_text: commentText })
-      });
+      const result = await apiClient.addTicketComment(selectedTicket.id, commentText);
       
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success) {
+        const data = result.data;
         setTicketComments(prev => [...prev, data.comment]);
         showNotification('Comment added successfully', 'success');
       } else {
-        const errorData = await response.text();
-        console.error('Comment API error:', response.status, errorData);
-        throw new Error(`Failed to add comment: ${response.status} - ${errorData}`);
+        console.error('Comment API error:', result.error);
+        throw new Error(`Failed to add comment: ${result.error}`);
       }
     } catch (error) {
       console.error('Error adding comment:', error);
@@ -844,17 +787,13 @@ export default function TicketsPage() {
     if (!selectedTicket) return;
     
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/tickets/${selectedTicket.id}/comments/${commentId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.deleteTicketComment(selectedTicket.id, commentId);
       
-      if (response.ok) {
+      if (result.success) {
         setTicketComments(prev => prev.filter(comment => comment.id !== commentId));
         showNotification('Comment deleted successfully', 'success');
       } else {
-        throw new Error('Failed to delete comment');
+        throw new Error(result.error || 'Failed to delete comment');
       }
     } catch (error) {
       console.error('Error deleting comment:', error);
@@ -867,14 +806,12 @@ export default function TicketsPage() {
     if (!selectedTicket) return;
     
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/tickets/${selectedTicket.id}/comments/read`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.markCommentsAsRead(selectedTicket.id);
       
-      if (response.ok) {
+      if (result.success) {
         setUnreadCommentsCount(0);
+      } else {
+        console.error('Error marking comments as read:', result.error);
       }
     } catch (error) {
       console.error('Error marking comments as read:', error);
@@ -1058,20 +995,11 @@ export default function TicketsPage() {
     setSaveStatus('saving');
     
     try {
-      const token = localStorage.getItem('authToken');
-      console.log('🔑 Token from localStorage:', token ? `Present (${token.length} chars)` : 'Missing');
       console.log('📝 Updating ticket:', selectedTicket.id);
       
-      const response = await fetch(`/api/tickets/${selectedTicket.id}`, {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(ticketToSave)
-      });
+      const result = await apiClient.updateTicket(selectedTicket.id, ticketToSave);
       
-      if (response.ok) {
+      if (result.success) {
         // Also save attachment changes if there are any
         if (hasAttachmentChanges()) {
           try {
@@ -1125,8 +1053,6 @@ export default function TicketsPage() {
     setShowCompletionModal(false);
     
     try {
-      const token = localStorage.getItem('authToken');
-      
       // Update ticket status to 'completed' and add completion notes
       const completedTicket = {
         ...selectedTicket,
@@ -1135,16 +1061,9 @@ export default function TicketsPage() {
         completed_at: new Date().toISOString()
       };
       
-      const response = await fetch(`/api/tickets/${selectedTicket.id}`, {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(completedTicket)
-      });
+      const result = await apiClient.updateTicket(selectedTicket.id, completedTicket);
       
-      if (response.ok) {
+      if (result.success) {
         // Update the ticket in the main list
         setTickets(prev => prev.map(ticket => 
           ticket.id === selectedTicket.id ? completedTicket : ticket
@@ -1671,7 +1590,6 @@ export default function TicketsPage() {
           try {
             console.log(`📎 Uploading ${files.length} files for ticket ${selectedTicket.id}...`);
             
-            const token = localStorage.getItem('authToken');
             const uploadFormData = new FormData();
             
             // Add all files to form data
@@ -1686,24 +1604,16 @@ export default function TicketsPage() {
             
             uploadFormData.append('ticketId', selectedTicket.id);
             
-            // Upload files
-            const uploadResponse = await fetch('/api/staff/tickets/attachments', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`
-              },
-              body: uploadFormData
-            });
+            // Upload files using API Gateway
+            const result = await apiClient.uploadTicketAttachment(uploadFormData, { ticketId: selectedTicket.id });
             
-            if (!uploadResponse.ok) {
-              const errorText = await uploadResponse.text();
-              throw new Error(`Upload failed: ${uploadResponse.status} ${errorText}`);
+            if (!result.success) {
+              throw new Error(`Upload failed: ${result.error}`);
             }
             
-            const uploadResult = await uploadResponse.json();
-            console.log('✅ Files uploaded successfully:', uploadResult);
+            console.log('✅ Files uploaded successfully:', result.data);
             
-            showNotification(`${uploadResult.files?.length || 0} file(s) uploaded successfully`, 'success');
+            showNotification(`${result.data?.files?.length || 0} file(s) uploaded successfully`, 'success');
             
             // Refresh attachments list
             loadTicketAttachments(selectedTicket.id);
@@ -1722,21 +1632,13 @@ export default function TicketsPage() {
           try {
             console.log(`🗑️ Deleting attachment ${attachmentId}...`);
             
-            const token = localStorage.getItem('authToken');
-            const response = await fetch(`/api/staff/tickets/attachments/${attachmentId}`, {
-              method: 'DELETE',
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
+            const result = await apiClient.deleteTicketAttachment(attachmentId);
             
-            if (!response.ok) {
-              const errorText = await response.text();
-              throw new Error(`Delete failed: ${response.status} ${errorText}`);
+            if (!result.success) {
+              throw new Error(`Delete failed: ${result.error}`);
             }
             
-            const result = await response.json();
-            console.log('✅ Attachment deleted successfully:', result);
+            console.log('✅ Attachment deleted successfully:', result.data);
             
             showNotification('File deleted successfully', 'success');
             
@@ -1808,32 +1710,22 @@ export default function TicketsPage() {
             try {
               console.log('🎫 Creating ticket via tickets page onSubmit:', ticketData);
               
-              // Create the ticket via API
-              const token = localStorage.getItem('authToken');
-              const response = await fetch('/api/staff/tickets', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                  ...ticketData,
-                  createdByStaff: currentUser?.username,
-                  submittedDate: new Date().toISOString()
-                })
+              // Create the ticket via API Gateway
+              const result = await apiClient.createStaffTicket({
+                ...ticketData,
+                createdByStaff: currentUser?.username,
+                submittedDate: new Date().toISOString()
               });
 
-              if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Failed to create ticket: ${response.status} ${errorText}`);
+              if (!result.success) {
+                throw new Error(`Failed to create ticket: ${result.error}`);
               }
 
-              const result = await response.json();
-              console.log('✅ Ticket created successfully:', result);
+              console.log('✅ Ticket created successfully:', result.data);
 
               // After successful ticket creation, refresh the tickets
               await loadTickets();
-              showNotification(`Ticket ${result.ticketId} created successfully`, 'success');
+              showNotification(`Ticket ${result.data?.ticketId} created successfully`, 'success');
             } catch (error) {
               console.error('❌ Error creating ticket:', error);
               showNotification('Failed to create ticket. Please try again.', 'error');

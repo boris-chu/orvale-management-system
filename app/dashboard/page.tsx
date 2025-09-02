@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import apiClient from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -88,29 +89,12 @@ export default function PersonalDashboard() {
       try {
         setLoading(true);
         
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const response = await fetch('/api/dashboard/personal', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to load dashboard metrics');
-        }
-
-        const data = await response.json();
+        const result = await apiClient.getPersonalDashboard();
         
-        if (data.success) {
-          setMetrics(data.metrics);
+        if (result.success) {
+          setMetrics(result.data.metrics);
         } else {
-          throw new Error(data.error || 'Unknown error');
+          throw new Error(result.message || 'Unknown error');
         }
         
         setLoading(false);

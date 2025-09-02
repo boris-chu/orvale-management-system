@@ -160,19 +160,9 @@ export default function OrganizationalManagement() {
 
     setSaving(true);
     try {
-      // TODO: Add create_section action to developer service and use:
-      // const result = await apiClient.makeRequest('developer', 'create_section', formData);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/sections', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
+      const result = await apiClient.createDeveloperSection(formData);
 
-      if (response.ok) {
+      if (result.success) {
         showNotification('Section created successfully', 'success');
         setShowCreateModal(false);
         setFormData({
@@ -184,8 +174,7 @@ export default function OrganizationalManagement() {
         });
         loadSections();
       } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to create section', 'error');
+        showNotification(result.message || 'Failed to create section', 'error');
       }
     } catch (error) {
       console.error('Error creating section:', error);
@@ -203,26 +192,15 @@ export default function OrganizationalManagement() {
 
     setSaving(true);
     try {
-      // TODO: Add update_section action to developer service and use:
-      // const result = await apiClient.makeRequest('developer', 'update_section', { ...formData, id: selectedSection.id });
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/developer/sections', {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ ...formData, id: selectedSection.id })
-      });
+      const result = await apiClient.updateDeveloperSection({ ...formData, id: selectedSection.id });
 
-      if (response.ok) {
+      if (result.success) {
         showNotification('Section updated successfully', 'success');
         setShowEditModal(false);
         setSelectedSection(null);
         loadSections();
       } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to update section', 'error');
+        showNotification(result.message || 'Failed to update section', 'error');
       }
     } catch (error) {
       console.error('Error updating section:', error);
@@ -243,22 +221,13 @@ export default function OrganizationalManagement() {
     }
 
     try {
-      // TODO: Add delete_section action to developer service and use:
-      // const result = await apiClient.makeRequest('developer', 'delete_section', { id: sectionId });
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/developer/sections?id=${sectionId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const result = await apiClient.deleteDeveloperSection(sectionId);
 
-      if (response.ok) {
+      if (result.success) {
         showNotification('Section deleted successfully', 'success');
         loadSections();
       } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to delete section', 'error');
+        showNotification(result.message || 'Failed to delete section', 'error');
       }
     } catch (error) {
       console.error('Error deleting section:', error);

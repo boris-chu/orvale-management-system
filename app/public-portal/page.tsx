@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Ticket, Monitor, Phone, Building, Clock } from 'lucide-react';
 import MaterialUILoginModalAnimated from '@/components/MaterialUILoginModalAnimated';
 import { PublicChatWidget } from '@/components/public-portal/PublicChatWidget';
+import apiClient from '@/lib/api-client';
 // Import removed - will load dynamically from API
 
 interface FormData {
@@ -296,8 +297,8 @@ export default function PublicPortal() {
   useEffect(() => {
     const detectComputerInfo = async () => {
       try {
-        const response = await fetch('/api/system-info');
-        const data = await response.json();
+        const result = await apiClient.getSystemInfo();
+        const data = result.data;
         
         setComputerInfo({
           ip: data.ip || 'Unable to detect',
@@ -343,15 +344,14 @@ export default function PublicPortal() {
     const loadTicketData = async () => {
       try {
         // Load organizational data, categories, and support teams in parallel
-        const [orgResponse, categoriesResponse, supportTeamsResponse] = await Promise.all([
-          fetch('/api/ticket-data/organization'),
-          fetch('/api/ticket-data/categories'),
-          fetch('/api/ticket-data/support-teams')
+        const [orgResult, categoriesResult, supportTeamsResult] = await Promise.all([
+          apiClient.getOrganization(),
+          apiClient.getTicketCategories(),
+          apiClient.getSupportTeams()
         ]);
 
-        if (orgResponse.ok) {
-          const orgData = await orgResponse.json();
-          setOrganizationalData(orgData);
+        if (orgResult.success) {
+          setOrganizationalData(orgResult.data);
         } else {
           console.error('Failed to load organizational data');
           setOrganizationalData({
@@ -362,20 +362,19 @@ export default function PublicPortal() {
           });
         }
 
-        if (categoriesResponse.ok) {
-          const categoriesData = await categoriesResponse.json();
-          setTicketCategories(categoriesData);
+        if (categoriesResult.success) {
+          setTicketCategories(categoriesResult.data);
         } else {
           console.error('Failed to load ticket categories');
           setTicketCategories({});
         }
 
-        if (supportTeamsResponse.ok) {
-          const supportTeamsData = await supportTeamsResponse.json();
-          setSupportTeamGroups(supportTeamsData);
+        if (supportTeamsResult.success) {
+          const supportTeamsData = supportTeamsResult.data;
+          setSupportTeamGroups(supportTeamsData.supportTeamGroups || {});
           
           // Set default email recipient to Crossroads Main if available
-          const allTeams = Object.values(supportTeamsData).flat() as any[];
+          const allTeams = Object.values(supportTeamsData.supportTeamGroups || {}).flat() as any[];
           const defaultTeam = allTeams.find((team: any) => team.value === 'crossroads_main') || allTeams[0];
           if (defaultTeam && !formData.emailRecipient) {
             setFormData(prev => ({ ...prev, emailRecipient: defaultTeam.value }));
@@ -648,29 +647,23 @@ export default function PublicPortal() {
       const htmlBody = generateEmailHTML();
       
       // Submit to backend
-      const response = await fetch('/api/tickets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_name: formData.userName,
-          employee_number: formData.employeeNumber,
-          phone_number: formData.phoneNumber,
-          location: formData.location,
-          cubicle_room: formData.cubicleRoom,
-          section: formData.section,
-          teleworking: formData.teleworking,
-          request_creator_display_name: formData.requestCreatorDisplayName,
-          issue_title: formData.issueTitle,
-          issue_description: formData.issueDescription,
-          computer_info: computerInfo,
-          priority: 'medium',
-          assigned_team: selectedTeam?.team_id || 'ITTS_Region7',
-          email_recipient: selectedTeam?.email || 'CrossroadsITSupport@dpss.lacounty.gov',
-          email_recipient_display: selectedTeam?.label || 'IT Support'
-        })
+      const result = await apiClient.createPublicTicket({
+        user_name: formData.userName,
+        employee_number: formData.employeeNumber,
+        phone_number: formData.phoneNumber,
+        location: formData.location,
+        cubicle_room: formData.cubicleRoom,
+        section: formData.section,
+        teleworking: formData.teleworking,
+        request_creator_display_name: formData.requestCreatorDisplayName,
+        issue_title: formData.issueTitle,
+        issue_description: formData.issueDescription,
+        computer_info: computerInfo,
+        priority: 'medium',
+        assigned_team: selectedTeam?.team_id || 'ITTS_Region7',
+        email_recipient: selectedTeam?.email || 'CrossroadsITSupport@dpss.lacounty.gov',
+        email_recipient_display: selectedTeam?.label || 'IT Support'
       });
-
-      const result = await response.json();
       
       if (result.success) {
         // Save form data to localStorage for future use (excluding title and description)
