@@ -60,36 +60,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Then try to fetch fresh permissions from server using API Gateway
         try {
-          const response = await fetch('/api/v1', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              service: 'auth',
-              action: 'get_current_user',
-              data: {}
-            })
-          });
-
-          if (response.ok) {
-            const result = await response.json();
-            console.log('🔄 API Gateway response:', result);
-            
-            // Handle nested API Gateway response structure
-            const userData = result.data?.data?.user || result.data?.user;
-            if (result.success && userData) {
-              console.log('✅ Updated with fresh user data:', userData);
-              setUser(userData);
-              // Update stored user data
-              localStorage.setItem('currentUser', JSON.stringify(userData));
-            } else {
-              console.log('⚠️ API Gateway returned invalid user data, keeping stored data');
-              console.log('🔍 Response structure:', result);
-            }
+          // Set the token for apiClient
+          apiClient.setToken(token);
+          
+          const result = await apiClient.getCurrentUser();
+          console.log('🔄 API Gateway response:', result);
+          
+          if (result.success && result.data) {
+            console.log('✅ Updated with fresh user data:', result.data);
+            setUser(result.data);
+            // Update stored user data
+            localStorage.setItem('currentUser', JSON.stringify(result.data));
           } else {
-            console.log('⚠️ Fresh data fetch failed, keeping stored data');
+            console.log('⚠️ API Gateway returned invalid user data, keeping stored data');
+            console.log('🔍 Response structure:', result);
           }
         } catch (fetchError) {
           console.log('⚠️ API Gateway request failed, keeping stored data:', fetchError);
@@ -108,29 +92,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/v1', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          service: 'auth',
-          action: 'login',
-          data: { username, password }
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
+      const result = await apiClient.login({ username, password });
+      
+      if (result.success && result.data?.token && result.data?.user) {
+        // apiClient.login already stores the token, but we need to store user too
+        localStorage.setItem('currentUser', JSON.stringify(result.data.user));
         
-        if (result.success && result.data?.data?.token && result.data?.data?.user) {
-          // Store in localStorage to match existing system
-          localStorage.setItem('authToken', result.data.data.token);
-          localStorage.setItem('currentUser', JSON.stringify(result.data.data.user));
-          
-          setUser(result.data.data.user);
-          return true;
-        }
+        setUser(result.data.user);
+        return true;
       }
 
       return false;

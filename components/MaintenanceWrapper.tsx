@@ -3,6 +3,7 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import MaintenancePage from './MaintenancePage';
+import apiClient from '@/lib/api-client';
 
 interface MaintenanceStatus {
   isSystemMaintenance: boolean;
@@ -52,8 +53,14 @@ export default function MaintenanceWrapper({ children }: MaintenanceWrapperProps
   const checkMaintenanceStatusOnMount = async () => {
     try {
       // Check maintenance status
-      const response = await fetch('/api/maintenance/status');
-      const status: MaintenanceStatus & { userHasOverride: boolean } = await response.json();
+      const result = await apiClient.getMaintenanceStatus();
+      const status: MaintenanceStatus & { userHasOverride: boolean } = result.data || {
+        isSystemMaintenance: false,
+        isPortalMaintenance: false,
+        effectiveMode: 'none' as const,
+        effectiveConfig: null,
+        userHasOverride: false
+      };
       
       setMaintenanceStatus(status);
 

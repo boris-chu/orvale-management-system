@@ -30,6 +30,7 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { getLoginRedirectUrl } from '@/lib/login-redirect';
+import apiClient from '@/lib/api-client';
 import React from 'react';
 
 interface MaterialUILoginModalAnimatedProps {
@@ -155,34 +156,21 @@ export default function MaterialUILoginModalAnimated({
     });
 
     try {
-      const requestBody = {
-        service: 'auth',
-        action: 'login',
-        data: { username, password }
-      };
-      
       // Login attempt with API Gateway
-      
-      const response = await fetch('/api/v1', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      });
+      const result = await apiClient.login({ username, password });
 
-      const result = await response.json();
-
-      if (response.ok && result.success && result.data?.data?.token) {
-        // Store token and user data IMMEDIATELY for production builds
-        localStorage.setItem('authToken', result.data.data.token);
-        localStorage.setItem('currentUser', JSON.stringify(result.data.data.user));
+      if (result.success && result.data?.token) {
+        // apiClient.login already stores the token
+        // Store user data for immediate access
+        localStorage.setItem('currentUser', JSON.stringify(result.data.user));
         
         // Force localStorage to flush (production timing fix)
         localStorage.getItem('authToken'); // Read to ensure write is complete
         
-        console.log('🔐 Login success - token stored, user:', result.data.data.user.display_name);
+        console.log('🔐 Login success - token stored, user:', result.data.user.display_name);
         
         // Determine redirect URL based on user preferences
-        const redirectUrl = getLoginRedirectUrl(result.data.data.user);
+        const redirectUrl = getLoginRedirectUrl(result.data.user);
         console.log('🔀 Redirecting to:', redirectUrl);
         
         // Success animation
@@ -201,7 +189,7 @@ export default function MaterialUILoginModalAnimated({
           window.location.href = redirectUrl;
         }, 300);
       } else {
-        setError(result.data?.error || result.error || 'Invalid username or password');
+        setError(result.message || 'Invalid username or password');
         // Error shake animation
         controls.start({
           x: [0, -10, 10, -10, 10, 0],

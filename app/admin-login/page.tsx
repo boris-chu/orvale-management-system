@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertTriangle, User, Lock, LogIn } from 'lucide-react';
+import apiClient from '@/lib/api-client';
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('');
@@ -26,8 +27,8 @@ export default function AdminLogin() {
   useEffect(() => {
     const checkMaintenanceStatus = async () => {
       try {
-        const response = await fetch('/api/maintenance/status');
-        const data = await response.json();
+        const result = await apiClient.getMaintenanceStatus();
+        const data = result.data || {};
         
         if (!data.isSystemMaintenance && !data.isPortalMaintenance) {
           // No maintenance active, redirect to main login page
@@ -64,17 +65,11 @@ export default function AdminLogin() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
+      const result = await apiClient.login({ username, password });
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        localStorage.setItem('authToken', result.token);
-        localStorage.setItem('currentUser', JSON.stringify(result.user));
+      if (result.success && result.data?.token) {
+        // apiClient.login already stores the token
+        localStorage.setItem('currentUser', JSON.stringify(result.data.user));
         window.location.href = '/tickets';
       } else {
         setError(result.message || 'Invalid username or password');

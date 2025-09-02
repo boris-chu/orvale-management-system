@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { RefreshCw, Settings, Wrench, Clock, Phone, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import apiClient from '@/lib/api-client';
 
 export interface MaintenanceTheme {
   // Primary Colors
@@ -185,8 +186,8 @@ export default function MaintenancePage({ config, preview = false }: Maintenance
 
     const checkMaintenanceStatus = async () => {
       try {
-        const response = await fetch('/api/maintenance/status');
-        const data = await response.json();
+        const result = await apiClient.getMaintenanceStatus();
+        const data = result.data || {};
         
         if (!data.isSystemMaintenance && !data.isPortalMaintenance) {
           // Maintenance is over, reload the page
@@ -212,8 +213,8 @@ export default function MaintenancePage({ config, preview = false }: Maintenance
     }
 
     try {
-      const response = await fetch('/api/maintenance/status');
-      const data = await response.json();
+      const result = await apiClient.getMaintenanceStatus();
+      const data = result.data || {};
       
       if (!data.isSystemMaintenance && !data.isPortalMaintenance) {
         window.location.reload();
