@@ -254,9 +254,6 @@ export default function SystemSettings() {
         }
         
         setCurrentUser(user);
-      } else {
-        window.location.href = '/';
-      }
     } catch (error) {
       console.error('Permission check failed:', error);
       window.location.href = '/';

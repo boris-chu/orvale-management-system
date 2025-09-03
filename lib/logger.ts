@@ -63,65 +63,47 @@ const createLoggerConfig = (level: LogLevel, enabled: boolean) => {
 
   const isProduction = process.env.NODE_ENV === 'production';
   const isDevelopment = process.env.NODE_ENV === 'development';
+  const isBuild = process.env.NEXT_PHASE === 'phase-production-build';
   
+  // During build or when worker issues occur, use simple console logging
+  if (isBuild || process.env.DISABLE_PINO_TRANSPORT === 'true') {
+    return {
+      level: level,
+      timestamp: pino.stdTimeFunctions.isoTime,
+      // No transport during build to avoid worker thread issues
+    };
+  }
+
   // Base configuration
   const config: any = {
     level: level,
     timestamp: pino.stdTimeFunctions.isoTime,
-    formatters: {
-      level: (label: string) => ({ level: label }),
-    },
   };
 
-  // Development configuration
+  // Development configuration - disable transport if worker issues
   if (isDevelopment) {
-    config.transport = {
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'SYS:standard',
-        ignore: 'pid,hostname,name',
-        messageFormat: '{msg}',
-        levelFirst: true,
-        timestampKey: 'time'
-      }
-    };
+    // Use simple logging without transport if worker issues detected
+    if (process.env.NODE_ENV === 'development') {
+      // Just use basic pino without pretty printing to avoid worker issues
+      config.formatters = {
+        level: (label: string) => ({ level: label }),
+      };
+      // No transport in development to avoid worker thread issues
+    }
   }
   
-  // Production configuration with file outputs
+  // Production configuration - simplified to avoid worker issues
   if (isProduction) {
+    // Use simple file destination instead of transport targets
     const logsDir = path.join(process.cwd(), 'logs');
     
-    config.transport = {
-      targets: [
-        // Console output (for PM2/Docker logs)
-        {
-          target: 'pino/file',
-          options: {
-            destination: 1, // stdout
-          },
-          level: level
-        },
-        // Application log file
-        {
-          target: 'pino/file',
-          options: {
-            destination: path.join(logsDir, 'app.log'),
-            mkdir: true
-          },
-          level: level
-        },
-        // Error-only log file
-        {
-          target: 'pino/file',
-          options: {
-            destination: path.join(logsDir, 'error.log'),
-            mkdir: true
-          },
-          level: 'error'
-        }
-      ]
-    };
+    try {
+      // Simple file destination without worker threads
+      config.destination = path.join(logsDir, 'app.log');
+    } catch (error) {
+      // If file logging fails, just use stdout
+      config.destination = 1; // stdout
+    }
   }
 
   return config;
@@ -129,12 +111,51 @@ const createLoggerConfig = (level: LogLevel, enabled: boolean) => {
 
 // Initialize logger with default settings  
 let currentLevel: LogLevel = 'info';
-let pinoEnabled = true; // Re-enabled for automatic logging
-let logger = pino(createLoggerConfig(currentLevel, pinoEnabled));
+let pinoEnabled = false; // Disabled to prevent worker thread issues
+
+// Safe logger initialization with console fallback
+let logger: any;
+
+// Use console logging by default to avoid worker thread issues
+logger = {
+  info: (obj?: any, msg?: string) => {
+    if (msg) {
+      console.log(`[INFO]`, msg, obj);
+    } else {
+      console.log(`[INFO]`, obj);
+    }
+  },
+  warn: (obj?: any, msg?: string) => {
+    if (msg) {
+      console.warn(`[WARN]`, msg, obj);
+    } else {
+      console.warn(`[WARN]`, obj);
+    }
+  },
+  error: (obj?: any, msg?: string) => {
+    if (msg) {
+      console.error(`[ERROR]`, msg, obj);
+    } else {
+      console.error(`[ERROR]`, obj);
+    }
+  },
+  debug: (obj?: any, msg?: string) => {
+    if (msg) {
+      console.debug(`[DEBUG]`, msg, obj);
+    } else {
+      console.debug(`[DEBUG]`, obj);
+    }
+  }
+};
 
 // Function to update logger settings dynamically
 const updateLogLevel = async (): Promise<void> => {
   try {
+    // Skip dynamic updates during build
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return;
+    }
+
     const { level: newLevel, enabled: newEnabled } = await getLogSettings();
     if (newLevel !== currentLevel || newEnabled !== pinoEnabled) {
       const oldLevel = currentLevel;
@@ -142,7 +163,18 @@ const updateLogLevel = async (): Promise<void> => {
       
       currentLevel = newLevel;
       pinoEnabled = newEnabled;
-      logger = pino(createLoggerConfig(newLevel, newEnabled));
+      
+      try {
+        logger = pino(createLoggerConfig(newLevel, newEnabled));
+      } catch (loggerError) {
+        // Fallback to console if Pino fails
+        logger = {
+          info: console.log.bind(console),
+          warn: console.warn.bind(console),
+          error: console.error.bind(console),
+          debug: console.debug.bind(console)
+        };
+      }
       
       // Only log if logging is enabled
       if (newEnabled) {
@@ -166,8 +198,8 @@ const updateLogLevel = async (): Promise<void> => {
 // Enhanced logger with context and structured logging
 export const createContextLogger = (context: string) => {
   const safeLog = (level: string, logFn: Function, obj: any, msg?: string) => {
-    if (!pinoEnabled) {
-      // Use console logging when Pino is disabled
+    if (!pinoEnabled || process.env.NEXT_PHASE === 'phase-production-build') {
+      // Use console logging when Pino is disabled or during build
       console.log(`[${level.toUpperCase()}] ${context}:`, msg || '', obj);
       return;
     }
@@ -365,17 +397,19 @@ export const apiLogger = {
     }, `API error: ${method} ${path}`),
 };
 
-// Initialize logger on module load
-getLogSettings().then(({ level, enabled }) => {
-  currentLevel = level;
-  pinoEnabled = enabled;
-  logger = pino(createLoggerConfig(level, enabled));
-  systemLogger.startup();
-}).catch((error) => {
-  // If database initialization fails, use defaults
-  console.log('Logger initialization using defaults (database not ready yet)');
-  systemLogger.startup();
-});
+// Initialize logger on module load - use console only
+if (process.env.NEXT_PHASE !== 'phase-production-build') {
+  getLogSettings().then(({ level, enabled }) => {
+    currentLevel = level;
+    pinoEnabled = false; // Keep disabled to prevent worker issues
+    // Logger is already initialized with console fallback above
+    systemLogger.startup();
+  }).catch((error) => {
+    // If database initialization fails, use defaults
+    console.log('Logger initialization using defaults (database not ready yet)');
+    systemLogger.startup();
+  });
+}
 
 // Create request-scoped logger for API gateway
 export function createRequestLogger(requestId: string, username?: string) {
