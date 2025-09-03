@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 // Use Material-UI for Dialog to avoid focus management conflicts
 import { Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import apiClient from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -152,27 +153,15 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
     setUploading(true);
     
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('userId', user.id.toString());
+      const result = await apiClient.uploadProfilePicture(file, user.id);
 
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/users/profile-picture', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const updatedUser = { ...user, profile_picture: result.profilePictureUrl };
+      if (result.success) {
+        const data = result.data;
+        const updatedUser = { ...user, profile_picture: data.profilePictureUrl };
         onProfileUpdate(updatedUser);
         showNotification('Profile picture updated successfully', 'success');
       } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to upload image', 'error');
+        showNotification(result.message || 'Failed to upload image', 'error');
       }
     } catch (error) {
       console.error('Upload error:', error);
@@ -188,21 +177,14 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
     setUploading(true);
     
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/users/profile-picture?userId=${user.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const result = await apiClient.removeProfilePicture(user.id);
 
-      if (response.ok) {
+      if (result.success) {
         const updatedUser = { ...user, profile_picture: undefined };
         onProfileUpdate(updatedUser);
         showNotification('Profile picture removed', 'success');
       } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to remove image', 'error');
+        showNotification(result.message || 'Failed to remove image', 'error');
       }
     } catch (error) {
       console.error('Remove error:', error);
@@ -216,7 +198,6 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
     setSaving(true);
     
     try {
-      const token = localStorage.getItem('authToken');
       const requestData = {
         display_name: formData.display_name,
         email: formData.email,
@@ -225,16 +206,9 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
         })
       };
       
-      const response = await fetch(`/api/users/${user.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(requestData)
-      });
+      const result = await apiClient.updateUserProfile(user.id, requestData);
 
-      if (response.ok) {
+      if (result.success) {
         const updatedUser = { 
           ...user, 
           display_name: formData.display_name,
@@ -247,8 +221,7 @@ export function ProfileEditModal({ open, onOpenChange, user, onProfileUpdate }: 
         showNotification('Profile updated successfully', 'success');
         setTimeout(() => onOpenChange(false), 1500);
       } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to update profile', 'error');
+        showNotification(result.message || 'Failed to update profile', 'error');
       }
     } catch (error) {
       console.error('Save error:', error);

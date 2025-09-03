@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import {
   Table,
   TableBody,
@@ -89,15 +90,10 @@ export default function AchievementCatalog({ onEdit, onRefresh }: AchievementCat
   const loadAchievements = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/achievements', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const result = await apiClient.getAchievements();
 
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success) {
+        const data = result.data;
         setAchievements(data.achievements);
       } else {
         throw new Error('Failed to load achievements');
@@ -147,17 +143,9 @@ export default function AchievementCatalog({ onEdit, onRefresh }: AchievementCat
 
   const handleToggleActive = async (achievement: Achievement) => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/admin/achievements/${achievement.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ active: !achievement.active })
-      });
+      const result = await apiClient.updateAchievement(achievement.id, { active: !achievement.active });
 
-      if (response.ok) {
+      if (result.success) {
         toast({
           title: 'Success',
           description: `Achievement ${achievement.active ? 'deactivated' : 'activated'}`
@@ -182,15 +170,9 @@ export default function AchievementCatalog({ onEdit, onRefresh }: AchievementCat
     }
 
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/admin/achievements/${achievement.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const result = await apiClient.deleteAchievement(achievement.id);
 
-      if (response.ok) {
+      if (result.success) {
         toast({
           title: 'Success',
           description: 'Achievement deleted successfully'
@@ -211,15 +193,9 @@ export default function AchievementCatalog({ onEdit, onRefresh }: AchievementCat
 
   const handleClone = async (achievement: Achievement) => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/admin/achievements/${achievement.id}/clone`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const result = await apiClient.cloneAchievement(achievement.id);
 
-      if (response.ok) {
+      if (result.success) {
         toast({
           title: 'Success',
           description: 'Achievement cloned successfully'
@@ -240,17 +216,9 @@ export default function AchievementCatalog({ onEdit, onRefresh }: AchievementCat
 
   const handleReorder = async (achievement: Achievement, direction: 'up' | 'down') => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/admin/achievements/${achievement.id}/reorder`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ direction })
-      });
+      const result = await apiClient.reorderAchievement(achievement.id, direction);
 
-      if (response.ok) {
+      if (result.success) {
         loadAchievements();
       }
     } catch (error) {

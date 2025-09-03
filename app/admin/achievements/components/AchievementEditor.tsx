@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import apiClient from '@/lib/api-client';
 import {
   Save,
   X,
@@ -208,35 +209,25 @@ export default function AchievementEditor({
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('authToken');
       
-      const url = isCreating 
-        ? '/api/admin/achievements'
-        : `/api/admin/achievements/${achievement.id}`;
-      
-      const method = isCreating ? 'POST' : 'PUT';
+      const achievementData = {
+        ...formData,
+        active_from: formData.active_from?.toISOString() || null,
+        active_until: formData.active_until?.toISOString() || null
+      };
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ...formData,
-          active_from: formData.active_from?.toISOString() || null,
-          active_until: formData.active_until?.toISOString() || null
-        })
-      });
+      const result = isCreating 
+        ? await apiClient.createAchievement(achievementData)
+        : await apiClient.updateAchievement(achievement.id, achievementData);
 
-      if (response.ok) {
+      if (result.success) {
         toast({
           title: 'Success',
           description: `Achievement ${isCreating ? 'created' : 'updated'} successfully`
         });
         onSave();
       } else {
-        throw new Error('Failed to save achievement');
+        throw new Error(result.error || 'Failed to save achievement');
       }
     } catch (error) {
       console.error('Error saving achievement:', error);

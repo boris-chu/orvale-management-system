@@ -8,6 +8,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import ChatWidget from './ChatWidget';
 import { usePathname } from 'next/navigation';
+import apiClient from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface User {
@@ -135,21 +136,10 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
     try {
       // Load widget settings through API Gateway (no auth required)
       console.log('🔧 Fetching widget settings from API Gateway');
-      const settingsResponse = await fetch('/api/v1', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          service: 'public',
-          action: 'get_widget_settings',
-          data: {}
-        })
-      });
+      const result = await apiClient.getPublicWidgetSettings();
       
-      if (settingsResponse.ok) {
-        const result = await settingsResponse.json();
-        const widgetSettings = result.data?.data || result.data;
+      if (result.success) {
+        const widgetSettings = result.data;
         console.log('🔧 Loaded widget settings:', widgetSettings);
         
         setSettings(prev => ({

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import apiClient from '@/lib/api-client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -81,9 +82,9 @@ export default function EnhancedPublicPortalForm() {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const response = await fetch('/api/developer/portal-settings');
-        if (response.ok) {
-          const settings = await response.json();
+        const result = await apiClient.getDeveloperPortalSettings();
+        if (result.success) {
+          const settings = result.data;
           setPortalSettings(settings.user_experience);
           
           // Initialize smart suggestions if enabled

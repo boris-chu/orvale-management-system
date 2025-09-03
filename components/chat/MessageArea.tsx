@@ -29,6 +29,7 @@ import { UserAvatar } from '@/components/UserAvatar';
 import { cn } from '@/lib/utils';
 import { useIsMobile, useIsTouchDevice } from '@/hooks/useMediaQuery';
 import { socketClient } from '@/lib/socket-client';
+import apiClient from '@/lib/api-client';
 import { useThemeCSS } from '@/hooks/useThemeSystem';
 import { Socket } from 'socket.io-client';
 import { AuthenticatedImage } from './AuthenticatedImage';
@@ -428,16 +429,10 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
       setIsLoading(true);
       console.log('📥 Loading messages for channel:', chat.id);
       
-      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
-      const response = await fetch(`/api/chat/messages?channelId=${chat.id}&limit=50`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const result = await apiClient.getChatMessages(chat.id, 50);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success) {
+        const data = result.data;
         console.log('📥 Loaded messages:', data.messages?.length || 0);
         
         // Convert API messages to component format
@@ -634,23 +629,14 @@ export default function MessageArea({ chat, currentUser }: MessageAreaProps) {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('channel_id', chat.id);
-
-      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
       
-      const response = await fetch('/api/chat/files/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
+      const result = await apiClient.uploadChatFile(formData);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upload file');
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to upload file');
       }
 
-      const data = await response.json();
+      const data = result.data;
       
       // Create message with file attachment
       const optimisticMessage: Message = {

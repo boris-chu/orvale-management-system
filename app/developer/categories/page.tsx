@@ -242,44 +242,29 @@ export default function CategoryManagement() {
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      let endpoint, body;
+      let result;
       
       switch (modalType) {
         case 'category':
-          endpoint = '/api/developer/categories';
-          body = formData;
+          result = await apiClient.createDeveloperCategory(formData);
           break;
         case 'request_type':
-          endpoint = '/api/developer/request-types';
-          body = { ...formData, category_id: formData.category_id };
+          result = await apiClient.createDeveloperRequestType({ ...formData, category_id: formData.category_id });
           break;
         case 'subcategory':
-          endpoint = '/api/developer/subcategories';
-          body = { ...formData, request_type_id: formData.request_type_id };
+          result = await apiClient.createDeveloperSubcategory({ ...formData, request_type_id: formData.request_type_id });
           break;
         default:
-          endpoint = '/api/developer/dpss-org';
-          body = { ...formData, type: modalType, parent_id: formData.parent_id || undefined };
+          result = await apiClient.createDeveloperDpssOrg({ ...formData, type: modalType, parent_id: formData.parent_id || undefined });
       }
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(body)
-      });
-
-      if (response.ok) {
+      if (result.success) {
         showNotification(`${modalType.replace('_', ' ')} created successfully`, 'success');
         setShowCreateModal(false);
         resetForm();
         loadData();
       } else {
-        const error = await response.json();
-        showNotification(error.error || `Failed to create ${modalType.replace('_', ' ')}`, 'error');
+        showNotification(result.error || `Failed to create ${modalType.replace('_', ' ')}`, 'error');
       }
     } catch (error) {
       console.error(`Error creating ${modalType}:`, error);
@@ -301,44 +286,29 @@ export default function CategoryManagement() {
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      let endpoint, body;
+      let result;
       
       switch (modalType) {
         case 'category':
-          endpoint = '/api/developer/categories';
-          body = formData;
+          result = await apiClient.updateDeveloperCategory(formData);
           break;
         case 'request_type':
-          endpoint = '/api/developer/request-types';
-          body = { ...formData, category_id: formData.category_id };
+          result = await apiClient.updateDeveloperRequestType({ ...formData, category_id: formData.category_id });
           break;
         case 'subcategory':
-          endpoint = '/api/developer/subcategories';
-          body = { ...formData, request_type_id: formData.request_type_id };
+          result = await apiClient.updateDeveloperSubcategory({ ...formData, request_type_id: formData.request_type_id });
           break;
         default:
-          endpoint = '/api/developer/dpss-org';
-          body = { ...formData, type: modalType, parent_id: formData.parent_id || undefined };
+          result = await apiClient.updateDeveloperDpssOrg({ ...formData, type: modalType, parent_id: formData.parent_id || undefined });
       }
 
-      const response = await fetch(endpoint, {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(body)
-      });
-
-      if (response.ok) {
+      if (result.success) {
         showNotification(`${modalType.replace('_', ' ')} updated successfully`, 'success');
         setShowEditModal(false);
         setSelectedItem(null);
         loadData();
       } else {
-        const error = await response.json();
-        showNotification(error.error || `Failed to update ${modalType.replace('_', ' ')}`, 'error');
+        showNotification(result.error || `Failed to update ${modalType.replace('_', ' ')}`, 'error');
       }
     } catch (error) {
       console.error(`Error updating ${modalType}:`, error);
@@ -363,34 +333,27 @@ export default function CategoryManagement() {
     }
 
     try {
-      const token = localStorage.getItem('authToken');
-      let endpoint;
+      let result;
       
       switch (type) {
         case 'category':
-          endpoint = `/api/developer/categories?id=${itemId}`;
+          result = await apiClient.deleteDeveloperCategory(itemId);
           break;
         case 'request_type':
-          endpoint = `/api/developer/request-types?id=${itemId}`;
+          result = await apiClient.deleteDeveloperRequestType(itemId);
           break;
         case 'subcategory':
-          endpoint = `/api/developer/subcategories?id=${itemId}`;
+          result = await apiClient.deleteDeveloperSubcategory(itemId);
           break;
         default:
-          endpoint = `/api/developer/dpss-org?type=${type}&id=${itemId}`;
+          result = await apiClient.deleteDeveloperDpssOrg(type, itemId);
       }
 
-      const response = await fetch(endpoint, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
+      if (result.success) {
         showNotification(`${type} deleted successfully`, 'success');
         loadData();
       } else {
-        const error = await response.json();
-        showNotification(error.error || `Failed to delete ${type}`, 'error');
+        showNotification(result.error || `Failed to delete ${type}`, 'error');
       }
     } catch (error) {
       console.error(`Error deleting ${type}:`, error);

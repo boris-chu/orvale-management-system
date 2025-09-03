@@ -34,6 +34,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import apiClient from '@/lib/api-client';
 import { 
   FilterList, 
   ViewColumn, 
@@ -263,30 +264,25 @@ export const ConfigurableDataTable: React.FC<ConfigurableDataTableProps> = ({
       };
 
       // Fetch columns
-      const columnsResponse = await fetch(`/api/admin/tables-columns?table=${tableIdentifier}`, {
-        headers,
-      });
+      const columnsResult = await apiClient.getTableColumns(tableIdentifier);
 
-      if (!columnsResponse.ok) {
-        throw new Error(`Failed to fetch columns: ${columnsResponse.statusText}`);
+      if (!columnsResult.success) {
+        throw new Error(`Failed to fetch columns: ${columnsResult.error}`);
       }
 
-      const columnsData = await columnsResponse.json();
-      console.log('Columns response:', columnsData);
-      const tableColumns = columnsData.data?.grouped?.[tableIdentifier] || [];
+      console.log('Columns response:', columnsResult.data);
+      const tableColumns = columnsResult.data?.grouped?.[tableIdentifier] || [];
       console.log('Table columns for', tableIdentifier, ':', tableColumns);
       setColumns(tableColumns);
 
       // Fetch configuration
-      const configResponse = await fetch(`/api/admin/tables-configs?table=${tableIdentifier}`, {
-        headers,
-      });
+      const configResult = await apiClient.getTableConfigs(tableIdentifier);
 
-      if (!configResponse.ok) {
-        throw new Error(`Failed to fetch configuration: ${configResponse.statusText}`);
+      if (!configResult.success) {
+        throw new Error(`Failed to fetch configuration: ${configResult.error}`);
       }
 
-      const configData = await configResponse.json();
+      const configData = configResult.data;
       const configs = configData.data || [];
       
       // Find default configuration or use the first one

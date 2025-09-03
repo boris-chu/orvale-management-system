@@ -292,10 +292,7 @@ export function TicketDetailsModal({
       
       // Delete marked attachments
       for (const attachmentId of attachmentsToDelete) {
-        await fetch(`/api/staff/tickets/attachments/${attachmentId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        await apiClient.deleteStaffTicketAttachment(attachmentId);
       }
       
       // Upload new attachments
@@ -374,13 +371,9 @@ export function TicketDetailsModal({
   const loadAttachments = async () => {
     setLoadingAttachments(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/staff/tickets/attachments?ticketId=${ticket.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAttachments(data.attachments || []);
+      const result = await apiClient.getStaffTicketAttachments(ticket.id);
+      if (result.success) {
+        setAttachments(result.data.attachments || []);
       }
     } catch (error) {
       console.error('Error loading attachments:', error);

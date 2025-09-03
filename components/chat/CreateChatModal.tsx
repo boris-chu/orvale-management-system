@@ -30,6 +30,7 @@ import {
 } from '@mui/material';
 import { Search, Users, MessageCircle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import apiClient from '@/lib/api-client';
 
 interface User {
   username: string;
@@ -72,15 +73,10 @@ export default function CreateChatModal({ open, onClose, currentUser, onChatCrea
 
     const loadUsers = async () => {
       try {
-        const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
-        if (!token) return;
+        const result = await apiClient.getChatUsers();
 
-        const response = await fetch('/api/chat/users', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
+        if (result.success) {
+          const data = result.data;
           
           if (data.users) {
             // Set users by status groups
@@ -167,32 +163,17 @@ export default function CreateChatModal({ open, onClose, currentUser, onChatCrea
     setError(null);
 
     try {
-      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
-      if (!token) throw new Error('No authentication token');
-
       // For DM, create a direct message
       if (chatType === 'dm' && selectedUsers.length === 1) {
         const targetUser = selectedUsers[0];
         console.log('Creating DM with:', targetUser);
 
-        const response = await fetch('/api/chat/dm', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            targetUsername: targetUser.username
-          })
-        });
+        const result = await apiClient.createDirectMessage(targetUser.username);
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to create direct message');
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to create direct message');
         }
-
-        const result = await response.json();
-        console.log('DM created/found:', result);
+        console.log('DM created/found:', result.data);
 
         // Reset form and close
         setChatName('');
@@ -202,8 +183,8 @@ export default function CreateChatModal({ open, onClose, currentUser, onChatCrea
         onClose();
 
         // Navigate to the new DM
-        if (onChatCreated && result.dmId) {
-          onChatCreated(result.dmId.toString(), 'dm');
+        if (onChatCreated && result.data.dmId) {
+          onChatCreated(result.data.dmId.toString(), 'dm');
         } else {
           // Fallback to reload if callback not provided
           window.location.reload();
@@ -212,28 +193,18 @@ export default function CreateChatModal({ open, onClose, currentUser, onChatCrea
       }
 
       // For group chat, create a group
-      const response = await fetch('/api/chat/channels', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: chatName,
-          description: description || null,
-          type: 'group',
-          is_private: true,
-          members: selectedUsers.map(user => user.username)
-        })
+      const result = await apiClient.createChatChannel({
+        name: chatName,
+        description: description || null,
+        type: 'group',
+        is_private: true,
+        members: selectedUsers.map(user => user.username)
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create group');
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to create group');
       }
-
-      const result = await response.json();
-      console.log('Group created:', result);
+      console.log('Group created:', result.data);
 
       // Reset form and close
       setChatName('');
@@ -243,8 +214,8 @@ export default function CreateChatModal({ open, onClose, currentUser, onChatCrea
       onClose();
 
       // Navigate to the new group
-      if (onChatCreated && result.channelId) {
-        onChatCreated(result.channelId.toString(), 'group');
+      if (onChatCreated && result.data.channelId) {
+        onChatCreated(result.data.channelId.toString(), 'group');
       } else {
         // Fallback to reload if callback not provided
         window.location.reload();

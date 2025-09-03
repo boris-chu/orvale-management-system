@@ -6,6 +6,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 
 export default function SystemInitializer() {
   useEffect(() => {
@@ -14,19 +15,12 @@ export default function SystemInitializer() {
       try {
         console.log('🔄 Initializing Orvale Management System...');
         
-        const response = await fetch('/api/system/init', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+        const result = await apiClient.systemInit();
 
-        if (response.ok) {
-          const result = await response.json();
+        if (result.success) {
           console.log('✅ System initialized:', result.message);
         } else {
-          const error = await response.json();
-          console.warn('⚠️ System initialization warning:', error.error);
+          console.warn('⚠️ System initialization warning:', result.message);
         }
       } catch (error) {
         console.error('❌ System initialization failed:', error);

@@ -10,6 +10,7 @@ import {
   Circle, Person, AccessTime, Chat, Assignment,
   Notifications, Settings, Save, Refresh, AutoAwesome, Groups
 } from '@mui/icons-material';
+import apiClient from '@/lib/api-client';
 
 interface WorkModeSettings {
   current_mode: 'ready' | 'work_mode' | 'ticketing_mode' | 'away' | 'break' | 'offline';
@@ -116,13 +117,10 @@ export const StaffWorkModeManager = ({ staffInfo, onWorkModeChange }: StaffWorkM
 
   const loadWorkModeSettings = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/staff/work-modes', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.getStaffWorkModes();
 
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success) {
+        const data = result.data;
         setWorkModeSettings({
           current_mode: data.current_mode || 'away',
           auto_assign_enabled: Boolean(data.auto_assign_enabled),
@@ -145,13 +143,10 @@ export const StaffWorkModeManager = ({ staffInfo, onWorkModeChange }: StaffWorkM
 
   const loadActiveChatCount = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/public-portal/staff/active-chats', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.getStaffActiveChats();
 
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success) {
+        const data = result.data;
         setActiveChatCount(data.activeChats || 0);
       }
     } catch (error) {
@@ -162,30 +157,22 @@ export const StaffWorkModeManager = ({ staffInfo, onWorkModeChange }: StaffWorkM
   const saveWorkModeSettings = async () => {
     setSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/staff/work-modes', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          current_mode: workModeSettings.current_mode,
-          auto_assign_enabled: workModeSettings.auto_assign_enabled,
-          max_concurrent_chats: workModeSettings.max_concurrent_chats,
-          accept_vip_chats: workModeSettings.accept_vip_chats,
-          accept_escalated_chats: workModeSettings.accept_escalated_chats,
-          preferred_departments: JSON.stringify(workModeSettings.preferred_departments),
-          status_message: workModeSettings.status_message
-        })
+      const result = await apiClient.updateStaffWorkModeSettings({
+        current_mode: workModeSettings.current_mode,
+        auto_assign_enabled: workModeSettings.auto_assign_enabled,
+        max_concurrent_chats: workModeSettings.max_concurrent_chats,
+        accept_vip_chats: workModeSettings.accept_vip_chats,
+        accept_escalated_chats: workModeSettings.accept_escalated_chats,
+        preferred_departments: JSON.stringify(workModeSettings.preferred_departments),
+        status_message: workModeSettings.status_message
       });
 
-      if (response.ok) {
+      if (result.success) {
         setLastUpdated(new Date());
         onWorkModeChange?.(workModeSettings.current_mode);
         console.log('Work mode settings saved successfully');
       } else {
-        console.error('Failed to save work mode settings');
+        console.error('Failed to save work mode settings:', result.message);
       }
     } catch (error) {
       console.error('Error saving work mode settings:', error);

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import apiClient from '@/lib/api-client';
 import { Input } from '@/components/ui/input';
 import { LogIn, Ticket, Users, Search, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -23,18 +24,7 @@ export default function Home() {
     const token = localStorage.getItem('authToken');
     if (token) {
       // Check user permissions using the API Gateway
-      fetch('/api/v1', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          service: 'auth',
-          action: 'get_current_user',
-          data: {}
-        })
-      })
+      apiClient.getCurrentUser()
       .then(response => response.json())
       .then(result => {
         if (result.success && result.data?.user) {
@@ -72,10 +62,10 @@ export default function Home() {
 
     try {
       // Public API endpoint to get ticket status (no auth required)
-      const response = await fetch(`/api/public/ticket-status/${ticketNumber.trim()}`);
+      const result = await apiClient.getPublicTicketStatus(ticketNumber.trim());
       
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success) {
+        const data = result.data;
         setTicketStatus(data.ticket);
       } else if (response.status === 404) {
         setTrackingError('Ticket not found. Please check your confirmation number.');

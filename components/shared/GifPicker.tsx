@@ -26,6 +26,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import apiClient from '@/lib/api-client';
 
 interface GifItem {
   id: string;
@@ -122,9 +123,9 @@ export default function GifPicker({
 
   const fetchGiphySettings = async () => {
     try {
-      const response = await fetch('/api/admin/chat/settings?category=giphy');
-      if (response.ok) {
-        const settings = await response.json();
+      const result = await apiClient.getGifSettings();
+      if (result.success) {
+        const settings = result.data;
         setGiphySettings({
           enabled: settings.giphy_enabled === 'true',
           api_key: settings.giphy_api_key || '',
@@ -145,11 +146,10 @@ export default function GifPicker({
 
   const checkRateLimit = async () => {
     try {
-      const response = await fetch('/api/chat/gif-rate-limit');
-      if (response.ok) {
-        const data = await response.json();
-        setRateLimitStatus(data);
-        return data.remaining > 0;
+      const result = await apiClient.getGifRateLimit();
+      if (result.success) {
+        setRateLimitStatus(result.data);
+        return result.data.remaining > 0;
       }
       return false;
     } catch (error) {
@@ -246,11 +246,7 @@ export default function GifPicker({
 
     // Log the GIF send for rate limiting
     try {
-      await fetch('/api/chat/gif-usage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gif_id: gif.id })
-      });
+      await apiClient.logGifUsage({ gif_id: gif.id });
     } catch (error) {
       console.error('Failed to log GIF usage:', error);
     }

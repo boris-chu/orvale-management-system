@@ -782,25 +782,15 @@ export default function RoleManagement() {
 
     setSaving(true);
     try {
-      // TODO: Add delete_role action to developer service and use:
-      // const result = await apiClient.makeRequest('developer', 'delete_role', { id: selectedRole.id });
-      const token = localStorage.getItem('authToken');
-      
-      const response = await fetch(`/api/developer/roles?id=${selectedRole.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const result = await apiClient.deleteDeveloperRole(selectedRole.id);
 
-      if (response.ok) {
+      if (result.success) {
         showNotification('Role deleted successfully', 'success');
         setShowDeleteModal(false);
         setSelectedRole(null);
         loadRoles();
       } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to delete role', 'error');
+        showNotification(result.error || 'Failed to delete role', 'error');
       }
     } catch (error) {
       console.error('Error deleting role:', error);

@@ -25,6 +25,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import apiClient from '@/lib/api-client';
 
 interface TeamPreference {
   team_id: string;
@@ -58,36 +59,14 @@ export default function HelpdeskTeamSettings({ open, onClose, onSaved }: Helpdes
     setLoading(true);
     try {
       // Load team preferences through API Gateway
-      const preferencesResponse = await fetch('/api/v1', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify({
-          service: 'helpdesk',
-          action: 'get_team_preferences',
-          data: {}
-        })
-      });
+      const preferencesResult = await apiClient.getTeamPreferences();
 
       // Load available teams
-      const teamsResponse = await fetch('/api/v1', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify({
-          service: 'helpdesk',
-          action: 'get_teams',
-          data: {}
-        })
-      });
+      const teamsResult = await apiClient.getHelpdeskTeams();
 
-      if (preferencesResponse.ok && teamsResponse.ok) {
-        const prefResult = await preferencesResponse.json();
-        const teamResult = await teamsResponse.json();
+      if (preferencesResult.success && teamsResult.success) {
+        const prefResult = preferencesResult.data;
+        const teamResult = teamsResult.data;
         
         const prefData = prefResult.data?.data || prefResult.data;
         const teamData = teamResult.data?.data || teamResult.data;
@@ -120,39 +99,23 @@ export default function HelpdeskTeamSettings({ open, onClose, onSaved }: Helpdes
   const savePreferences = async () => {
     setSaving(true);
     try {
-      const response = await fetch('/api/v1', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify({
-          service: 'helpdesk',
-          action: 'update_team_preferences',
-          data: {
-            teamPreferences: preferences.map(pref => ({
-              team_id: pref.team_id,
-              is_visible: pref.is_visible,
-              tab_order: pref.tab_order
-            }))
-          }
-        })
+      const result = await apiClient.updateTeamPreferences({
+        teamPreferences: preferences.map(pref => ({
+          team_id: pref.team_id,
+          is_visible: pref.is_visible,
+          tab_order: pref.tab_order
+        }))
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
+      if (result.success) {
           showNotification('Team preferences saved successfully', 'success');
           onSaved(); // Notify parent to refresh
           setTimeout(() => {
             onClose();
           }, 1000);
         } else {
-          showNotification(result.error || 'Failed to save preferences', 'error');
+          showNotification(result.message || 'Failed to save preferences', 'error');
         }
-      } else {
-        showNotification('Failed to save preferences', 'error');
-      }
     } catch (error) {
       console.error('Error saving preferences:', error);
       showNotification('Error saving team preferences', 'error');

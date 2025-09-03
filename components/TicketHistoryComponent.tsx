@@ -7,6 +7,7 @@ import { Clock, User, ArrowRight, AlertTriangle, CheckCircle, UserCheck, Users, 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatRegularTime } from '@/lib/time-utils';
+import apiClient from '@/lib/api-client';
 
 interface HistoryEntry {
   id: number;
@@ -119,20 +120,13 @@ export default function TicketHistoryComponent({ ticketId, isVisible }: TicketHi
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/tickets/${ticketId}/history`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const result = await apiClient.getTicketHistory(ticketId);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to fetch ticket history');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch ticket history');
       }
 
-      const data = await response.json();
-      setHistory(data.history || []);
+      setHistory(result.data.history || []);
     } catch (err: any) {
       setError(err.message);
       console.error('Error fetching ticket history:', err);

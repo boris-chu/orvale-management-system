@@ -24,6 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Achievement } from '@/lib/achievement-service';
+import apiClient from '@/lib/api-client';
 
 const rarityColors = {
   common: 'bg-gray-100 text-gray-800 border-gray-300',
@@ -62,24 +63,13 @@ export default function AchievementsPage() {
     try {
       setLoading(true);
       
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
+      const result = await apiClient.getAchievements();
 
-      const response = await fetch('/api/achievements', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
+      if (!result.success) {
         throw new Error('Failed to load achievements');
       }
 
-      const data = await response.json();
+      const data = result.data;
       
       if (data.success) {
         setAchievements(data.achievements);
@@ -103,20 +93,11 @@ export default function AchievementsPage() {
     try {
       setRefreshing(true);
       
-      const token = localStorage.getItem('authToken');
-      if (!token) return;
-
       // Trigger achievement check
-      const response = await fetch('/api/achievements', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const result = await apiClient.refreshAchievements();
 
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success) {
+        const data = result.data;
         if (data.newAchievements?.length > 0) {
           toast({
             title: 'Achievements Updated!',

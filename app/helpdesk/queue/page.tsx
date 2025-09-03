@@ -446,14 +446,9 @@ export default function HelpdeskQueue() {
       
       // Delete marked attachments
       for (const attachmentId of attachmentsToDelete) {
-        const deleteResponse = await fetch(`/api/staff/tickets/attachments/${attachmentId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const result = await apiClient.deleteStaffTicketAttachment(attachmentId);
         
-        if (!deleteResponse.ok) {
+        if (!result.success) {
           throw new Error(`Failed to delete attachment ${attachmentId}`);
         }
       }
@@ -466,15 +461,9 @@ export default function HelpdeskQueue() {
         });
         formData.append('ticketId', selectedTicket.id);
         
-        const uploadResponse = await fetch('/api/staff/tickets/attachments', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        });
+        const result = await apiClient.uploadStaffTicketAttachment(formData);
         
-        if (!uploadResponse.ok) {
+        if (!result.success) {
           throw new Error('Failed to upload new attachments');
         }
       }

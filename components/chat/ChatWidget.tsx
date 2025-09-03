@@ -33,6 +33,7 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { socketClient } from '@/lib/socket-client';
 import { useChatSettings } from '@/hooks/useChatSettings';
+import apiClient from '@/lib/api-client';
 import { useCallManager } from '@/hooks/useCallManager';
 import IncomingCallNotification from './IncomingCallNotification';
 import WebRTCCall from './WebRTCCall';
@@ -144,36 +145,23 @@ export default function ChatWidget({
     try {
       setIsLoading(true);
       setChatSystemError(null);
-      
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        setChatSystemError('Authentication required for chat system');
-        setIsLoading(false);
-        return;
-      }
 
       // Load both channels, direct messages, and user presence data
-      const [channelsResponse, dmsResponse, usersResponse] = await Promise.all([
-        fetch('/api/chat/channels', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch('/api/chat/dm', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch('/api/chat/users', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
+      const [channelsResult, dmsResult, usersResult] = await Promise.all([
+        apiClient.getChatChannels(),
+        apiClient.getDirectMessages(),
+        apiClient.getChatUsers()
       ]);
       
-      if (channelsResponse.ok && dmsResponse.ok) {
-        const channelsData = await channelsResponse.json();
-        const dmsData = await dmsResponse.json();
+      if (channelsResult.success && dmsResult.success) {
+        const channelsData = channelsResult.data;
+        const dmsData = dmsResult.data;
         
         // Process user presence data for quick lookup
         let userPresenceMap: {[key: string]: any} = {};
-        if (usersResponse.ok) {
-          const usersData = await usersResponse.json();
-          if (usersData.success && usersData.users) {
+        if (usersResult.success) {
+          const usersData = usersResult.data;
+          if (usersData.users) {
             Object.values(usersData.users).flat().forEach((user: any) => {
               userPresenceMap[user.username] = user;
             });
@@ -567,36 +555,25 @@ export default function ChatWidget({
         return;
       }
 
-      const url = `/api/chat/messages?channelId=${chatId}&limit=5`;
-      console.log('🔗 ChatWidget: Fetching messages from:', url);
+      console.log('🔗 ChatWidget: Fetching messages for channel:', chatId);
       
-      const response = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.getChatWidgetMessages(chatId, 5);
       
-      console.log('📡 ChatWidget: Response status:', response.status);
+      console.log('📡 ChatWidget: API result:', result);
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`📨 ChatWidget: API response:`, data);
-        console.log(`📨 ChatWidget: Loaded ${data.messages?.length || 0} messages for channel ${chatId}`);
+      if (result.success) {
+        console.log(`📨 ChatWidget: API response:`, result.data);
+        console.log(`📨 ChatWidget: Loaded ${result.data.messages?.length || 0} messages for channel ${chatId}`);
         
         // The API returns messages in an array
-        if (Array.isArray(data.messages)) {
-          setMessages(data.messages);
+        if (Array.isArray(result.data.messages)) {
+          setMessages(result.data.messages);
         } else {
-          console.warn('ChatWidget: Messages is not an array:', data.messages);
+          console.warn('ChatWidget: Messages is not an array:', result.data.messages);
           setMessages([]);
         }
       } else {
-        console.error(`❌ ChatWidget: Failed to load messages for chat ${chatId}:`, response.status);
-        try {
-          const errorData = await response.json();
-          console.error('Error response:', errorData);
-        } catch {
-          const errorText = await response.text();
-          console.error('Error response text:', errorText);
-        }
+        console.error(`❌ ChatWidget: Failed to load messages for chat ${chatId}:`, result.error);
         setMessages([]);
       }
     } catch (error) {

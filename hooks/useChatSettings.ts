@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 
 interface ChatUISettings {
   show_unread_badges: boolean;
@@ -39,18 +40,10 @@ export function useChatSettings() {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
-        if (!token) {
-          setLoading(false);
-          return;
-        }
+        const result = await apiClient.getChatUISettings();
 
-        const response = await fetch('/api/chat/ui-settings', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
+        if (result.success) {
+          const data = result.data;
           setSettings({
             show_unread_badges: data.show_unread_badges ?? defaultSettings.show_unread_badges,
             unread_badge_color: data.unread_badge_color ?? defaultSettings.unread_badge_color,

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import {
   Paper,
   Typography,
@@ -123,18 +124,9 @@ export default function ToastCustomization() {
   const saveConfiguration = async () => {
     try {
       setSaving(true);
-      const token = localStorage.getItem('authToken');
-      
-      const response = await fetch('/api/admin/achievements/toast-config', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(config)
-      });
+      const result = await apiClient.updateToastConfig(config);
 
-      if (response.ok) {
+      if (result.success) {
         toast({
           title: 'Success',
           description: 'Toast configuration saved successfully'

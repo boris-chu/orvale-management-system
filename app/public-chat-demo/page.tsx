@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Box, Card, CardContent, Typography, Alert, CircularProgress } from '@mui/material';
+import apiClient from '@/lib/api-client';
 
 interface WidgetStatus {
   enabled: boolean;
@@ -41,8 +42,8 @@ const PublicChatDemo = () => {
 
   const checkWidgetStatus = async () => {
     try {
-      const response = await fetch('/api/public-portal/widget-status');
-      const data = await response.json();
+      const result = await apiClient.getPublicWidgetStatus();
+      const data = result.success ? result.data : {};
       setWidgetStatus(data);
       setLoading(false);
     } catch (error) {

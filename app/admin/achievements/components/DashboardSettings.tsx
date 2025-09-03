@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import apiClient from '@/lib/api-client';
 import {
   Settings,
   Eye,
@@ -126,13 +127,10 @@ export default function DashboardSettings() {
 
   const loadConfiguration = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/achievements/dashboard-settings', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const result = await apiClient.getDashboardSettings();
 
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success) {
+        const data = result.data;
         if (data.config) {
           setConfig(data.config);
         }
@@ -157,18 +155,10 @@ export default function DashboardSettings() {
   const saveConfiguration = async () => {
     try {
       setSaving(true);
-      const token = localStorage.getItem('authToken');
       
-      const response = await fetch('/api/admin/achievements/dashboard-settings', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(config)
-      });
+      const result = await apiClient.updateDashboardSettings(config);
 
-      if (response.ok) {
+      if (result.success) {
         toast({
           title: 'Success',
           description: 'Dashboard settings saved successfully'

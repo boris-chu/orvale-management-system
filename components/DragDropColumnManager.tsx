@@ -39,6 +39,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import apiClient from '@/lib/api-client';
 
 // Types
 interface ColumnDefinition {
@@ -252,16 +253,13 @@ export const DragDropColumnManager: React.FC<DragDropColumnManagerProps> = ({
       };
 
       // Load column definitions
-      const columnsResponse = await fetch(`/api/admin/tables-columns?table=${tableIdentifier}`, {
-        headers,
-      });
+      const columnsResult = await apiClient.getTableColumns(tableIdentifier);
 
-      if (!columnsResponse.ok) {
+      if (!columnsResult.success) {
         throw new Error('Failed to load column definitions');
       }
 
-      const columnsData = await columnsResponse.json();
-      const tableColumns = columnsData.data?.grouped?.[tableIdentifier] || [];
+      const tableColumns = columnsResult.data?.grouped?.[tableIdentifier] || [];
       
       // Sort by display_order
       const sortedColumns = tableColumns.sort((a: ColumnDefinition, b: ColumnDefinition) => 

@@ -1634,17 +1634,10 @@ const MessagesDisplay = ({ sessionId, guestInfo }: MessagesDisplayProps) => {
   useEffect(() => {
     const loadMessageHistory = async () => {
       try {
-        const token = localStorage.getItem('authToken');
-        if (!token) return;
+        const result = await apiClient.getPublicChatMessages(sessionId);
 
-        const response = await fetch(`/api/public-chat/messages/${sessionId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
+        if (result.success) {
+          const data = result.data;
           const formattedMessages = data.messages.map((msg: any) => ({
             id: msg.id,
             sender: msg.sender,

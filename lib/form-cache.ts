@@ -3,6 +3,8 @@
  * Manages local storage of form data with configurable expiration and auto-renewal
  */
 
+import apiClient from '@/lib/api-client';
+
 interface CachedFormData {
   data: Record<string, any>;
   timestamp: number;
@@ -293,10 +295,9 @@ export const useFormCacheWithSettings = () => {
   // Load portal settings and update cache config
   const initializeCache = async () => {
     try {
-      const response = await fetch('/api/developer/portal-settings');
-      if (response.ok) {
-        const settings = await response.json();
-        cache.updateConfig(settings.user_experience);
+      const result = await apiClient.getDeveloperPortalSettings();
+      if (result.success) {
+        cache.updateConfig(result.data.user_experience);
       }
     } catch (error) {
       console.warn('Failed to load portal settings for form cache:', error);

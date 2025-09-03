@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertCircle, MessageCircle, Users, Hash } from 'lucide-react';
 import ChatLayout from '@/components/chat/ChatLayout';
 import { ThemeSystemProvider } from '@/hooks/useThemeSystem';
+import apiClient from '@/lib/api-client';
 
 interface User {
   username: string;
@@ -45,26 +46,21 @@ export default function ChatPage() {
       setError(null);
 
       // Check if user is authenticated
-      const token = localStorage.getItem('authToken') || localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
-      if (!token) {
+      const hasToken = localStorage.getItem('authToken') || localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
+      if (!hasToken) {
         setError('Please log in to access the chat system');
         setIsLoading(false);
         return;
       }
 
       // Fetch current user data
-      const userResponse = await fetch('/api/auth/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const userResult = await apiClient.getCurrentUser();
 
-      if (!userResponse.ok) {
+      if (!userResult.success) {
         throw new Error('Failed to load user data');
       }
 
-      const userData = await userResponse.json();
+      const userData = userResult.data;
       
       // Check chat permissions
       const hasBasicChatPermission = userData.permissions?.includes('chat.access') ||
@@ -100,9 +96,9 @@ export default function ChatPage() {
   const checkChatSystemStatus = async () => {
     try {
       // Use the public widget settings API to check if chat is enabled
-      const response = await fetch('/api/chat/widget-settings');
-      if (response.ok) {
-        const settings = await response.json();
+      const result = await apiClient.getWidgetSettings();
+      if (result.success) {
+        const settings = result.data;
         // If widget is enabled, chat system is enabled
         setChatSystemEnabled(settings.enabled === true);
       } else {

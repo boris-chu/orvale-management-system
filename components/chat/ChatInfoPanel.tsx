@@ -5,6 +5,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import apiClient from '@/lib/api-client';
 import {
   Avatar,
   Button,
@@ -129,20 +130,16 @@ export default function ChatInfoPanel({
           return;
         }
 
-        const response = await fetch(`/api/chat/channels/${chat.id}/members`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const result = await apiClient.getChatChannelMembers(chat.id);
 
-        console.log('Members API response status:', response.status);
+        console.log('Members API result:', result);
         
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Members data received:', data);
-          console.log('Setting members count:', data.members?.length || 0);
-          setMembers(data.members || []);
+        if (result.success) {
+          console.log('Members data received:', result.data);
+          console.log('Setting members count:', result.data?.members?.length || 0);
+          setMembers(result.data?.members || []);
         } else {
-          const errorText = await response.text();
-          console.log('Members API failed with error:', errorText);
+          console.log('Members API failed with error:', result.error);
           console.log('Using fallback strategy');
           // If API fails, create a member list with current user and participants
           const fallbackMembers = [];

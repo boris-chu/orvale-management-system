@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import apiClient from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Download, ZoomIn, ZoomOut, RotateCcw, Database, Key, ExternalLink, Settings2, GitBranch, Grid3x3, Minimize2, Maximize2, Eye } from 'lucide-react';
@@ -81,22 +82,13 @@ export function DatabaseSchemaVisualization({ className }: DatabaseSchemaVisuali
     try {
       setLoading(true);
       
-      const token = localStorage.getItem('authToken');
-      const headers: any = {
-        'Content-Type': 'application/json',
-      };
+      const result = await apiClient.getDatabaseSchema();
       
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      if (!result.success) {
+        throw new Error(`Failed to load schema: ${result.message}`);
       }
 
-      const response = await fetch('/api/admin/database-schema', { headers });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to load schema: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const data = result.data;
       setSchemaData(data.schema);
       
       toast({

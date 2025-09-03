@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import apiClient from '@/lib/api-client';
 import ChatSidebar from './ChatSidebar';
 import MessageArea from './MessageArea';
 import ChatInfoPanel from './ChatInfoPanel';
@@ -98,18 +99,12 @@ export default function ChatLayout({ currentUser, initialChatId }: ChatLayoutPro
     // Load member count for non-DM chats if not cached
     if (chat.type !== 'dm' && !memberCounts[chat.id]) {
       try {
-        const token = localStorage.getItem('authToken') || localStorage.getItem('jwt');
-        if (token) {
-          const response = await fetch(`/api/chat/channels/${chat.id}/members`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            setMemberCounts(prev => ({
-              ...prev,
-              [chat.id]: data.members?.length || 0
-            }));
-          }
+        const result = await apiClient.getChatChannelMembers(chat.id);
+        if (result.success) {
+          setMemberCounts(prev => ({
+            ...prev,
+            [chat.id]: result.data?.members?.length || 0
+          }));
         }
       } catch (error) {
         console.error('Failed to load member count:', error);

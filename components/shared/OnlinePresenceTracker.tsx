@@ -9,6 +9,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import io, { Socket } from 'socket.io-client';
+import apiClient from '@/lib/api-client';
 
 interface OnlinePresenceTrackerProps {
   userId: string;
@@ -175,19 +176,10 @@ export default function OnlinePresenceTracker({
   // Fetch initial presence data
   const fetchUserPresence = async (socketInstance: Socket) => {
     try {
-      // First try to get from REST API
-      const token = localStorage.getItem('jwt') || sessionStorage.getItem('jwt');
-      if (!token) return;
+      const result = await apiClient.getChatPresence();
 
-      const response = await fetch('/api/chat/presence', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success) {
+        const data = result.data;
         const userPresence = [
           ...data.presence.online,
           ...data.presence.away,

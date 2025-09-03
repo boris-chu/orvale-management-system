@@ -238,28 +238,14 @@ export default function SystemSettings() {
 
   const checkPermissions = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
+      const result = await apiClient.getCurrentUser();
+      
+      if (!result.success) {
         window.location.href = '/';
         return;
       }
 
-      const response = await fetch('/api/v1', {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          service: 'auth',
-          action: 'get_current_user',
-          data: {}
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const user = result.data?.user || result.data;
+      const user = result.data;
         
         // Check for system settings permission
         if (!user.permissions?.includes('admin.system_settings')) {
@@ -279,22 +265,9 @@ export default function SystemSettings() {
 
   const loadSettings = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/v1', {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          service: 'developer',
-          action: 'get_settings',
-          data: {}
-        })
-      });
+      const result = await apiClient.getDeveloperSettings();
       
-      if (response.ok) {
-        const result = await response.json();
+      if (result.success) {
         const settingsData = result.data;
         setSettings(settingsData);
         setOriginalSettings({ ...settingsData });
@@ -310,31 +283,13 @@ export default function SystemSettings() {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/v1', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          service: 'developer',
-          action: 'update_settings',
-          data: { settings }
-        })
-      });
+      const result = await apiClient.updateDeveloperSettings({ settings });
       
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          setOriginalSettings({ ...settings });
-          showNotification('Settings saved successfully', 'success');
-        } else {
-          showNotification(result.error || 'Failed to save settings', 'error');
-        }
+      if (result.success) {
+        setOriginalSettings({ ...settings });
+        showNotification('Settings saved successfully', 'success');
       } else {
-        const error = await response.json();
-        showNotification(error.message || 'Failed to save settings', 'error');
+        showNotification(result.message || 'Failed to save settings', 'error');
       }
     } catch (error) {
       console.error('Failed to save settings:', error);

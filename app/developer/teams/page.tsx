@@ -267,22 +267,13 @@ export default function TeamManagement() {
     }
 
     try {
-      // TODO: Add delete_team action to developer service and use:
-      // const result = await apiClient.makeRequest('developer', 'delete_team', { id: teamId });
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/developer/teams?id=${teamId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const result = await apiClient.deleteDeveloperTeam(teamId);
 
-      if (response.ok) {
+      if (result.success) {
         showNotification('Team deleted successfully', 'success');
         loadTeams();
       } else {
-        const error = await response.json();
-        showNotification(error.error || 'Failed to delete team', 'error');
+        showNotification(result.error || 'Failed to delete team', 'error');
       }
     } catch (error) {
       console.error('Error deleting team:', error);
