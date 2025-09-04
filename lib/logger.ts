@@ -50,80 +50,13 @@ async function getLogSettings(): Promise<{ level: LogLevel; enabled: boolean }> 
 
 // Create logger configuration
 const createLoggerConfig = (level: LogLevel, enabled: boolean) => {
-  // If Pino is disabled, return a minimal console logger configuration
-  if (!enabled) {
-    return {
-      level: 'silent', // Disable all logging
-      timestamp: false,
-      formatters: {
-        level: () => ({}),
-      },
-    };
-  }
-
-  const isProduction = process.env.NODE_ENV === 'production';
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  
-  // Base configuration
-  const config: any = {
-    level: level,
-    timestamp: pino.stdTimeFunctions.isoTime,
+  // Always return minimal configuration to prevent worker thread issues
+  // Pino is disabled across all environments due to Next.js compatibility issues
+  return {
+    level: enabled ? level : 'silent', // Respect level but disable if not enabled
+    timestamp: false, // Disable timestamp to prevent worker thread spawning
+    // No transport configuration to prevent any worker thread creation
   };
-
-  // Only add custom formatters when NOT using transport.targets
-  if (!isProduction) {
-    config.formatters = {
-      level: (label: string) => ({ level: label }),
-    };
-  }
-
-  // Development configuration - Use simple console output to avoid worker thread issues
-  if (isDevelopment) {
-    config.transport = {
-      target: 'pino/file',
-      options: {
-        destination: 1, // stdout - will appear in console
-      }
-    };
-  }
-  
-  // Production configuration with file outputs
-  if (isProduction) {
-    const logsDir = path.join(process.cwd(), 'logs');
-    
-    config.transport = {
-      targets: [
-        // Console output (for PM2/Docker logs)
-        {
-          target: 'pino/file',
-          options: {
-            destination: 1, // stdout
-          },
-          level: level
-        },
-        // Application log file
-        {
-          target: 'pino/file',
-          options: {
-            destination: path.join(logsDir, 'app.log'),
-            mkdir: true
-          },
-          level: level
-        },
-        // Error-only log file
-        {
-          target: 'pino/file',
-          options: {
-            destination: path.join(logsDir, 'error.log'),
-            mkdir: true
-          },
-          level: 'error'
-        }
-      ]
-    };
-  }
-
-  return config;
 };
 
 // Initialize logger with default settings
