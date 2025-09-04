@@ -142,6 +142,14 @@ export default function ChatWidget({
       return;
     }
 
+    // Also check if we have a valid token
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      console.log('🔍 CHAT WIDGET: No auth token available, skipping chat load');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setChatSystemError(null);

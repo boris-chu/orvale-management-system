@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Test</title>
+</head>
+<body>
+    <h1>Authentication Diagnostic Tool</h1>
+    <button onclick="testAuth()">Test Authentication</button>
+    <div id="results"></div>
+
+    <script>
+        async function testAuth() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing authentication...</p>';
+            
+            try {
+                // Check localStorage
+                const token = localStorage.getItem('authToken');
+                const currentUser = localStorage.getItem('currentUser');
+                
+                console.log('🔍 BROWSER TEST: Token check:', {
+                    hasToken: !!token,
+                    tokenLength: token ? token.length : 0,
+                    hasCurrentUser: !!currentUser
+                });
+                
+                if (!token) {
+                    resultsDiv.innerHTML = '<div style="color: red;"><h3>❌ No Token Found</h3><p>You need to log in first. Go to <a href="/tickets">/tickets</a> and log in.</p></div>';
+                    return;
+                }
+                
+                // Try to call the auth debug endpoint with proper headers
+                const response = await fetch('/api/auth-debug', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('🔍 BROWSER TEST: API response:', data);
+                
+                // Display results
+                let html = '<h3>Authentication Test Results:</h3>';
+                
+                if (data.success) {
+                    html += `
+                        <div style="color: green;">
+                            <h4>✅ Authentication Successful</h4>
+                            <p><strong>User:</strong> ${data.user.display_name} (${data.user.username})</p>
+                            <p><strong>Role:</strong> ${data.user.role}</p>
+                            <p><strong>Total Permissions:</strong> ${data.permissions.total_count}</p>
+                            <p><strong>Has public_portal.manage_queue:</strong> ${data.permissions.has_manage_queue ? '✅ YES' : '❌ NO'}</p>
+                            <p><strong>Has admin.system_settings:</strong> ${data.permissions.has_admin_settings ? '✅ YES' : '❌ NO'}</p>
+                        </div>
+                    `;
+                    
+                    if (data.permissions.contains_public_portal.length > 0) {
+                        html += `
+                            <h4>Public Portal Permissions Found:</h4>
+                            <ul>
+                                ${data.permissions.contains_public_portal.map(p => `<li>${p}</li>`).join('')}
+                            </ul>
+                        `;
+                    }
+                    
+                    html += `
+                        <h4>First 10 Permissions:</h4>
+                        <ul>
+                            ${data.permissions.first_10_permissions.map(p => `<li>${p}</li>`).join('')}
+                        </ul>
+                    `;
+                } else {
+                    html += `
+                        <div style="color: red;">
+                            <h4>❌ Authentication Failed</h4>
+                            <p><strong>Error:</strong> ${data.error}</p>
+                            <p><strong>Details:</strong> ${data.details}</p>
+                        </div>
+                    `;
+                }
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('❌ BROWSER TEST: Error:', error);
+                resultsDiv.innerHTML = `<div style="color: red;"><h3>❌ Test Failed</h3><p>Error: ${error.message}</p></div>`;
+            }
+        }
+        
+        // Auto-run test if user is already logged in
+        window.onload = function() {
+            if (localStorage.getItem('authToken')) {
+                console.log('🔍 BROWSER TEST: Token found, running auto-test...');
+                testAuth();
+            } else {
+                document.getElementById('results').innerHTML = '<p style="color: orange;">No authentication token found. Please log in first.</p>';
+            }
+        };
+    </script>
+</body>
+</html>

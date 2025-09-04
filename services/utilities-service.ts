@@ -17,8 +17,10 @@ export class UtilitiesService extends BaseService {
   protected async executeAction(action: string, data: any, options: any, context: RequestContext): Promise<any> {
     switch (action) {
       case 'get_organization':
+      case 'get_organizations':  // Support both singular and plural
         return this.getOrganization(data, context);
       case 'get_categories':
+      case 'get_ticket_categories':  // Support alternate naming
         return this.getCategories(data, context);
       case 'get_assignable_users':
         return this.getAssignableUsers(data, context);
@@ -30,6 +32,18 @@ export class UtilitiesService extends BaseService {
         return this.getProfilePicture(data, context);
       case 'upload_profile_picture':
         return this.uploadProfilePicture(data, context);
+      case 'get_offices':
+        return this.getOffices(data, context);
+      case 'get_bureaus':
+        return this.getBureaus(data, context);
+      case 'get_divisions':
+        return this.getDivisions(data, context);
+      case 'get_sections':
+        return this.getSections(data, context);
+      case 'get_request_types':
+        return this.getRequestTypes(data, context);
+      case 'get_subcategories':
+        return this.getSubcategories(data, context);
       default:
         throw new Error(`Unknown utilities action: ${action}`);
     }
@@ -522,6 +536,203 @@ export class UtilitiesService extends BaseService {
       }, 'Profile picture uploaded successfully');
     } catch (error) {
       throw new ValidationError('Failed to save profile picture reference');
+    }
+  }
+
+  /**
+   * Get DPSS offices only
+   */
+  private async getOffices(data: any, context: RequestContext): Promise<any> {
+    this.requirePermission(context, 'portal.view_data');
+    
+    this.log(context, 'Getting DPSS offices');
+    
+    try {
+      const offices = await queryAsync(`SELECT * FROM dpss_offices ORDER BY name`);
+      return this.success({
+        offices,
+        total: offices.length
+      });
+    } catch (error) {
+      this.log(context, 'Offices data unavailable', { error: error.message });
+      return this.success({ offices: [], total: 0 });
+    }
+  }
+
+  /**
+   * Get DPSS bureaus only
+   */
+  private async getBureaus(data: any, context: RequestContext): Promise<any> {
+    this.requirePermission(context, 'portal.view_data');
+    
+    const { office_id } = data;
+    
+    this.log(context, 'Getting DPSS bureaus', { office_id });
+    
+    try {
+      let query = `SELECT * FROM dpss_bureaus`;
+      const params: any[] = [];
+      
+      if (office_id) {
+        query += ` WHERE office_id = ?`;
+        params.push(office_id);
+      }
+      
+      query += ` ORDER BY name`;
+      
+      const bureaus = await queryAsync(query, params);
+      return this.success({
+        bureaus,
+        total: bureaus.length
+      });
+    } catch (error) {
+      this.log(context, 'Bureaus data unavailable', { error: error.message });
+      return this.success({ bureaus: [], total: 0 });
+    }
+  }
+
+  /**
+   * Get DPSS divisions only
+   */
+  private async getDivisions(data: any, context: RequestContext): Promise<any> {
+    this.requirePermission(context, 'portal.view_data');
+    
+    const { bureau_id } = data;
+    
+    this.log(context, 'Getting DPSS divisions', { bureau_id });
+    
+    try {
+      let query = `SELECT * FROM dpss_divisions`;
+      const params: any[] = [];
+      
+      if (bureau_id) {
+        query += ` WHERE bureau_id = ?`;
+        params.push(bureau_id);
+      }
+      
+      query += ` ORDER BY name`;
+      
+      const divisions = await queryAsync(query, params);
+      return this.success({
+        divisions,
+        total: divisions.length
+      });
+    } catch (error) {
+      this.log(context, 'Divisions data unavailable', { error: error.message });
+      return this.success({ divisions: [], total: 0 });
+    }
+  }
+
+  /**
+   * Get sections (both DPSS and regular)
+   */
+  private async getSections(data: any, context: RequestContext): Promise<any> {
+    this.requirePermission(context, 'portal.view_data');
+    
+    const { type = 'all', division_id } = data;
+    
+    this.log(context, 'Getting sections', { type, division_id });
+    
+    try {
+      const result: any = {};
+      
+      if (type === 'all' || type === 'dpss') {
+        let query = `SELECT * FROM dpss_sections`;
+        const params: any[] = [];
+        
+        if (division_id) {
+          query += ` WHERE division_id = ?`;
+          params.push(division_id);
+        }
+        
+        query += ` ORDER BY name`;
+        
+        const dpssSections = await queryAsync(query, params);
+        result.dpss_sections = dpssSections;
+      }
+      
+      if (type === 'all' || type === 'regular') {
+        const sections = await queryAsync(`SELECT * FROM sections ORDER BY name`);
+        result.sections = sections;
+      }
+      
+      return this.success({
+        ...result,
+        total_dpss_sections: result.dpss_sections?.length || 0,
+        total_sections: result.sections?.length || 0
+      });
+    } catch (error) {
+      this.log(context, 'Sections data unavailable', { error: error.message });
+      return this.success({ 
+        dpss_sections: [], 
+        sections: [],
+        total_dpss_sections: 0,
+        total_sections: 0
+      });
+    }
+  }
+
+  /**
+   * Get request types for ticket categories
+   */
+  private async getRequestTypes(data: any, context: RequestContext): Promise<any> {
+    this.requirePermission(context, 'portal.view_data');
+    
+    const { category_id } = data;
+    
+    this.log(context, 'Getting request types', { category_id });
+    
+    try {
+      let query = `SELECT * FROM request_types`;
+      const params: any[] = [];
+      
+      if (category_id) {
+        query += ` WHERE category_id = ?`;
+        params.push(category_id);
+      }
+      
+      query += ` ORDER BY name`;
+      
+      const requestTypes = await queryAsync(query, params);
+      return this.success({
+        request_types: requestTypes,
+        total: requestTypes.length
+      });
+    } catch (error) {
+      this.log(context, 'Request types data unavailable', { error: error.message });
+      return this.success({ request_types: [], total: 0 });
+    }
+  }
+
+  /**
+   * Get subcategories
+   */
+  private async getSubcategories(data: any, context: RequestContext): Promise<any> {
+    this.requirePermission(context, 'portal.view_data');
+    
+    const { request_type_id } = data;
+    
+    this.log(context, 'Getting subcategories', { request_type_id });
+    
+    try {
+      let query = `SELECT * FROM subcategories`;
+      const params: any[] = [];
+      
+      if (request_type_id) {
+        query += ` WHERE request_type_id = ?`;
+        params.push(request_type_id);
+      }
+      
+      query += ` ORDER BY name`;
+      
+      const subcategories = await queryAsync(query, params);
+      return this.success({
+        subcategories,
+        total: subcategories.length
+      });
+    } catch (error) {
+      this.log(context, 'Subcategories data unavailable', { error: error.message });
+      return this.success({ subcategories: [], total: 0 });
     }
   }
 

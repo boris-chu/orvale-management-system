@@ -88,7 +88,8 @@ export function validateServiceAction(service: string, action: string): void {
     tickets: [
       'list', 'create', 'get', 'update', 'delete',
       'get_history', 'get_comments', 'add_comment', 'delete_comment',
-      'get_unread_counts', 'mark_comments_read', 'get_public_status'
+      'get_unread_counts', 'mark_comments_read', 'get_public_status',
+      'get_attachments', 'upload_attachment', 'delete_attachment'
     ],
     chat: [
       'get_channels', 'create_channel', 'update_channel', 'delete_channel',
@@ -114,13 +115,15 @@ export function validateServiceAction(service: string, action: string): void {
       'update_theme_settings', 'get_theme_analytics', 'force_theme_compliance',
       'get_portal_settings', 'update_portal_settings', 'get_recovery_settings',
       'get_work_mode_settings', 'update_work_mode_settings', 'get_table_configs',
-      'get_table_views', 'get_table_data'
+      'get_table_views', 'get_table_data', 'get_users', 'create_user', 'update_user',
+      'delete_user', 'get_roles', 'get_teams', 'get_permissions'
     ],
     staff: [
       'get_work_mode', 'update_work_mode', 'get_all_work_modes', 'get_ticket_users'
     ],
     helpdesk: [
-      'get_queue', 'get_teams', 'get_team_preferences', 'update_team_preferences'
+      'get_queue', 'get_teams', 'get_team_preferences', 'update_team_preferences',
+      'get_ticket_history'
     ],
     developer: [
       'get_analytics', 'get_stats', 'get_settings', 'update_settings',
@@ -135,9 +138,10 @@ export function validateServiceAction(service: string, action: string): void {
       'restart_socket_server', 'create_data_backup', 'get_system_stats'
     ],
     utilities: [
-      'get_organization', 'get_categories', 'get_assignable_users',
-      'get_support_teams', 'get_simple_categories', 'get_profile_picture',
-      'upload_profile_picture'
+      'get_organization', 'get_organizations', 'get_categories', 'get_ticket_categories',
+      'get_assignable_users', 'get_support_teams', 'get_simple_categories', 
+      'get_profile_picture', 'upload_profile_picture', 'get_offices', 'get_bureaus',
+      'get_divisions', 'get_sections', 'get_request_types', 'get_subcategories'
     ],
     public: [
       'get_widget_settings', 'get_widget_status', 'get_available_agents',

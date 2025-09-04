@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Permissions Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .result {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+        }
+        pre {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Permissions Test</h1>
+    
+    <div>
+        <button onclick="testDirectAuthAPI()">Test Direct Auth API</button>
+        <button onclick="testAPIGateway()">Test API Gateway</button>
+        <button onclick="testAPIClient()">Test API Client</button>
+    </div>
+    
+    <div id="result" class="result"></div>
+
+    <script>
+        const resultDiv = document.getElementById('result');
+        
+        async function testDirectAuthAPI() {
+            try {
+                const token = localStorage.getItem('authToken');
+                if (!token) {
+                    resultDiv.innerHTML = '<h3>Error: No auth token found</h3>';
+                    return;
+                }
+                
+                const response = await fetch('/api/auth/user', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <h3>Direct Auth API Response:</h3>
+                    <p>Status: ${response.status}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                    <p>Permissions count: ${data.permissions?.length || 0}</p>
+                    <p>First 5 permissions: ${data.permissions?.slice(0, 5).join(', ') || 'None'}</p>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<h3>Error:</h3><pre>${error.message}</pre>`;
+            }
+        }
+        
+        async function testAPIGateway() {
+            try {
+                const token = localStorage.getItem('authToken');
+                if (!token) {
+                    resultDiv.innerHTML = '<h3>Error: No auth token found</h3>';
+                    return;
+                }
+                
+                const response = await fetch('/api/v1', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        service: 'auth',
+                        action: 'get_current_user',
+                        data: {}
+                    })
+                });
+                
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <h3>API Gateway Response:</h3>
+                    <p>Status: ${response.status}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                    <p>Permissions count: ${data.data?.user?.permissions?.length || data.data?.permissions?.length || 0}</p>
+                    <p>First 5 permissions: ${(data.data?.user?.permissions || data.data?.permissions || []).slice(0, 5).join(', ') || 'None'}</p>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<h3>Error:</h3><pre>${error.message}</pre>`;
+            }
+        }
+        
+        async function testAPIClient() {
+            try {
+                // Import API client
+                const module = await import('/lib/api-client.js');
+                const apiClient = module.default;
+                
+                const result = await apiClient.getCurrentUser();
+                
+                resultDiv.innerHTML = `
+                    <h3>API Client Response:</h3>
+                    <p>Success: ${result.success}</p>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                    <p>User data path: ${result.data?.user ? 'result.data.user' : 'result.data'}</p>
+                    <p>Permissions count: ${(result.data?.user?.permissions || result.data?.permissions || []).length}</p>
+                    <p>First 5 permissions: ${(result.data?.user?.permissions || result.data?.permissions || []).slice(0, 5).join(', ') || 'None'}</p>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<h3>Error:</h3><pre>${error.message}</pre>`;
+            }
+        }
+    </script>
+</body>
+</html>

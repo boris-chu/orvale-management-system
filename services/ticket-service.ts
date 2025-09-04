@@ -40,6 +40,12 @@ export class TicketService extends BaseService {
         return this.markCommentsRead(data, context);
       case 'get_public_status':
         return this.getPublicStatus(data, context);
+      case 'get_attachments':
+        return this.getAttachments(data, context);
+      case 'upload_attachment':
+        return this.uploadAttachment(data, context);
+      case 'delete_attachment':
+        return this.deleteAttachment(data, context);
       default:
         throw new Error(`Unknown action: ${action}`);
     }
@@ -456,6 +462,45 @@ export class TicketService extends BaseService {
   private async getPublicStatus(data: any, context: RequestContext): Promise<any> {
     // No auth required for public status
     return this.success({ message: 'Get public ticket status - Implementation pending' });
+  }
+
+  /**
+   * Get ticket attachments
+   */
+  private async getAttachments(data: any, context: RequestContext): Promise<any> {
+    this.requirePermission(context, 'ticket.view_own');
+    
+    const { ticket_id } = data;
+    this.validateRequiredFields(data, ['ticket_id']);
+    
+    this.log(context, 'Getting ticket attachments', { ticket_id });
+    
+    // TODO: Implement actual attachment retrieval from database
+    // For now, return empty attachments to prevent errors
+    return this.success({
+      attachments: [],
+      total: 0
+    });
+  }
+
+  /**
+   * Upload ticket attachment
+   */
+  private async uploadAttachment(data: any, context: RequestContext): Promise<any> {
+    this.requirePermission(context, 'ticket.update_own');
+    
+    // TODO: Implement actual file upload
+    return this.success({ message: 'Upload attachment - Implementation pending' });
+  }
+
+  /**
+   * Delete ticket attachment
+   */
+  private async deleteAttachment(data: any, context: RequestContext): Promise<any> {
+    this.requirePermission(context, 'ticket.update_own');
+    
+    // TODO: Implement actual attachment deletion
+    return this.success({ message: 'Delete attachment - Implementation pending' });
   }
 
   /**

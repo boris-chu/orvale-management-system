@@ -52,14 +52,13 @@ export default function MaintenanceWrapper({ children }: MaintenanceWrapperProps
 
   const checkMaintenanceStatusOnMount = async () => {
     try {
-      // Check maintenance status
-      const result = await apiClient.getMaintenanceStatus();
-      const status: MaintenanceStatus & { userHasOverride: boolean } = result.data || {
+      // For now, skip the API call and assume no maintenance to avoid CORS issues
+      // TODO: Implement proper maintenance status checking
+      const status: MaintenanceStatus = {
         isSystemMaintenance: false,
         isPortalMaintenance: false,
-        effectiveMode: 'none' as const,
-        effectiveConfig: null,
-        userHasOverride: false
+        effectiveMode: 'none',
+        effectiveConfig: null
       };
       
       setMaintenanceStatus(status);

@@ -141,22 +141,30 @@ export default function ChatWidgetProvider({ children }: ChatWidgetProviderProps
       if (result.success) {
         const widgetSettings = result.data;
         console.log('🔧 Loaded widget settings:', widgetSettings);
+        console.log('🔧 Widget settings structure check:', {
+          has_widget_settings: !!widgetSettings.widget_settings,
+          direct_enabled: widgetSettings.enabled,
+          nested_enabled: widgetSettings.widget_settings?.enabled
+        });
+        
+        // Handle both direct and nested structures
+        const settings = widgetSettings.widget_settings || widgetSettings;
         
         setSettings(prev => ({
           ...prev,
-          enabled: widgetSettings.enabled || false,
-          position: widgetSettings.position || 'bottom-right',
-          theme: widgetSettings.theme || 'light',
-          shape: widgetSettings.shape || 'rounded-square',
-          primaryColor: widgetSettings.primaryColor || '#1976d2',
-          defaultState: widgetSettings.defaultState || 'minimized',
+          enabled: settings.enabled || false,
+          position: settings.position || 'bottom-right',
+          theme: settings.theme || 'light',
+          shape: settings.shape || 'rounded-square',
+          primaryColor: settings.primaryColor || '#1976d2',
+          defaultState: settings.defaultState || 'minimized',
           showOnPages: ['*'], // Show on all pages
           hideOnPages: ['/chat', '/chat/*', '/public-portal', '/public-portal/*', '/public-chat-demo'] // Hide on chat pages and public portal
         }));
         
         console.log('🔧 Widget settings updated');
       } else {
-        console.warn('❌ Failed to load widget settings from /api/chat/widget-settings:', settingsResponse.status);
+        console.warn('❌ Failed to load widget settings from API Gateway:', result.message);
       }
     } catch (error) {
       console.log('❌ Error loading widget settings:', error);

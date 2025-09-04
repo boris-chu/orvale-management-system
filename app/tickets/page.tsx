@@ -315,7 +315,7 @@ export default function TicketsPage() {
   const loadAssignableUsers = async () => {
     setLoadingAssignableUsers(true);
     try {
-      const result = await apiClient.getUsers(); // Gets all users with filtering capability
+      const result = await apiClient.getAssignableUsers(); // Use utilities service
       setAssignableUsers(result.data.users || []);
     } catch (error) {
       console.error('Error loading assignable users:', error);
@@ -514,11 +514,19 @@ export default function TicketsPage() {
       console.log('🔍 Auth API response:', result.success);
 
       if (result.success && result.data) {
+        // Debug: Log the entire response structure
+        console.log('🔍 Full API response:', result);
+        console.log('🔍 result.data structure:', result.data);
+        console.log('🔍 result.data.user:', result.data.user);
+        
         // Handle both possible response structures
         const user = result.data.user || result.data;
         
         if (user && user.username) {
           console.log('✅ User loaded successfully:', user.display_name, 'Permissions:', user.permissions?.length || 0);
+          console.log('🔑 Permission check - public_portal.manage_queue:', user.permissions?.includes('public_portal.manage_queue'));
+          console.log('🔑 Permission check - helpdesk.multi_queue_access:', user.permissions?.includes('helpdesk.multi_queue_access'));
+          console.log('🔑 First 5 permissions:', user.permissions?.slice(0, 5));
           setCurrentUser(user);
           localStorage.setItem('currentUser', JSON.stringify(user));
         } else {

@@ -90,11 +90,15 @@ export default function PersonalDashboard() {
         setLoading(true);
         
         const result = await apiClient.getPersonalDashboard();
+        console.log('📊 Dashboard API response:', result);
         
         if (result.success) {
-          setMetrics(result.data.metrics);
+          // Handle different response structures
+          const metricsData = result.data?.metrics || result.metrics;
+          console.log('📊 Metrics data:', metricsData);
+          setMetrics(metricsData);
         } else {
-          throw new Error(result.message || 'Unknown error');
+          throw new Error(result.error || result.message || 'Unknown error');
         }
         
         setLoading(false);

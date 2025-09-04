@@ -72,6 +72,16 @@ export class AdminService extends BaseService {
       case 'get_table_data':
         return this.getTableData(data, context);
 
+      // User management
+      case 'get_users':
+        return this.getUsers(data, context);
+      case 'create_user':
+        return this.createUser(data, context);
+      case 'update_user':
+        return this.updateUser(data, context);
+      case 'delete_user':
+        return this.deleteUser(data, context);
+
       default:
         throw new Error(`Unknown admin action: ${action}`);
     }
@@ -1663,6 +1673,86 @@ export class AdminService extends BaseService {
     } else {
       return `${minutes}m`;
     }
+  }
+
+  /**
+   * User Management Operations
+   */
+  private async getUsers(data: any, context: RequestContext): Promise<any> {
+    this.requirePermission(context, 'admin.view_users');
+    
+    const { team_id, role, search, active = true } = data;
+    
+    this.log(context, 'Getting users', { team_id, role, search, active });
+    
+    try {
+      let query = `
+        SELECT u.id, u.username, u.display_name, u.email, u.role, u.role_id, 
+               u.team_id, u.section_id, u.active, u.profile_picture,
+               r.name as role_name
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE 1=1
+      `;
+      const params: any[] = [];
+      
+      if (active !== undefined) {
+        query += ' AND u.active = ?';
+        params.push(active);
+      }
+      
+      if (team_id) {
+        query += ' AND u.team_id = ?';
+        params.push(team_id);
+      }
+      
+      if (role) {
+        query += ' AND u.role = ?';
+        params.push(role);
+      }
+      
+      if (search) {
+        query += ' AND (u.username LIKE ? OR u.display_name LIKE ? OR u.email LIKE ?)';
+        const searchTerm = `%${search}%`;
+        params.push(searchTerm, searchTerm, searchTerm);
+      }
+      
+      query += ' ORDER BY u.display_name';
+      
+      const users = await queryAsync(query, params);
+      
+      return this.success({
+        users,
+        total: users.length
+      });
+    } catch (error) {
+      this.logError(context, 'Error getting users', error);
+      return this.success({
+        users: [],
+        total: 0
+      });
+    }
+  }
+
+  private async createUser(data: any, context: RequestContext): Promise<any> {
+    this.requirePermission(context, 'admin.manage_users');
+    
+    // TODO: Implement user creation
+    return this.success({ message: 'Create user - Implementation pending' });
+  }
+
+  private async updateUser(data: any, context: RequestContext): Promise<any> {
+    this.requirePermission(context, 'admin.manage_users');
+    
+    // TODO: Implement user update
+    return this.success({ message: 'Update user - Implementation pending' });
+  }
+
+  private async deleteUser(data: any, context: RequestContext): Promise<any> {
+    this.requirePermission(context, 'admin.manage_users');
+    
+    // TODO: Implement user deletion
+    return this.success({ message: 'Delete user - Implementation pending' });
   }
 
   /**

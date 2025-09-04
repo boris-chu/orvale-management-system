@@ -93,7 +93,13 @@ export class SystemService extends BaseService {
     this.log(context, 'Maintenance status check');
 
     // In a real implementation, this would check a database flag or config file
+    // For now, return the expected structure for MaintenanceWrapper
     return this.success({
+      isSystemMaintenance: false,
+      isPortalMaintenance: false,
+      effectiveMode: 'none',
+      effectiveConfig: null,
+      userHasOverride: false,
       maintenance_mode: false,
       scheduled_maintenance: null,
       last_maintenance: null,

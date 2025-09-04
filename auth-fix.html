@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Fix Tool</title>
+</head>
+<body>
+    <h1>Authentication Fix Tool</h1>
+    <p>This will clear your stored authentication data so you can log in fresh.</p>
+    
+    <button onclick="clearAuth()">Clear Authentication & Redirect to Login</button>
+    
+    <div id="status"></div>
+
+    <script>
+        function clearAuth() {
+            // Clear all localStorage
+            localStorage.clear();
+            
+            // Clear all sessionStorage  
+            sessionStorage.clear();
+            
+            // Clear all cookies (best effort)
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            document.getElementById('status').innerHTML = `
+                <div style="color: green; margin-top: 20px;">
+                    <h3>✅ Authentication Cleared</h3>
+                    <p>Redirecting to tickets page for fresh login...</p>
+                </div>
+            `;
+            
+            // Redirect to tickets page after short delay
+            setTimeout(() => {
+                window.location.href = '/tickets';
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

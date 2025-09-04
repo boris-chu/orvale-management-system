@@ -395,11 +395,16 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
   // Load widget settings from API
   const loadWidgetSettings = async () => {
     try {
+      console.log('🔄 Loading public widget settings...');
       const result = await apiClient.getPublicWidgetSettings();
+      console.log('📡 Public widget settings API response:', result);
+      
       if (result.success) {
         const data = result.data;
-        console.log('Widget settings loaded:', data);
+        console.log('✅ Widget settings loaded:', data);
         console.log('🎨 Widget theme is:', data.widget_theme || 'NOT SET - defaulting to classic');
+        console.log('🔄 Session recovery enabled:', data.session_recovery_enabled);
+        console.log('⏰ Session recovery minutes:', data.session_recovery_minutes);
         setSettings(data);
         
         // Set online status based on enabled state and business hours
@@ -424,11 +429,13 @@ export const usePublicChatLogic = ({ enabledPages = [], disabledPages = [] }: Us
           data.delivery_status_icons = JSON.parse(data.delivery_status_icons);
         }
       } else {
-        console.error('Failed to load widget settings');
+        console.error('❌ Failed to load widget settings:', result.message);
+        console.error('🔍 Full failed response:', result);
         setSettings(null);
       }
     } catch (error) {
-      console.error('Error loading widget settings:', error);
+      console.error('❌ Network error loading widget settings:', error);
+      console.error('🔍 Error details:', error.message);
       setSettings(null);
     } finally {
       setLoading(false);

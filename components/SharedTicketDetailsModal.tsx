@@ -430,7 +430,7 @@ export function SharedTicketDetailsModal({
                           <MenuItem value="">
                             <em>Unassigned</em>
                           </MenuItem>
-                          {availableTeams.map((team) => (
+                          {Array.isArray(availableTeams) && availableTeams.map((team) => (
                             <MenuItem key={team.id} value={team.id}>
                               <div className="flex flex-col">
                                 <span className="font-medium">{team.name}</span>

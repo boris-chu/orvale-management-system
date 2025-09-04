@@ -67,16 +67,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('🔄 API Gateway response:', result);
           
           if (result.success && result.data) {
-            // Handle both possible response structures
-            const user = result.data.user || result.data;
+            // Handle the nested API Gateway response structure
+            // Structure is: result.data.data.user for getCurrentUser
+            let user = null;
+            
+            if (result.data.data && result.data.data.user) {
+              // API Gateway structure: result.data.data.user
+              user = result.data.data.user;
+            } else if (result.data.user) {
+              // Direct structure: result.data.user
+              user = result.data.user;
+            } else if (result.data.username) {
+              // Flat structure: result.data
+              user = result.data;
+            }
             
             if (user && user.username) {
-              console.log('✅ Updated with fresh user data:', { username: user.username, role: user.role, permissions: user.permissions?.length });
+              console.log('✅ Updated with fresh user data:', { 
+                username: user.username, 
+                role: user.role, 
+                permissions: user.permissions?.length,
+                hasTargetPermission: user.permissions?.includes('public_portal.manage_queue')
+              });
               setUser(user);
               // Update stored user data
               localStorage.setItem('currentUser', JSON.stringify(user));
             } else {
               console.log('⚠️ User data structure invalid:', result.data);
+              console.log('🔍 Available keys:', Object.keys(result.data));
             }
           } else {
             console.log('⚠️ API Gateway returned invalid user data, keeping stored data');

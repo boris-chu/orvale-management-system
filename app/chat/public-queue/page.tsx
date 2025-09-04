@@ -234,14 +234,26 @@ const PublicQueuePage = () => {
         return;
       }
 
+      console.log('🔍 PUBLIC QUEUE: Checking authentication with token:', token ? 'present' : 'missing');
+
       const result = await apiClient.getCurrentUser();
+      console.log('🔍 PUBLIC QUEUE: getCurrentUser result:', result);
 
       if (result.success) {
         const user = result.data;
+        console.log('🔍 PUBLIC QUEUE: User data received:', {
+          username: user.username,
+          role: user.role,
+          permissionsCount: user.permissions?.length || 0,
+          hasTargetPermission: user.permissions?.includes('public_portal.manage_queue'),
+          hasAdminPermission: user.permissions?.includes('admin.system_settings'),
+          allPermissions: user.permissions?.slice(0, 10) // First 10 permissions for debugging
+        });
         
         // Check if user has permission to manage public queue
         if (!user.permissions?.includes('public_portal.manage_queue') && 
             !user.permissions?.includes('admin.system_settings')) {
+          console.error('❌ PUBLIC QUEUE: User lacks required permissions');
           setAuthError('Insufficient permissions. You need "public_portal.manage_queue" permission to access this page.');
           setLoading(false);
           return;

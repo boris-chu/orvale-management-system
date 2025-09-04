@@ -88,7 +88,18 @@ export const getUserPermissions = async (user: User): Promise<string[]> => {
         
         console.log('✅ Database permissions found:', permissions.length);
         const permissionList = permissions.map((p: any) => p.permission_id);
-        console.log('🔑 User permissions:', permissionList.slice(0, 5), '...'); // Show first 5
+        console.log('🔑 User permissions:', permissionList.slice(0, 10), '...'); // Show first 10
+        
+        // Check specifically for the public_portal.manage_queue permission
+        const hasManageQueuePermission = permissionList.includes('public_portal.manage_queue');
+        const hasAdminPermission = permissionList.includes('admin.system_settings');
+        console.log('🎯 PUBLIC QUEUE PERMISSION CHECK:', {
+            role: user.role,
+            hasManageQueuePermission,
+            hasAdminPermission,
+            totalPermissions: permissionList.length
+        });
+        
         return permissionList;
     } catch (error) {
         console.error('❌ CRITICAL: Database permissions query failed:', error);

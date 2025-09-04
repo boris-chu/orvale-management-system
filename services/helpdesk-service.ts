@@ -22,6 +22,8 @@ export class HelpdeskService extends BaseService {
         return this.getTeamPreferences(data, context);
       case 'update_team_preferences':
         return this.updateTeamPreferences(data, context);
+      case 'get_ticket_history':
+        return this.getTicketHistory(data, context);
       default:
         throw new Error(`Unknown helpdesk action: ${action}`);
     }
@@ -235,20 +237,15 @@ export class HelpdeskService extends BaseService {
           };
         });
       } else {
-        // No preferences set, show all teams user has access to
+        // No preferences set, show all active teams (not just teams with tickets)
         const availableTeams = await queryAsync(`
           SELECT 
             t.id as team_id,
             t.name as team_name,
             t.description as team_label
           FROM teams t
-          WHERE t.active = TRUE AND t.id IN (
-            SELECT DISTINCT ut.assigned_team 
-            FROM user_tickets ut 
-            WHERE ut.assigned_team IS NOT NULL
-          )
+          WHERE t.active = TRUE
           ORDER BY t.name
-          LIMIT 10
         `);
         
         userTeams = availableTeams.map((team: any, index: number) => {
@@ -593,6 +590,52 @@ export class HelpdeskService extends BaseService {
       },
       updated_by: context.user!.username
     }, 'Team preferences updated successfully');
+  }
+
+  /**
+   * Get ticket history for helpdesk users
+   */
+  private async getTicketHistory(data: any, context: RequestContext): Promise<any> {
+    this.requirePermission(context, 'helpdesk.multi_queue_access');
+    
+    const { ticket_id } = data;
+    this.validateRequiredFields(data, ['ticket_id']);
+    
+    this.log(context, 'Getting ticket history', { ticket_id });
+    
+    try {
+      // Get detailed ticket history from the database
+      const history = await queryAsync(`
+        SELECT 
+          th.id,
+          th.ticket_id,
+          th.action_type,
+          th.field_name,
+          th.old_value,
+          th.new_value,
+          th.changed_by,
+          th.created_at,
+          th.notes,
+          u.display_name as changed_by_name
+        FROM ticket_history_detailed th
+        LEFT JOIN users u ON th.changed_by = u.username
+        WHERE th.ticket_id = ?
+        ORDER BY th.created_at DESC
+      `, [ticket_id]);
+      
+      return this.success({
+        ticket_id,
+        history,
+        total_entries: history.length
+      });
+    } catch (error) {
+      this.logError(context, 'Error getting ticket history', error);
+      return this.success({
+        ticket_id,
+        history: [],
+        total_entries: 0
+      });
+    }
   }
 
   /**
