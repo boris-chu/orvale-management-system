@@ -128,8 +128,9 @@ const createLoggerConfig = (level: LogLevel, enabled: boolean) => {
 
 // Initialize logger with default settings
 let currentLevel: LogLevel = 'info';
-// Disable Pino in development to prevent worker thread issues, use console fallback
-let pinoEnabled = process.env.NODE_ENV === 'production';
+// Completely disable Pino to prevent worker thread issues across all environments
+// Use console fallback logging which is more reliable in Next.js
+let pinoEnabled = false;
 let logger = pino(createLoggerConfig(currentLevel, pinoEnabled));
 
 // Function to update logger settings dynamically
@@ -363,18 +364,22 @@ export const apiLogger = {
 };
 
 // Initialize logger on module load with database settings
+// Note: Pino is disabled by default due to Next.js worker thread compatibility issues
+// Database can override this, but console fallback is recommended for stability
 getLogSettings().then(({ level, enabled }) => {
   currentLevel = level;
-  pinoEnabled = enabled;
-  logger = pino(createLoggerConfig(level, enabled));
+  // Only enable Pino if explicitly enabled in database AND not in a build environment
+  const isBuilding = process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build';
+  pinoEnabled = enabled && !isBuilding;
+  logger = pino(createLoggerConfig(level, pinoEnabled));
   
   // Only log startup if enabled to avoid console noise when disabled
-  if (enabled) {
+  if (pinoEnabled) {
     systemLogger.startup();
   }
 }).catch(error => {
   // If database settings fail, keep defaults but log the issue
-  console.warn('Failed to load logger settings from database, using defaults:', error.message);
+  console.warn('Logger: Using console fallback due to database settings error:', error.message);
 });
 
 // Export default logger and utilities
