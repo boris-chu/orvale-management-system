@@ -22,6 +22,8 @@ const httpsPort = process.env.HTTPS_PORT || 443;
 const sslKeyPath = process.env.SSL_KEY_PATH || './ssl/private.key';
 const sslCertPath = process.env.SSL_CERT_PATH || './ssl/certificate.crt';
 const sslCAPath = process.env.SSL_CA_PATH || './ssl/ca-bundle.crt';
+const sslPfxPath = process.env.SSL_PFX_PATH || './ssl/server.pfx';
+const sslPfxPassword = process.env.SSL_PFX_PASSWORD || 'orvale2024';
 
 console.log('🚀 Starting Orvale Management System with HTTPS...');
 console.log(`Environment: ${process.env.NODE_ENV}`);
@@ -35,6 +37,13 @@ const handle = app.getRequestHandler();
 
 // SSL Certificate validation
 function validateSSLCertificates() {
+  // Check if PFX file exists first (preferred for Windows deployment)
+  if (fs.existsSync(sslPfxPath)) {
+    console.log('✅ SSL Certificate found (PFX format)');
+    return 'pfx';
+  }
+
+  // Fall back to separate key/cert files
   const requiredFiles = [
     { path: sslKeyPath, name: 'Private Key' },
     { path: sslCertPath, name: 'Certificate' }
@@ -52,25 +61,41 @@ function validateSSLCertificates() {
     console.error('❌ SSL Certificate files missing:');
     missingFiles.forEach(file => console.error(`   - ${file}`));
     console.error('\nPlease ensure SSL certificates are properly installed.');
-    console.error('Run ssl-certificate-setup.ps1 to generate certificates.');
+    console.error('Run deploy-production.ps1 or ssl-certificate-setup.ps1 to generate certificates.');
     process.exit(1);
   }
 
-  console.log('✅ SSL Certificate files found');
-  return true;
+  console.log('✅ SSL Certificate files found (PEM format)');
+  return 'pem';
 }
 
 // Create HTTPS options
 function createHTTPSOptions() {
-  const options = {
-    key: fs.readFileSync(sslKeyPath),
-    cert: fs.readFileSync(sslCertPath)
-  };
+  const certFormat = validateSSLCertificates();
+  
+  let options = {};
 
-  // Add CA bundle if available
-  if (fs.existsSync(sslCAPath)) {
-    options.ca = fs.readFileSync(sslCAPath);
-    console.log('✅ CA Bundle loaded');
+  if (certFormat === 'pfx') {
+    // Use PFX certificate (Windows deployment)
+    options = {
+      pfx: fs.readFileSync(sslPfxPath),
+      passphrase: sslPfxPassword
+    };
+    console.log('✅ PFX Certificate loaded');
+  } else {
+    // Use separate key/cert files (manual deployment)
+    options = {
+      key: fs.readFileSync(sslKeyPath),
+      cert: fs.readFileSync(sslCertPath)
+    };
+
+    // Add CA bundle if available
+    if (fs.existsSync(sslCAPath)) {
+      options.ca = fs.readFileSync(sslCAPath);
+      console.log('✅ CA Bundle loaded');
+    }
+    
+    console.log('✅ PEM Certificates loaded');
   }
 
   return options;
@@ -110,14 +135,11 @@ function createRedirectServer() {
 // Main server startup
 async function startServer() {
   try {
-    // Validate SSL certificates
-    validateSSLCertificates();
-
     // Prepare Next.js app
     console.log('⚡ Preparing Next.js application...');
     await app.prepare();
 
-    // Create HTTPS options
+    // Create HTTPS options (this also validates certificates)
     const httpsOptions = createHTTPSOptions();
 
     // Create HTTPS server
