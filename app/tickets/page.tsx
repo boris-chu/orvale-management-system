@@ -513,11 +513,17 @@ export default function TicketsPage() {
 
       console.log('🔍 Auth API response:', result.success);
 
-      if (result.success) {
-        const user = result.data;
-        console.log('✅ User loaded successfully:', user.display_name, 'Permissions:', user.permissions?.length || 0);
-        setCurrentUser(user);
-        localStorage.setItem('currentUser', JSON.stringify(user));
+      if (result.success && result.data) {
+        // Handle both possible response structures
+        const user = result.data.user || result.data;
+        
+        if (user && user.username) {
+          console.log('✅ User loaded successfully:', user.display_name, 'Permissions:', user.permissions?.length || 0);
+          setCurrentUser(user);
+          localStorage.setItem('currentUser', JSON.stringify(user));
+        } else {
+          console.log('⚠️ User data structure invalid:', result.data);
+        }
       } else {
         console.log('❌ Token invalid, error:', result.error);
         // Token invalid, redirect to login
