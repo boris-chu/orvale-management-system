@@ -68,22 +68,21 @@ const createLoggerConfig = (level: LogLevel, enabled: boolean) => {
   const config: any = {
     level: level,
     timestamp: pino.stdTimeFunctions.isoTime,
-    formatters: {
-      level: (label: string) => ({ level: label }),
-    },
   };
 
-  // Development configuration
+  // Only add custom formatters when NOT using transport.targets
+  if (!isProduction) {
+    config.formatters = {
+      level: (label: string) => ({ level: label }),
+    };
+  }
+
+  // Development configuration - Use simple console output to avoid worker thread issues
   if (isDevelopment) {
     config.transport = {
-      target: 'pino-pretty',
+      target: 'pino/file',
       options: {
-        colorize: true,
-        translateTime: 'SYS:standard',
-        ignore: 'pid,hostname,name',
-        messageFormat: '{msg}',
-        levelFirst: true,
-        timestampKey: 'time'
+        destination: 1, // stdout - will appear in console
       }
     };
   }
@@ -127,10 +126,10 @@ const createLoggerConfig = (level: LogLevel, enabled: boolean) => {
   return config;
 };
 
-// Initialize logger with default settings  
-// Temporarily disable Pino to avoid worker thread issues in development
+// Initialize logger with default settings
 let currentLevel: LogLevel = 'info';
-let pinoEnabled = false; // Disabled to prevent worker thread crashes and transport issues
+// Disable Pino in development to prevent worker thread issues, use console fallback
+let pinoEnabled = process.env.NODE_ENV === 'production';
 let logger = pino(createLoggerConfig(currentLevel, pinoEnabled));
 
 // Function to update logger settings dynamically
@@ -363,16 +362,20 @@ export const apiLogger = {
     }, `API error: ${method} ${path}`),
 };
 
-// Initialize logger on module load
-// Temporarily disabled to prevent pino-pretty transport errors
-/*
+// Initialize logger on module load with database settings
 getLogSettings().then(({ level, enabled }) => {
   currentLevel = level;
   pinoEnabled = enabled;
   logger = pino(createLoggerConfig(level, enabled));
-  systemLogger.startup();
+  
+  // Only log startup if enabled to avoid console noise when disabled
+  if (enabled) {
+    systemLogger.startup();
+  }
+}).catch(error => {
+  // If database settings fail, keep defaults but log the issue
+  console.warn('Failed to load logger settings from database, using defaults:', error.message);
 });
-*/
 
 // Export default logger and utilities
 export default logger;
