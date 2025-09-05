@@ -59,6 +59,7 @@ try {
         @{Source = "next.config.js"; Destination = "$DeployPath\next.config.js"},
         @{Source = "https-server.js"; Destination = "$DeployPath\https-server.js"},
         @{Source = "socket-server.js"; Destination = "$DeployPath\socket-server.js"},
+        @{Source = "auto-ssl-deployment.js"; Destination = "$DeployPath\auto-ssl-deployment.js"},
         @{Source = "ecosystem.config.js"; Destination = "$DeployPath\ecosystem.config.js"},
         @{Source = "orvale_tickets.db"; Destination = "$DeployPath\orvale_tickets.db"},
         @{Source = "lib"; Destination = "$DeployPath\lib"},
@@ -211,7 +212,8 @@ module.exports = {
         SSL_PFX_PATH: './ssl/server.pfx',
         SSL_PFX_PASSWORD: 'orvale2024',
         SSL_CERT_PATH: './ssl/certificate.crt',
-        SSL_CA_PATH: './ssl/ca-bundle.crt'
+        SSL_CA_PATH: './ssl/ca-bundle.crt',
+        AUTO_SSL_DEPLOY: 'true'
       },
       error_file: './logs/main-error.log',
       out_file: './logs/main-out.log',

@@ -1,6 +1,6 @@
-# 🚀 2-Step Production Deployment - IP Address Only
+# 🚀 1-Step Production Deployment - IP Address Only
 
-## 📋 **Super Simple 2-Step Process**
+## 📋 **Automatic SSL Deployment Process**
 
 ### **Prerequisites (One-time setup):**
 - Windows Server with Administrator access
@@ -21,24 +21,20 @@ cd orvale-management-system
 .\deploy-production-ip.ps1 -ServerIP "192.168.1.100" -CompanyName "Your Company"
 ```
 
-## **Step 2: Install CA Certificate on Client Machines**
-On each computer that will access the system:
-
-**Option A - Copy and run the batch file:**
-```
-Copy: C:\Orvale\ssl\install-ca-certificate.bat
-Run as Administrator
-```
-
-**Option B - Manual PowerShell:**
-```powershell
-# Copy C:\Orvale\ssl\ca-bundle.crt to client machine, then:
-Import-Certificate -FilePath "ca-bundle.crt" -CertStoreLocation "Cert:\LocalMachine\Root"
-```
-
 ---
 
-## **✅ Done! Access Your System:**
+## **✅ That's It! Automatic SSL Setup:**
+
+When users visit your server for the first time, they'll see a friendly setup page instead of scary SSL warnings:
+
+1. **User visits:** http://192.168.1.100 (or gets redirected from HTTPS)
+2. **Server detects:** New client IP address 
+3. **Auto-installer page:** Shows with one-click certificate installation
+4. **User clicks:** "Download Auto-Installer" or "Try Automatic Installation"
+5. **Certificate installs:** Automatically in the background
+6. **User redirected:** To secure https://192.168.1.100 without warnings
+
+## **Access Your System:**
 - **Main App:** https://192.168.1.100
 - **Admin Portal:** https://192.168.1.100/admin
 - **Health Check:** https://192.168.1.100/api/health
