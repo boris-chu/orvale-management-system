@@ -261,7 +261,7 @@ module.exports = {
   apps: [
     {
       name: 'orvale-main',
-      script: './https-server.js',
+      script: 'https-server.js',
       cwd: '$DeployPath',
       instances: 1,
       autorestart: true,
@@ -276,15 +276,15 @@ module.exports = {
         SSL_CERT_PATH: './ssl/certificate.crt',
         SSL_CA_PATH: './ssl/ca-bundle.crt'
       },
-      error_file: './logs/main-error.log',
-      out_file: './logs/main-out.log',
-      log_file: './logs/main-combined.log',
+      error_file: '$DeployPath/logs/main-error.log',
+      out_file: '$DeployPath/logs/main-out.log',
+      log_file: '$DeployPath/logs/main-combined.log',
       time: true,
       merge_logs: true
     },
     {
       name: 'orvale-socket',
-      script: './socket-server.js',
+      script: 'socket-server.js',
       cwd: '$DeployPath',
       instances: 1,
       autorestart: true,
@@ -294,9 +294,9 @@ module.exports = {
         NODE_ENV: 'production',
         SOCKET_PORT: 3001
       },
-      error_file: './logs/socket-error.log',
-      out_file: './logs/socket-out.log',
-      log_file: './logs/socket-combined.log',
+      error_file: '$DeployPath/logs/socket-error.log',
+      out_file: '$DeployPath/logs/socket-out.log',
+      log_file: '$DeployPath/logs/socket-combined.log',
       time: true,
       merge_logs: true
     }
@@ -364,7 +364,34 @@ if ($pm2Installed) {
 
         # Install as Windows service
         Write-Host "   Installing PM2 as Windows service..." -ForegroundColor Gray
-        pm2-service-install -n $ServiceName
+        
+        # Try different PM2 service installation methods
+        $serviceInstalled = $false
+        
+        # Method 1: pm2-service-install
+        try {
+            pm2-service-install -n $ServiceName 2>$null
+            $serviceInstalled = $true
+            Write-Host "     ✅ Service installed via pm2-service-install" -ForegroundColor Gray
+        } catch {
+            Write-Host "     pm2-service-install not available, trying alternative..." -ForegroundColor Gray
+        }
+        
+        # Method 2: Direct PM2 service installation
+        if (-not $serviceInstalled) {
+            try {
+                pm2 install pm2-windows-service 2>$null
+                pm2-service-install -n $ServiceName 2>$null
+                $serviceInstalled = $true
+                Write-Host "     ✅ Service installed via PM2 module" -ForegroundColor Gray
+            } catch {
+                Write-Host "     PM2 service module installation failed" -ForegroundColor Gray
+            }
+        }
+        
+        if (-not $serviceInstalled) {
+            throw "Unable to install PM2 as Windows service. PM2 will run manually."
+        }
 
         # Set service to auto-start and start it
         Set-Service -Name $ServiceName -StartupType Automatic -ErrorAction SilentlyContinue
@@ -436,19 +463,29 @@ switch (`$Action) {
         Write-Host "Application URL: https://$ServerIP" -ForegroundColor Cyan
     }
     "start" { 
-        Start-Service $ServiceName
-        pm2 start ecosystem.config.js
-        Write-Host "✅ Orvale started - Access: https://$ServerIP" -ForegroundColor Green
+        if (Get-Service $ServiceName -ErrorAction SilentlyContinue) {
+            Start-Service $ServiceName
+            Write-Host "✅ Orvale service started - Access: https://$ServerIP" -ForegroundColor Green
+        } else {
+            pm2 start ecosystem.config.js
+            Write-Host "✅ Orvale started via PM2 - Access: https://$ServerIP" -ForegroundColor Green
+        }
     }
     "stop" { 
-        Stop-Service $ServiceName -Force
-        pm2 stop all
+        if (Get-Service $ServiceName -ErrorAction SilentlyContinue) {
+            Stop-Service $ServiceName -Force
+        }
+        pm2 stop all 2>`$null
         Write-Host "⏹️ Orvale stopped" -ForegroundColor Yellow
     }
     "restart" { 
-        Restart-Service $ServiceName
-        pm2 restart all
-        Write-Host "🔄 Orvale restarted - Access: https://$ServerIP" -ForegroundColor Green
+        if (Get-Service $ServiceName -ErrorAction SilentlyContinue) {
+            Restart-Service $ServiceName
+            Write-Host "🔄 Orvale service restarted - Access: https://$ServerIP" -ForegroundColor Green
+        } else {
+            pm2 restart all
+            Write-Host "🔄 Orvale restarted via PM2 - Access: https://$ServerIP" -ForegroundColor Green
+        }
     }
     "logs" { 
         Write-Host "=== Recent Logs ===" -ForegroundColor Green
