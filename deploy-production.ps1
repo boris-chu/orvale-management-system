@@ -1,20 +1,31 @@
-# Orvale Management System - Production Deployment Script v1.1
-# Deploys from Git repository to C:\Orvale with Internal CA certificates and Windows Service
-# Version 1.1 - Added Git repository support
+# Orvale Management System - Production Deployment Script v1.2
+# Deploys from Git repository to C:\Orvale with IP-based SSL certificates
+# Version 1.2 - IP-based SSL certificates (no domain required)
 
 param(
     [string]$CompanyName = "Your Company",
-    [string]$ServerName = "orvale-server", 
-    [string]$DomainName = "orvale.internal",
+    [string]$ServerIP = "", # Auto-detected if not provided
     [string]$DeployPath = "C:\Orvale",
     [string]$ServiceName = "OrvaleManagementSystem",
     [string]$GitRepo = "https://github.com/YOUR_USERNAME/orvale-management-system.git",
     [switch]$Update = $false
 )
 
-Write-Host "🚀 Orvale Management System Production Deployment v1.1" -ForegroundColor Green
+# Auto-detect server IP if not provided
+if (-not $ServerIP) {
+    $ServerIP = (Get-NetIPAddress -AddressFamily IPv4 -InterfaceAlias "Ethernet*" | 
+                Where-Object { $_.IPAddress -notlike "169.254.*" -and $_.IPAddress -ne "127.0.0.1" } | 
+                Select-Object -First 1).IPAddress
+    if (-not $ServerIP) {
+        $ServerIP = (Get-NetIPAddress -AddressFamily IPv4 | 
+                    Where-Object { $_.IPAddress -notlike "169.254.*" -and $_.IPAddress -ne "127.0.0.1" } | 
+                    Select-Object -First 1).IPAddress
+    }
+}
+
+Write-Host "🚀 Orvale Management System Production Deployment v1.2" -ForegroundColor Green
 Write-Host "Deploy Path: $DeployPath" -ForegroundColor Cyan
-Write-Host "Domain: $DomainName" -ForegroundColor Cyan
+Write-Host "Server IP: $ServerIP" -ForegroundColor Cyan
 if ($Update) {
     Write-Host "Mode: Update existing deployment" -ForegroundColor Yellow
 } else {
@@ -127,11 +138,11 @@ Write-Host "`n🔒 Step 3: Setting up Internal CA and SSL certificates..." -Fore
 $internalCAScript = @"
 param(
     [string]`$CompanyName = "$CompanyName",
-    [string]`$DomainName = "$DomainName",
+    [string]`$ServerIP = "$ServerIP",
     [string]`$SslPath = "$DeployPath\ssl"
 )
 
-# Create certificates using PowerShell
+# Create certificates using PowerShell with IP address
 try {
     # Create Root CA
     `$rootCA = New-SelfSignedCertificate -Type Custom -KeySpec Signature ``
@@ -141,13 +152,14 @@ try {
         -KeyUsageProperty Sign -KeyUsage CertSign ``
         -NotAfter (Get-Date).AddDays(1825)  # 5 years
 
-    # Create Server Certificate
-    `$serverCert = New-SelfSignedCertificate -Type Custom -DnsName `$DomainName -KeySpec Signature ``
-        -Subject "CN=`$DomainName, O=`$CompanyName" ``
+    # Create Server Certificate with IP address
+    # For IP addresses, we use both Subject Alternative Name and IP Address extension
+    `$serverCert = New-SelfSignedCertificate -Type Custom -KeySpec Signature ``
+        -Subject "CN=`$ServerIP, O=`$CompanyName" ``
         -KeyExportPolicy Exportable -HashAlgorithm sha256 -KeyLength 2048 ``
         -CertStoreLocation "Cert:\LocalMachine\My" ``
         -Signer `$rootCA ``
-        -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.1", "2.5.29.17={text}DNS:`$DomainName,DNS:localhost,DNS:orvale") ``
+        -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.1", "2.5.29.17={text}IP:`$ServerIP&DNS:localhost&IP:127.0.0.1") ``
         -NotAfter (Get-Date).AddDays(1460)  # 4 years
 
     # Export certificates
@@ -168,6 +180,7 @@ try {
     Write-Host "✅ Internal CA and server certificates created successfully!" -ForegroundColor Green
     Write-Host "   Root CA Thumbprint: `$(`$rootCA.Thumbprint)" -ForegroundColor Cyan
     Write-Host "   Server Cert Thumbprint: `$(`$serverCert.Thumbprint)" -ForegroundColor Cyan
+    Write-Host "   Certificate IP: `$ServerIP" -ForegroundColor Cyan
 
 } catch {
     Write-Host "❌ Certificate creation failed: `$(`$_.Exception.Message)" -ForegroundColor Red
@@ -180,7 +193,7 @@ $internalCAScript | Out-File -FilePath $certScriptPath -Encoding UTF8
 
 # Run certificate creation
 try {
-    & $certScriptPath -CompanyName $CompanyName -DomainName $DomainName -SslPath "$DeployPath\ssl"
+    & $certScriptPath -CompanyName $CompanyName -ServerIP $ServerIP -SslPath "$DeployPath\ssl"
     Write-Host "   ✅ SSL certificates created" -ForegroundColor Green
 } catch {
     Write-Host "   ❌ Certificate creation failed: $($_.Exception.Message)" -ForegroundColor Red
@@ -192,7 +205,7 @@ Write-Host "`n⚙️ Step 4: Creating production configuration..." -ForegroundCo
 
 $envContent = @"
 NODE_ENV=production
-HOSTNAME=$DomainName
+HOSTNAME=$ServerIP
 HTTP_PORT=80
 HTTPS_PORT=443
 SOCKET_PORT=3001
@@ -224,7 +237,7 @@ module.exports = {
       max_memory_restart: '1G',
       env: {
         NODE_ENV: 'production',
-        HOSTNAME: '$DomainName',
+        HOSTNAME: '$ServerIP',
         HTTP_PORT: 80,
         HTTPS_PORT: 443,
         SSL_KEY_PATH: './ssl/server.pfx',
@@ -333,12 +346,12 @@ switch (`$Action) {
         Write-Host "=== Orvale Management System Status ===" -ForegroundColor Green
         Get-Service $ServiceName -ErrorAction SilentlyContinue | Format-Table -AutoSize
         pm2 list
-        Write-Host "Application URL: https://$DomainName" -ForegroundColor Cyan
+        Write-Host "Application URL: https://$ServerIP" -ForegroundColor Cyan
     }
     "start" { 
         Start-Service $ServiceName
         pm2 start ecosystem.config.js
-        Write-Host "✅ Orvale started - Access: https://$DomainName" -ForegroundColor Green
+        Write-Host "✅ Orvale started - Access: https://$ServerIP" -ForegroundColor Green
     }
     "stop" { 
         Stop-Service $ServiceName -Force
@@ -348,7 +361,7 @@ switch (`$Action) {
     "restart" { 
         Restart-Service $ServiceName
         pm2 restart all
-        Write-Host "🔄 Orvale restarted - Access: https://$DomainName" -ForegroundColor Green
+        Write-Host "🔄 Orvale restarted - Access: https://$ServerIP" -ForegroundColor Green
     }
     "logs" { 
         Write-Host "=== Recent Logs ===" -ForegroundColor Green
@@ -374,16 +387,15 @@ Write-Host ""
 Write-Host "🎉 Orvale Management System Production Deployment COMPLETE!" -ForegroundColor Green
 Write-Host ""
 Write-Host "📍 Deployment Location: $DeployPath" -ForegroundColor Cyan
-Write-Host "🌐 Application URL:     https://$DomainName" -ForegroundColor Cyan  
+Write-Host "🌐 Application URL:     https://$ServerIP" -ForegroundColor Cyan  
 Write-Host "🔧 Service Name:        $ServiceName" -ForegroundColor Cyan
 Write-Host "📦 Git Repository:      $GitRepo" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "🚀 Next Steps:" -ForegroundColor Yellow
-Write-Host "  1. Add '$DomainName' to DNS or client machine hosts files pointing to this server" -ForegroundColor White
-Write-Host "  2. Deploy Root CA certificate to client machines for trusted HTTPS" -ForegroundColor White
+Write-Host "  1. Deploy Root CA certificate to client machines for trusted HTTPS" -ForegroundColor White
 Write-Host "     Copy: $DeployPath\ssl\ca-bundle.crt to client machines" -ForegroundColor White
 Write-Host "     Install: Import certificate to 'Trusted Root Certification Authorities'" -ForegroundColor White
-Write-Host "  3. Access application: https://$DomainName" -ForegroundColor White
+Write-Host "  2. Access application: https://$ServerIP" -ForegroundColor White
 Write-Host ""
 Write-Host "⚡ Quick Commands:" -ForegroundColor Yellow
 Write-Host "  Fresh Deploy: .\deploy-production.ps1 -GitRepo '$GitRepo'" -ForegroundColor White  

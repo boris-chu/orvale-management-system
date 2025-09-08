@@ -1,4 +1,4 @@
-# Orvale Management System - Deployment Guide v1.1
+# Orvale Management System - Deployment Guide v1.2
 
 ## Quick Start
 
@@ -14,10 +14,11 @@
 
 ## Deployment Script Features
 
-The `deploy-production.ps1` script (v1.1) provides automated deployment from Git repository to Windows Server with:
+The `deploy-production.ps1` script (v1.2) provides automated deployment from Git repository to Windows Server with:
 
 - **Git Repository Support**: Clones from GitHub/GitLab/etc on fresh install, pulls updates on existing deployments
-- **Automated SSL Setup**: Creates Internal CA and server certificates
+- **IP-Based SSL Setup**: Creates Internal CA and server certificates using server IP address (no domain needed)
+- **Auto IP Detection**: Automatically detects server IP address if not provided
 - **Windows Service**: Installs as Windows service using PM2
 - **Firewall Configuration**: Opens required ports automatically
 - **Production Build**: Builds Next.js app for production
@@ -26,16 +27,17 @@ The `deploy-production.ps1` script (v1.1) provides automated deployment from Git
 
 - `-GitRepo`: Your Git repository URL (required for fresh deployment)
 - `-CompanyName`: Your company name for SSL certificates (default: "Your Company")
-- `-DomainName`: Domain name for the application (default: "orvale.internal")
+- `-ServerIP`: Server IP address (auto-detected if not provided)
 - `-DeployPath`: Installation directory (default: "C:\Orvale")
 - `-ServiceName`: Windows service name (default: "OrvaleManagementSystem")
 - `-Update`: Switch to update existing deployment
 
 ## Post-Deployment Steps
 
-1. **DNS Configuration**: Add the domain name to your DNS server or hosts file
-2. **SSL Trust**: Deploy the Root CA certificate (`C:\Orvale\ssl\ca-bundle.crt`) to client machines
-3. **Access Application**: Navigate to `https://your-domain-name`
+1. **SSL Trust**: Deploy the Root CA certificate (`C:\Orvale\ssl\ca-bundle.crt`) to client machines
+   - Copy the certificate file to each client machine
+   - Import to "Trusted Root Certification Authorities" store
+2. **Access Application**: Navigate to `https://<server-ip-address>` (e.g., https://192.168.1.100)
 
 ## Management Commands
 
