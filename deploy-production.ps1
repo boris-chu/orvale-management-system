@@ -261,8 +261,7 @@ module.exports = {
   apps: [
     {
       name: 'orvale-main',
-      script: './https-server.js',
-      cwd: '$DeployPath',
+      script: 'https-server.js',
       instances: 1,
       autorestart: true,
       watch: false,
@@ -276,16 +275,15 @@ module.exports = {
         SSL_CERT_PATH: './ssl/certificate.crt',
         SSL_CA_PATH: './ssl/ca-bundle.crt'
       },
-      error_file: '$DeployPath/logs/main-error.log',
-      out_file: '$DeployPath/logs/main-out.log',
-      log_file: '$DeployPath/logs/main-combined.log',
+      error_file: './logs/main-error.log',
+      out_file: './logs/main-out.log',
+      log_file: './logs/main-combined.log',
       time: true,
       merge_logs: true
     },
     {
       name: 'orvale-socket',
-      script: './socket-server.js',
-      cwd: '$DeployPath',
+      script: 'socket-server.js',
       instances: 1,
       autorestart: true,
       watch: false,
@@ -294,9 +292,9 @@ module.exports = {
         NODE_ENV: 'production',
         SOCKET_PORT: 3001
       },
-      error_file: '$DeployPath/logs/socket-error.log',
-      out_file: '$DeployPath/logs/socket-out.log',
-      log_file: '$DeployPath/logs/socket-combined.log',
+      error_file: './logs/socket-error.log',
+      out_file: './logs/socket-out.log',
+      log_file: './logs/socket-combined.log',
       time: true,
       merge_logs: true
     }
