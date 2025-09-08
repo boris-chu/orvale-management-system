@@ -8,7 +8,9 @@ param(
     [string]$DeployPath = "C:\Orvale",
     [string]$ServiceName = "OrvaleManagementSystem",
     [string]$GitRepo = "https://github.com/YOUR_USERNAME/orvale-management-system.git",
-    [switch]$Update = $false
+    [switch]$Update = $false,
+    [switch]$EnableSSLMonitoring = $false,
+    [int]$SSLMonitorIntervalMinutes = 30
 )
 
 # Auto-detect server IP if not provided
@@ -523,6 +525,7 @@ Write-Host ""
 Write-Host "⚡ Quick Commands:" -ForegroundColor Yellow
 Write-Host "  Fresh Deploy: .\deploy-production.ps1 -GitRepo '$GitRepo'" -ForegroundColor White  
 Write-Host "  Update:       .\deploy-production.ps1 -Update" -ForegroundColor White
+Write-Host "  With SSL Mon: .\deploy-production.ps1 -GitRepo '$GitRepo' -EnableSSLMonitoring" -ForegroundColor White
 Write-Host "  Status:       cd $DeployPath && .\manage.ps1 status" -ForegroundColor White
 Write-Host "  Restart:      cd $DeployPath && .\manage.ps1 restart" -ForegroundColor White
 Write-Host "  Logs:         cd $DeployPath && .\manage.ps1 logs" -ForegroundColor White
@@ -533,3 +536,397 @@ Write-Host "  Database:    $DeployPath\orvale_tickets.db" -ForegroundColor White
 Write-Host "  SSL Certs:   $DeployPath\ssl\" -ForegroundColor White
 Write-Host "  Logs:        $DeployPath\logs\" -ForegroundColor White
 Write-Host "  Management:  $DeployPath\manage.ps1" -ForegroundColor White
+
+# Step 9: Setup SSL Certificate Monitoring (Optional)
+if ($EnableSSLMonitoring) {
+    Write-Host "`n🔍 Step 9: Setting up SSL certificate monitoring..." -ForegroundColor Yellow
+    
+    # Create SSL monitoring script
+    $sslMonitorScript = @"
+# Orvale SSL Certificate Auto-Deployment Script
+# Monitors application logs for SSL handshake failures and certificate errors
+# Automatically deploys Root CA certificate to client workstations
+
+param(
+    [int]`$CheckIntervalMinutes = $SSLMonitorIntervalMinutes,
+    [switch]`$RunOnce = `$false,
+    [switch]`$SkipSetup = `$false
+)
+
+# Check if running as Administrator
+`$IsAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+if (-not `$IsAdmin) {
+    Write-Host "ERROR: SSL monitoring must be run as Administrator!" -ForegroundColor Red
+    Write-Host "Right-click PowerShell and select 'Run as Administrator'" -ForegroundColor Yellow
+    exit 1
+}
+
+`$ScriptDirectory = "$DeployPath"
+`$CertPath = Join-Path `$ScriptDirectory "ssl\ca-bundle.crt"
+`$LogPath = Join-Path `$ScriptDirectory "logs"
+
+Write-Host "Orvale SSL Certificate Auto-Deployment System" -ForegroundColor Green
+Write-Host "=============================================" -ForegroundColor Green
+Write-Host "Server IP: $ServerIP" -ForegroundColor Cyan
+Write-Host "Certificate: `$CertPath" -ForegroundColor Cyan
+Write-Host ""
+
+# Auto-setup WinRM for remote certificate deployment
+if (-not `$SkipSetup) {
+    Write-Host "Performing initial setup..." -ForegroundColor Cyan
+    
+    # Configure WinRM TrustedHosts for local network
+    Write-Host "  Configuring WinRM TrustedHosts..." -NoNewline
+    try {
+        `$CurrentTrustedHosts = (Get-Item WSMan:\localhost\Client\TrustedHosts).Value
+        `$NetworkRanges = @("10.*", "192.168.*", "172.16.*", "172.17.*", "172.18.*", "172.19.*", "172.20.*", "172.21.*", "172.22.*", "172.23.*", "172.24.*", "172.25.*", "172.26.*", "172.27.*", "172.28.*", "172.29.*", "172.30.*", "172.31.*")
+        
+        `$NewTrustedHosts = `$NetworkRanges -join ","
+        if (`$CurrentTrustedHosts -ne `$NewTrustedHosts) {
+            Set-Item WSMan:\localhost\Client\TrustedHosts -Value `$NewTrustedHosts -Force
+            Write-Host " ✓" -ForegroundColor Green
+        } else {
+            Write-Host " Already configured" -ForegroundColor Gray
+        }
+    }
+    catch {
+        Write-Host " Failed: `$(`$_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  You may need to run: winrm quickconfig" -ForegroundColor Yellow
+    }
+    
+    # Check certificate file
+    Write-Host "  Checking certificate file..." -NoNewline
+    if (-not (Test-Path `$CertPath)) {
+        Write-Host " Missing!" -ForegroundColor Red
+        Write-Host "Certificate file not found: `$CertPath" -ForegroundColor Yellow
+        Write-Host "Please ensure the deployment completed successfully." -ForegroundColor Yellow
+        exit 1
+    } else {
+        Write-Host " ✓" -ForegroundColor Green
+    }
+    
+    # Enable WinRM if not already enabled
+    Write-Host "  Ensuring WinRM is enabled..." -NoNewline
+    try {
+        `$WinRMService = Get-Service -Name WinRM -ErrorAction SilentlyContinue
+        if (`$WinRMService.Status -ne "Running") {
+            Start-Service WinRM
+            Write-Host " Started" -ForegroundColor Green
+        } else {
+            Write-Host " ✓" -ForegroundColor Green
+        }
+    }
+    catch {
+        Write-Host " Failed: `$(`$_.Exception.Message)" -ForegroundColor Red
+    }
+    
+    Write-Host "Setup complete!" -ForegroundColor Green
+    Write-Host ""
+}
+
+# Function to parse Orvale application logs for SSL errors
+function Get-SSLErrorsFromOrvaleLog {
+    param([string]`$LogPath)
+    
+    `$SSLErrors = @{}
+    `$Today = Get-Date -Format "yyyy-MM-dd"
+    
+    # Check main application logs
+    `$LogFiles = @(
+        "main-error.log",
+        "main-combined.log",
+        "socket-error.log",
+        "app.log",
+        "error.log"
+    )
+    
+    foreach (`$LogFile in `$LogFiles) {
+        `$FullPath = Join-Path `$LogPath `$LogFile
+        if (Test-Path `$FullPath) {
+            Get-Content `$FullPath -Tail 500 -ErrorAction SilentlyContinue | ForEach-Object {
+                # Look for SSL/TLS errors with IP addresses
+                if (`$_ -match 'SSL.*error.*?(\d+\.\d+\.\d+\.\d+)' -or
+                    `$_ -match 'TLS.*handshake.*failed.*?(\d+\.\d+\.\d+\.\d+)' -or
+                    `$_ -match 'certificate.*verify.*failed.*?(\d+\.\d+\.\d+\.\d+)' -or
+                    `$_ -match 'CERT_UNTRUSTED.*?(\d+\.\d+\.\d+\.\d+)' -or
+                    `$_ -match 'ERR_CERT_AUTHORITY_INVALID.*?(\d+\.\d+\.\d+\.\d+)') {
+                    `$IP = `$matches[1]
+                    if (`$IP -ne "127.0.0.1" -and `$IP -ne "$ServerIP") {
+                        `$SSLErrors[`$IP] = Get-Date
+                    }
+                }
+                # Look for browser connection patterns that suggest SSL issues
+                elseif (`$_ -match '(\d+\.\d+\.\d+\.\d+).*?(connection.*reset|connection.*refused|handshake.*timeout)') {
+                    `$IP = `$matches[1]
+                    if (`$IP -ne "127.0.0.1" -and `$IP -ne "$ServerIP") {
+                        `$SSLErrors[`$IP] = Get-Date
+                    }
+                }
+            }
+        }
+    }
+    
+    return `$SSLErrors
+}
+
+# Function to monitor HTTP requests that suggest SSL problems
+function Get-PotentialSSLIssues {
+    param([string]`$LogPath)
+    
+    `$SuspiciousPatterns = @{}
+    
+    # Check for patterns in main logs that suggest SSL fallback
+    `$LogFiles = @("main-combined.log", "app.log")
+    
+    foreach (`$LogFile in `$LogFiles) {
+        `$FullPath = Join-Path `$LogPath `$LogFile
+        if (Test-Path `$FullPath) {
+            `$LogData = @{}
+            
+            # Analyze access patterns
+            Get-Content `$FullPath -Tail 1000 -ErrorAction SilentlyContinue | ForEach-Object {
+                if (`$_ -match '(\d+\.\d+\.\d+\.\d+).*?HTTP.*?(GET|POST)') {
+                    `$IP = `$matches[1]
+                    if (`$IP -ne "127.0.0.1" -and `$IP -ne "$ServerIP") {
+                        if (-not `$LogData.ContainsKey(`$IP)) {
+                            `$LogData[`$IP] = @{
+                                HTTPRequests = 0
+                                HTTPSRequests = 0
+                                LastSeen = Get-Date
+                            }
+                        }
+                        
+                        if (`$_ -match 'https://') {
+                            `$LogData[`$IP].HTTPSRequests++
+                        } else {
+                            `$LogData[`$IP].HTTPRequests++
+                        }
+                        `$LogData[`$IP].LastSeen = Get-Date
+                    }
+                }
+            }
+            
+            # Detect suspicious patterns
+            foreach (`$IP in `$LogData.Keys) {
+                `$Data = `$LogData[`$IP]
+                
+                # Pattern: Lots of HTTP requests but few/no HTTPS (SSL avoidance)
+                if (`$Data.HTTPRequests -gt 5 -and `$Data.HTTPSRequests -eq 0) {
+                    `$SuspiciousPatterns[`$IP] = "HTTP only access - possible HTTPS avoidance due to SSL issues"
+                }
+                # Pattern: Recent activity (user is actively trying to access)
+                elseif ((`$Data.LastSeen -gt (Get-Date).AddMinutes(-10)) -and (`$Data.HTTPRequests + `$Data.HTTPSRequests -gt 3)) {
+                    `$SuspiciousPatterns[`$IP] = "Recent connection attempts - potential SSL issues"
+                }
+            }
+        }
+    }
+    
+    return `$SuspiciousPatterns
+}
+
+# Function to deploy certificate to detected problem workstations
+function Deploy-ToProblematicWorkstation {
+    param(
+        [string]`$IPAddress,
+        [string]`$CertificatePath,
+        [string]`$Reason
+    )
+    
+    Write-Host "  Detected SSL issue for `$IPAddress - `$Reason" -ForegroundColor Yellow
+    
+    try {
+        # Quick test if it's reachable
+        if (Test-Connection -ComputerName `$IPAddress -Count 1 -Quiet) {
+            `$RemotePath = "\\\\`$IPAddress\\C`$\\temp\\orvale-ca.crt"
+            
+            # Create temp directory
+            `$TempDir = "\\\\`$IPAddress\\C`$\\temp"
+            if (-not (Test-Path `$TempDir)) {
+                New-Item -Path `$TempDir -ItemType Directory -Force | Out-Null
+            }
+            
+            # Copy and install certificate
+            Copy-Item -Path `$CertificatePath -Destination `$RemotePath -Force
+            
+            Invoke-Command -ComputerName `$IPAddress -ScriptBlock {
+                param(`$certPath)
+                Import-Certificate -FilePath `$certPath -CertStoreLocation "Cert:\\LocalMachine\\Root"
+                Remove-Item `$certPath -Force -ErrorAction SilentlyContinue
+            } -ArgumentList "C:\\temp\\orvale-ca.crt"
+            
+            Write-Host "    ✓ Certificate deployed successfully to `$IPAddress!" -ForegroundColor Green
+            
+            # Log the deployment
+            `$LogEntry = "`$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') | `$IPAddress | Deployed due to: `$Reason"
+            Add-Content -Path (Join-Path `$ScriptDirectory "ssl-deployments.log") -Value `$LogEntry
+            
+            return `$true
+        }
+        else {
+            Write-Host "    ✗ Cannot reach `$IPAddress (offline or firewall blocking)" -ForegroundColor Red
+        }
+    }
+    catch {
+        Write-Host "    ✗ Failed to deploy to `$IPAddress`: `$(`$_.Exception.Message)" -ForegroundColor Red
+        
+        # Log the failure
+        `$LogEntry = "`$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') | `$IPAddress | FAILED: `$(`$_.Exception.Message)"
+        Add-Content -Path (Join-Path `$ScriptDirectory "ssl-deployments.log") -Value `$LogEntry
+    }
+    
+    return `$false
+}
+
+# Tracking for already handled IPs
+`$HandledIPs = @{}
+`$HandledIPsFile = Join-Path `$ScriptDirectory "ssl-handled-ips.json"
+
+if (Test-Path `$HandledIPsFile) {
+    try {
+        `$Content = Get-Content `$HandledIPsFile -Raw
+        if (`$Content.Trim()) {
+            `$HandledIPs = `$Content | ConvertFrom-Json -AsHashtable
+        }
+    }
+    catch {
+        `$HandledIPs = @{}
+    }
+}
+
+# Main monitoring loop
+do {
+    `$CurrentTime = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    Write-Host "`n[`$CurrentTime] - Checking Orvale logs for SSL errors..." -ForegroundColor Cyan
+    
+    `$AllSSLErrors = @{}
+    
+    # Check Orvale application logs
+    if (Test-Path `$LogPath) {
+        `$OrvaleErrors = Get-SSLErrorsFromOrvaleLog -LogPath `$LogPath
+        foreach (`$IP in `$OrvaleErrors.Keys) {
+            `$AllSSLErrors[`$IP] = "Orvale SSL certificate error detected in logs"
+        }
+        
+        # Check for suspicious patterns
+        `$Suspicious = Get-PotentialSSLIssues -LogPath `$LogPath
+        foreach (`$IP in `$Suspicious.Keys) {
+            if (-not `$AllSSLErrors.ContainsKey(`$IP)) {
+                `$AllSSLErrors[`$IP] = `$Suspicious[`$IP]
+            }
+        }
+    }
+    
+    # Deploy to problematic IPs
+    `$NewProblems = @()
+    
+    foreach (`$IP in `$AllSSLErrors.Keys) {
+        if (-not `$HandledIPs.ContainsKey(`$IP)) {
+            `$NewProblems += `$IP
+        }
+        else {
+            # Check if we should retry (after 24 hours)
+            try {
+                `$LastDeployed = [DateTime]::ParseExact(`$HandledIPs[`$IP].DetectedAt, "yyyy-MM-dd HH:mm:ss", `$null)
+                `$HoursSinceDeployment = ((Get-Date) - `$LastDeployed).TotalHours
+                
+                if (`$HoursSinceDeployment -gt 24) {
+                    `$NewProblems += `$IP
+                }
+            }
+            catch {
+                `$NewProblems += `$IP
+            }
+        }
+    }
+    
+    if (`$NewProblems.Count -gt 0) {
+        Write-Host "[`$CurrentTime] Found `$(`$NewProblems.Count) workstations with potential SSL issues!" -ForegroundColor Yellow
+        
+        foreach (`$IP in `$NewProblems) {
+            `$DeploymentTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            Write-Host "[`$DeploymentTime] Deploying Orvale CA certificate to `$IP..." -ForegroundColor Cyan
+            
+            `$Success = Deploy-ToProblematicWorkstation -IPAddress `$IP ``
+                                                          -CertificatePath `$CertPath ``
+                                                          -Reason `$AllSSLErrors[`$IP]
+            
+            # Mark as handled
+            `$HandledIPs[`$IP] = @{
+                DetectedAt = `$DeploymentTime
+                Reason = `$AllSSLErrors[`$IP]
+                Deployed = `$Success
+            }
+        }
+        
+        # Save handled IPs
+        `$HandledIPs | ConvertTo-Json | Out-File `$HandledIPsFile -Encoding UTF8
+        Write-Host "[`$CurrentTime] Deployment status saved" -ForegroundColor Gray
+    }
+    else {
+        Write-Host "[`$CurrentTime] No new SSL errors detected" -ForegroundColor Gray
+    }
+    
+    # Show statistics
+    `$TotalHandled = `$HandledIPs.Count
+    `$Deployed = (`$HandledIPs.Values | Where-Object { `$_.Deployed }).Count
+    `$Failed = (`$HandledIPs.Values | Where-Object { `$_.Deployed -eq `$false }).Count
+    
+    Write-Host "[`$CurrentTime] SSL Deployment Statistics:" -ForegroundColor Cyan
+    Write-Host "  Total workstations handled: `$TotalHandled" -ForegroundColor White
+    Write-Host "  Successfully deployed: `$Deployed" -ForegroundColor Green
+    Write-Host "  Failed deployments: `$Failed" -ForegroundColor Red
+    
+    if (-not `$RunOnce) {
+        `$NextCheck = (Get-Date).AddMinutes(`$CheckIntervalMinutes).ToString("yyyy-MM-dd HH:mm:ss")
+        Write-Host "[`$CurrentTime] Next check: `$NextCheck" -ForegroundColor Gray
+        Start-Sleep -Seconds (`$CheckIntervalMinutes * 60)
+    }
+    
+} while (-not `$RunOnce)
+"@
+
+    # Write SSL monitoring script
+    $sslMonitorPath = Join-Path $DeployPath "monitor-ssl-errors.ps1"
+    $sslMonitorScript | Out-File -FilePath $sslMonitorPath -Encoding UTF8
+    Write-Host "   ✅ SSL monitoring script created: $sslMonitorPath" -ForegroundColor Green
+    
+    # Create a scheduled task to run SSL monitoring
+    Write-Host "   Setting up SSL monitoring scheduled task..." -ForegroundColor Gray
+    try {
+        $TaskName = "OrvaleSSLMonitoring"
+        $TaskAction = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-ExecutionPolicy Bypass -File `"$sslMonitorPath`""
+        $TaskTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5) -RepetitionInterval (New-TimeSpan -Minutes $SSLMonitorIntervalMinutes)
+        $TaskPrincipal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+        $TaskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnDemand -DontStopIfGoingOnBatteries -DontStopOnIdleEnd -StartWhenAvailable
+        
+        # Remove existing task if it exists
+        if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
+            Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
+        }
+        
+        Register-ScheduledTask -TaskName $TaskName -Action $TaskAction -Trigger $TaskTrigger -Principal $TaskPrincipal -Settings $TaskSettings | Out-Null
+        Write-Host "   ✅ SSL monitoring scheduled task created" -ForegroundColor Green
+        Write-Host "   📅 Monitoring will check every $SSLMonitorIntervalMinutes minutes" -ForegroundColor Cyan
+        
+    } catch {
+        Write-Host "   ⚠️  Could not create scheduled task: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "   You can run SSL monitoring manually: .\monitor-ssl-errors.ps1" -ForegroundColor Gray
+    }
+    
+    Write-Host ""
+    Write-Host "🔍 SSL Certificate Monitoring Setup Complete!" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "📋 SSL Monitoring Features:" -ForegroundColor Yellow
+    Write-Host "  • Monitors Orvale application logs for SSL certificate errors" -ForegroundColor White
+    Write-Host "  • Automatically detects client workstations with SSL issues" -ForegroundColor White
+    Write-Host "  • Deploys Root CA certificate to affected workstations via WinRM" -ForegroundColor White
+    Write-Host "  • Tracks deployment history and prevents duplicate deployments" -ForegroundColor White
+    Write-Host "  • Runs every $SSLMonitorIntervalMinutes minutes via scheduled task" -ForegroundColor White
+    Write-Host ""
+    Write-Host "🔧 SSL Monitoring Commands:" -ForegroundColor Yellow
+    Write-Host "  Manual run:     cd $DeployPath && .\monitor-ssl-errors.ps1 -RunOnce" -ForegroundColor White
+    Write-Host "  Check status:   Get-ScheduledTask -TaskName 'OrvaleSSLMonitoring'" -ForegroundColor White
+    Write-Host "  View logs:      Get-Content $DeployPath\ssl-deployments.log" -ForegroundColor White
+    Write-Host "  Handled IPs:    Get-Content $DeployPath\ssl-handled-ips.json" -ForegroundColor White
+}
