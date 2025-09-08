@@ -1,17 +1,25 @@
-# Orvale Management System - Production Deployment Script
-# Deploys to C:\Orvale with Internal CA certificates and Windows Service
+# Orvale Management System - Production Deployment Script v1.1
+# Deploys from Git repository to C:\Orvale with Internal CA certificates and Windows Service
+# Version 1.1 - Added Git repository support
 
 param(
     [string]$CompanyName = "Your Company",
     [string]$ServerName = "orvale-server", 
     [string]$DomainName = "orvale.internal",
     [string]$DeployPath = "C:\Orvale",
-    [string]$ServiceName = "OrvaleManagementSystem"
+    [string]$ServiceName = "OrvaleManagementSystem",
+    [string]$GitRepo = "https://github.com/YOUR_USERNAME/orvale-management-system.git",
+    [switch]$Update = $false
 )
 
-Write-Host "🚀 Deploying Orvale Management System to Production..." -ForegroundColor Green
+Write-Host "🚀 Orvale Management System Production Deployment v1.1" -ForegroundColor Green
 Write-Host "Deploy Path: $DeployPath" -ForegroundColor Cyan
 Write-Host "Domain: $DomainName" -ForegroundColor Cyan
+if ($Update) {
+    Write-Host "Mode: Update existing deployment" -ForegroundColor Yellow
+} else {
+    Write-Host "Mode: Fresh deployment" -ForegroundColor Yellow
+}
 
 # Check if running as Administrator
 if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
@@ -20,11 +28,61 @@ if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     exit 1
 }
 
-# Step 1: Create production directory structure
-Write-Host "`n📁 Step 1: Creating production directory structure..." -ForegroundColor Yellow
+# Step 1: Handle Git repository
+if ($Update) {
+    Write-Host "`n🔄 Step 1: Updating from Git repository..." -ForegroundColor Yellow
+    
+    if (!(Test-Path "$DeployPath\.git")) {
+        Write-Host "   ❌ No Git repository found at $DeployPath" -ForegroundColor Red
+        Write-Host "   Please run without -Update flag for fresh deployment" -ForegroundColor Yellow
+        exit 1
+    }
+    
+    Push-Location $DeployPath
+    try {
+        Write-Host "   Pulling latest changes..." -ForegroundColor Gray
+        git pull origin main
+        Write-Host "   ✅ Git repository updated" -ForegroundColor Green
+    } catch {
+        Write-Host "   ❌ Git pull failed: $($_.Exception.Message)" -ForegroundColor Red
+        Pop-Location
+        exit 1
+    }
+    Pop-Location
+} else {
+    Write-Host "`n📥 Step 1: Cloning Git repository..." -ForegroundColor Yellow
+    
+    # Create production directory if it doesn't exist
+    if (!(Test-Path $DeployPath)) {
+        New-Item -ItemType Directory -Path $DeployPath -Force | Out-Null
+    }
+    
+    # Check if directory is empty or has .git folder
+    if ((Get-ChildItem $DeployPath -Force | Measure-Object).Count -gt 0) {
+        if (Test-Path "$DeployPath\.git") {
+            Write-Host "   ⚠️  Git repository already exists. Use -Update flag to update." -ForegroundColor Yellow
+            exit 1
+        } else {
+            Write-Host "   ⚠️  Directory not empty. Please use empty directory or use -Update flag." -ForegroundColor Yellow
+            exit 1
+        }
+    }
+    
+    try {
+        Write-Host "   Cloning repository: $GitRepo" -ForegroundColor Gray
+        git clone $GitRepo $DeployPath
+        Write-Host "   ✅ Repository cloned successfully" -ForegroundColor Green
+    } catch {
+        Write-Host "   ❌ Git clone failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "   Please check your Git repository URL and access permissions" -ForegroundColor Yellow
+        exit 1
+    }
+}
+
+# Step 1b: Create required directories
+Write-Host "`n📁 Step 1b: Ensuring directory structure..." -ForegroundColor Yellow
 
 $directories = @(
-    $DeployPath,
     "$DeployPath\logs",
     "$DeployPath\ssl",
     "$DeployPath\backups",
@@ -40,66 +98,30 @@ foreach ($dir in $directories) {
     }
 }
 
-# Step 2: Build and copy application files
-Write-Host "`n🔨 Step 2: Building and copying application..." -ForegroundColor Yellow
+# Step 2: Build application 
+Write-Host "`n🔨 Step 2: Building application..." -ForegroundColor Yellow
 
+Push-Location $DeployPath
 try {
+    # Install dependencies
+    Write-Host "   Installing dependencies..." -ForegroundColor Gray
+    npm install --production
+    Write-Host "   ✅ Dependencies installed" -ForegroundColor Green
+    
     # Build the application
     Write-Host "   Building Next.js application..." -ForegroundColor Gray
     npm run build
     Write-Host "   ✅ Build completed" -ForegroundColor Green
 
-    # Copy all necessary files to production directory
-    $filesToCopy = @(
-        @{Source = ".next"; Destination = "$DeployPath\.next"},
-        @{Source = "public"; Destination = "$DeployPath\public"},
-        @{Source = "package.json"; Destination = "$DeployPath\package.json"},
-        @{Source = "package-lock.json"; Destination = "$DeployPath\package-lock.json"},
-        @{Source = "next.config.js"; Destination = "$DeployPath\next.config.js"},
-        @{Source = "https-server.js"; Destination = "$DeployPath\https-server.js"},
-        @{Source = "socket-server.js"; Destination = "$DeployPath\socket-server.js"},
-        @{Source = "ecosystem.config.js"; Destination = "$DeployPath\ecosystem.config.js"},
-        @{Source = "orvale_tickets.db"; Destination = "$DeployPath\orvale_tickets.db"},
-        @{Source = "lib"; Destination = "$DeployPath\lib"},
-        @{Source = "contexts"; Destination = "$DeployPath\contexts"},
-        @{Source = "components"; Destination = "$DeployPath\components"},
-        @{Source = "app"; Destination = "$DeployPath\app"},
-        @{Source = "hooks"; Destination = "$DeployPath\hooks"},
-        @{Source = "middleware.ts"; Destination = "$DeployPath\middleware.ts"},
-        @{Source = "config"; Destination = "$DeployPath\config"},
-        @{Source = "scripts"; Destination = "$DeployPath\scripts"}
-    )
-
-    foreach ($item in $filesToCopy) {
-        if (Test-Path $item.Source) {
-            Copy-Item -Path $item.Source -Destination $item.Destination -Recurse -Force
-            Write-Host "   ✅ Copied: $($item.Source)" -ForegroundColor Green
-        } else {
-            Write-Host "   ⚠️  Missing: $($item.Source)" -ForegroundColor Yellow
-        }
-    }
-
 } catch {
-    Write-Host "   ❌ Build/Copy failed: $($_.Exception.Message)" -ForegroundColor Red
-    exit 1
-}
-
-# Step 3: Install dependencies in production directory
-Write-Host "`n📦 Step 3: Installing production dependencies..." -ForegroundColor Yellow
-
-Push-Location $DeployPath
-try {
-    npm install --production
-    Write-Host "   ✅ Dependencies installed" -ForegroundColor Green
-} catch {
-    Write-Host "   ❌ Dependency installation failed: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "   ❌ Build failed: $($_.Exception.Message)" -ForegroundColor Red
     Pop-Location
     exit 1
 }
 Pop-Location
 
-# Step 4: Setup Internal CA and SSL certificates
-Write-Host "`n🔒 Step 4: Setting up Internal CA and SSL certificates..." -ForegroundColor Yellow
+# Step 3: Setup Internal CA and SSL certificates
+Write-Host "`n🔒 Step 3: Setting up Internal CA and SSL certificates..." -ForegroundColor Yellow
 
 # Create the internal CA setup script in the deploy directory
 $internalCAScript = @"
@@ -165,8 +187,8 @@ try {
     exit 1
 }
 
-# Step 5: Create production environment file
-Write-Host "`n⚙️ Step 5: Creating production configuration..." -ForegroundColor Yellow
+# Step 4: Create production environment file
+Write-Host "`n⚙️ Step 4: Creating production configuration..." -ForegroundColor Yellow
 
 $envContent = @"
 NODE_ENV=production
@@ -186,8 +208,8 @@ $envPath = Join-Path $DeployPath ".env.local"
 $envContent | Out-File -FilePath $envPath -Encoding UTF8
 Write-Host "   ✅ Environment configuration created" -ForegroundColor Green
 
-# Step 6: Update ecosystem config for production paths
-Write-Host "`n🔧 Step 6: Updating ecosystem configuration..." -ForegroundColor Yellow
+# Step 5: Update ecosystem config for production paths
+Write-Host "`n🔧 Step 5: Updating ecosystem configuration..." -ForegroundColor Yellow
 
 $ecosystemConfig = @"
 module.exports = {
@@ -241,8 +263,8 @@ $ecosystemPath = Join-Path $DeployPath "ecosystem.config.js"
 $ecosystemConfig | Out-File -FilePath $ecosystemPath -Encoding UTF8
 Write-Host "   ✅ Ecosystem configuration updated" -ForegroundColor Green
 
-# Step 7: Install and start Windows Service
-Write-Host "`n🔧 Step 7: Installing Windows Service..." -ForegroundColor Yellow
+# Step 6: Install and start Windows Service
+Write-Host "`n🔧 Step 6: Installing Windows Service..." -ForegroundColor Yellow
 
 Push-Location $DeployPath
 try {
@@ -273,8 +295,8 @@ try {
 }
 Pop-Location
 
-# Step 8: Configure Windows Firewall
-Write-Host "`n🛡️ Step 8: Configuring Windows Firewall..." -ForegroundColor Yellow
+# Step 7: Configure Windows Firewall
+Write-Host "`n🛡️ Step 7: Configuring Windows Firewall..." -ForegroundColor Yellow
 
 $firewallRules = @(
     @{Name = "Orvale HTTPS"; Port = 443},
@@ -291,8 +313,8 @@ foreach ($rule in $firewallRules) {
     }
 }
 
-# Step 9: Create quick management script
-Write-Host "`n📋 Step 9: Creating management script..." -ForegroundColor Yellow
+# Step 8: Create quick management script
+Write-Host "`n📋 Step 8: Creating management script..." -ForegroundColor Yellow
 
 $quickManageScript = @"
 # Orvale Management System - Quick Management
@@ -334,7 +356,7 @@ switch (`$Action) {
     }
     "update" {
         Write-Host "Updating from Git repository..." -ForegroundColor Yellow
-        git pull
+        git pull origin main
         npm install --production
         npm run build
         pm2 restart all
@@ -354,6 +376,7 @@ Write-Host ""
 Write-Host "📍 Deployment Location: $DeployPath" -ForegroundColor Cyan
 Write-Host "🌐 Application URL:     https://$DomainName" -ForegroundColor Cyan  
 Write-Host "🔧 Service Name:        $ServiceName" -ForegroundColor Cyan
+Write-Host "📦 Git Repository:      $GitRepo" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "🚀 Next Steps:" -ForegroundColor Yellow
 Write-Host "  1. Add '$DomainName' to DNS or client machine hosts files pointing to this server" -ForegroundColor White
@@ -363,10 +386,11 @@ Write-Host "     Install: Import certificate to 'Trusted Root Certification Auth
 Write-Host "  3. Access application: https://$DomainName" -ForegroundColor White
 Write-Host ""
 Write-Host "⚡ Quick Commands:" -ForegroundColor Yellow
-Write-Host "  Status:  cd $DeployPath && .\manage.ps1 status" -ForegroundColor White
-Write-Host "  Restart: cd $DeployPath && .\manage.ps1 restart" -ForegroundColor White
-Write-Host "  Logs:    cd $DeployPath && .\manage.ps1 logs" -ForegroundColor White
-Write-Host "  Update:  cd $DeployPath && .\manage.ps1 update" -ForegroundColor White
+Write-Host "  Fresh Deploy: .\deploy-production.ps1 -GitRepo '$GitRepo'" -ForegroundColor White  
+Write-Host "  Update:       .\deploy-production.ps1 -Update" -ForegroundColor White
+Write-Host "  Status:       cd $DeployPath && .\manage.ps1 status" -ForegroundColor White
+Write-Host "  Restart:      cd $DeployPath && .\manage.ps1 restart" -ForegroundColor White
+Write-Host "  Logs:         cd $DeployPath && .\manage.ps1 logs" -ForegroundColor White
 Write-Host ""
 Write-Host "📂 Key Files:" -ForegroundColor Yellow
 Write-Host "  App:         $DeployPath\https-server.js" -ForegroundColor White
