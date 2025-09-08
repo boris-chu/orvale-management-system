@@ -16,10 +16,10 @@ if (Test-Path $DeployPath) {
     exit 1
 }
 
-# Stop current PM2 processes
-Write-Host "Stopping current PM2 processes..." -ForegroundColor Yellow
-pm2 stop all 2>$null
-pm2 delete all 2>$null
+# Stop current PM2 processes and clear PM2 cache
+Write-Host "Stopping current PM2 processes and clearing cache..." -ForegroundColor Yellow
+pm2 kill 2>$null  # This completely stops PM2 daemon and clears everything
+Start-Sleep -Seconds 3
 
 # Auto-detect server IP
 $ServerIP = (Get-NetIPAddress -AddressFamily IPv4 -InterfaceAlias "Ethernet*" | 
@@ -39,7 +39,7 @@ module.exports = {
   apps: [
     {
       name: 'orvale-main',
-      script: 'https-server.js',
+      script: './https-server.js',
       cwd: '$DeployPath',
       instances: 1,
       autorestart: true,
@@ -62,7 +62,7 @@ module.exports = {
     },
     {
       name: 'orvale-socket',
-      script: 'socket-server.js',
+      script: './socket-server.js',
       cwd: '$DeployPath',
       instances: 1,
       autorestart: true,
@@ -90,6 +90,27 @@ Write-Host "✅ Fixed ecosystem.config.js with correct paths" -ForegroundColor G
 if (-not (Test-Path "logs")) {
     New-Item -ItemType Directory -Path "logs" -Force | Out-Null
     Write-Host "✅ Created logs directory" -ForegroundColor Green
+}
+
+# Verify required files exist
+$requiredFiles = @("https-server.js", "socket-server.js", "package.json")
+$missingFiles = @()
+
+foreach ($file in $requiredFiles) {
+    if (-not (Test-Path $file)) {
+        $missingFiles += $file
+    } else {
+        Write-Host "✅ Found: $file" -ForegroundColor Gray
+    }
+}
+
+if ($missingFiles.Count -gt 0) {
+    Write-Host "❌ Missing required files:" -ForegroundColor Red
+    $missingFiles | ForEach-Object { Write-Host "   - $_" -ForegroundColor Red }
+    Write-Host ""
+    Write-Host "Current directory contents:" -ForegroundColor Yellow
+    Get-ChildItem | Format-Table Name, Length, LastWriteTime
+    exit 1
 }
 
 # Start PM2 with corrected config

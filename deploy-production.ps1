@@ -261,7 +261,7 @@ module.exports = {
   apps: [
     {
       name: 'orvale-main',
-      script: 'https-server.js',
+      script: './https-server.js',
       cwd: '$DeployPath',
       instances: 1,
       autorestart: true,
@@ -284,7 +284,7 @@ module.exports = {
     },
     {
       name: 'orvale-socket',
-      script: 'socket-server.js',
+      script: './socket-server.js',
       cwd: '$DeployPath',
       instances: 1,
       autorestart: true,
@@ -345,9 +345,10 @@ Push-Location $DeployPath
 
 if ($pm2Installed) {
     try {
-        # Stop existing PM2 processes
-        Write-Host "   Stopping existing PM2 processes..." -ForegroundColor Gray
-        pm2 delete all 2>$null
+        # Stop existing PM2 processes and clear cache
+        Write-Host "   Stopping existing PM2 processes and clearing cache..." -ForegroundColor Gray
+        pm2 kill 2>$null  # Completely stops PM2 daemon and clears cached paths
+        Start-Sleep -Seconds 3
 
         # Remove existing service if it exists
         if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
