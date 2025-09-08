@@ -116,8 +116,20 @@ Push-Location $DeployPath
 try {
     # Install dependencies
     Write-Host "   Installing dependencies..." -ForegroundColor Gray
-    npm install --production
+    # Use --omit=dev instead of --production for newer npm versions
+    npm install --omit=dev 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        # Fallback to --production for older npm versions
+        npm install --production
+    }
     Write-Host "   ✅ Dependencies installed" -ForegroundColor Green
+    
+    # Address security vulnerabilities
+    Write-Host "   Fixing security vulnerabilities..." -ForegroundColor Gray
+    npm audit fix --omit=dev 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "     Note: Some vulnerabilities may require manual attention" -ForegroundColor Yellow
+    }
     
     # Build the application
     Write-Host "   Building Next.js application..." -ForegroundColor Gray
@@ -144,6 +156,7 @@ param(
 
 # Create certificates using PowerShell with IP address
 try {
+    Write-Host "Creating Root CA certificate..." -ForegroundColor Gray
     # Create Root CA
     `$rootCA = New-SelfSignedCertificate -Type Custom -KeySpec Signature ``
         -Subject "CN=`$CompanyName Root CA, O=`$CompanyName" ``
@@ -152,38 +165,57 @@ try {
         -KeyUsageProperty Sign -KeyUsage CertSign ``
         -NotAfter (Get-Date).AddDays(1825)  # 5 years
 
-    # Create Server Certificate with IP address
-    # For IP addresses, we use both Subject Alternative Name and IP Address extension
+    if (-not `$rootCA) {
+        throw "Failed to create Root CA certificate"
+    }
+
+    Write-Host "Creating server certificate for IP: `$ServerIP..." -ForegroundColor Gray
+    # Create Server Certificate - simplified approach for better compatibility
     `$serverCert = New-SelfSignedCertificate -Type Custom -KeySpec Signature ``
         -Subject "CN=`$ServerIP, O=`$CompanyName" ``
         -KeyExportPolicy Exportable -HashAlgorithm sha256 -KeyLength 2048 ``
         -CertStoreLocation "Cert:\LocalMachine\My" ``
         -Signer `$rootCA ``
-        -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.1", "2.5.29.17={text}IP:`$ServerIP&DNS:localhost&IP:127.0.0.1") ``
         -NotAfter (Get-Date).AddDays(1460)  # 4 years
 
+    if (-not `$serverCert) {
+        throw "Failed to create server certificate"
+    }
+
+    Write-Host "Exporting certificates..." -ForegroundColor Gray
     # Export certificates
-    Export-Certificate -Cert `$rootCA -FilePath "`$SslPath\ca-bundle.crt" -Type CERT
-    Export-Certificate -Cert `$serverCert -FilePath "`$SslPath\certificate.crt" -Type CERT
+    Export-Certificate -Cert `$rootCA -FilePath "`$SslPath\ca-bundle.crt" -Type CERT | Out-Null
+    Export-Certificate -Cert `$serverCert -FilePath "`$SslPath\certificate.crt" -Type CERT | Out-Null
 
     # Export private key
     `$serverPassword = ConvertTo-SecureString -String "orvale2024" -Force -AsPlainText
     `$serverPfxPath = "`$SslPath\server.pfx"
-    Export-PfxCertificate -Cert `$serverCert -FilePath `$serverPfxPath -Password `$serverPassword
+    Export-PfxCertificate -Cert `$serverCert -FilePath `$serverPfxPath -Password `$serverPassword | Out-Null
 
+    Write-Host "Installing Root CA in trusted store..." -ForegroundColor Gray
     # Install Root CA in trusted store
     `$rootStore = Get-Item "Cert:\LocalMachine\Root"
     `$rootStore.Open("ReadWrite")
     `$rootStore.Add(`$rootCA)
     `$rootStore.Close()
 
+    # Clean up certificates from personal store
+    Remove-Item -Path "Cert:\LocalMachine\My\`$(`$rootCA.Thumbprint)" -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "Cert:\LocalMachine\My\`$(`$serverCert.Thumbprint)" -Force -ErrorAction SilentlyContinue
+
     Write-Host "✅ Internal CA and server certificates created successfully!" -ForegroundColor Green
     Write-Host "   Root CA Thumbprint: `$(`$rootCA.Thumbprint)" -ForegroundColor Cyan
     Write-Host "   Server Cert Thumbprint: `$(`$serverCert.Thumbprint)" -ForegroundColor Cyan
     Write-Host "   Certificate IP: `$ServerIP" -ForegroundColor Cyan
+    Write-Host "   Certificate files:" -ForegroundColor Cyan
+    Write-Host "     - Root CA: `$SslPath\ca-bundle.crt" -ForegroundColor Gray
+    Write-Host "     - Server Cert: `$SslPath\certificate.crt" -ForegroundColor Gray
+    Write-Host "     - Private Key: `$SslPath\server.pfx" -ForegroundColor Gray
 
 } catch {
     Write-Host "❌ Certificate creation failed: `$(`$_.Exception.Message)" -ForegroundColor Red
+    Write-Host "   Error details: `$(`$_.Exception.GetType().FullName)" -ForegroundColor Red
+    Write-Host "   This may require running PowerShell as Administrator with elevated privileges" -ForegroundColor Yellow
     throw `$_
 }
 "@
