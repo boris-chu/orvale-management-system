@@ -96,17 +96,33 @@ iisreset /stop
 
 ### 5. PM2 Installation Issues
 
-**Issue**: PM2 Windows service installation fails.
+**Issue**: `pm2 is not recognized` or PM2 Windows service installation fails.
 
 **Solutions**:
 
-#### A. Install PM2 Globally
+#### A. Install PM2 Globally (Run as Administrator)
 ```powershell
+# Install PM2 and Windows service support
 npm install -g pm2
 npm install -g pm2-windows-service
+
+# Verify installation
+pm2 --version
 ```
 
-#### B. Manual PM2 Service Setup
+#### B. If PM2 Installation Fails
+```powershell
+# Clear npm cache
+npm cache clean --force
+
+# Try installing with different registry
+npm install -g pm2 --registry https://registry.npmjs.org/
+
+# Or use alternative startup method
+.\start-simple.ps1
+```
+
+#### C. Manual PM2 Service Setup
 ```powershell
 # Navigate to deployment directory
 cd C:\Orvale
@@ -117,6 +133,21 @@ pm2 save
 
 # Install as service
 pm2-service-install -n OrvaleManagementSystem
+
+# Set service to auto-start
+Set-Service -Name OrvaleManagementSystem -StartupType Automatic
+Start-Service -Name OrvaleManagementSystem
+```
+
+#### D. Alternative: Simple Startup (No PM2)
+If PM2 continues to fail, use the simple startup script:
+```powershell
+# Copy start-simple.ps1 to your deployment directory
+# Then run:
+.\start-simple.ps1
+
+# This starts the applications without PM2 or Windows services
+# Good for testing or development environments
 ```
 
 ### 6. Build Failures

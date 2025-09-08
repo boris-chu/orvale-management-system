@@ -308,36 +308,91 @@ $ecosystemPath = Join-Path $DeployPath "ecosystem.config.js"
 $ecosystemConfig | Out-File -FilePath $ecosystemPath -Encoding UTF8
 Write-Host "   ✅ Ecosystem configuration updated" -ForegroundColor Green
 
-# Step 6: Install and start Windows Service
-Write-Host "`n🔧 Step 6: Installing Windows Service..." -ForegroundColor Yellow
+# Step 6: Install PM2 and setup Windows Service
+Write-Host "`n🔧 Step 6: Installing PM2 and setting up Windows Service..." -ForegroundColor Yellow
+
+# Check if PM2 is installed
+$pm2Installed = $false
+try {
+    pm2 --version | Out-Null
+    $pm2Installed = $true
+    Write-Host "   ✅ PM2 is already installed" -ForegroundColor Green
+} catch {
+    Write-Host "   📦 PM2 not found, installing..." -ForegroundColor Yellow
+}
+
+# Install PM2 if not present
+if (-not $pm2Installed) {
+    try {
+        Write-Host "   Installing PM2 globally..." -ForegroundColor Gray
+        npm install -g pm2
+        
+        Write-Host "   Installing PM2 Windows Service..." -ForegroundColor Gray  
+        npm install -g pm2-windows-service
+        
+        Write-Host "   ✅ PM2 installed successfully" -ForegroundColor Green
+        $pm2Installed = $true
+    } catch {
+        Write-Host "   ❌ PM2 installation failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "   You may need to install PM2 manually:" -ForegroundColor Yellow
+        Write-Host "   npm install -g pm2" -ForegroundColor White
+        Write-Host "   npm install -g pm2-windows-service" -ForegroundColor White
+        $pm2Installed = $false
+    }
+}
 
 Push-Location $DeployPath
-try {
-    # Install PM2 as Windows service
-    if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
-        Write-Host "   Stopping existing service..." -ForegroundColor Gray
-        Stop-Service -Name $ServiceName -Force
-        pm2 delete all
+
+if ($pm2Installed) {
+    try {
+        # Stop existing PM2 processes
+        Write-Host "   Stopping existing PM2 processes..." -ForegroundColor Gray
+        pm2 delete all 2>$null
+
+        # Remove existing service if it exists
+        if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
+            Write-Host "   Removing existing service..." -ForegroundColor Gray
+            Stop-Service -Name $ServiceName -Force
+            pm2-service-uninstall 2>$null
+            Start-Sleep -Seconds 2
+        }
+
+        # Start PM2 ecosystem
+        Write-Host "   Starting PM2 applications..." -ForegroundColor Gray
+        pm2 start ecosystem.config.js
+        pm2 save
+
+        # Install as Windows service
+        Write-Host "   Installing PM2 as Windows service..." -ForegroundColor Gray
+        pm2-service-install -n $ServiceName
+
+        # Set service to auto-start and start it
+        Set-Service -Name $ServiceName -StartupType Automatic -ErrorAction SilentlyContinue
+        Start-Service -Name $ServiceName -ErrorAction SilentlyContinue
+
+        Write-Host "   ✅ Windows Service installed and started" -ForegroundColor Green
+
+    } catch {
+        Write-Host "   ❌ Service installation failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "   Trying manual PM2 startup..." -ForegroundColor Yellow
+        
+        try {
+            pm2 start ecosystem.config.js
+            pm2 save
+            Write-Host "   ✅ PM2 started manually (not as Windows service)" -ForegroundColor Green
+            Write-Host "   Note: Applications will not auto-start on reboot" -ForegroundColor Yellow
+        } catch {
+            Write-Host "   ❌ Manual PM2 startup also failed: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "   Please install PM2 manually and re-run deployment" -ForegroundColor Yellow
+        }
     }
-
-    # Start PM2 ecosystem
-    pm2 start ecosystem.config.js
-    pm2 save
-
-    # Install as Windows service
-    pm2-service-install -n $ServiceName --cwd $DeployPath
-
-    # Set service to auto-start
-    Set-Service -Name $ServiceName -StartupType Automatic
-    Start-Service -Name $ServiceName
-
-    Write-Host "   ✅ Windows Service installed and started" -ForegroundColor Green
-
-} catch {
-    Write-Host "   ❌ Service installation failed: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "   Continuing with manual PM2 startup..." -ForegroundColor Yellow
-    pm2 start ecosystem.config.js
+} else {
+    Write-Host "   ❌ Cannot proceed without PM2. Please install manually:" -ForegroundColor Red
+    Write-Host "   1. npm install -g pm2" -ForegroundColor White
+    Write-Host "   2. npm install -g pm2-windows-service" -ForegroundColor White
+    Write-Host "   3. Re-run this deployment script" -ForegroundColor White
 }
+
 Pop-Location
 
 # Step 7: Configure Windows Firewall
