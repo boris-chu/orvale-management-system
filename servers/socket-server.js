@@ -21,7 +21,7 @@ const path = require('path');
 // Configuration
 const PORT = process.env.SOCKET_PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'orvale-management-system-secret-key-2025';
-const DB_PATH = path.join(__dirname, 'orvale_tickets.db');
+const DB_PATH = path.join(__dirname, '../database/orvale_tickets.db');
 const isDevelopment = process.env.NODE_ENV === 'development';
 
 // Connection limits (can be overridden by admin settings)

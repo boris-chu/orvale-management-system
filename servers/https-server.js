@@ -12,7 +12,7 @@ const http = require('http');
 const next = require('next');
 const fs = require('fs');
 const path = require('path');
-const AutoSSLDeployment = require('./auto-ssl-deployment');
+const AutoSSLDeployment = require('../deployment/auto-ssl-deployment');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';

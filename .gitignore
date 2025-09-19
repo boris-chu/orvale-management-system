@@ -19,3 +19,9 @@ Screenshot*.png
 # Log files
 logs/*.log
 logs/*.log.*
+servers/logs/*.log
+servers/logs/*.log.*
+
+# Temporary files
+temp/
+*.tsbuildinfo

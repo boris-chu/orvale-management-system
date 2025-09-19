@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'orvale-main',
-      script: './https-server.js',  // Use HTTPS server instead of npm start
+      script: './servers/https-server.js',  // Use HTTPS server instead of npm start
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -17,15 +17,15 @@ module.exports = {
         SSL_CERT_PATH: './ssl/certificate.crt',
         SSL_CA_PATH: './ssl/ca-bundle.crt'
       },
-      error_file: './logs/main-error.log',
-      out_file: './logs/main-out.log',
-      log_file: './logs/main-combined.log',
+      error_file: './servers/logs/main-error.log',
+      out_file: './servers/logs/main-out.log',
+      log_file: './servers/logs/main-combined.log',
       time: true,
       merge_logs: true
     },
     {
       name: 'orvale-socket',
-      script: './socket-server.js',
+      script: './servers/socket-server.js',
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -35,9 +35,9 @@ module.exports = {
         NODE_ENV: 'production',
         SOCKET_PORT: 3001
       },
-      error_file: './logs/socket-error.log',
-      out_file: './logs/socket-out.log',
-      log_file: './logs/socket-combined.log',
+      error_file: './servers/logs/socket-error.log',
+      out_file: './servers/logs/socket-out.log',
+      log_file: './servers/logs/socket-combined.log',
       time: true,
       merge_logs: true
     }
