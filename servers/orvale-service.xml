@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Windows Service Configuration Template for Orvale Management System
+
+  This XML file serves as a template/reference for the Windows service configuration.
+  The actual service is created and managed by node-windows package through service-installer.ts
+
+  Service Details:
+  - Name: OrvaleManagementSystem
+  - Display Name: Orvale Management System
+  - Description: Unified platform for tickets, projects, communication, and analytics
+  - Executable: tsx (TypeScript execution runtime)
+  - Script: servers/orvale-server.ts
+  - Auto-start: Yes
+  - Recovery: Restart on failure
+-->
+<service>
+  <id>OrvaleManagementSystem</id>
+  <name>Orvale Management System</name>
+  <description>Unified platform for tickets, projects, communication, and analytics</description>
+
+  <!-- Executable and script configuration -->
+  <executable>node</executable>
+  <arguments>--loader tsx servers/orvale-server.ts</arguments>
+  <workingdirectory>%BASE%</workingdirectory>
+
+  <!-- Environment variables -->
+  <env name="NODE_ENV" value="production"/>
+  <env name="HOSTNAME" value="localhost"/>
+  <env name="HTTP_PORT" value="80"/>
+  <env name="HTTPS_PORT" value="443"/>
+  <env name="SOCKET_PORT" value="3001"/>
+
+  <!-- Service behavior -->
+  <startmode>Automatic</startmode>
+  <delayedstart>true</delayedstart>
+
+  <!-- Recovery options -->
+  <onfailure action="restart" delay="10 sec"/>
+  <onfailure action="restart" delay="20 sec"/>
+  <onfailure action="restart" delay="60 sec"/>
+  <resetfailure>1 day</resetfailure>
+
+  <!-- Security -->
+  <serviceaccount>
+    <domain>NT AUTHORITY</domain>
+    <user>NetworkService</user>
+    <allowservicelogon>true</allowservicelogon>
+  </serviceaccount>
+
+  <!-- Logging -->
+  <logpath>%BASE%\servers\logs</logpath>
+  <log mode="roll-by-time">
+    <pattern>yyyy-MM-dd</pattern>
+  </log>
+
+  <!-- Stop configuration -->
+  <stoptimeout>30 sec</stoptimeout>
+  <stopparentprocessfirst>false</stopparentprocessfirst>
+</service>
